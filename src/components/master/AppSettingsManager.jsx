@@ -5,6 +5,7 @@ import { Loader2, Save, CheckCircle2 } from 'lucide-react';
 
 const DEFAULT_SETTINGS = [
   { key: 'WIP_PALLET_CRATE_CAPACITY', label: 'WIP Pallet Crate Capacity', description: 'Number of crates per WIP pallet before auto-pallet prompt', type: 'number' },
+  { key: 'EDGE_ENDPOINT_URL', label: 'Edge Endpoint URL', description: 'LAN URL of edge device e.g. http://192.168.1.50:8080', type: 'text' },
 ];
 
 function SettingRow({ def, existing, onSave }) {
