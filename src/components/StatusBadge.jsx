@@ -23,6 +23,11 @@ const statusColors = {
   PENDING: 'bg-amber-100 text-amber-700',
   PASSED: 'bg-green-100 text-green-700',
   FAILED: 'bg-red-100 text-red-700',
+  APPROVED: 'bg-green-100 text-green-700',
+  REJECTED: 'bg-red-100 text-red-700',
+  ISSUED: 'bg-teal-100 text-teal-700',
+  PARTIAL: 'bg-amber-100 text-amber-700',
+  RELEASED: 'bg-blue-100 text-blue-700',
   WIP: 'bg-indigo-100 text-indigo-700',
   FG: 'bg-emerald-100 text-emerald-700',
 };
