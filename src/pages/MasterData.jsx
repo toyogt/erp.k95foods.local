@@ -8,6 +8,7 @@ import AppSettingsManager from '@/components/master/AppSettingsManager.jsx';
 import PackingWOManager from '@/components/master/PackingWOManager';
 import ChecklistTemplateManager from '@/components/master/ChecklistTemplateManager';
 import SyncQueueViewer from '@/components/master/SyncQueueViewer';
+import ModuleAccessManager from '@/components/master/ModuleAccessManager';
 import { Loader2 } from 'lucide-react';
 
 export default function MasterData() {
@@ -38,6 +39,7 @@ export default function MasterData() {
             <TabsTrigger value="machines"   className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Machines</TabsTrigger>
             <TabsTrigger value="wos"        className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">WOs</TabsTrigger>
             {isManager && <TabsTrigger value="checklists" className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Checklists</TabsTrigger>}
+            {isManager && <TabsTrigger value="modules"    className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Modules</TabsTrigger>}
             {isManager && <TabsTrigger value="syncqueue"  className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Sync Queue</TabsTrigger>}
             {isAdmin   && <TabsTrigger value="settings"   className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Settings</TabsTrigger>}
           </TabsList>
@@ -47,6 +49,7 @@ export default function MasterData() {
         <TabsContent value="machines"   className="mt-4"><MachineManager user={user} /></TabsContent>
         <TabsContent value="wos"        className="mt-4"><PackingWOManager /></TabsContent>
         {isManager && <TabsContent value="checklists" className="mt-4"><ChecklistTemplateManager /></TabsContent>}
+        {isManager && <TabsContent value="modules"    className="mt-4"><ModuleAccessManager /></TabsContent>}
         {isManager && <TabsContent value="syncqueue"  className="mt-4"><SyncQueueViewer /></TabsContent>}
         {isAdmin   && <TabsContent value="settings"   className="mt-4"><AppSettingsManager user={user} /></TabsContent>}
       </Tabs>
