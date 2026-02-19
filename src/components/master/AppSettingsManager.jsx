@@ -4,8 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Loader2, Save, CheckCircle2 } from 'lucide-react';
 
 const DEFAULT_SETTINGS = [
-  { key: 'WIP_PALLET_CRATE_CAPACITY', label: 'WIP Pallet Crate Capacity', description: 'Number of crates per WIP pallet before auto-pallet prompt', type: 'number' },
-  { key: 'EDGE_ENDPOINT_URL', label: 'Edge Endpoint URL', description: 'LAN URL of edge device e.g. http://192.168.1.50:8080', type: 'text' },
+  { key: 'WIP_PALLET_CRATE_CAPACITY',       label: 'WIP Pallet Crate Capacity',         description: 'Crates per WIP pallet before auto-pallet prompt',         type: 'number' },
+  { key: 'EDGE_ENDPOINT_URL',               label: 'Edge Endpoint URL',                 description: 'LAN URL of edge device e.g. http://192.168.1.50:8080',   type: 'text'   },
+  { key: 'ERP_API_BASE_URL',                label: 'ERP API Base URL',                  description: 'ERPNext base URL for sync e.g. https://erp.company.com',  type: 'text'   },
+  { key: 'OFFLINE_SYNC_ENABLED',            label: 'Offline Sync Enabled',              description: 'true / false — enable background sync of offline queue',  type: 'text'   },
+  { key: 'BOTTLE_TYPE_MISMATCH_HARDSTOP',   label: 'Bottle Type Mismatch → HARD STOP',  description: 'true = hard stop on bottle type mismatch (default: soft)', type: 'text'   },
 ];
 
 function SettingRow({ def, existing, onSave }) {
