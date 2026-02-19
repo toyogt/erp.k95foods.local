@@ -3,16 +3,25 @@ import { createPageUrl } from '@/utils';
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import OfflineProvider, { OfflineBanner } from '@/components/OfflineProvider';
+import { getAllowedPages } from '@/components/roles';
 import {
   LayoutDashboard, ScrollText, Settings, ChevronLeft,
-  Factory, LogOut, Menu, X
+  Factory, LogOut, Menu, X,
+  Store, Beaker, Droplets, Thermometer, Truck, Tag, PackageCheck
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-const NAV_ITEMS = [
-  { label: 'Dashboard', page: 'Dashboard', icon: LayoutDashboard },
-  { label: 'Audit Log', page: 'AuditLogPage', icon: ScrollText },
-  { label: 'Master Data', page: 'MasterData', icon: Settings },
+const ALL_NAV_ITEMS = [
+  { label: 'Dashboard',          page: 'Dashboard',        icon: LayoutDashboard },
+  { label: 'Stores Issue',       page: 'StoresIssue',      icon: Store           },
+  { label: 'Recipe Station',     page: 'RecipeStation',    icon: Beaker          },
+  { label: 'Filling Station',    page: 'FillingStation',   icon: Droplets        },
+  { label: 'Chamber Station',    page: 'ChamberStation',   icon: Thermometer     },
+  { label: 'Transfer/Receiving', page: 'TransferReceiving',icon: Truck           },
+  { label: 'Labelling Line',     page: 'LabellingLine',    icon: Tag             },
+  { label: 'FG Palletizing',     page: 'FGPalletizing',    icon: PackageCheck    },
+  { label: 'Audit Log',          page: 'AuditLogPage',     icon: ScrollText      },
+  { label: 'Master Data',        page: 'MasterData',       icon: Settings        },
 ];
 
 export default function Layout({ children, currentPageName }) {
