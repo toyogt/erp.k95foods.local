@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import BottleTypeManager from '@/components/master/BottleTypeManager';
 import LocationManager from '@/components/master/LocationManager';
 import MachineManager from '@/components/master/MachineManager';
+import AppSettingsManager from '@/components/master/AppSettingsManager';
 import { Loader2 } from 'lucide-react';
 
 export default function MasterData() {
