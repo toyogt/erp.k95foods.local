@@ -9,6 +9,7 @@ import SessionStatus from '@/components/labelling/SessionStatus';
 import ChecklistRunner from '@/components/checklist/ChecklistRunner';
 import { callEdge } from '@/components/labelling/edgeClient';
 import { logAudit } from '@/components/AuditLogger';
+import { raiseAlert } from '@/components/alerts/alertHelpers';
 
 const STEP = { MACHINE: 0, SELECT_WO: 1, SCAN_LABEL: 2, SCAN_CARTON: 3, CHECKLIST: 4, RUNNING: 5 };
 
@@ -156,6 +157,9 @@ export default function LabellingLine() {
     }
     await callEdge(newState === 'HARD_STOP' ? 'hard_stop' : 'soft_stop', { wo_id: wo?.wo_id, reason: msg });
     await logAudit({ action: `Line ${newState}: ${msg}`, entity_type: 'LineSession', entity_id: session?.session_id, user, station: machine?.machine_id });
+    if (newState === 'HARD_STOP') {
+      await raiseAlert({ severity: 'CRITICAL', station_type: 'LABELLING', reference_type: 'LineSession', reference_id: session?.session_id || wo?.wo_id || '', message: msg });
+    }
   }
 
   async function handleResume() {
