@@ -28,16 +28,18 @@ export default function MasterData() {
       </div>
 
       <Tabs defaultValue="bottles" className="w-full">
-        <TabsList className="w-full grid grid-cols-4 h-12 rounded-xl bg-slate-100 p-1">
-          <TabsTrigger value="bottles" className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm">Bottles</TabsTrigger>
+        <TabsList className="w-full grid grid-cols-5 h-12 rounded-xl bg-slate-100 p-1">
+          <TabsTrigger value="bottles"   className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm">Bottles</TabsTrigger>
           <TabsTrigger value="locations" className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm">Locations</TabsTrigger>
-          <TabsTrigger value="machines" className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm">Machines</TabsTrigger>
-          <TabsTrigger value="settings" className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm">Settings</TabsTrigger>
+          <TabsTrigger value="machines"  className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm">Machines</TabsTrigger>
+          <TabsTrigger value="wos"       className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm">WOs</TabsTrigger>
+          <TabsTrigger value="settings"  className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm">Settings</TabsTrigger>
         </TabsList>
-        <TabsContent value="bottles" className="mt-4"><BottleTypeManager user={user} /></TabsContent>
+        <TabsContent value="bottles"   className="mt-4"><BottleTypeManager user={user} /></TabsContent>
         <TabsContent value="locations" className="mt-4"><LocationManager user={user} /></TabsContent>
-        <TabsContent value="machines" className="mt-4"><MachineManager user={user} /></TabsContent>
-        <TabsContent value="settings" className="mt-4"><AppSettingsManager user={user} /></TabsContent>
+        <TabsContent value="machines"  className="mt-4"><MachineManager user={user} /></TabsContent>
+        <TabsContent value="wos"       className="mt-4"><PackingWOManager /></TabsContent>
+        <TabsContent value="settings"  className="mt-4"><AppSettingsManager user={user} /></TabsContent>
       </Tabs>
     </div>
   );
