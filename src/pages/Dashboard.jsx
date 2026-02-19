@@ -34,19 +34,27 @@ export default function Dashboard() {
     try {
       const [u, crates, pallets, batches, jobs, logs] = await Promise.all([
         base44.auth.me(),
-        base44.entities.Crate.list('-created_date', 200),
-        base44.entities.Pallet.filter({ status: 'OPEN' }),
+        base44.entities.Crate.list('-created_date', 500),
+        base44.entities.Pallet.list('-created_date', 200),
         base44.entities.Batch.list('-created_date', 50),
         base44.entities.Job.filter({ status: 'IN_PROGRESS' }),
         base44.entities.AuditLog.list('-created_date', 10),
       ]);
       setUser(u);
-      const activeCrates = crates.filter(c => c.status !== 'SHIPPED');
+      const activeCrates = crates.filter(c => c.status !== 'STORED');
+      const openPallets = pallets.filter(p => p.status !== 'CLOSED');
       setStats({
         crates: activeCrates.length,
-        pallets: pallets.length,
+        pallets: openPallets.length,
         batches: batches.filter(b => ['IN_PROGRESS', 'QC_PENDING'].includes(b.status)).length,
         jobs: jobs.length,
+      });
+      setWipCounters({
+        filling: crates.filter(c => c.current_location === 'WIP-FILLING-OUT').length,
+        chamber: pallets.filter(p => p.status === 'IN_CHAMBER').length,
+        transit: pallets.filter(p => p.status === 'IN_TRANSIT').length,
+        line1: crates.filter(c => c.current_location === 'ZONE-LABEL-LINE-1').length,
+        line2: crates.filter(c => c.current_location === 'ZONE-LABEL-LINE-2').length,
       });
       const locMap = {};
       activeCrates.forEach(c => { const loc = c.current_location || 'UNKNOWN'; locMap[loc] = (locMap[loc] || 0) + 1; });
