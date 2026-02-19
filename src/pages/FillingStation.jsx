@@ -379,10 +379,37 @@ export default function FillingStation() {
 
           {supervisorAction === 'close' && activeBatch && (
             <div className="space-y-2 pt-2">
-              <p className="text-sm text-slate-600">Close active batch <strong>{activeBatch.batch_id}</strong>?</p>
-              <Button className="w-full rounded-xl bg-red-600 hover:bg-red-700" onClick={handleCloseBatch} disabled={loading}>
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Confirm Close Batch'}
-              </Button>
+              <p className="text-sm text-slate-600">Close batch <strong>{activeBatch.batch_id}</strong>?</p>
+              <div className="text-xs text-slate-500 bg-slate-100 rounded-lg p-2">
+                Created: {activeBatch.created_crates || 0} · Palletized: {activeBatch.palletized_crates || 0} · Policy: {activeBatch.close_policy || 'REQUIRE_PALLETIZED'}
+              </div>
+              {closeBlockMsg && !showCloseOverride && <p className="text-sm text-red-600">{closeBlockMsg}</p>}
+              {!showCloseOverride && (
+                <Button className="w-full rounded-xl bg-red-600 hover:bg-red-700" onClick={handleCloseBatch} disabled={loading}>
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Confirm Close Batch'}
+                </Button>
+              )}
+              {showCloseOverride && (
+                <div className="space-y-2 border border-amber-300 bg-amber-50 rounded-xl p-3">
+                  <p className="text-xs font-bold text-amber-700 flex items-center gap-1"><Lock className="w-3.5 h-3.5" /> Override Required</p>
+                  {closeBlockMsg && <p className="text-xs text-red-600">{closeBlockMsg}</p>}
+                  <div>
+                    <label className="text-xs text-slate-500">Supervisor PIN</label>
+                    <input type="password" value={closeOverridePIN} onChange={e => setCloseOverridePIN(e.target.value)}
+                      className="w-full mt-1 h-10 rounded-xl border border-slate-300 px-3 text-sm focus:outline-none" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-500">Override Reason *</label>
+                    <input value={closeOverrideReason} onChange={e => setCloseOverrideReason(e.target.value)}
+                      className="w-full mt-1 h-10 rounded-xl border border-slate-300 px-3 text-sm focus:outline-none" />
+                  </div>
+                  <Button className="w-full rounded-xl bg-amber-600 hover:bg-amber-700" disabled={loading}
+                    onClick={() => doCloseBatch(closeOverridePIN, closeOverrideReason)}>
+                    {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Force Close with Override'}
+                  </Button>
+                  <Button variant="ghost" className="w-full" onClick={() => { setShowCloseOverride(false); setCloseBlockMsg(''); }}>Cancel</Button>
+                </div>
+              )}
             </div>
           )}
         </div>
