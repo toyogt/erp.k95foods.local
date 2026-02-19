@@ -172,6 +172,12 @@ export default function FillingStation() {
     await savePallet(palletData, user);
     await linkCratesToPallet(palletScan.trim(), cratesOnCurrentPallet, user);
     await logMovement({ entityType: 'PALLET', entityId: palletScan.trim(), from: '', to: LOC_FILLING, machineId: machine.machine_id, user });
+    // Increment palletized_crates on active batch
+    if (activeBatch?.id) {
+      const newPalletized = (activeBatch.palletized_crates || 0) + cratesOnCurrentPallet.length;
+      await base44.entities.MachineActiveBatch.update(activeBatch.id, { palletized_crates: newPalletized }).catch(() => {});
+      setActiveBatch(prev => ({ ...prev, palletized_crates: newPalletized }));
+    }
     setLoading(false);
     setStep('pallet_ready');
   }
