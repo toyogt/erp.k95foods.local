@@ -20,11 +20,24 @@ export async function saveCrate(data, user) {
   }
 }
 
-/** Create a pallet, queue if offline */
+/** Create or update a pallet, queue if offline */
 export async function savePallet(data, user) {
   try {
-    return await base44.entities.Pallet.create(data);
-  } catch {
+    const existing = await base44.entities.Pallet.filter({ pallet_id: data.pallet_id });
+    if (existing.length > 0) {
+      const pallet = existing[0];
+      // Block reuse: pallet must be OPEN (i.e. not currently in use or in chamber/transit)
+      const blockedStatuses = ['IN_CHAMBER', 'POST_CHAMBER', 'IN_TRANSIT', 'CLOSED'];
+      if (blockedStatuses.includes(pallet.status)) {
+        throw new Error(`Pallet ${data.pallet_id} is currently "${pallet.status}" and cannot be reused until it is emptied and reset.`);
+      }
+      return await base44.entities.Pallet.update(pallet.id, data);
+    } else {
+      return await base44.entities.Pallet.create(data);
+    }
+  } catch (e) {
+    // Re-throw blocking errors so UI can show them
+    if (e.message?.includes('cannot be reused')) throw e;
     enqueue({ type: 'create', entity: 'Pallet', data, userEmail: user?.email, userName: user?.full_name, auditAction: 'PalletCreated', auditEntityId: data.pallet_id });
     return { ...data, id: '_offline_' + data.pallet_id };
   }
