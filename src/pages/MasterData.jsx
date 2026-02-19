@@ -5,6 +5,7 @@ import BottleTypeManager from '@/components/master/BottleTypeManager';
 import LocationManager from '@/components/master/LocationManager';
 import MachineManager from '@/components/master/MachineManager';
 import AppSettingsManager from '@/components/master/AppSettingsManager.jsx';
+import PackingWOManager from '@/components/master/PackingWOManager';
 import { Loader2 } from 'lucide-react';
 
 export default function MasterData() {
