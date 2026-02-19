@@ -3,57 +3,52 @@ import { createPageUrl } from '@/utils';
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import OfflineProvider, { OfflineBanner } from '@/components/OfflineProvider';
-import { getAllowedPages } from '@/components/roles';
+import useModuleAccess from '@/components/modules/useModuleAccess';
 import {
   LayoutDashboard, ScrollText, Settings, ChevronLeft,
   Factory, LogOut, Menu, X,
-  Store, Beaker, Droplets, Thermometer, Truck, Tag, PackageCheck
+  Store, Beaker, Droplets, Thermometer, Truck, Tag, PackageCheck,
+  ListChecks, Bell
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const ALL_NAV_ITEMS = [
-  { label: 'Dashboard',          page: 'Dashboard',        icon: LayoutDashboard },
-  { label: 'Stores Issue',       page: 'StoresIssue',      icon: Store           },
-  { label: 'Recipe Station',     page: 'RecipeStation',    icon: Beaker          },
-  { label: 'Filling Station',    page: 'FillingStation',   icon: Droplets        },
-  { label: 'Chamber Station',    page: 'ChamberStation',   icon: Thermometer     },
-  { label: 'Transfer/Receiving', page: 'TransferReceiving',icon: Truck           },
-  { label: 'Labelling Line',     page: 'LabellingLine',    icon: Tag             },
-  { label: 'FG Palletizing',     page: 'FGPalletizing',    icon: PackageCheck    },
-  { label: 'Audit Log',          page: 'AuditLogPage',     icon: ScrollText      },
-  { label: 'Master Data',        page: 'MasterData',       icon: Settings        },
+  { label: 'Dashboard',          page: 'Dashboard',         icon: LayoutDashboard },
+  { label: 'Stores Issue',       page: 'StoresIssue',       icon: Store           },
+  { label: 'Recipe Station',     page: 'RecipeStation',     icon: Beaker          },
+  { label: 'Filling Station',    page: 'FillingStation',    icon: Droplets        },
+  { label: 'Chamber Station',    page: 'ChamberStation',    icon: Thermometer     },
+  { label: 'Transfer/Receiving', page: 'TransferReceiving', icon: Truck           },
+  { label: 'Labelling Line',     page: 'LabellingLine',     icon: Tag             },
+  { label: 'FG Palletizing',     page: 'FGPalletizing',     icon: PackageCheck    },
+  { label: 'Pull Lists',         page: 'PullLists',         icon: ListChecks      },
+  { label: 'Alerts',             page: 'AlertsPage',        icon: Bell            },
+  { label: 'Audit Log',          page: 'AuditLogPage',      icon: ScrollText      },
+  { label: 'Master Data',        page: 'MasterData',        icon: Settings        },
 ];
 
 export default function Layout({ children, currentPageName }) {
   const [user, setUser] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const { isEnabled } = useModuleAccess(user);
 
   useEffect(() => {
     base44.auth.me().then(setUser).catch(() => {});
   }, []);
 
   const isDashboard = currentPageName === 'Dashboard';
-  const allowedPages = getAllowedPages(user);
-  const NAV_ITEMS = ALL_NAV_ITEMS.filter(n => allowedPages.includes(n.page));
+  const NAV_ITEMS = ALL_NAV_ITEMS.filter(n => isEnabled(n.page));
   const pageTitle = ALL_NAV_ITEMS.find(n => n.page === currentPageName)?.label || currentPageName?.replace(/([A-Z])/g, ' $1').trim();
 
   return (
     <OfflineProvider>
       <div className="min-h-screen bg-slate-50">
         <style>{`
-          :root {
-            --factory-primary: #0f172a;
-            --factory-accent: #2563eb;
-          }
-          body { 
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            -webkit-font-smoothing: antialiased;
-          }
+          :root { --factory-primary: #0f172a; --factory-accent: #2563eb; }
+          body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; -webkit-font-smoothing: antialiased; }
           * { -webkit-tap-highlight-color: transparent; }
         `}</style>
-
         <OfflineBanner />
-
         {/* Header */}
         <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-200/60">
           <div className="max-w-lg mx-auto flex items-center justify-between px-4 h-14">
@@ -75,18 +70,10 @@ export default function Layout({ children, currentPageName }) {
                 <h1 className="font-semibold text-slate-900 text-base">{pageTitle}</h1>
               )}
             </div>
-
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setMenuOpen(!menuOpen)}
-              className="rounded-lg"
-            >
+            <Button variant="ghost" size="icon" onClick={() => setMenuOpen(!menuOpen)} className="rounded-lg">
               {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </Button>
           </div>
-
-          {/* Dropdown menu */}
           {menuOpen && (
             <div className="absolute top-14 left-0 right-0 bg-white border-b border-slate-200 shadow-lg z-50">
               <div className="max-w-lg mx-auto p-3 space-y-1">
@@ -94,14 +81,8 @@ export default function Layout({ children, currentPageName }) {
                   const Icon = item.icon;
                   const isActive = currentPageName === item.page;
                   return (
-                    <Link
-                      key={item.page}
-                      to={createPageUrl(item.page)}
-                      onClick={() => setMenuOpen(false)}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                        isActive ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'
-                      }`}
-                    >
+                    <Link key={item.page} to={createPageUrl(item.page)} onClick={() => setMenuOpen(false)}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'}`}>
                       <Icon className="w-5 h-5" />
                       <span className="font-medium text-sm">{item.label}</span>
                     </Link>
@@ -113,10 +94,8 @@ export default function Layout({ children, currentPageName }) {
                       {user.full_name || user.email}
                       {user.role && <span className="ml-1 uppercase">· {user.role}</span>}
                     </div>
-                    <button
-                      onClick={() => base44.auth.logout()}
-                      className="flex items-center gap-3 px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 w-full transition-all"
-                    >
+                    <button onClick={() => base44.auth.logout()}
+                      className="flex items-center gap-3 px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 w-full transition-all">
                       <LogOut className="w-5 h-5" />
                       <span className="font-medium text-sm">Sign Out</span>
                     </button>
@@ -126,11 +105,7 @@ export default function Layout({ children, currentPageName }) {
             </div>
           )}
         </header>
-
-        {/* Content */}
-        <main className="max-w-lg mx-auto px-4 py-5 pb-24">
-          {children}
-        </main>
+        <main className="max-w-lg mx-auto px-4 py-5 pb-24">{children}</main>
       </div>
     </OfflineProvider>
   );
