@@ -83,6 +83,23 @@ export default function Dashboard() {
       </div>
 
       <LiveCounters crates={stats.crates} pallets={stats.pallets} batches={stats.batches} jobs={stats.jobs} />
+
+      {/* WIP counters */}
+      <div className="grid grid-cols-2 gap-2">
+        {[
+          { label: 'Filling Out', value: wipCounters.filling, color: 'bg-blue-50 text-blue-800 border-blue-200' },
+          { label: 'In Chamber', value: wipCounters.chamber, color: 'bg-orange-50 text-orange-800 border-orange-200' },
+          { label: 'In Transit', value: wipCounters.transit, color: 'bg-teal-50 text-teal-800 border-teal-200' },
+          { label: 'Line 1 Crates', value: wipCounters.line1, color: 'bg-violet-50 text-violet-800 border-violet-200' },
+          { label: 'Line 2 Crates', value: wipCounters.line2, color: 'bg-pink-50 text-pink-800 border-pink-200' },
+        ].map(c => (
+          <div key={c.label} className={`rounded-2xl border p-3 ${c.color}`}>
+            <p className="text-2xl font-bold">{c.value}</p>
+            <p className="text-xs font-semibold opacity-70 mt-0.5">{c.label}</p>
+          </div>
+        ))}
+      </div>
+
       <LocationHeatmap cratesByLocation={cratesByLocation} />
 
       <div>
