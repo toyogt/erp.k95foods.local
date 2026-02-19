@@ -307,11 +307,16 @@ export default function FillingStation() {
       </div>
 
       {activeBatch ? (
-        <div className="rounded-2xl bg-emerald-50 border border-emerald-200 p-4 space-y-1">
+        <div className="rounded-2xl bg-emerald-50 border border-emerald-200 p-4 space-y-2">
           <p className="text-xs font-bold text-emerald-600 uppercase tracking-widest">Active Batch</p>
           <p className="text-2xl font-black text-emerald-900">{activeBatch.batch_id}</p>
           <p className="text-sm text-emerald-700">{activeBatch.product_code} · {activeBatch.bottle_type}</p>
           {bottleType && <p className="text-xs text-emerald-600">{bottleType.bottles_per_crate} bottles/crate</p>}
+          <div className="flex gap-3 pt-1">
+            <div className="text-center"><p className="text-lg font-black text-emerald-900">{activeBatch.created_crates || 0}</p><p className="text-xs text-emerald-600">Created</p></div>
+            <div className="text-center"><p className="text-lg font-black text-emerald-900">{activeBatch.palletized_crates || 0}</p><p className="text-xs text-emerald-600">Palletized</p></div>
+            {activeBatch.expected_crates ? <div className="text-center"><p className="text-lg font-black text-slate-500">{activeBatch.expected_crates}</p><p className="text-xs text-slate-400">Expected</p></div> : null}
+          </div>
         </div>
       ) : (
         <div className="rounded-2xl bg-red-50 border border-red-200 p-4 flex items-start gap-3">
