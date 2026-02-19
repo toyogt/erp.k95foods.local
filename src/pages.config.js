@@ -57,6 +57,9 @@ import MasterData from './pages/MasterData';
 import RecipeStation from './pages/RecipeStation';
 import StoresIssue from './pages/StoresIssue';
 import TransferReceiving from './pages/TransferReceiving';
+import AlertsPage from './pages/AlertsPage';
+import PullLists from './pages/PullLists';
+import CustomizeDashboard from './pages/CustomizeDashboard';
 import __Layout from './Layout.jsx';
 
 
@@ -71,6 +74,9 @@ export const PAGES = {
     "RecipeStation": RecipeStation,
     "StoresIssue": StoresIssue,
     "TransferReceiving": TransferReceiving,
+    "AlertsPage": AlertsPage,
+    "PullLists": PullLists,
+    "CustomizeDashboard": CustomizeDashboard,
 }
 
 export const pagesConfig = {
