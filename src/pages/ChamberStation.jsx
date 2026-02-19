@@ -67,6 +67,17 @@ export default function ChamberStation() {
       if (!pallet) { setResultMsg({ ok: false, text: `Pallet ${palletId} not found` }); setLoading(false); setScanInput(''); return; }
 
       if (mode === 'in') {
+        // Block if already IN_CHAMBER
+        if (pallet.status === 'IN_CHAMBER') {
+          setResultMsg({ ok: false, text: `Pallet ${palletId} is already IN CHAMBER. Remove it first.` });
+          setLoading(false); setScanInput(''); return;
+        }
+        // Block if in a state that means it hasn't been emptied (post-chamber onwards)
+        const blockIn = ['POST_CHAMBER', 'IN_TRANSIT', 'RECEIVED', 'STORED', 'CLOSED'];
+        if (blockIn.includes(pallet.status)) {
+          setResultMsg({ ok: false, text: `Pallet ${palletId} status is "${pallet.status}" — it must be emptied and reset before chambering again.` });
+          setLoading(false); setScanInput(''); return;
+        }
         await movePalletWithCrates({
           palletDbId: pallet.id,
           palletId,
@@ -79,6 +90,11 @@ export default function ChamberStation() {
         setResultMsg({ ok: true, text: `Pallet ${palletId} moved INTO chamber` });
         setPalletsInChamber(prev => [...prev.filter(p => p.pallet_id !== palletId), { ...pallet, status: 'IN_CHAMBER', current_location: LOC_CHAMBER_IN }]);
       } else {
+        // Block if not actually in chamber
+        if (pallet.status !== 'IN_CHAMBER') {
+          setResultMsg({ ok: false, text: `Pallet ${palletId} is not IN CHAMBER (status: "${pallet.status}"). Cannot move out.` });
+          setLoading(false); setScanInput(''); return;
+        }
         await movePalletWithCrates({
           palletDbId: pallet.id,
           palletId,
