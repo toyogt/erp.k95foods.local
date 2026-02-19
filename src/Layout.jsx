@@ -33,7 +33,9 @@ export default function Layout({ children, currentPageName }) {
   }, []);
 
   const isDashboard = currentPageName === 'Dashboard';
-  const pageTitle = NAV_ITEMS.find(n => n.page === currentPageName)?.label || currentPageName?.replace(/([A-Z])/g, ' $1').trim();
+  const allowedPages = getAllowedPages(user);
+  const NAV_ITEMS = ALL_NAV_ITEMS.filter(n => allowedPages.includes(n.page));
+  const pageTitle = ALL_NAV_ITEMS.find(n => n.page === currentPageName)?.label || currentPageName?.replace(/([A-Z])/g, ' $1').trim();
 
   return (
     <OfflineProvider>
