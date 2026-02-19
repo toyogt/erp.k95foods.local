@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
-import { ScanLine, CheckCircle2, Loader2, AlertCircle, RefreshCw, ShieldAlert } from 'lucide-react';
+import { ScanLine, CheckCircle2, Loader2, AlertCircle, RefreshCw, ShieldAlert, Lock } from 'lucide-react';
 import { saveCrate, savePallet, linkCratesToPallet, logMovement } from '@/components/wip/wipHelpers';
 import { pendingCount } from '@/components/wip/offlineQueue';
 import { logAudit } from '@/components/AuditLogger';
+import { raiseAlert } from '@/components/alerts/alertHelpers';
 
 const LOC_FILLING = 'WIP-FILLING-OUT';
 
@@ -34,6 +35,12 @@ export default function FillingStation() {
   const [productCodeInput, setProductCodeInput] = useState('');
   const [changeReason, setChangeReason] = useState('');
   const [bottleTypes, setBottleTypes] = useState([]);
+  // Close batch enforcement
+  const [closeBlockMsg, setCloseBlockMsg] = useState('');
+  const [showCloseOverride, setShowCloseOverride] = useState(false);
+  const [closeOverridePIN, setCloseOverridePIN] = useState('');
+  const [closeOverrideReason, setCloseOverrideReason] = useState('');
+  const SUPERVISOR_PIN = '1234'; // In prod, store in AppSetting
 
   const crateRef = useRef(null);
 
