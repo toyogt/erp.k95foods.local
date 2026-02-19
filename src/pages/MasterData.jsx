@@ -4,7 +4,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import BottleTypeManager from '@/components/master/BottleTypeManager';
 import LocationManager from '@/components/master/LocationManager';
 import MachineManager from '@/components/master/MachineManager';
-import AppSettingManager from '@/components/master/AppSettingManager';
 import { Loader2 } from 'lucide-react';
 
 export default function MasterData() {
@@ -27,16 +26,26 @@ export default function MasterData() {
       </div>
 
       <Tabs defaultValue="bottles" className="w-full">
-        <TabsList className="w-full grid grid-cols-4 h-12 rounded-xl bg-slate-100 p-1">
-          <TabsTrigger value="bottles" className="rounded-lg text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm">Bottles</TabsTrigger>
-          <TabsTrigger value="locations" className="rounded-lg text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm">Locations</TabsTrigger>
-          <TabsTrigger value="machines" className="rounded-lg text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm">Machines</TabsTrigger>
-          <TabsTrigger value="settings" className="rounded-lg text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm">Settings</TabsTrigger>
+        <TabsList className="w-full grid grid-cols-3 h-12 rounded-xl bg-slate-100 p-1">
+          <TabsTrigger value="bottles" className="rounded-lg text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm">
+            Bottles
+          </TabsTrigger>
+          <TabsTrigger value="locations" className="rounded-lg text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm">
+            Locations
+          </TabsTrigger>
+          <TabsTrigger value="machines" className="rounded-lg text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm">
+            Machines
+          </TabsTrigger>
         </TabsList>
-        <TabsContent value="bottles" className="mt-4"><BottleTypeManager user={user} /></TabsContent>
-        <TabsContent value="locations" className="mt-4"><LocationManager user={user} /></TabsContent>
-        <TabsContent value="machines" className="mt-4"><MachineManager user={user} /></TabsContent>
-        <TabsContent value="settings" className="mt-4"><AppSettingManager user={user} /></TabsContent>
+        <TabsContent value="bottles" className="mt-4">
+          <BottleTypeManager user={user} />
+        </TabsContent>
+        <TabsContent value="locations" className="mt-4">
+          <LocationManager user={user} />
+        </TabsContent>
+        <TabsContent value="machines" className="mt-4">
+          <MachineManager user={user} />
+        </TabsContent>
       </Tabs>
     </div>
   );
