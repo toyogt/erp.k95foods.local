@@ -218,14 +218,47 @@ export default function FillingStation() {
 
   async function handleCloseBatch() {
     if (!activeBatch) return;
+    setCloseBlockMsg('');
+    // Enforce close policy
+    const policy = activeBatch.close_policy || 'REQUIRE_PALLETIZED';
+    if (policy === 'REQUIRE_PALLETIZED') {
+      const created = activeBatch.created_crates || 0;
+      const palletized = activeBatch.palletized_crates || 0;
+      if (created > palletized) {
+        setCloseBlockMsg(`Cannot close: ${created - palletized} crate(s) not yet palletized.`);
+        setShowCloseOverride(true);
+        return;
+      }
+    }
+    await doCloseBatch(null, null);
+  }
+
+  async function doCloseBatch(overridePIN, overrideReason) {
+    if (overridePIN !== null) {
+      if (overridePIN !== SUPERVISOR_PIN) { setCloseBlockMsg('Incorrect PIN. Close override denied.'); return; }
+      if (!overrideReason?.trim()) { setCloseBlockMsg('Override reason is required.'); return; }
+    }
     setLoading(true);
-    await base44.entities.MachineActiveBatch.update(activeBatch.id, { status: 'CLOSED', closed_by: user?.email, closed_at: new Date().toISOString() });
-    await logAudit({ action: `BatchClosed on ${machine.machine_id}`, entity_type: 'MachineActiveBatch', entity_id: machine.machine_id, user });
+    const now = new Date().toISOString();
+    const updateData = { status: 'CLOSED', closed_by: user?.email, closed_at: now };
+    if (overrideReason) updateData.close_override_reason = overrideReason;
+    await base44.entities.MachineActiveBatch.update(activeBatch.id, updateData);
+    const logAction = overrideReason
+      ? `BatchClosed (OVERRIDE) on ${machine.machine_id}: ${overrideReason}`
+      : `BatchClosed on ${machine.machine_id}`;
+    await logAudit({ action: logAction, entity_type: 'MachineActiveBatch', entity_id: machine.machine_id, user, details: { batch_id: activeBatch.batch_id, overrideReason } });
+    if (overrideReason) {
+      await raiseAlert({ severity: 'WARN', station_type: 'FILLING', reference_type: 'MachineActiveBatch', reference_id: activeBatch.batch_id, message: `Batch close override on ${machine.machine_id}: ${overrideReason}` });
+    }
     setActiveBatch(null);
     setBottleType(null);
     setActiveBatchError('Batch closed. Assign a new batch to continue.');
     setStep('active');
     setShowSupervisorPanel(false);
+    setShowCloseOverride(false);
+    setCloseOverridePIN('');
+    setCloseOverrideReason('');
+    setCloseBlockMsg('');
     setLoading(false);
   }
 
