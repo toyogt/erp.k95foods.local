@@ -47,30 +47,30 @@
  *
  * The mainPage value must match a key in the PAGES object exactly.
  */
-import Dashboard from './pages/Dashboard';
 import AuditLogPage from './pages/AuditLogPage';
-import MasterData from './pages/MasterData';
-import StoresIssue from './pages/StoresIssue';
-import RecipeStation from './pages/RecipeStation';
-import FillingStation from './pages/FillingStation';
 import ChamberStation from './pages/ChamberStation';
-import TransferReceiving from './pages/TransferReceiving';
-import LabellingLine from './pages/LabellingLine';
+import Dashboard from './pages/Dashboard';
 import FGPalletizing from './pages/FGPalletizing';
+import FillingStation from './pages/FillingStation';
+import LabellingLine from './pages/LabellingLine';
+import MasterData from './pages/MasterData';
+import RecipeStation from './pages/RecipeStation';
+import StoresIssue from './pages/StoresIssue';
+import TransferReceiving from './pages/TransferReceiving';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
-    "Dashboard": Dashboard,
     "AuditLogPage": AuditLogPage,
-    "MasterData": MasterData,
-    "StoresIssue": StoresIssue,
-    "RecipeStation": RecipeStation,
-    "FillingStation": FillingStation,
     "ChamberStation": ChamberStation,
-    "TransferReceiving": TransferReceiving,
-    "LabellingLine": LabellingLine,
+    "Dashboard": Dashboard,
     "FGPalletizing": FGPalletizing,
+    "FillingStation": FillingStation,
+    "LabellingLine": LabellingLine,
+    "MasterData": MasterData,
+    "RecipeStation": RecipeStation,
+    "StoresIssue": StoresIssue,
+    "TransferReceiving": TransferReceiving,
 }
 
 export const pagesConfig = {
