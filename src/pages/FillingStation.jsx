@@ -136,6 +136,12 @@ export default function FillingStation() {
     await saveCrate(crateData, user);
     await logMovement({ entityType: 'CRATE', entityId: val.trim(), from: '', to: LOC_FILLING, machineId: machine.machine_id, user });
     await logAudit({ action: 'CrateScanned', entity_type: 'Crate', entity_id: val.trim(), user, station: machine.machine_id, details: { batch_id: activeBatch.batch_id, product_code: activeBatch.product_code } });
+    // Increment created_crates counter on active batch
+    if (activeBatch.id) {
+      const newCount = (activeBatch.created_crates || 0) + 1;
+      await base44.entities.MachineActiveBatch.update(activeBatch.id, { created_crates: newCount }).catch(() => {});
+      setActiveBatch(prev => ({ ...prev, created_crates: newCount }));
+    }
 
     const newCurrent = [...cratesOnCurrentPallet, val.trim()];
     const newSession = [...sessionCrates, val.trim()];
