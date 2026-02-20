@@ -47,36 +47,36 @@
  *
  * The mainPage value must match a key in the PAGES object exactly.
  */
+import AlertsPage from './pages/AlertsPage';
 import AuditLogPage from './pages/AuditLogPage';
 import ChamberStation from './pages/ChamberStation';
+import CustomizeDashboard from './pages/CustomizeDashboard';
 import Dashboard from './pages/Dashboard';
 import FGPalletizing from './pages/FGPalletizing';
 import FillingStation from './pages/FillingStation';
 import LabellingLine from './pages/LabellingLine';
 import MasterData from './pages/MasterData';
+import PullLists from './pages/PullLists';
 import RecipeStation from './pages/RecipeStation';
 import StoresIssue from './pages/StoresIssue';
 import TransferReceiving from './pages/TransferReceiving';
-import AlertsPage from './pages/AlertsPage';
-import PullLists from './pages/PullLists';
-import CustomizeDashboard from './pages/CustomizeDashboard';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
+    "AlertsPage": AlertsPage,
     "AuditLogPage": AuditLogPage,
     "ChamberStation": ChamberStation,
+    "CustomizeDashboard": CustomizeDashboard,
     "Dashboard": Dashboard,
     "FGPalletizing": FGPalletizing,
     "FillingStation": FillingStation,
     "LabellingLine": LabellingLine,
     "MasterData": MasterData,
+    "PullLists": PullLists,
     "RecipeStation": RecipeStation,
     "StoresIssue": StoresIssue,
     "TransferReceiving": TransferReceiving,
-    "AlertsPage": AlertsPage,
-    "PullLists": PullLists,
-    "CustomizeDashboard": CustomizeDashboard,
 }
 
 export const pagesConfig = {
