@@ -213,6 +213,8 @@ export default function FillingStation() {
       status: 'OPEN',
       crate_count: cratesOnCurrentPallet.length,
       batch_id: activeBatch.batch_id,
+      product_code: activeBatch.product_code,
+      bottle_type: activeBatch.bottle_type,
     };
     await savePallet(palletData, user);
     await linkCratesToPallet(palletScan.trim(), cratesOnCurrentPallet, user);
