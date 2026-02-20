@@ -133,6 +133,33 @@ export default function LabellingLine() {
     if (session.id && !session.id.startsWith('_local_')) {
       try { await base44.entities.LineSession.update(session.id, { bottles_counted: newBottles, crates_used: newCrates, cases_counted: newCases, current_crate_id: crate.crate_id, state: newState, reason }); } catch { /* offline */ }
     }
+    // Mark crate as CONSUMED and check if pallet becomes empty
+    try {
+      const crates = await base44.entities.Crate.filter({ crate_id: crate.crate_id });
+      if (crates.length > 0) {
+        await base44.entities.Crate.update(crates[0].id, {
+          status: 'CONSUMED',
+          consumed_at: new Date().toISOString(),
+          consumed_by: user?.email || '',
+        });
+      }
+      // Find pallet this crate belongs to and check if all its crates are consumed
+      const links = await base44.entities.PalletCrateLink.filter({ crate_id: crate.crate_id });
+      for (const link of links) {
+        const allLinks = await base44.entities.PalletCrateLink.filter({ pallet_id: link.pallet_id });
+        const crateStatuses = await Promise.all(allLinks.map(async l => {
+          const cs = await base44.entities.Crate.filter({ crate_id: l.crate_id });
+          return cs[0]?.status;
+        }));
+        const allConsumed = crateStatuses.every(s => s === 'CONSUMED' || s === 'EMPTY_RETURNED');
+        if (allConsumed) {
+          const pallets = await base44.entities.Pallet.filter({ pallet_id: link.pallet_id });
+          if (pallets.length > 0) {
+            await base44.entities.Pallet.update(pallets[0].id, { status: 'EMPTY' });
+          }
+        }
+      }
+    } catch { /* non-blocking */ }
   }
 
   async function handleCrateError({ reason, crate_id }) {
