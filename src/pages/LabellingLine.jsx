@@ -27,6 +27,7 @@ export default function LabellingLine() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [edgeStatus, setEdgeStatus] = useState(null);
+  const [hardwareEnabled, setHardwareEnabled] = useState(false);
   const [bottleTypeMismatchHardStop, setBottleTypeMismatchHardStop] = useState(false);
   // Supervisor restart checklist gate
   const [showRestartChecklist, setShowRestartChecklist] = useState(false);
