@@ -482,21 +482,55 @@ export default function FillingStation() {
         </div>
       </div>
 
-      <div className="relative">
-        <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-        <input
-          ref={crateRef}
-          className="w-full pl-10 h-14 text-lg rounded-xl border-2 border-blue-400 focus:border-blue-600 focus:outline-none font-mono"
-          placeholder="Scan crate barcode…"
-          value={crateScan}
-          onChange={e => setCrateScan(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') { handleCrateScan(crateScan); } }}
-          autoFocus
-        />
-      </div>
+      {/* Step 1: Crate ID */}
+      {!pendingCrateId && (
+        <div className="space-y-2">
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Step 1 — Scan Crate ID</p>
+          <div className="relative">
+            <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+            <input
+              ref={crateRef}
+              className="w-full pl-10 h-14 text-lg rounded-xl border-2 border-blue-400 focus:border-blue-600 focus:outline-none font-mono"
+              placeholder="Scan crate barcode…"
+              value={crateIdScan}
+              onChange={e => setCrateIdScan(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') handleCrateIdScan(crateIdScan); }}
+              autoFocus
+              disabled={loading}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Step 2: Label serial */}
+      {pendingCrateId && (
+        <div className="space-y-2">
+          <div className="rounded-xl bg-blue-50 border border-blue-200 p-3 text-center">
+            <p className="text-xs text-blue-500 font-bold uppercase">Crate ID scanned</p>
+            <p className="text-lg font-black text-blue-900 font-mono">{pendingCrateId}</p>
+          </div>
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Step 2 — Scan Product Label Serial</p>
+          <div className="relative">
+            <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-amber-400" />
+            <input
+              id="label-serial-input"
+              className="w-full pl-10 h-14 text-lg rounded-xl border-2 border-amber-400 focus:border-amber-600 focus:outline-none font-mono"
+              placeholder="Scan label serial barcode…"
+              value={labelSerialScan}
+              onChange={e => setLabelSerialScan(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') handleLabelSerialScan(labelSerialScan); }}
+              autoFocus
+              disabled={loading}
+            />
+          </div>
+          <button className="text-xs text-slate-400 underline" onClick={() => { setPendingCrateId(null); setCrateIdScan(''); setLabelSerialScan(''); setMsg(''); setTimeout(() => crateRef.current?.focus(), 100); }}>
+            Cancel — re-scan crate ID
+          </button>
+        </div>
+      )}
 
       {loading && <div className="flex items-center gap-2 text-slate-500"><Loader2 className="w-4 h-4 animate-spin" /><span className="text-sm">Saving…</span></div>}
-      {msg && <p className="text-sm text-emerald-600 font-medium">{msg}</p>}
+      {msg && <p className={`text-sm font-medium ${msg.startsWith('⛔') ? 'text-red-600' : msg.startsWith('⚠') ? 'text-amber-600' : 'text-emerald-600'}`}>{msg}</p>}
 
       <div className="flex gap-2">
         <p className="text-xs text-slate-400">Session: {sessionCrates.length} crates total</p>
