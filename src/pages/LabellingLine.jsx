@@ -40,6 +40,9 @@ export default function LabellingLine() {
     base44.entities.AppSetting.filter({ key: 'BOTTLE_TYPE_MISMATCH_HARDSTOP' })
       .then(r => { if (r[0]?.value === 'true') setBottleTypeMismatchHardStop(true); })
       .catch(() => {});
+    base44.entities.AppSetting.filter({ key: 'HARDWARE_ENABLED' })
+      .then(r => { setHardwareEnabled(r[0]?.value === 'true'); })
+      .catch(() => {});
   }, []);
 
   async function handleMachineConfirmed(m) {
