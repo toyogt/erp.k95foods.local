@@ -109,6 +109,7 @@ export default function FillingStation() {
       setActiveBatch(null);
       setActiveBatchError('Could not check active batch (offline).');
     }
+    setStep('active');
   }
 
   function startScanning() {
