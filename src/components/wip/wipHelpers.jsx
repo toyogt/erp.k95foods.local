@@ -20,24 +20,33 @@ export async function saveCrate(data, user) {
   }
 }
 
-/** Create or update a pallet, queue if offline */
+/** Create or update a pallet, queue if offline.
+ *  Enforces:
+ *   - No reuse while still active (non-OPEN/EMPTY status)
+ *   - If existing pallet has product/batch/bottle locked, new data must match
+ */
 export async function savePallet(data, user) {
   try {
     const existing = await base44.entities.Pallet.filter({ pallet_id: data.pallet_id });
     if (existing.length > 0) {
       const pallet = existing[0];
-      // Block reuse: pallet must be OPEN (i.e. not currently in use or in chamber/transit)
-      const blockedStatuses = ['IN_CHAMBER', 'POST_CHAMBER', 'IN_TRANSIT', 'CLOSED'];
+      const blockedStatuses = ['IN_CHAMBER', 'POST_CHAMBER', 'IN_TRANSIT', 'RECEIVED', 'AT_ZONE', 'CLOSED'];
       if (blockedStatuses.includes(pallet.status)) {
-        throw new Error(`Pallet ${data.pallet_id} is currently "${pallet.status}" and cannot be reused until it is emptied and reset.`);
+        throw new Error(`Pallet ${data.pallet_id} is currently "${pallet.status}" and cannot be reused until it is emptied.`);
+      }
+      // Enforce type lock: if pallet already has batch/product, new data must match
+      if (pallet.batch_id && data.batch_id && pallet.batch_id !== data.batch_id) {
+        throw new Error(`Pallet ${data.pallet_id} is locked to batch ${pallet.batch_id}. Cannot assign batch ${data.batch_id}.`);
+      }
+      if (pallet.product_code && data.product_code && pallet.product_code !== data.product_code) {
+        throw new Error(`Pallet ${data.pallet_id} is locked to product ${pallet.product_code}. Cannot assign ${data.product_code}.`);
       }
       return await base44.entities.Pallet.update(pallet.id, data);
     } else {
       return await base44.entities.Pallet.create(data);
     }
   } catch (e) {
-    // Re-throw blocking errors so UI can show them
-    if (e.message?.includes('cannot be reused')) throw e;
+    if (e.message?.includes('cannot be reused') || e.message?.includes('locked to')) throw e;
     enqueue({ type: 'create', entity: 'Pallet', data, userEmail: user?.email, userName: user?.full_name, auditAction: 'PalletCreated', auditEntityId: data.pallet_id });
     return { ...data, id: '_offline_' + data.pallet_id };
   }
