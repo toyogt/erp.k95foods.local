@@ -18,7 +18,9 @@ export default function FillingStation() {
   const [activeBatch, setActiveBatch] = useState(null); // MachineActiveBatch record
   const [activeBatchError, setActiveBatchError] = useState('');
   const [bottleType, setBottleType] = useState(null); // BottleType record
-  const [crateScan, setCrateScan] = useState('');
+  const [crateIdScan, setCrateIdScan] = useState('');
+  const [pendingCrateId, setPendingCrateId] = useState(null); // waiting for label serial
+  const [labelSerialScan, setLabelSerialScan] = useState('');
   const [sessionCrates, setSessionCrates] = useState([]);
   const [capacity, setCapacity] = useState(20);
   const [cratesOnCurrentPallet, setCratesOnCurrentPallet] = useState([]);
