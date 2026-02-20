@@ -117,13 +117,55 @@ export default function FillingStation() {
     setTimeout(() => crateRef.current?.focus(), 100);
   }
 
-  async function handleCrateScan(val) {
+  // Step 1: scan crate ID
+  function handleCrateIdScan(val) {
     if (!val.trim()) return;
+    const crateId = val.trim();
+    if (cratesOnCurrentPallet.includes(crateId) || sessionCrates.includes(crateId)) {
+      setMsg('⚠ Crate already scanned this session');
+      setCrateIdScan('');
+      return;
+    }
+    setPendingCrateId(crateId);
+    setCrateIdScan('');
+    setMsg(`Crate ${crateId} — now scan its product label serial`);
+    setTimeout(() => document.getElementById('label-serial-input')?.focus(), 100);
+  }
+
+  // Step 2: scan label serial
+  async function handleLabelSerialScan(val) {
+    if (!val.trim() || !pendingCrateId) return;
     setLoading(true);
+    const serial = val.trim();
+    setLabelSerialScan('');
     setMsg('');
+
+    // Check if serial was ever used
+    const existing = await base44.entities.CrateLabelSerial.filter({ label_serial: serial }).catch(() => []);
+    if (existing.length > 0) {
+      setMsg(`⛔ Label serial ${serial} was already used on crate ${existing[0].crate_id}. BLOCKED.`);
+      setPendingCrateId(null);
+      setLoading(false);
+      setTimeout(() => crateRef.current?.focus(), 100);
+      return;
+    }
+
     const now = new Date().toISOString();
+    const crateId = pendingCrateId;
+
+    // Record the serial
+    await base44.entities.CrateLabelSerial.create({
+      label_serial: serial,
+      crate_id: crateId,
+      product_code: activeBatch.product_code,
+      batch_id: activeBatch.batch_id,
+      filler_machine_id: machine.machine_id,
+      used_time: now,
+      used_by: user?.email || '',
+    }).catch(() => {});
+
     const crateData = {
-      crate_id: val.trim(),
+      crate_id: crateId,
       bottle_type: activeBatch.bottle_type,
       bottle_count: bottleType?.bottles_per_crate || 0,
       batch_id: activeBatch.batch_id,
@@ -132,30 +174,31 @@ export default function FillingStation() {
       filled_time: now,
       current_location: LOC_FILLING,
       status: 'FILLED',
+      crate_label_serial: serial,
       last_scan_time: now,
       last_scanned_by: user?.email || '',
     };
     await saveCrate(crateData, user);
-    await logMovement({ entityType: 'CRATE', entityId: val.trim(), from: '', to: LOC_FILLING, machineId: machine.machine_id, user });
-    await logAudit({ action: 'CrateScanned', entity_type: 'Crate', entity_id: val.trim(), user, station: machine.machine_id, details: { batch_id: activeBatch.batch_id, product_code: activeBatch.product_code } });
-    // Increment created_crates counter on active batch
+    await logMovement({ entityType: 'CRATE', entityId: crateId, from: '', to: LOC_FILLING, machineId: machine.machine_id, user });
+    await logAudit({ action: 'CrateScanned', entity_type: 'Crate', entity_id: crateId, user, station: machine.machine_id, details: { batch_id: activeBatch.batch_id, product_code: activeBatch.product_code, label_serial: serial } });
+
     if (activeBatch.id) {
       const newCount = (activeBatch.created_crates || 0) + 1;
       await base44.entities.MachineActiveBatch.update(activeBatch.id, { created_crates: newCount }).catch(() => {});
       setActiveBatch(prev => ({ ...prev, created_crates: newCount }));
     }
 
-    const newCurrent = [...cratesOnCurrentPallet, val.trim()];
-    const newSession = [...sessionCrates, val.trim()];
+    const newCurrent = [...cratesOnCurrentPallet, crateId];
+    const newSession = [...sessionCrates, crateId];
     setCratesOnCurrentPallet(newCurrent);
     setSessionCrates(newSession);
-    setCrateScan('');
+    setPendingCrateId(null);
     setLoading(false);
 
     if (newCurrent.length >= capacity) {
       setStep('pallet_prompt');
     } else {
-      setMsg(`✓ Crate ${val.trim()} scanned (${newCurrent.length}/${capacity})`);
+      setMsg(`✓ Crate ${crateId} + serial ${serial} saved (${newCurrent.length}/${capacity})`);
       setTimeout(() => crateRef.current?.focus(), 50);
     }
   }
