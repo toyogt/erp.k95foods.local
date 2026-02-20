@@ -53,6 +53,12 @@ export default function CrateScanner({ lineZone, wo, bottleTypeMismatchHardStop,
       }
       const crate = crates[0];
 
+      // 0) Already consumed check
+      if (crate.status === 'CONSUMED') {
+        fireError(crateId, 'ALREADY_CONSUMED', crate, `Crate ${crateId} is already consumed`);
+        return;
+      }
+
       // 1) Zone check
       if (lineZone && crate.current_location !== lineZone) {
         fireError(crateId, 'WRONG_ZONE', crate, `Wrong zone: ${crate.current_location || 'UNKNOWN'} (expected ${lineZone})`);
