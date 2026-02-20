@@ -237,7 +237,7 @@ export default function LabellingLine() {
         <p className="text-sm text-slate-500">WO-driven line run</p>
       </div>
 
-      {edgeStatus === 'offline' && (
+      {hardwareEnabled && edgeStatus === 'offline' && (
         <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-800">
           <AlertTriangle className="w-4 h-4 shrink-0" />
           Edge offline — app-only control active
