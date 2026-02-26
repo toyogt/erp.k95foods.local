@@ -22,6 +22,14 @@ export default function MyRequestsList({ requests, products, user, onRefresh }) 
   const [printData, setPrintData] = useState(null);
   const [confirmReprint, setConfirmReprint] = useState(null); // req to confirm reprint
 
+  async function handlePrintClick(req) {
+    if (req.status === 'PRINTED') {
+      setConfirmReprint(req);
+    } else {
+      await handleGenerate(req);
+    }
+  }
+
   async function handleGenerate(req) {
     setGenerating(req.request_id);
     const product = products.find(p => p.item_code === req.item_code) || {};
