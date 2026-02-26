@@ -159,6 +159,32 @@ export default function MyRequestsList({ requests, products, user, onRefresh }) 
           onClose={() => setPrintData(null)}
         />
       )}
+
+      {/* Reprint warning dialog */}
+      {confirmReprint && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 space-y-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="w-6 h-6 text-amber-500 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold text-slate-800">Labels Already Printed</p>
+                <p className="text-sm text-slate-500 mt-1">
+                  Labels for <strong>{confirmReprint.request_id}</strong> were already printed before. Reprinting will generate new box serials and consume more label stock.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3 justify-end">
+              <Button variant="outline" onClick={() => setConfirmReprint(null)}>Cancel</Button>
+              <Button
+                className="bg-amber-500 hover:bg-amber-600 text-white"
+                onClick={async () => { setConfirmReprint(null); await handleGenerate(confirmReprint); }}
+              >
+                <Printer className="w-4 h-4 mr-1" /> Print Anyway
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
