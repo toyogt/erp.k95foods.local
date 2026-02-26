@@ -22,6 +22,7 @@ function genSessionId() {
 export default function ReceiveQCTab({ user }) {
   const [palletInput, setPalletInput] = useState('');
   const [sessionLoading, setSessionLoading] = useState(false);
+
   const [sessionError, setSessionError] = useState('');
   const [session, setSession] = useState(null);
   const [palletRecord, setPalletRecord] = useState(null);
