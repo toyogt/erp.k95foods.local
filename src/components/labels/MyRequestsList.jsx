@@ -18,8 +18,9 @@ function genSerial(date) {
 }
 
 export default function MyRequestsList({ requests, products, user, onRefresh }) {
-  const [generating, setGenerating] = useState(null); // request_id being processed
-  const [printData, setPrintData] = useState(null); // { labels, product }
+  const [generating, setGenerating] = useState(null);
+  const [printData, setPrintData] = useState(null);
+  const [confirmReprint, setConfirmReprint] = useState(null); // req to confirm reprint
 
   async function handleGenerate(req) {
     setGenerating(req.request_id);
