@@ -63,9 +63,12 @@ export default function MyRequestsList({ requests, products, user, onRefresh }) 
     for (let i = 0; i < req.qty_labels; i++) {
       const serial = genSerial(req.mfg_date ? new Date(req.mfg_date) : new Date());
       const qrPayload = JSON.stringify({ s: serial, r: req.request_id, i: req.item_code, b: req.batch_no });
+      const productObj = products.find(p => p.item_code === req.item_code);
+      const productNameStr = req.product_name || (productObj ? productObj.product_name + (productObj.flavour ? ` · ${productObj.flavour}` : '') : req.item_code);
       const label = await base44.entities.BoxLabel.create({
         box_serial: serial,
         item_code: req.item_code,
+        product_name: productNameStr,
         batch_no: req.batch_no,
         mfg_date: req.mfg_date,
         exp_date: req.exp_date,
@@ -75,7 +78,7 @@ export default function MyRequestsList({ requests, products, user, onRefresh }) 
         printed_by: user?.email || '',
         current_location: 'LABEL-STATION',
       });
-      labels.push({ ...label, qr_payload: qrPayload, mfg_date: req.mfg_date, exp_date: req.exp_date, batch_no: req.batch_no, item_code: req.item_code, box_serial: serial, printed_at: now });
+      labels.push({ ...label, qr_payload: qrPayload, mfg_date: req.mfg_date, exp_date: req.exp_date, batch_no: req.batch_no, item_code: req.item_code, product_name: productNameStr, box_serial: serial, printed_at: now });
 
       if (req.is_trial_pack && req.contents_json?.length) {
         for (const line of req.contents_json) {
