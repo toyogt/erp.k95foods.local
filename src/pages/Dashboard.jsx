@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Store, Beaker, Droplets, Thermometer, Truck, Tag, PackageCheck, ScrollText, Settings,
-         Loader2, WifiOff, ListChecks, Bell, LayoutDashboard } from 'lucide-react';
+import { Store, Beaker, Droplets, Thermometer, Truck, Tag, ScrollText, Settings,
+         Loader2, WifiOff, ListChecks, Bell, LayoutDashboard,
+         Printer, ClipboardCheck, Layers, Warehouse, BarChart3, Upload } from 'lucide-react';
 import LiveCounters from '@/components/dashboard/LiveCounters';
 import LocationHeatmap from '@/components/dashboard/LocationHeatmap';
 import RecentActivity from '@/components/dashboard/RecentActivity';
@@ -13,17 +14,22 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 
 const ALL_STATIONS = [
-  { icon: Store,         title: 'Stores Issue',        subtitle: 'Material issue',      page: 'StoresIssue',       color: 'bg-violet-600' },
-  { icon: Beaker,        title: 'Recipe Station',      subtitle: 'Batch execution',     page: 'RecipeStation',     color: 'bg-rose-600'   },
-  { icon: Droplets,      title: 'Filling Station',     subtitle: 'Crate creation',      page: 'FillingStation',    color: 'bg-blue-600'   },
-  { icon: Thermometer,   title: 'Chamber Station',     subtitle: 'Pallet in/out',       page: 'ChamberStation',    color: 'bg-orange-600' },
-  { icon: Truck,         title: 'Transfer/Receiving',  subtitle: 'Transit & receive',   page: 'TransferReceiving', color: 'bg-teal-600'   },
-  { icon: Tag,           title: 'Labelling Line',      subtitle: 'Line run',            page: 'LabellingLine',     color: 'bg-pink-600'   },
-  { icon: PackageCheck,  title: 'FG Palletizing',      subtitle: 'Case pallets',        page: 'FGPalletizing',     color: 'bg-emerald-600'},
-  { icon: ListChecks,    title: 'Pull Lists',           subtitle: 'Planning board',      page: 'PullLists',         color: 'bg-indigo-600' },
-  { icon: Bell,          title: 'Alerts',              subtitle: 'Exceptions',          page: 'AlertsPage',        color: 'bg-red-600'    },
-  { icon: ScrollText,    title: 'Audit Log',           subtitle: 'All actions',         page: 'AuditLogPage',      color: 'bg-slate-700'  },
-  { icon: Settings,      title: 'Master Data',         subtitle: 'Config & reference',  page: 'MasterData',        color: 'bg-slate-900'  },
+  { icon: Store,          title: 'Stores Issue',       subtitle: 'Material issue',      page: 'StoresIssue',        color: 'bg-violet-600'  },
+  { icon: Beaker,         title: 'Recipe Station',     subtitle: 'Batch execution',     page: 'RecipeStation',      color: 'bg-rose-600'    },
+  { icon: Droplets,       title: 'Filling Station',    subtitle: 'Crate creation',      page: 'FillingStation',     color: 'bg-blue-600'    },
+  { icon: Thermometer,    title: 'Chamber Station',    subtitle: 'Pallet in/out',       page: 'ChamberStation',     color: 'bg-orange-600'  },
+  { icon: Truck,          title: 'Transfer/Receiving', subtitle: 'Transit & receive',   page: 'TransferReceiving',  color: 'bg-teal-600'    },
+  { icon: Tag,            title: 'Labelling Line',     subtitle: 'Line run',            page: 'LabellingLine',      color: 'bg-pink-600'    },
+  { icon: Printer,        title: 'Box Label Print',    subtitle: 'Print & register',    page: 'BoxLabelPrint',      color: 'bg-cyan-600'    },
+  { icon: ClipboardCheck, title: 'Label Approvals',    subtitle: 'Approve requests',    page: 'BoxLabelApprovals',  color: 'bg-amber-600'   },
+  { icon: Layers,         title: 'Pallet Build',       subtitle: 'Scan boxes to pallet',page: 'BoxPalletBuild',     color: 'bg-emerald-600' },
+  { icon: Warehouse,      title: 'Warehouse Ops',      subtitle: 'Receive, QC, dispatch',page: 'WarehouseOps',      color: 'bg-sky-700'     },
+  { icon: BarChart3,      title: 'Box Stock',          subtitle: 'FG stock visibility', page: 'BoxStockDashboard',  color: 'bg-green-700'   },
+  { icon: Upload,         title: 'Opening Stock',      subtitle: 'Legacy import',       page: 'OpeningStockImport', color: 'bg-slate-600'   },
+  { icon: ListChecks,     title: 'Pull Lists',         subtitle: 'Planning board',      page: 'PullLists',          color: 'bg-indigo-600'  },
+  { icon: Bell,           title: 'Alerts',             subtitle: 'Exceptions',          page: 'AlertsPage',         color: 'bg-red-600'     },
+  { icon: ScrollText,     title: 'Audit Log',          subtitle: 'All actions',         page: 'AuditLogPage',       color: 'bg-slate-700'   },
+  { icon: Settings,       title: 'Master Data',        subtitle: 'Config & reference',  page: 'MasterData',         color: 'bg-slate-900'   },
 ];
 
 const STATE_COLOR = {

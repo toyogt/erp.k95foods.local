@@ -60,6 +60,12 @@ import PullLists from './pages/PullLists';
 import RecipeStation from './pages/RecipeStation';
 import StoresIssue from './pages/StoresIssue';
 import TransferReceiving from './pages/TransferReceiving';
+import BoxLabelPrint from './pages/BoxLabelPrint';
+import BoxLabelApprovals from './pages/BoxLabelApprovals';
+import BoxPalletBuild from './pages/BoxPalletBuild';
+import WarehouseOps from './pages/WarehouseOps';
+import BoxStockDashboard from './pages/BoxStockDashboard';
+import OpeningStockImport from './pages/OpeningStockImport';
 import __Layout from './Layout.jsx';
 
 
@@ -77,6 +83,12 @@ export const PAGES = {
     "RecipeStation": RecipeStation,
     "StoresIssue": StoresIssue,
     "TransferReceiving": TransferReceiving,
+    "BoxLabelPrint": BoxLabelPrint,
+    "BoxLabelApprovals": BoxLabelApprovals,
+    "BoxPalletBuild": BoxPalletBuild,
+    "WarehouseOps": WarehouseOps,
+    "BoxStockDashboard": BoxStockDashboard,
+    "OpeningStockImport": OpeningStockImport,
 }
 
 export const pagesConfig = {

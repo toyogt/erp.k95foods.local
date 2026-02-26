@@ -11,13 +11,28 @@ export const ROLES = {
   LabellingReceiver:  'labelling_receiver',
   LabellingOperator:  'line_operator',
   LabellingSupervisor:'labelling_supervisor',
+  // New FG/warehouse roles
+  LabelOperator:      'label_operator',
+  LabelSupervisor:    'label_supervisor',
+  PalletBuilder:      'pallet_builder',
+  WarehouseOps:       'warehouse_ops',
+  // Legacy (kept for backward compat, access removed)
   FGOperator:         'warehouse',
 };
 
 // Pages each role can access
 const ACCESS_MAP = {
-  admin:                ['Dashboard','StoresIssue','RecipeStation','FillingStation','ChamberStation','TransferReceiving','LabellingLine','FGPalletizing','AuditLogPage','MasterData','AlertsPage','PullLists','CustomizeDashboard'],
-  production_manager:   ['Dashboard','AuditLogPage','MasterData','AlertsPage','PullLists','CustomizeDashboard','FillingStation','LabellingLine'],
+  admin: [
+    'Dashboard','StoresIssue','RecipeStation','FillingStation','ChamberStation',
+    'TransferReceiving','LabellingLine','FGPalletizing','AuditLogPage','MasterData',
+    'AlertsPage','PullLists','CustomizeDashboard',
+    'BoxLabelPrint','BoxLabelApprovals','BoxPalletBuild','WarehouseOps','BoxStockDashboard','OpeningStockImport',
+  ],
+  production_manager: [
+    'Dashboard','AuditLogPage','MasterData','AlertsPage','PullLists','CustomizeDashboard',
+    'FillingStation','LabellingLine',
+    'BoxLabelApprovals','BoxStockDashboard',
+  ],
   stores:               ['Dashboard','StoresIssue'],
   recipe_operator:      ['Dashboard','RecipeStation'],
   qa:                   ['Dashboard','RecipeStation','AuditLogPage'],
@@ -26,9 +41,19 @@ const ACCESS_MAP = {
   labelling_receiver:   ['Dashboard','TransferReceiving','PullLists'],
   line_operator:        ['Dashboard','LabellingLine'],
   labelling_supervisor: ['Dashboard','LabellingLine','TransferReceiving','AlertsPage','PullLists'],
-  warehouse:            ['Dashboard','FGPalletizing'],
-  // default platform role
-  user:                 ['Dashboard','StoresIssue','RecipeStation','FillingStation','ChamberStation','TransferReceiving','LabellingLine','FGPalletizing','AuditLogPage','MasterData','AlertsPage','PullLists','CustomizeDashboard'],
+  // Legacy warehouse role – no longer gets FGPalletizing or new pages by default
+  warehouse:            ['Dashboard'],
+  // New roles
+  label_operator:       ['Dashboard','BoxLabelPrint'],
+  label_supervisor:     ['Dashboard','BoxLabelApprovals','AlertsPage'],
+  pallet_builder:       ['Dashboard','BoxPalletBuild'],
+  warehouse_ops:        ['Dashboard','WarehouseOps','BoxStockDashboard'],
+  // Default platform role – broad access (non-admin)
+  user: [
+    'Dashboard','StoresIssue','RecipeStation','FillingStation','ChamberStation',
+    'TransferReceiving','LabellingLine','AuditLogPage','MasterData','AlertsPage','PullLists','CustomizeDashboard',
+    'BoxLabelPrint','BoxLabelApprovals','BoxPalletBuild','WarehouseOps','BoxStockDashboard','OpeningStockImport',
+  ],
 };
 
 export function getRole(user) {

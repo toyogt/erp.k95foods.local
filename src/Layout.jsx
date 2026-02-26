@@ -7,24 +7,29 @@ import useModuleAccess from '@/components/modules/useModuleAccess';
 import {
   LayoutDashboard, ScrollText, Settings, ChevronLeft,
   Factory, LogOut, Menu, X,
-  Store, Beaker, Droplets, Thermometer, Truck, Tag, PackageCheck,
-  ListChecks, Bell
+  Store, Beaker, Droplets, Thermometer, Truck, Tag,
+  ListChecks, Bell, Printer, ClipboardCheck, Layers, Warehouse, BarChart3, Upload
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const ALL_NAV_ITEMS = [
-  { label: 'Dashboard',          page: 'Dashboard',         icon: LayoutDashboard },
-  { label: 'Stores Issue',       page: 'StoresIssue',       icon: Store           },
-  { label: 'Recipe Station',     page: 'RecipeStation',     icon: Beaker          },
-  { label: 'Filling Station',    page: 'FillingStation',    icon: Droplets        },
-  { label: 'Chamber Station',    page: 'ChamberStation',    icon: Thermometer     },
-  { label: 'Transfer/Receiving', page: 'TransferReceiving', icon: Truck           },
-  { label: 'Labelling Line',     page: 'LabellingLine',     icon: Tag             },
-  { label: 'FG Palletizing',     page: 'FGPalletizing',     icon: PackageCheck    },
-  { label: 'Pull Lists',         page: 'PullLists',         icon: ListChecks      },
-  { label: 'Alerts',             page: 'AlertsPage',        icon: Bell            },
-  { label: 'Audit Log',          page: 'AuditLogPage',      icon: ScrollText      },
-  { label: 'Master Data',        page: 'MasterData',        icon: Settings        },
+  { label: 'Dashboard',          page: 'Dashboard',          icon: LayoutDashboard },
+  { label: 'Stores Issue',       page: 'StoresIssue',        icon: Store           },
+  { label: 'Recipe Station',     page: 'RecipeStation',      icon: Beaker          },
+  { label: 'Filling Station',    page: 'FillingStation',     icon: Droplets        },
+  { label: 'Chamber Station',    page: 'ChamberStation',     icon: Thermometer     },
+  { label: 'Transfer/Receiving', page: 'TransferReceiving',  icon: Truck           },
+  { label: 'Labelling Line',     page: 'LabellingLine',      icon: Tag             },
+  { label: 'Box Label Print',    page: 'BoxLabelPrint',      icon: Printer         },
+  { label: 'Label Approvals',    page: 'BoxLabelApprovals',  icon: ClipboardCheck  },
+  { label: 'Pallet Build',       page: 'BoxPalletBuild',     icon: Layers          },
+  { label: 'Warehouse Ops',      page: 'WarehouseOps',       icon: Warehouse       },
+  { label: 'Box Stock',          page: 'BoxStockDashboard',  icon: BarChart3       },
+  { label: 'Opening Stock',      page: 'OpeningStockImport', icon: Upload          },
+  { label: 'Pull Lists',         page: 'PullLists',          icon: ListChecks      },
+  { label: 'Alerts',             page: 'AlertsPage',         icon: Bell            },
+  { label: 'Audit Log',          page: 'AuditLogPage',       icon: ScrollText      },
+  { label: 'Master Data',        page: 'MasterData',         icon: Settings        },
 ];
 
 export default function Layout({ children, currentPageName }) {
@@ -51,7 +56,7 @@ export default function Layout({ children, currentPageName }) {
         <OfflineBanner />
         {/* Header */}
         <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-200/60">
-          <div className="max-w-lg mx-auto flex items-center justify-between px-4 h-14">
+          <div className="max-w-screen-2xl mx-auto flex items-center justify-between px-4 h-14">
             <div className="flex items-center gap-2">
               {!isDashboard && (
                 <Link to={createPageUrl('Dashboard')} className="p-1.5 -ml-1.5 rounded-lg hover:bg-slate-100 transition-colors">
@@ -76,7 +81,7 @@ export default function Layout({ children, currentPageName }) {
           </div>
           {menuOpen && (
             <div className="absolute top-14 left-0 right-0 bg-white border-b border-slate-200 shadow-lg z-50">
-              <div className="max-w-lg mx-auto p-3 space-y-1">
+              <div className="max-w-screen-2xl mx-auto p-3 space-y-1">
                 {NAV_ITEMS.map(item => {
                   const Icon = item.icon;
                   const isActive = currentPageName === item.page;
@@ -105,7 +110,7 @@ export default function Layout({ children, currentPageName }) {
             </div>
           )}
         </header>
-        <main className="max-w-lg mx-auto px-4 py-5 pb-24">{children}</main>
+        <main className="max-w-screen-2xl mx-auto px-4 py-5 pb-24">{children}</main>
       </div>
     </OfflineProvider>
   );
