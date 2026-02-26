@@ -263,6 +263,17 @@ export default function ProductMasterManager() {
               <Input value={form.customer_care_phone} onChange={e => setForm(f => ({ ...f, customer_care_phone: e.target.value }))} className="text-sm" />
             </div>
             <div className="space-y-1">
+              <Label className="text-xs">Is Trial Pack?</Label>
+              <select
+                value={form.is_trial_pack ? 'true' : 'false'}
+                onChange={e => setForm(f => ({ ...f, is_trial_pack: e.target.value === 'true' }))}
+                className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm bg-white"
+              >
+                <option value="false">No</option>
+                <option value="true">Yes — Trial Pack</option>
+              </select>
+            </div>
+            <div className="space-y-1">
               <Label className="text-xs">Active</Label>
               <select
                 value={form.is_active ? 'true' : 'false'}
