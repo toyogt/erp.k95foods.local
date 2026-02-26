@@ -9,6 +9,7 @@ import PackingWOManager from '@/components/master/PackingWOManager';
 import ChecklistTemplateManager from '@/components/master/ChecklistTemplateManager';
 import SyncQueueViewer from '@/components/master/SyncQueueViewer';
 import ModuleAccessManager from '@/components/master/ModuleAccessManager';
+import ProductMasterManager from '@/components/master/ProductMasterManager';
 import { Loader2 } from 'lucide-react';
 
 export default function MasterData() {

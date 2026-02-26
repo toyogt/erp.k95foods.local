@@ -1,0 +1,281 @@
+import { useState, useEffect } from 'react';
+import { base44 } from '@/api/base44Client';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Plus, Pencil, Trash2, Download, Upload, X, Loader2, Search } from 'lucide-react';
+
+const EMPTY_FORM = {
+  item_code: '', brand_name: '', product_name: '', flavour: '',
+  ml_per_bottle: '', bottles_per_box: '', product_barcode: '', mrp_box: '',
+  gross_weight_kg: '', fssai_no: '', manufacturer_name: '', address_1: '',
+  address_2: '', customer_care_email: '', customer_care_phone: '',
+  shelf_life_days: '', is_active: true
+};
+
+const CSV_HEADERS = [
+  'item_code','brand_name','product_name','flavour','ml_per_bottle',
+  'bottles_per_box','product_barcode','mrp_box','gross_weight_kg',
+  'fssai_no','manufacturer_name','address_1','address_2',
+  'customer_care_email','customer_care_phone','shelf_life_days'
+];
+
+export default function ProductMasterManager() {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editItem, setEditItem] = useState(null);
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [saving, setSaving] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState(null);
+
+  const load = async () => {
+    setLoading(true);
+    const data = await base44.entities.ProductMaster.list('-created_date', 500);
+    setProducts(data);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const openAdd = () => { setEditItem(null); setForm(EMPTY_FORM); setDialogOpen(true); };
+  const openEdit = (p) => { setEditItem(p); setForm({ ...EMPTY_FORM, ...p }); setDialogOpen(true); };
+
+  const handleSave = async () => {
+    setSaving(true);
+    const payload = { ...form };
+    ['ml_per_bottle','bottles_per_box','mrp_box','gross_weight_kg','shelf_life_days'].forEach(k => {
+      if (payload[k] !== '') payload[k] = Number(payload[k]);
+      else delete payload[k];
+    });
+    if (editItem) {
+      await base44.entities.ProductMaster.update(editItem.id, payload);
+    } else {
+      await base44.entities.ProductMaster.create(payload);
+    }
+    setSaving(false);
+    setDialogOpen(false);
+    load();
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this product?')) return;
+    await base44.entities.ProductMaster.delete(id);
+    load();
+  };
+
+  const downloadTemplate = () => {
+    const sample = [
+      'PROD001','BrandX','Mango Drink','Mango','200','24','8901234567890',
+      '120.00','5.5','12345678901234','ABC Beverages Pvt Ltd',
+      '123 Industrial Area','Phase 2, Delhi - 110001',
+      'care@abc.com','1800-123-456','365'
+    ];
+    const csv = [CSV_HEADERS.join(','), sample.join(',')].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url;
+    a.download = 'product_master_template.csv'; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleCSVUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    e.target.value = '';
+    setImporting(true);
+    setImportResult(null);
+
+    const text = await file.text();
+    const lines = text.trim().split('\n');
+    const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+
+    let created = 0, errors = [];
+    for (let i = 1; i < lines.length; i++) {
+      const vals = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+      const row = {};
+      headers.forEach((h, idx) => { row[h] = vals[idx] || ''; });
+
+      if (!row.item_code || !row.product_name) {
+        errors.push(`Row ${i + 1}: item_code and product_name are required`);
+        continue;
+      }
+
+      const payload = { ...row, is_active: true };
+      ['ml_per_bottle','bottles_per_box','mrp_box','gross_weight_kg','shelf_life_days'].forEach(k => {
+        if (payload[k] !== '' && !isNaN(payload[k])) payload[k] = Number(payload[k]);
+        else if (payload[k] === '') delete payload[k];
+      });
+
+      await base44.entities.ProductMaster.create(payload);
+      created++;
+    }
+
+    setImportResult({ created, errors });
+    setImporting(false);
+    load();
+  };
+
+  const filtered = products.filter(p =>
+    !search ||
+    p.item_code?.toLowerCase().includes(search.toLowerCase()) ||
+    p.product_name?.toLowerCase().includes(search.toLowerCase()) ||
+    p.brand_name?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div className="space-y-4">
+      {/* Toolbar */}
+      <div className="flex flex-wrap gap-2 items-center justify-between">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-slate-400" />
+          <Input className="pl-8 w-56 text-sm" placeholder="Search products…" value={search} onChange={e => setSearch(e.target.value)} />
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={downloadTemplate} className="gap-1.5 text-xs">
+            <Download className="w-3.5 h-3.5" /> Template
+          </Button>
+          <label>
+            <Button variant="outline" size="sm" className="gap-1.5 text-xs cursor-pointer" asChild>
+              <span>{importing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />} Import CSV</span>
+            </Button>
+            <input type="file" accept=".csv" className="hidden" onChange={handleCSVUpload} disabled={importing} />
+          </label>
+          <Button size="sm" onClick={openAdd} className="gap-1.5 text-xs">
+            <Plus className="w-3.5 h-3.5" /> Add Product
+          </Button>
+        </div>
+      </div>
+
+      {/* Import Result */}
+      {importResult && (
+        <div className={`p-3 rounded-lg text-sm flex justify-between items-start ${importResult.errors.length ? 'bg-yellow-50 border border-yellow-200' : 'bg-green-50 border border-green-200'}`}>
+          <div>
+            <p className="font-medium">{importResult.created} product(s) imported successfully.</p>
+            {importResult.errors.map((e, i) => <p key={i} className="text-red-600 text-xs mt-1">{e}</p>)}
+          </div>
+          <button onClick={() => setImportResult(null)}><X className="w-4 h-4 text-slate-400" /></button>
+        </div>
+      )}
+
+      {/* Table */}
+      {loading ? (
+        <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-12 text-slate-400 text-sm">No products found. Add one or import via CSV.</div>
+      ) : (
+        <div className="overflow-x-auto rounded-xl border border-slate-200">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 text-slate-600 text-xs uppercase tracking-wide">
+              <tr>
+                <th className="px-4 py-3 text-left">Item Code</th>
+                <th className="px-4 py-3 text-left">Brand</th>
+                <th className="px-4 py-3 text-left">Product Name</th>
+                <th className="px-4 py-3 text-left">Flavour</th>
+                <th className="px-4 py-3 text-right">ML</th>
+                <th className="px-4 py-3 text-right">Btl/Box</th>
+                <th className="px-4 py-3 text-right">MRP (Box)</th>
+                <th className="px-4 py-3 text-center">Status</th>
+                <th className="px-4 py-3 text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filtered.map(p => (
+                <tr key={p.id} className="hover:bg-slate-50">
+                  <td className="px-4 py-3 font-mono text-xs font-semibold text-slate-700">{p.item_code}</td>
+                  <td className="px-4 py-3 text-slate-600">{p.brand_name || '—'}</td>
+                  <td className="px-4 py-3 font-medium text-slate-800">{p.product_name}</td>
+                  <td className="px-4 py-3 text-slate-600">{p.flavour || '—'}</td>
+                  <td className="px-4 py-3 text-right text-slate-600">{p.ml_per_bottle || '—'}</td>
+                  <td className="px-4 py-3 text-right text-slate-600">{p.bottles_per_box || '—'}</td>
+                  <td className="px-4 py-3 text-right text-slate-600">₹{p.mrp_box || '—'}</td>
+                  <td className="px-4 py-3 text-center">
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${p.is_active !== false ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
+                      {p.is_active !== false ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <div className="flex justify-center gap-2">
+                      <button onClick={() => openEdit(p)} className="p-1 hover:bg-slate-100 rounded-md text-slate-500 hover:text-slate-800">
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => handleDelete(p.id)} className="p-1 hover:bg-red-50 rounded-md text-slate-400 hover:text-red-600">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Add/Edit Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editItem ? 'Edit Product' : 'Add Product'}</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-4 py-2">
+            {[
+              { key: 'item_code', label: 'Item Code *', type: 'text' },
+              { key: 'product_name', label: 'Product Name *', type: 'text' },
+              { key: 'brand_name', label: 'Brand Name', type: 'text' },
+              { key: 'flavour', label: 'Flavour', type: 'text' },
+              { key: 'ml_per_bottle', label: 'ML per Bottle', type: 'number' },
+              { key: 'bottles_per_box', label: 'Bottles per Box', type: 'number' },
+              { key: 'product_barcode', label: 'Product Barcode', type: 'text' },
+              { key: 'mrp_box', label: 'MRP per Box (₹)', type: 'number' },
+              { key: 'gross_weight_kg', label: 'Gross Weight (kg)', type: 'number' },
+              { key: 'shelf_life_days', label: 'Shelf Life (days)', type: 'number' },
+              { key: 'fssai_no', label: 'FSSAI No', type: 'text' },
+              { key: 'manufacturer_name', label: 'Manufacturer Name', type: 'text' },
+            ].map(({ key, label, type }) => (
+              <div key={key} className="space-y-1">
+                <Label className="text-xs">{label}</Label>
+                <Input type={type} value={form[key]} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} className="text-sm" />
+              </div>
+            ))}
+            <div className="space-y-1 col-span-2">
+              <Label className="text-xs">Address Line 1</Label>
+              <Input value={form.address_1} onChange={e => setForm(f => ({ ...f, address_1: e.target.value }))} className="text-sm" />
+            </div>
+            <div className="space-y-1 col-span-2">
+              <Label className="text-xs">Address Line 2</Label>
+              <Input value={form.address_2} onChange={e => setForm(f => ({ ...f, address_2: e.target.value }))} className="text-sm" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Customer Care Email</Label>
+              <Input value={form.customer_care_email} onChange={e => setForm(f => ({ ...f, customer_care_email: e.target.value }))} className="text-sm" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Customer Care Phone</Label>
+              <Input value={form.customer_care_phone} onChange={e => setForm(f => ({ ...f, customer_care_phone: e.target.value }))} className="text-sm" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Active</Label>
+              <select
+                value={form.is_active ? 'true' : 'false'}
+                onChange={e => setForm(f => ({ ...f, is_active: e.target.value === 'true' }))}
+                className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm bg-white"
+              >
+                <option value="true">Active</option>
+                <option value="false">Inactive</option>
+              </select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSave} disabled={saving || !form.item_code || !form.product_name}>
+              {saving && <Loader2 className="w-4 h-4 animate-spin mr-2" />} Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

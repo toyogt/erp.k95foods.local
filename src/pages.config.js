@@ -49,6 +49,10 @@
  */
 import AlertsPage from './pages/AlertsPage';
 import AuditLogPage from './pages/AuditLogPage';
+import BoxLabelApprovals from './pages/BoxLabelApprovals';
+import BoxLabelPrint from './pages/BoxLabelPrint';
+import BoxPalletBuild from './pages/BoxPalletBuild';
+import BoxStockDashboard from './pages/BoxStockDashboard';
 import ChamberStation from './pages/ChamberStation';
 import CustomizeDashboard from './pages/CustomizeDashboard';
 import Dashboard from './pages/Dashboard';
@@ -56,22 +60,22 @@ import FGPalletizing from './pages/FGPalletizing';
 import FillingStation from './pages/FillingStation';
 import LabellingLine from './pages/LabellingLine';
 import MasterData from './pages/MasterData';
+import OpeningStockImport from './pages/OpeningStockImport';
 import PullLists from './pages/PullLists';
 import RecipeStation from './pages/RecipeStation';
 import StoresIssue from './pages/StoresIssue';
 import TransferReceiving from './pages/TransferReceiving';
-import BoxLabelPrint from './pages/BoxLabelPrint';
-import BoxLabelApprovals from './pages/BoxLabelApprovals';
-import BoxPalletBuild from './pages/BoxPalletBuild';
 import WarehouseOps from './pages/WarehouseOps';
-import BoxStockDashboard from './pages/BoxStockDashboard';
-import OpeningStockImport from './pages/OpeningStockImport';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
     "AlertsPage": AlertsPage,
     "AuditLogPage": AuditLogPage,
+    "BoxLabelApprovals": BoxLabelApprovals,
+    "BoxLabelPrint": BoxLabelPrint,
+    "BoxPalletBuild": BoxPalletBuild,
+    "BoxStockDashboard": BoxStockDashboard,
     "ChamberStation": ChamberStation,
     "CustomizeDashboard": CustomizeDashboard,
     "Dashboard": Dashboard,
@@ -79,16 +83,12 @@ export const PAGES = {
     "FillingStation": FillingStation,
     "LabellingLine": LabellingLine,
     "MasterData": MasterData,
+    "OpeningStockImport": OpeningStockImport,
     "PullLists": PullLists,
     "RecipeStation": RecipeStation,
     "StoresIssue": StoresIssue,
     "TransferReceiving": TransferReceiving,
-    "BoxLabelPrint": BoxLabelPrint,
-    "BoxLabelApprovals": BoxLabelApprovals,
-    "BoxPalletBuild": BoxPalletBuild,
     "WarehouseOps": WarehouseOps,
-    "BoxStockDashboard": BoxStockDashboard,
-    "OpeningStockImport": OpeningStockImport,
 }
 
 export const pagesConfig = {
