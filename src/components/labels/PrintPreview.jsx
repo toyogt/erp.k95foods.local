@@ -22,10 +22,12 @@ export default function PrintPreview({ labels, product, onClose }) {
           width: 4in;
           height: 6in;
           overflow: hidden;
-          page-break-after: always;
-          break-after: page;
           page-break-inside: avoid;
           break-inside: avoid;
+        }
+        .lbl-print-page:not(:last-child) {
+          page-break-after: always;
+          break-after: page;
         }
         .lbl-print-page > div {
           transform: none !important;
