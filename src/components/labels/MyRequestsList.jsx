@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { base44 } from '@/api/base44Client';
-import { Printer, Loader2, RefreshCw } from 'lucide-react';
+import { Printer, Loader2, RefreshCw, AlertTriangle } from 'lucide-react';
 import PrintPreview from './PrintPreview';
 
 const STATUS_STYLE = {
