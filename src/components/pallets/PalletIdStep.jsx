@@ -19,6 +19,29 @@ export default function PalletIdStep({ user, onPalletOpened }) {
 
   useEffect(() => { inputRef.current?.focus(); }, []);
 
+  async function loadBoxesForPallet(palletRec) {
+    // Load links tied to this specific record
+    let links = await base44.entities.BoxPalletLink.filter(
+      { box_pallet_record_id: palletRec.id },
+      '-created_date',
+      500
+    );
+    // Fallback for old records
+    if (!links.length) {
+      links = await base44.entities.BoxPalletLink.filter(
+        { pallet_id: palletRec.pallet_id },
+        '-created_date',
+        500
+      );
+    }
+    const boxes = [];
+    for (const link of links) {
+      const labels = await base44.entities.BoxLabel.filter({ box_serial: link.box_serial }, '-created_date', 1);
+      if (labels.length) boxes.push({ ...labels[0], box_serial: link.box_serial });
+    }
+    return boxes;
+  }
+
   async function handleConfirm() {
     const pid = palletInput.trim().toUpperCase();
     if (!pid) return;
@@ -27,57 +50,53 @@ export default function PalletIdStep({ user, onPalletOpened }) {
     setSealedPallet(null);
     setHandedOverPallet(null);
 
+    // Get most recent record for this pallet_id
     const existing = await base44.entities.BoxPallet.filter({ pallet_id: pid }, '-created_date', 1);
-    let pallet;
 
     if (existing.length > 0) {
-      pallet = existing[0];
+      const pallet = existing[0];
+
+      if (pallet.status === 'OPEN' || pallet.status === 'DRAFT') {
+        // Resume draft — load existing boxes automatically
+        const preloadedBoxes = await loadBoxesForPallet(pallet);
+        setLoading(false);
+        onPalletOpened({ ...pallet, _preloadedBoxes: preloadedBoxes });
+        return;
+      }
+
       if (pallet.status === 'SEALED') {
         setSealedPallet(pallet);
         setLoading(false);
         return;
       }
+
       if (pallet.status === 'HANDED_OVER' || pallet.status === 'RECEIVED') {
         setHandedOverPallet(pallet);
         setLoading(false);
         return;
       }
-    } else {
-      pallet = await base44.entities.BoxPallet.create({
-        pallet_id: pid,
-        status: 'OPEN',
-        created_by_user: user?.email || '',
-        opened_at: new Date().toISOString(),
-      });
     }
+
+    // New pallet
+    const pallet = await base44.entities.BoxPallet.create({
+      pallet_id: pid,
+      status: 'OPEN',
+      created_by_user: user?.email || '',
+      opened_at: new Date().toISOString(),
+    });
     setLoading(false);
     onPalletOpened(pallet);
   }
 
-  // Reopen sealed pallet and load existing boxes
   async function handleReopen() {
     setLoading(true);
-    const updated = await base44.entities.BoxPallet.update(sealedPallet.id, { status: 'OPEN' });
-    const links = await base44.entities.BoxPalletLink.filter(
-      { box_pallet_record_id: sealedPallet.id },
-      '-created_date', 500
-    );
-    // fallback: if no links with record_id (old data), try by pallet_id
-    const linksToUse = links.length > 0
-      ? links
-      : await base44.entities.BoxPalletLink.filter({ pallet_id: sealedPallet.pallet_id }, '-created_date', 500);
-
-    const preloadedBoxes = [];
-    for (const link of linksToUse) {
-      const labels = await base44.entities.BoxLabel.filter({ box_serial: link.box_serial }, '-created_date', 1);
-      if (labels.length) preloadedBoxes.push({ ...labels[0], box_serial: link.box_serial });
-    }
+    await base44.entities.BoxPallet.update(sealedPallet.id, { status: 'OPEN' });
+    const preloadedBoxes = await loadBoxesForPallet(sealedPallet);
     setSealedPallet(null);
     setLoading(false);
-    onPalletOpened({ ...updated, _preloadedBoxes: preloadedBoxes });
+    onPalletOpened({ ...sealedPallet, status: 'OPEN', sealed_at: null, _preloadedBoxes: preloadedBoxes });
   }
 
-  // Start a fresh build on a previously completed pallet (physical pallet reuse)
   async function handleStartNewBuild() {
     setLoading(true);
     const newRecord = await base44.entities.BoxPallet.create({
@@ -139,6 +158,9 @@ export default function PalletIdStep({ user, onPalletOpened }) {
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Open Pallet →'}
           </Button>
         </div>
+        {loading && (
+          <p className="text-xs text-slate-400 text-center animate-pulse">Loading pallet data…</p>
+        )}
       </div>
 
       {/* Recovery: SEALED pallet */}
@@ -154,8 +176,7 @@ export default function PalletIdStep({ user, onPalletOpened }) {
             </div>
           </div>
           <Button onClick={handleReopen} disabled={loading} className="w-full gap-2 bg-amber-600 hover:bg-amber-700">
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
-            {loading ? 'Loading existing boxes…' : 'Re-open & Continue Scanning'}
+            {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Loading existing boxes…</> : <><RotateCcw className="w-4 h-4" /> Re-open & Continue Scanning</>}
           </Button>
           <button onClick={reset} className="w-full text-xs text-slate-400 hover:text-slate-600 pt-1">Cancel</button>
         </div>
@@ -169,14 +190,13 @@ export default function PalletIdStep({ user, onPalletOpened }) {
             <div>
               <p className="font-bold text-blue-800">Pallet Previously Used</p>
               <p className="text-sm text-blue-700 mt-1">
-                <span className="font-mono font-semibold">{handedOverPallet.pallet_id}</span> was handed over. 
-                Do you want to reuse this pallet for a new build?
+                <span className="font-mono font-semibold">{handedOverPallet.pallet_id}</span> was already handed over.
+                Start a new build on this pallet?
               </p>
             </div>
           </div>
           <Button onClick={handleStartNewBuild} disabled={loading} className="w-full gap-2 bg-blue-600 hover:bg-blue-700">
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-            {loading ? 'Creating new build…' : 'Start New Build on This Pallet'}
+            {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Creating new build…</> : <><Plus className="w-4 h-4" /> Start New Build on This Pallet</>}
           </Button>
           <button onClick={reset} className="w-full text-xs text-slate-400 hover:text-slate-600 pt-1">Cancel — scan different pallet</button>
         </div>

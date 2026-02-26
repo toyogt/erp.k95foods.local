@@ -8,7 +8,6 @@ function parseSerial(raw) {
     const obj = JSON.parse(raw);
     if (obj.s) return obj.s;
   } catch (_) {}
-  if (raw.startsWith('BX-')) return raw.trim();
   return raw.trim();
 }
 
@@ -19,6 +18,25 @@ export default function BoxScanStep({ pallet, user, products = [], scannedBoxes,
   const inputRef = useRef(null);
 
   useEffect(() => { inputRef.current?.focus(); }, []);
+
+  // Save draft status whenever boxes are added
+  useEffect(() => {
+    if (scannedBoxes.length > 0 && pallet?.id && pallet.status !== 'SEALED') {
+      // Save product/batch info to pallet for reference
+      const first = scannedBoxes[0];
+      const productInfo = products.find(p => p.item_code === first.item_code);
+      const productName = productInfo
+        ? productInfo.product_name + (productInfo.flavour ? ` · ${productInfo.flavour}` : '')
+        : first.item_code;
+      base44.entities.BoxPallet.update(pallet.id, {
+        status: 'OPEN',
+        item_code: first.item_code,
+        product_name: productName,
+        batch_no: first.batch_no,
+        total_boxes: scannedBoxes.length,
+      }).catch(() => {});
+    }
+  }, [scannedBoxes.length]);
 
   function getProductName(item_code) {
     const p = products.find(p => p.item_code === item_code);
@@ -43,21 +61,26 @@ export default function BoxScanStep({ pallet, user, products = [], scannedBoxes,
     }
     const label = labels[0];
 
-    // Duplicate check on current pallet (local state)
+    // Duplicate check on current pallet (local state) — just skip silently as "already scanned"
     if (scannedBoxes.find(b => b.box_serial === serial)) {
       setLastResult({ ok: false, message: `Already scanned on this pallet: ${serial}` });
       setScanning(false); inputRef.current?.focus(); return;
     }
 
-    // If box is ON_PALLET_REGISTERED — check which pallet it belongs to
+    // If box is ON_PALLET_REGISTERED — check which pallet record it belongs to
     if (label.status === 'ON_PALLET_REGISTERED') {
       const links = await base44.entities.BoxPalletLink.filter({ box_serial: serial }, '-created_date', 1);
-      if (links.length > 0 && links[0].pallet_id === pallet.pallet_id) {
-        // It's on this same pallet (preloaded) — just add to local state
-        setScannedBoxes(prev => [...prev, { ...label, box_serial: serial }]);
-        setLastResult({ ok: true, message: `✓ ${serial} already on this pallet` });
-      } else if (links.length > 0) {
-        setLastResult({ ok: false, message: `❌ Already on pallet "${links[0].pallet_id}" — use a different label` });
+      if (links.length > 0) {
+        // Check if this link belongs to our current pallet record
+        const isOurPallet = links[0].pallet_id === pallet.pallet_id &&
+          (links[0].box_pallet_record_id === pallet.id || !links[0].box_pallet_record_id);
+        if (isOurPallet) {
+          // Already on this pallet in DB — but not in local state yet (resume scenario)
+          // DO NOT add again, just inform
+          setLastResult({ ok: false, message: `Already scanned on this pallet: ${serial}` });
+        } else {
+          setLastResult({ ok: false, message: `❌ Already on pallet "${links[0].pallet_id}" — use a different label` });
+        }
       } else {
         setLastResult({ ok: false, message: `❌ Box is ON_PALLET_REGISTERED but no link found — contact admin` });
       }
@@ -83,16 +106,16 @@ export default function BoxScanStep({ pallet, user, products = [], scannedBoxes,
     if (scannedBoxes.length > 0) {
       const firstBox = scannedBoxes[0];
       if (firstBox.item_code !== label.item_code) {
-        setLastResult({ ok: false, message: `❌ Pallet already has item "${firstBox.item_code}" — cannot mix products on one pallet` });
+        setLastResult({ ok: false, message: `❌ Pallet already has item "${firstBox.item_code}" — cannot mix products` });
         setScanning(false); inputRef.current?.focus(); return;
       }
       if (firstBox.batch_no !== label.batch_no) {
-        setLastResult({ ok: false, message: `❌ Pallet already has batch "${firstBox.batch_no}" — cannot mix batches on one pallet` });
+        setLastResult({ ok: false, message: `❌ Pallet already has batch "${firstBox.batch_no}" — cannot mix batches` });
         setScanning(false); inputRef.current?.focus(); return;
       }
     }
 
-    // Create link with record reference
+    // Create link
     await base44.entities.BoxPalletLink.create({
       pallet_id: pallet.pallet_id,
       box_pallet_record_id: pallet.id,
@@ -119,7 +142,6 @@ export default function BoxScanStep({ pallet, user, products = [], scannedBoxes,
     if (e.key === 'Enter') handleScan();
   }
 
-  // Summary — single product/batch so just count
   const firstBox = scannedBoxes[0];
   const productName = firstBox ? getProductName(firstBox.item_code) : null;
 
@@ -130,6 +152,7 @@ export default function BoxScanStep({ pallet, user, products = [], scannedBoxes,
         <div>
           <span className="text-xs text-emerald-600 font-bold uppercase tracking-wide">Active Pallet</span>
           <p className="font-bold text-emerald-900 text-lg font-mono">{pallet.pallet_id}</p>
+          <p className="text-xs text-emerald-600">Draft auto-saves as you scan</p>
         </div>
         <div className="text-right">
           <span className="text-2xl font-black text-emerald-700">{scannedBoxes.length}</span>
@@ -168,8 +191,8 @@ export default function BoxScanStep({ pallet, user, products = [], scannedBoxes,
 
       {/* Contents summary */}
       {scannedBoxes.length > 0 && firstBox && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-2">
-          <p className="text-xs font-bold text-slate-500 uppercase mb-1">Contents Summary</p>
+        <div className="bg-white rounded-2xl border border-slate-200 p-4">
+          <p className="text-xs font-bold text-slate-500 uppercase mb-2">Contents Summary</p>
           <div className="flex items-center justify-between">
             <div>
               <p className="font-semibold text-slate-800 text-sm">{productName}</p>

@@ -96,13 +96,34 @@ export default function SealAndPrint({ pallet, scannedBoxes, user, onSealed, onH
   }
 
   function printManifest() {
-    const rows = scannedBoxes.slice(0, 20).map(b =>
-      `<tr><td>${b.box_serial}</td><td>${b.item_code || '—'}</td><td>${b.batch_no || '—'}</td><td>${b.exp_date || '—'}</td></tr>`
-    ).join('');
-    const more = scannedBoxes.length > 20 ? `<p style="color:#888;font-size:10pt;">...and ${scannedBoxes.length - 20} more</p>` : '';
-    const summaryRows = summary.map(r =>
-      `<tr><td><b>${r.item_code}</b></td><td>${r.batch_no}</td><td>${r.count}</td></tr>`
-    ).join('');
+    // Build detailed product summary from scanned boxes + product master
+    const productMap = {};
+    for (const b of scannedBoxes) {
+      const key = `${b.item_code}|${b.batch_no}`;
+      if (!productMap[key]) {
+        productMap[key] = {
+          item_code: b.item_code,
+          batch_no: b.batch_no,
+          exp_date: b.exp_date || '—',
+          mfg_date: b.mfg_date || '—',
+          count: 0,
+        };
+      }
+      productMap[key].count++;
+    }
+    const detailRows = Object.values(productMap).map(r => {
+      // Try to get product_name from summary (it holds item_code and batch_no)
+      const summaryRow = summary.find(s => s.item_code === r.item_code && s.batch_no === r.batch_no);
+      const productName = summaryRow?.product_name || r.item_code;
+      return `<tr>
+        <td>${productName}</td>
+        <td>${r.item_code}</td>
+        <td>${r.batch_no}</td>
+        <td>${r.mfg_date}</td>
+        <td>${r.exp_date}</td>
+        <td style="text-align:right;font-weight:bold">${r.count}</td>
+      </tr>`;
+    }).join('');
 
     const html = `<!DOCTYPE html><html><head>
       <style>
@@ -110,22 +131,40 @@ export default function SealAndPrint({ pallet, scannedBoxes, user, onSealed, onH
         body { font-family: Arial, sans-serif; font-size: 11pt; color: #000; }
         h1 { font-size: 18pt; margin-bottom: 4pt; }
         h2 { font-size: 13pt; margin-top: 16pt; margin-bottom: 4pt; }
-        table { width: 100%; border-collapse: collapse; font-size: 9pt; }
-        th { border-bottom: 1.5pt solid #000; text-align: left; padding: 4pt 6pt; font-size: 8pt; text-transform: uppercase; }
-        td { border-bottom: 0.5pt solid #ddd; padding: 3pt 6pt; }
-        .meta { font-size: 9pt; color: #555; margin-bottom: 12pt; }
+        table { width: 100%; border-collapse: collapse; font-size: 9.5pt; }
+        th { border-bottom: 1.5pt solid #000; text-align: left; padding: 5pt 6pt; font-size: 8pt; text-transform: uppercase; background: #f5f5f5; }
+        td { border-bottom: 0.5pt solid #ddd; padding: 5pt 6pt; }
+        .meta { font-size: 9pt; color: #555; margin-bottom: 12pt; line-height: 1.6; }
+        .total-row { font-weight: bold; background: #f9f9f9; border-top: 1pt solid #000; }
         * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       </style>
     </head><body>
       <h1>Pallet Manifest — ${pallet.pallet_id}</h1>
-      <div class="meta">Sealed: ${sealedPallet?.sealed_at ? new Date(sealedPallet.sealed_at).toLocaleString() : '—'} · By: ${sealedPallet?.sealed_by || '—'} · Total boxes: ${scannedBoxes.length}</div>
-      <h2>Contents Summary</h2>
-      <table><thead><tr><th>Item Code</th><th>Batch</th><th>Boxes</th></tr></thead>
-      <tbody>${summaryRows}</tbody></table>
-      <h2>Box Serials (first 20)</h2>
-      <table><thead><tr><th>Box Serial</th><th>Item Code</th><th>Batch</th><th>Exp Date</th></tr></thead>
-      <tbody>${rows}</tbody></table>
-      ${more}
+      <div class="meta">
+        Sealed: ${sealedPallet?.sealed_at ? new Date(sealedPallet.sealed_at).toLocaleString() : '—'}<br/>
+        Sealed by: ${sealedPallet?.sealed_by || '—'}<br/>
+        Total Boxes: <strong>${scannedBoxes.length}</strong>
+      </div>
+      <h2>Product Details</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Product Name</th>
+            <th>Item Code</th>
+            <th>Batch No</th>
+            <th>Mfg Date</th>
+            <th>Exp Date</th>
+            <th style="text-align:right">Qty (Boxes)</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${detailRows}
+          <tr class="total-row">
+            <td colspan="5">TOTAL</td>
+            <td style="text-align:right">${scannedBoxes.length}</td>
+          </tr>
+        </tbody>
+      </table>
     </body></html>`;
 
     const win = window.open('', '_blank', 'width=900,height=700');
