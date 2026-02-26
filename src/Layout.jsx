@@ -104,7 +104,6 @@ export default function Layout({ children, currentPageName }) {
                   <div className="border-t border-slate-100 pt-2 mt-2">
                     <div className="px-4 py-2 text-xs text-slate-400">
                       {user.full_name || user.email}
-                      {user.role && <span className="ml-1 uppercase">· {user.role}</span>}
                     </div>
                     <button onClick={() => base44.auth.logout()}
                       className="flex items-center gap-3 px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 w-full transition-all">
