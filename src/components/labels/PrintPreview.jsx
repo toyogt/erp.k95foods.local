@@ -1,22 +1,18 @@
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import BoxLabelTemplate from './BoxLabelTemplate';
 import { Button } from '@/components/ui/button';
 import { X, Printer } from 'lucide-react';
 
-/**
- * Opens a modal with all N labels rendered and a Print button.
- * Print uses a hidden iframe with injected HTML / CSS so only labels print.
- */
 export default function PrintPreview({ labels, product, onClose }) {
   const previewRef = useRef(null);
 
   function handlePrint() {
     const style = `
       <style>
-        @page { size: 6in 4in; margin: 0; }
+        @page { size: 4in 6in; margin: 0; }
         body { margin: 0; padding: 0; background: #fff; }
         .box-label-page {
-          width: 6in; height: 4in;
+          width: 4in; height: 6in;
           page-break-after: always;
           break-after: page;
         }
@@ -24,7 +20,7 @@ export default function PrintPreview({ labels, product, onClose }) {
       </style>
     `;
     const bodyHTML = previewRef.current?.innerHTML || '';
-    const win = window.open('', '_blank', 'width=900,height=700');
+    const win = window.open('', '_blank', 'width=700,height=900');
     win.document.write(`<!DOCTYPE html><html><head>${style}</head><body>${bodyHTML}</body></html>`);
     win.document.close();
     win.focus();
@@ -37,7 +33,7 @@ export default function PrintPreview({ labels, product, onClose }) {
       <div className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shrink-0">
         <div>
           <p className="font-bold text-slate-900">Print Preview — {labels.length} label{labels.length !== 1 ? 's' : ''}</p>
-          <p className="text-xs text-slate-500">Each label is 6 × 4 inches (Code128 barcode + QR code)</p>
+          <p className="text-xs text-slate-500">Each label is 4 × 6 inches (portrait)</p>
         </div>
         <div className="flex items-center gap-3">
           <Button onClick={handlePrint} className="gap-2 bg-cyan-600 hover:bg-cyan-700">
@@ -52,8 +48,8 @@ export default function PrintPreview({ labels, product, onClose }) {
         <div ref={previewRef}>
           {labels.map((lbl, i) => (
             <div key={i} style={{ marginBottom: '16px', boxShadow: '0 2px 12px rgba(0,0,0,0.15)', background: '#fff', display: 'inline-block' }}>
-              {/* Scale down 6in×4in for screen: ~72px/in → show at 0.9 scale */}
-              <div style={{ transform: 'scale(0.85)', transformOrigin: 'top left', width: '6in', height: '4in' }}>
+              {/* Scale 4in×6in for screen preview */}
+              <div style={{ transform: 'scale(0.85)', transformOrigin: 'top left', width: '4in', height: '6in' }}>
                 <BoxLabelTemplate label={lbl} product={product} />
               </div>
             </div>

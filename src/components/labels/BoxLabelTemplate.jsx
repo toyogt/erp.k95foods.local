@@ -1,7 +1,7 @@
 import QRCode from 'react-qr-code';
 import Barcode from 'react-barcode';
 
-// Rendered at exactly 6in × 4in. Used both on-screen (scaled) and for print.
+// Portrait label: 4in wide × 6in tall
 export default function BoxLabelTemplate({ label, product }) {
   if (!label || !product) return null;
 
@@ -14,14 +14,14 @@ export default function BoxLabelTemplate({ label, product }) {
     <div
       className="box-label-page"
       style={{
-        width: '6in',
-        height: '4in',
+        width: '4in',
+        height: '6in',
         display: 'flex',
         flexDirection: 'column',
         border: '1px solid #000',
         fontFamily: 'Arial, Helvetica, sans-serif',
         fontSize: '10pt',
-        padding: '0.12in',
+        padding: '0.15in',
         boxSizing: 'border-box',
         background: '#fff',
         color: '#000',
@@ -29,95 +29,92 @@ export default function BoxLabelTemplate({ label, product }) {
         pageBreakAfter: 'always',
       }}
     >
-      {/* Top section: brand + product info + QR */}
-      <div style={{ display: 'flex', gap: '0.1in', flex: '0 0 auto', alignItems: 'flex-start' }}>
-        {/* Left: product details */}
+      {/* ── TOP: brand + QR side by side ── */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.1in' }}>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: '8pt', color: '#666', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '2pt' }}>
-            {product.brand_name}
-          </div>
-          <div style={{ fontSize: '18pt', fontWeight: 'bold', lineHeight: 1.15, marginBottom: '2pt' }}>
+          {product.brand_name && (
+            <div style={{ fontSize: '7pt', color: '#777', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '3pt' }}>
+              {product.brand_name}
+            </div>
+          )}
+          <div style={{ fontSize: '16pt', fontWeight: 'bold', lineHeight: 1.15, marginBottom: '3pt' }}>
             {product.product_name}
           </div>
           {product.flavour && (
-            <div style={{ fontSize: '12pt', fontWeight: '600', color: '#333', marginBottom: '4pt' }}>
+            <div style={{ fontSize: '10pt', fontWeight: '600', color: '#444' }}>
               {product.flavour}
             </div>
           )}
-          <div style={{ display: 'flex', gap: '0.3in', marginTop: '4pt' }}>
-            <div>
-              <span style={{ fontSize: '7pt', color: '#888', display: 'block', textTransform: 'uppercase' }}>Mfg Date</span>
-              <span style={{ fontSize: '11pt', fontWeight: 'bold' }}>{mfg}</span>
-            </div>
-            <div>
-              <span style={{ fontSize: '7pt', color: '#888', display: 'block', textTransform: 'uppercase' }}>Exp Date</span>
-              <span style={{ fontSize: '11pt', fontWeight: 'bold', color: '#b91c1c' }}>{exp}</span>
-            </div>
-            <div>
-              <span style={{ fontSize: '7pt', color: '#888', display: 'block', textTransform: 'uppercase' }}>Batch</span>
-              <span style={{ fontSize: '11pt', fontWeight: 'bold' }}>{label.batch_no}</span>
-            </div>
-          </div>
         </div>
-
-        {/* Right: QR code */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2pt', flexShrink: 0 }}>
-          <QRCode value={qrVal} size={80} style={{ height: '0.85in', width: '0.85in' }} />
-          <span style={{ fontSize: '6pt', color: '#555', maxWidth: '0.9in', wordBreak: 'break-all', textAlign: 'center' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
+          <QRCode value={qrVal} size={75} style={{ height: '0.95in', width: '0.95in' }} />
+          <span style={{ fontSize: '5.5pt', color: '#666', maxWidth: '1in', wordBreak: 'break-all', textAlign: 'center', marginTop: '2pt' }}>
             {label.box_serial}
           </span>
         </div>
       </div>
 
-      {/* Divider */}
-      <div style={{ borderTop: '0.5pt solid #ccc', margin: '0.06in 0' }} />
+      {/* ── DIVIDER ── */}
+      <div style={{ borderTop: '0.5pt solid #ccc', margin: '0.1in 0' }} />
 
-      {/* Middle: pack info row */}
-      <div style={{ display: 'flex', gap: '0.3in', flex: '0 0 auto', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', gap: '0.25in' }}>
-          {product.ml_per_bottle && (
-            <Spec label="Vol/Bottle" value={`${product.ml_per_bottle} ml`} />
-          )}
-          {product.bottles_per_box && (
-            <Spec label="Bottles/Box" value={product.bottles_per_box} />
-          )}
-          {product.gross_weight_kg && (
-            <Spec label="Gross Wt" value={`${product.gross_weight_kg} kg`} />
-          )}
-          {product.mrp_box && (
-            <Spec label="MRP (Box)" value={`₹ ${product.mrp_box}`} big />
-          )}
+      {/* ── DATES + BATCH ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.05in' }}>
+        <div>
+          <div style={{ fontSize: '6.5pt', color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Mfg Date</div>
+          <div style={{ fontSize: '12pt', fontWeight: 'bold', marginTop: '1pt' }}>{mfg}</div>
         </div>
-
-        {/* 1D Barcode */}
-        <div style={{ flexShrink: 0 }}>
-          <Barcode
-            value={barcodeVal}
-            format="CODE128"
-            width={1.2}
-            height={40}
-            displayValue={true}
-            fontSize={8}
-            margin={0}
-          />
+        <div>
+          <div style={{ fontSize: '6.5pt', color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Exp Date</div>
+          <div style={{ fontSize: '12pt', fontWeight: 'bold', color: '#b91c1c', marginTop: '1pt' }}>{exp}</div>
+        </div>
+        <div>
+          <div style={{ fontSize: '6.5pt', color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Batch</div>
+          <div style={{ fontSize: '12pt', fontWeight: 'bold', marginTop: '1pt' }}>{label.batch_no}</div>
         </div>
       </div>
 
-      {/* Divider */}
-      <div style={{ borderTop: '0.5pt solid #ccc', margin: '0.06in 0' }} />
+      {/* ── DIVIDER ── */}
+      <div style={{ borderTop: '0.5pt solid #ccc', margin: '0.1in 0' }} />
 
-      {/* Bottom: manufacturer info */}
+      {/* ── SPECS ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.08in 0.15in' }}>
+        {product.ml_per_bottle && <Spec label="Vol / Bottle" value={`${product.ml_per_bottle} ml`} />}
+        {product.bottles_per_box && <Spec label="Bottles / Box" value={product.bottles_per_box} />}
+        {product.gross_weight_kg && <Spec label="Gross Weight" value={`${product.gross_weight_kg} kg`} />}
+        {product.mrp_box && <Spec label="MRP (Box)" value={`₹ ${product.mrp_box}`} big />}
+      </div>
+
+      {/* ── DIVIDER ── */}
+      <div style={{ borderTop: '0.5pt solid #ccc', margin: '0.1in 0' }} />
+
+      {/* ── BARCODE (full width) ── */}
+      <div style={{ display: 'flex', justifyContent: 'center' }}>
+        <Barcode
+          value={barcodeVal}
+          format="CODE128"
+          width={1.6}
+          height={52}
+          displayValue={true}
+          fontSize={9}
+          margin={0}
+        />
+      </div>
+
+      {/* ── DIVIDER ── */}
+      <div style={{ borderTop: '0.5pt solid #ccc', margin: '0.1in 0' }} />
+
+      {/* ── MANUFACTURER INFO ── */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', gap: '0.15in', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.1in' }}>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: '8pt', fontWeight: 'bold', marginBottom: '2pt' }}>
               {product.manufacturer_name}
             </div>
             {product.address_1 && (
-              <div style={{ fontSize: '7pt', color: '#444', lineHeight: 1.4 }}>{product.address_1}</div>
+              <div style={{ fontSize: '7pt', color: '#444', lineHeight: 1.5 }}>{product.address_1}</div>
             )}
             {product.address_2 && (
-              <div style={{ fontSize: '7pt', color: '#444', lineHeight: 1.4 }}>{product.address_2}</div>
+              <div style={{ fontSize: '7pt', color: '#444', lineHeight: 1.5 }}>{product.address_2}</div>
             )}
           </div>
           <div style={{ flexShrink: 0, textAlign: 'right' }}>
@@ -127,19 +124,19 @@ export default function BoxLabelTemplate({ label, product }) {
               </div>
             )}
             {product.customer_care_phone && (
-              <div style={{ fontSize: '7pt', color: '#555', marginTop: '2pt' }}>
+              <div style={{ fontSize: '7pt', color: '#555', marginTop: '3pt' }}>
                 <span style={{ fontWeight: 'bold' }}>Care:</span> {product.customer_care_phone}
               </div>
             )}
             {product.customer_care_email && (
-              <div style={{ fontSize: '7pt', color: '#555' }}>
+              <div style={{ fontSize: '7pt', color: '#555', marginTop: '1pt' }}>
                 {product.customer_care_email}
               </div>
             )}
           </div>
         </div>
 
-        <div style={{ fontSize: '6pt', color: '#aaa', textAlign: 'right', marginTop: '2pt' }}>
+        <div style={{ fontSize: '6pt', color: '#aaa', textAlign: 'right', marginTop: '4pt' }}>
           {label.item_code} · Printed {label.printed_at ? new Date(label.printed_at).toLocaleString() : '—'}
         </div>
       </div>
@@ -151,7 +148,7 @@ function Spec({ label, value, big }) {
   return (
     <div>
       <span style={{ fontSize: '6.5pt', color: '#888', display: 'block', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</span>
-      <span style={{ fontSize: big ? '11pt' : '9pt', fontWeight: big ? 'bold' : '600' }}>{value}</span>
+      <span style={{ fontSize: big ? '12pt' : '10pt', fontWeight: big ? 'bold' : '600' }}>{value}</span>
     </div>
   );
 }
