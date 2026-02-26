@@ -65,18 +65,20 @@ export default function BoxPalletBuild() {
       </div>
 
       {/* Stepper */}
-      <div className="flex items-center gap-1 bg-white rounded-2xl border border-slate-200 px-4 py-3">
+      <div className="flex items-center gap-1 bg-white rounded-2xl border border-slate-200 px-3 py-3 overflow-x-auto">
         {STEPS.map((label, i) => (
-          <div key={i} className="flex items-center gap-1 flex-1 min-w-0">
-            <div className={`flex items-center gap-1.5 flex-1 min-w-0 ${i > step ? 'opacity-40' : ''}`}>
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+          <div key={i} className="flex items-center gap-1 shrink-0">
+            <div className={`flex items-center gap-1.5 ${i > step ? 'opacity-40' : ''}`}>
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
                 i < step ? 'bg-emerald-500 text-white' : i === step ? 'bg-slate-900 text-white' : 'bg-slate-200 text-slate-500'
               }`}>
                 {i < step ? '✓' : i + 1}
               </div>
-              <span className={`text-xs font-semibold truncate ${i === step ? 'text-slate-900' : 'text-slate-500'}`}>{label}</span>
+              {i === step && (
+                <span className="text-sm font-bold text-slate-900 whitespace-nowrap">{label}</span>
+              )}
             </div>
-            {i < STEPS.length - 1 && <ChevronRight className="w-3.5 h-3.5 text-slate-300 shrink-0" />}
+            {i < STEPS.length - 1 && <ChevronRight className="w-3.5 h-3.5 text-slate-300 shrink-0 mx-0.5" />}
           </div>
         ))}
       </div>

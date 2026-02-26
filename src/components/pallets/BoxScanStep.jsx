@@ -42,7 +42,7 @@ export default function BoxScanStep({ pallet, user, scannedBoxes, setScannedBoxe
     const label = labels[0];
 
     // Status check
-    const allowedStatuses = ['PRINTED_UNREGISTERED'];
+    const allowedStatuses = ['PRINTED_UNREGISTERED', 'ON_PALLET_REGISTERED'];
     if (user?.role === 'admin') allowedStatuses.push('IN_STOCK');
     if (!allowedStatuses.includes(label.status)) {
       setLastResult({ ok: false, message: `Cannot add — box is ${label.status}` });
@@ -54,6 +54,15 @@ export default function BoxScanStep({ pallet, user, scannedBoxes, setScannedBoxe
     // Duplicate check on current pallet
     if (scannedBoxes.find(b => b.box_serial === serial)) {
       setLastResult({ ok: false, message: `Already on this pallet: ${serial}` });
+      setScanning(false);
+      inputRef.current?.focus();
+      return;
+    }
+
+    // If box is already ON_PALLET_REGISTERED, skip duplicate link check (it's preloaded)
+    if (label.status === 'ON_PALLET_REGISTERED') {
+      setScannedBoxes(prev => [...prev, { ...label, box_serial: serial }]);
+      setLastResult({ ok: true, message: `✓ ${serial} already on pallet` });
       setScanning(false);
       inputRef.current?.focus();
       return;
@@ -122,7 +131,7 @@ export default function BoxScanStep({ pallet, user, scannedBoxes, setScannedBoxe
       <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-3">
         <div className="flex items-center gap-2">
           <ScanLine className="w-4 h-4 text-slate-400" />
-          <span className="text-xs font-semibold text-slate-500 uppercase">Scan Box QR</span>
+          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Scan Box QR</span>
         </div>
         <div className="flex gap-2">
           <input
