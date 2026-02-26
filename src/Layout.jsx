@@ -41,6 +41,8 @@ export default function Layout({ children, currentPageName }) {
     base44.auth.me().then(setUser).catch(() => {});
   }, []);
 
+  useEffect(() => { window.scrollTo(0, 0); }, [currentPageName]);
+
   const isDashboard = currentPageName === 'Dashboard';
   // Only filter nav once user is loaded to avoid flashing admin items
   const NAV_ITEMS = user ? ALL_NAV_ITEMS.filter(n => isEnabled(n.page)) : [];
