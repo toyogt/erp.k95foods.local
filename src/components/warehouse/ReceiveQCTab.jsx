@@ -291,13 +291,14 @@ export default function ReceiveQCTab({ user }) {
             <div className="flex gap-2">
               <input
                 ref={boxRef}
-                className="flex-1 h-11 px-3 text-sm rounded-xl border border-slate-300 focus:border-sky-500 focus:outline-none font-mono"
+                style={{ fontSize: '16px' }}
+                className="flex-1 h-12 px-3 rounded-xl border border-slate-300 focus:border-sky-500 focus:outline-none font-mono"
                 placeholder="Scan Box QR…"
                 value={boxInput}
                 onChange={e => setBoxInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleBoxScan()}
               />
-              <Button onClick={handleBoxScan} disabled={!boxInput.trim()} className="bg-sky-600 hover:bg-sky-700 h-11">Add</Button>
+              <Button onClick={handleBoxScan} disabled={!boxInput.trim()} className="bg-sky-600 hover:bg-sky-700 h-12">Add</Button>
             </div>
             {scanMsg && (
               <div className={`flex items-center gap-2 text-sm px-3 py-2 rounded-xl ${scanMsg.ok ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'}`}>
