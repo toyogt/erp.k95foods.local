@@ -126,20 +126,12 @@ export default function PalletIdStep({ user, onPalletOpened }) {
           </div>
           <div className="flex flex-col gap-2">
             <Button
-              onClick={handleProceedToHandover}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 gap-2"
-            >
-              <CheckCircle className="w-4 h-4" />
-              Proceed to Handover (skip scanning)
-            </Button>
-            <Button
-              variant="outline"
               onClick={handleReopen}
               disabled={loading}
-              className="w-full gap-2 border-amber-300 text-amber-800 hover:bg-amber-100"
+              className="w-full gap-2 bg-amber-600 hover:bg-amber-700"
             >
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
-              Re-open Pallet (re-scan boxes)
+              {loading ? 'Loading existing boxes…' : 'Re-open & Continue Scanning'}
             </Button>
           </div>
         </div>
