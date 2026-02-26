@@ -62,12 +62,12 @@ export default function Layout({ children, currentPageName }) {
         `}</style>
         <OfflineBanner />
         {/* Header */}
-        <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-200/60">
-          <div className="max-w-screen-2xl mx-auto flex items-center justify-between px-4 h-14">
+        <header className="sticky top-0 z-50 bg-white border-b border-slate-200">
+          <div className="max-w-screen-2xl mx-auto flex items-center justify-between px-3 h-14">
             <div className="flex items-center gap-2">
               {!isDashboard && (
-                <Link to={createPageUrl('Dashboard')} className="w-11 h-11 -ml-2 rounded-lg hover:bg-slate-100 transition-colors flex items-center justify-center">
-                  <ChevronLeft className="w-5 h-5 text-slate-600" />
+                <Link to={createPageUrl('Dashboard')} className="w-12 h-12 -ml-1 rounded-xl hover:bg-slate-100 active:bg-slate-200 transition-colors flex items-center justify-center">
+                  <ChevronLeft className="w-7 h-7 text-slate-700" />
                 </Link>
               )}
               {isDashboard && (
@@ -82,9 +82,13 @@ export default function Layout({ children, currentPageName }) {
                 <h1 className="font-semibold text-slate-900 text-base">{pageTitle}</h1>
               )}
             </div>
-            <Button variant="ghost" onClick={() => setMenuOpen(!menuOpen)} className="rounded-lg w-11 h-11 p-0">
-              {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </Button>
+            <button
+              type="button"
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="w-12 h-12 rounded-xl hover:bg-slate-100 active:bg-slate-200 transition-colors flex items-center justify-center"
+            >
+              {menuOpen ? <X className="w-7 h-7 text-slate-700" /> : <Menu className="w-7 h-7 text-slate-700" />}
+            </button>
           </div>
           {menuOpen && (
             <div className="absolute top-14 left-0 right-0 bg-white border-b border-slate-200 shadow-lg z-50">
