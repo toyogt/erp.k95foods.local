@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { base44 } from '@/api/base44Client';
-import { Printer, Loader2, RefreshCw, AlertTriangle, ChevronRight } from 'lucide-react';
+import { Printer, Loader2, RefreshCw, AlertTriangle, Search, X } from 'lucide-react';
 import PrintPreview from './PrintPreview';
 
 const STATUS_STYLE = {
@@ -19,8 +19,8 @@ function fmtDate(d) {
 }
 
 function genSerial(date) {
-  const d = (date || new Date()).toISOString().slice(0,10).replace(/-/g,'');
-  const rand = Math.random().toString(36).slice(2,8).toUpperCase();
+  const d = (date || new Date()).toISOString().slice(0, 10).replace(/-/g, '');
+  const rand = Math.random().toString(36).slice(2, 8).toUpperCase();
   return `BX-${d}-${rand}`;
 }
 
@@ -28,6 +28,23 @@ export default function MyRequestsList({ requests, products, user, onRefresh }) 
   const [generating, setGenerating] = useState(null);
   const [printData, setPrintData] = useState(null);
   const [confirmReprint, setConfirmReprint] = useState(null);
+  const [search, setSearch] = useState('');
+  const [showAll, setShowAll] = useState(false);
+
+  // Filter by batch no / request_id / item_code
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return requests;
+    return requests.filter(r =>
+      (r.batch_no || '').toLowerCase().includes(q) ||
+      (r.request_id || '').toLowerCase().includes(q) ||
+      (r.item_code || '').toLowerCase().includes(q)
+    );
+  }, [requests, search]);
+
+  // Show only last 10 unless showAll or searching
+  const visible = (search || showAll) ? filtered : filtered.slice(0, 10);
+  const hasMore = !search && !showAll && filtered.length > 10;
 
   async function handlePrintClick(req) {
     if (req.status === 'PRINTED') {
@@ -87,6 +104,7 @@ export default function MyRequestsList({ requests, products, user, onRefresh }) 
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-3">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <h3 className="font-bold text-slate-800 text-base">My Requests</h3>
         <button onClick={onRefresh} className="text-slate-400 hover:text-slate-600 p-1">
@@ -94,13 +112,36 @@ export default function MyRequestsList({ requests, products, user, onRefresh }) 
         </button>
       </div>
 
-      {requests.length === 0 && (
-        <p className="text-sm text-slate-400 text-center py-6">No requests yet.</p>
+      {/* Search bar */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+        <input
+          className="w-full h-9 pl-9 pr-8 text-sm rounded-xl border border-slate-300 focus:border-sky-500 focus:outline-none"
+          placeholder="Search by batch no, item code, request ID…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
+        {search && (
+          <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+
+      {/* Results info */}
+      {search && (
+        <p className="text-xs text-slate-400">{filtered.length} result{filtered.length !== 1 ? 's' : ''} for "{search}"</p>
       )}
 
-      {/* Card list – no horizontal scroll */}
+      {visible.length === 0 && (
+        <p className="text-sm text-slate-400 text-center py-6">
+          {search ? 'No matching requests.' : 'No requests yet.'}
+        </p>
+      )}
+
+      {/* Card list */}
       <div className="space-y-2">
-        {requests.map(req => (
+        {visible.map(req => (
           <div key={req.id} className="border border-slate-200 rounded-xl p-3 space-y-2">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
@@ -116,9 +157,9 @@ export default function MyRequestsList({ requests, products, user, onRefresh }) 
               </span>
             </div>
             <div className="grid grid-cols-3 gap-1 text-xs text-slate-600">
-              <div><span className="text-slate-400">Batch</span><br/><b>{req.batch_no}</b></div>
-              <div><span className="text-slate-400">Mfg</span><br/>{fmtDate(req.mfg_date)}</div>
-              <div><span className="text-slate-400">Qty</span><br/><b>{req.qty_labels}</b> labels</div>
+              <div><span className="text-slate-400">Batch</span><br /><b>{req.batch_no}</b></div>
+              <div><span className="text-slate-400">Mfg</span><br />{fmtDate(req.mfg_date)}</div>
+              <div><span className="text-slate-400">Qty</span><br /><b>{req.qty_labels}</b> labels</div>
             </div>
             {(req.status === 'APPROVED' || req.status === 'PRINTED') && (
               <Button
@@ -141,6 +182,24 @@ export default function MyRequestsList({ requests, products, user, onRefresh }) 
           </div>
         ))}
       </div>
+
+      {/* Show more / less */}
+      {hasMore && (
+        <button
+          onClick={() => setShowAll(true)}
+          className="w-full text-xs text-slate-500 hover:text-slate-700 py-2 border border-dashed border-slate-200 rounded-xl"
+        >
+          Show all {filtered.length} requests (showing last 10)
+        </button>
+      )}
+      {showAll && filtered.length > 10 && !search && (
+        <button
+          onClick={() => setShowAll(false)}
+          className="w-full text-xs text-slate-400 hover:text-slate-600 py-1"
+        >
+          Show less
+        </button>
+      )}
 
       {/* Print preview overlay */}
       {printData && (
