@@ -128,7 +128,7 @@ export default function Dashboard() {
           <h1 className="text-2xl font-bold text-slate-900">
             {user?.full_name ? `Hello, ${user.full_name.split(' ')[0]}` : 'Dashboard'}
           </h1>
-          <p className="text-sm text-slate-500 mt-1">{user?.role || 'Factory execution'}</p>
+          <p className="text-sm text-slate-500 mt-1">Factory execution</p>
         </div>
         <div className="flex gap-2 flex-wrap justify-end">
           {offlineQueue > 0 && (
