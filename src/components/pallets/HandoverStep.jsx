@@ -93,7 +93,7 @@ export default function HandoverStep({ pallet, user, onComplete }) {
 
       <Button
         onClick={handleSubmit}
-        disabled={saving || !palletPhoto || !manifestPhoto}
+        disabled={saving}
         className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 rounded-xl font-semibold text-base gap-2"
       >
         {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Uploading Photos…</> : <><CheckCircle className="w-4 h-4" /> Complete Handover</>}
