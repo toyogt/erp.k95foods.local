@@ -109,6 +109,7 @@ export default function ProductMasterManager() {
         if (payload[k] !== '' && !isNaN(payload[k])) payload[k] = Number(payload[k]);
         else if (payload[k] === '') delete payload[k];
       });
+      payload.is_trial_pack = payload.is_trial_pack === 'true' || payload.is_trial_pack === true;
 
       await base44.entities.ProductMaster.create(payload);
       created++;
