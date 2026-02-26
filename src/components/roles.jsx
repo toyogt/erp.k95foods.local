@@ -44,10 +44,10 @@ const ACCESS_MAP = {
   // Legacy warehouse role – no longer gets FGPalletizing or new pages by default
   warehouse:            ['Dashboard'],
   // New roles
-  label_operator:       ['Dashboard','BoxLabelPrint'],
+  label_operator:       ['Dashboard','BoxLabelPrint','BoxLabelApprovals'],
   label_supervisor:     ['Dashboard','BoxLabelApprovals','AlertsPage'],
-  pallet_builder:       ['Dashboard','BoxPalletBuild'],
-  warehouse_ops:        ['Dashboard','WarehouseOps','BoxStockDashboard'],
+  pallet_builder:       ['Dashboard','BoxPalletBuild','BoxStockDashboard'],
+  warehouse_ops:        ['Dashboard','WarehouseOps','BoxStockDashboard','OpeningStockImport'],
   // Default platform role – broad access (non-admin)
   user: [
     'Dashboard','StoresIssue','RecipeStation','FillingStation','ChamberStation',
