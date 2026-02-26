@@ -100,7 +100,7 @@ export default function SealAndPrint({ pallet, scannedBoxes, user, onSealed, onH
   }
 
   function printManifest() {
-    // Build detailed product summary from scanned boxes + product master
+    // Build detailed product summary from scanned boxes
     const productMap = {};
     for (const b of scannedBoxes) {
       const key = `${b.item_code}|${b.batch_no}`;
@@ -110,17 +110,16 @@ export default function SealAndPrint({ pallet, scannedBoxes, user, onSealed, onH
           batch_no: b.batch_no,
           exp_date: b.exp_date || '—',
           mfg_date: b.mfg_date || '—',
+          // product_name stored directly on BoxLabel entity
+          product_name: b.product_name || b.item_code,
           count: 0,
         };
       }
       productMap[key].count++;
     }
     const detailRows = Object.values(productMap).map(r => {
-      // Try to get product_name from summary (it holds item_code and batch_no)
-      const summaryRow = summary.find(s => s.item_code === r.item_code && s.batch_no === r.batch_no);
-      const productName = summaryRow?.product_name || r.item_code;
       return `<tr>
-        <td>${productName}</td>
+        <td>${r.product_name}</td>
         <td>${r.item_code}</td>
         <td>${r.batch_no}</td>
         <td>${r.mfg_date}</td>
