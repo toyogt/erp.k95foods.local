@@ -10,6 +10,7 @@ import ChecklistTemplateManager from '@/components/master/ChecklistTemplateManag
 import SyncQueueViewer from '@/components/master/SyncQueueViewer';
 import ModuleAccessManager from '@/components/master/ModuleAccessManager';
 import ProductMasterManager from '@/components/master/ProductMasterManager';
+import ErrorMessagesManager from '@/components/master/ErrorMessagesManager';
 import { Loader2 } from 'lucide-react';
 
 export default function MasterData() {
@@ -43,6 +44,7 @@ export default function MasterData() {
             {isManager && <TabsTrigger value="checklists" className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Checklists</TabsTrigger>}
             {isManager && <TabsTrigger value="modules"    className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Modules</TabsTrigger>}
             {isManager && <TabsTrigger value="syncqueue"  className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Sync Queue</TabsTrigger>}
+            {isManager && <TabsTrigger value="errors"     className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Errors</TabsTrigger>}
             {isAdmin   && <TabsTrigger value="settings"   className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Settings</TabsTrigger>}
           </TabsList>
         </div>
@@ -54,6 +56,7 @@ export default function MasterData() {
         {isManager && <TabsContent value="checklists" className="mt-4"><ChecklistTemplateManager /></TabsContent>}
         {isManager && <TabsContent value="modules"    className="mt-4"><ModuleAccessManager /></TabsContent>}
         {isManager && <TabsContent value="syncqueue"  className="mt-4"><SyncQueueViewer /></TabsContent>}
+        {isManager && <TabsContent value="errors"     className="mt-4"><ErrorMessagesManager /></TabsContent>}
         {isAdmin   && <TabsContent value="settings"   className="mt-4"><AppSettingsManager user={user} /></TabsContent>}
       </Tabs>
     </div>
