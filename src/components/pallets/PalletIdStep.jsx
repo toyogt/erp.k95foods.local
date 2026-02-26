@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { base44 } from '@/api/base44Client';
-import { Layers, Loader2, RefreshCw } from 'lucide-react';
+import { Layers, Loader2, RefreshCw, AlertTriangle, CheckCircle, RotateCcw } from 'lucide-react';
 
 function genPalletId() {
   const d = new Date().toISOString().slice(0, 10).replace(/-/g, '');
@@ -13,6 +13,7 @@ export default function PalletIdStep({ user, onPalletOpened }) {
   const [palletInput, setPalletInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [sealedPallet, setSealedPallet] = useState(null); // pallet that is already sealed
   const inputRef = useRef(null);
 
   useEffect(() => { inputRef.current?.focus(); }, []);
@@ -22,13 +23,19 @@ export default function PalletIdStep({ user, onPalletOpened }) {
     if (!pid) return;
     setLoading(true);
     setError('');
-    // Check if pallet already exists
+    setSealedPallet(null);
     const existing = await base44.entities.BoxPallet.filter({ pallet_id: pid }, '-created_date', 1);
     let pallet;
     if (existing.length > 0) {
       pallet = existing[0];
-      if (pallet.status === 'SEALED' || pallet.status === 'HANDED_OVER') {
-        setError(`Pallet ${pid} is already ${pallet.status}. Generate a new one.`);
+      if (pallet.status === 'HANDED_OVER') {
+        setError(`Pallet ${pid} has already been handed over and is complete.`);
+        setLoading(false);
+        return;
+      }
+      if (pallet.status === 'SEALED') {
+        // Show recovery options instead of blocking
+        setSealedPallet(pallet);
         setLoading(false);
         return;
       }
@@ -42,6 +49,20 @@ export default function PalletIdStep({ user, onPalletOpened }) {
     }
     setLoading(false);
     onPalletOpened(pallet);
+  }
+
+  // Go straight to handover (pallet was sealed but not handed over)
+  function handleProceedToHandover() {
+    onPalletOpened({ ...sealedPallet, _resumeAtHandover: true });
+  }
+
+  // Reopen the pallet so boxes can be re-scanned
+  async function handleReopen() {
+    setLoading(true);
+    const updated = await base44.entities.BoxPallet.update(sealedPallet.id, { status: 'OPEN' });
+    setSealedPallet(null);
+    setLoading(false);
+    onPalletOpened(updated);
   }
 
   function handleGenerate() {
