@@ -72,10 +72,10 @@ export default function DraftPalletList({ user, onResume }) {
               disabled={cancelling === p.id}
               className="flex-1 bg-white border border-amber-200 rounded-xl px-4 py-3 flex items-center gap-3 hover:bg-amber-50 transition-colors text-left disabled:opacity-50"
             >
-              <div className="flex-1 min-w-0">
-                <p className="font-mono font-bold text-slate-800 text-sm">{p.pallet_id}</p>
-                {p.product_name && <p className="text-xs text-slate-500 truncate">{p.product_name}</p>}
-                {p.batch_no && <p className="text-xs text-slate-400">Batch: {p.batch_no}</p>}
+              <div className="flex-1 min-w-0 overflow-hidden">
+                <p className="font-mono font-bold text-slate-800 text-sm truncate">{p.pallet_id}</p>
+                {p.product_name && <p className="text-xs text-slate-500 truncate max-w-[180px]">{p.product_name}</p>}
+                {p.batch_no && <p className="text-xs text-slate-400 truncate">Batch: {p.batch_no}</p>}
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 {p.total_boxes > 0 && (
