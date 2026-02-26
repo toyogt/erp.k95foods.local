@@ -125,16 +125,18 @@ export default function MyRequestsList({ requests, products, user, onRefresh }) 
                     {req.is_trial_pack && <span className="ml-1 text-xs text-purple-600 font-semibold">TRIAL</span>}
                   </td>
                   <td className="py-2">
-                    {req.status === 'APPROVED' && (
+                    {(req.status === 'APPROVED' || req.status === 'PRINTED') && (
                       <Button
                         size="sm"
-                        className="h-7 text-xs rounded-lg gap-1 bg-cyan-600 hover:bg-cyan-700"
+                        className={`h-7 text-xs rounded-lg gap-1 ${req.status === 'PRINTED' ? 'bg-amber-500 hover:bg-amber-600' : 'bg-cyan-600 hover:bg-cyan-700'}`}
                         disabled={generating === req.request_id}
-                        onClick={() => handleGenerate(req)}
+                        onClick={() => handlePrintClick(req)}
                       >
                         {generating === req.request_id
                           ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          : <><Printer className="w-3.5 h-3.5" /> Generate & Print</>
+                          : req.status === 'PRINTED'
+                            ? <><Printer className="w-3.5 h-3.5" /> Reprint</>
+                            : <><Printer className="w-3.5 h-3.5" /> Generate & Print</>
                         }
                       </Button>
                     )}
