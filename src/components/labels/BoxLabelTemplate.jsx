@@ -35,7 +35,6 @@ export default function BoxLabelTemplate({ label, product }) {
         background: '#fff',
         color: '#000',
         overflow: 'hidden',
-        pageBreakAfter: 'always',
       }}
     >
       {/* ── TOP: brand + QR side by side ── */}
