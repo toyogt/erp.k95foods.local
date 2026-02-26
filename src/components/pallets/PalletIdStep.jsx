@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { base44 } from '@/api/base44Client';
-import { Layers, Loader2, RefreshCw, AlertTriangle, CheckCircle, RotateCcw } from 'lucide-react';
+import { Layers, Loader2, RefreshCw, AlertTriangle, RotateCcw } from 'lucide-react';
 
 function genPalletId() {
   const d = new Date().toISOString().slice(0, 10).replace(/-/g, '');
@@ -51,18 +51,21 @@ export default function PalletIdStep({ user, onPalletOpened }) {
     onPalletOpened(pallet);
   }
 
-  // Go straight to handover (pallet was sealed but not handed over)
-  function handleProceedToHandover() {
-    onPalletOpened({ ...sealedPallet, _resumeAtHandover: true });
-  }
-
-  // Reopen the pallet so boxes can be re-scanned
+  // Reopen the pallet: unseal it, load already-scanned boxes, go to scan step
   async function handleReopen() {
     setLoading(true);
+    // Unseal it
     const updated = await base44.entities.BoxPallet.update(sealedPallet.id, { status: 'OPEN' });
+    // Load existing box links
+    const links = await base44.entities.BoxPalletLink.filter({ pallet_id: sealedPallet.pallet_id }, '-created_date', 500);
+    const preloadedBoxes = [];
+    for (const link of links) {
+      const labels = await base44.entities.BoxLabel.filter({ box_serial: link.box_serial }, '-created_date', 1);
+      if (labels.length) preloadedBoxes.push({ ...labels[0], box_serial: link.box_serial });
+    }
     setSealedPallet(null);
     setLoading(false);
-    onPalletOpened(updated);
+    onPalletOpened({ ...updated, _preloadedBoxes: preloadedBoxes });
   }
 
   function handleGenerate() {
