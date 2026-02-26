@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { base44 } from '@/api/base44Client';
 import { Plus, Trash2, Loader2 } from 'lucide-react';
@@ -10,6 +10,9 @@ function genRequestId() {
 
 const emptyLine = () => ({ item_code: '', product_name: '', batch_no: '', mfg_date: '', exp_date: '', qty_bottles: '' });
 
+// Input style with min font-size 16px to prevent iOS zoom
+const INPUT_CLS = "w-full h-12 px-3 text-base rounded-xl border border-slate-300 focus:border-cyan-500 focus:outline-none bg-white";
+
 export default function BoxLabelForm({ products, user, onSubmitted }) {
   const [itemCode, setItemCode] = useState('');
   const [batchNo, setBatchNo] = useState('');
@@ -20,10 +23,12 @@ export default function BoxLabelForm({ products, user, onSubmitted }) {
   const [submitting, setSubmitting] = useState(false);
   const [search, setSearch] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
-
-  // Per-line search state
   const [lineSearch, setLineSearch] = useState([]);
   const [lineDropdown, setLineDropdown] = useState([]);
+
+  const batchRef = useRef(null);
+  const qtyRef = useRef(null);
+  const mfgRef = useRef(null);
 
   const product = products.find(p => p.item_code === itemCode) || null;
   const isTrial = product?.is_trial_pack === true;
@@ -84,6 +89,7 @@ export default function BoxLabelForm({ products, user, onSubmitted }) {
     await base44.entities.LabelPrintRequest.create({
       request_id: reqId,
       item_code: itemCode,
+      product_name: product ? (product.product_name + (product.flavour ? ` · ${product.flavour}` : '')) : itemCode,
       batch_no: batchNo,
       mfg_date: mfgDate,
       exp_date: expDate,
@@ -102,7 +108,6 @@ export default function BoxLabelForm({ products, user, onSubmitted }) {
       reference_id: reqId,
       status: 'OPEN',
     }).catch(() => {});
-    // Reset
     setItemCode(''); setBatchNo(''); setMfgDate(''); setExpDate('');
     setQtyLabels(1); setLines([emptyLine()]); setSearch('');
     setLineSearch([]); setLineDropdown([]);
@@ -116,20 +121,22 @@ export default function BoxLabelForm({ products, user, onSubmitted }) {
 
       {/* Product search */}
       <div className="relative">
-        <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Product</label>
+        <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Product</label>
         <input
-          className="w-full h-10 px-3 text-sm rounded-xl border border-slate-300 focus:border-cyan-500 focus:outline-none"
+          style={{ fontSize: '16px' }}
+          className={INPUT_CLS}
           placeholder="Search item code / product name..."
           value={product ? `${product.item_code} – ${product.product_name}${product.flavour ? ' · ' + product.flavour : ''}` : search}
           onChange={e => { setSearch(e.target.value); setItemCode(''); setShowDropdown(true); }}
           onFocus={() => setShowDropdown(true)}
+          onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
         />
         {showDropdown && !itemCode && filteredProducts.length > 0 && (
           <div className="absolute z-20 top-full left-0 right-0 bg-white border border-slate-200 rounded-xl shadow-lg max-h-52 overflow-auto mt-1">
             {filteredProducts.map(p => (
               <button
                 key={p.item_code}
-                className="w-full text-left px-3 py-2 hover:bg-slate-50 text-sm"
+                className="w-full text-left px-3 py-3 hover:bg-slate-50 text-sm border-b border-slate-50 last:border-0"
                 onMouseDown={() => { setItemCode(p.item_code); setSearch(''); setShowDropdown(false); }}
               >
                 <span className="font-semibold text-slate-800">{p.item_code}</span>
@@ -143,7 +150,7 @@ export default function BoxLabelForm({ products, user, onSubmitted }) {
 
       {/* Product preview strip */}
       {product && (
-        <div className={`border rounded-xl px-3 py-2 flex flex-wrap gap-4 text-xs ${isTrial ? 'bg-purple-50 border-purple-200 text-purple-800' : 'bg-cyan-50 border-cyan-200 text-cyan-800'}`}>
+        <div className={`border rounded-xl px-3 py-2 flex flex-wrap gap-3 text-xs ${isTrial ? 'bg-purple-50 border-purple-200 text-purple-800' : 'bg-cyan-50 border-cyan-200 text-cyan-800'}`}>
           {isTrial && <span className="font-bold text-purple-700">⚗ Trial Pack — contents below</span>}
           <span><b>Shelf life:</b> {product.shelf_life_days ?? '—'} days</span>
           <span><b>Bottles/Box:</b> {product.bottles_per_box ?? '—'}</span>
@@ -152,42 +159,78 @@ export default function BoxLabelForm({ products, user, onSubmitted }) {
         </div>
       )}
 
-      {/* Batch + dates */}
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Batch No</label>
-          <input className="w-full h-10 px-3 text-sm rounded-xl border border-slate-300 focus:border-cyan-500 focus:outline-none"
-            value={batchNo} onChange={e => setBatchNo(e.target.value)} placeholder="e.g. B-20240201" />
-        </div>
-        <div>
-          <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Qty Labels</label>
-          <input type="number" min={1} className="w-full h-10 px-3 text-sm rounded-xl border border-slate-300 focus:border-cyan-500 focus:outline-none"
-            value={qtyLabels} onChange={e => setQtyLabels(e.target.value)} />
-        </div>
-        <div>
-          <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Mfg Date</label>
-          <input type="date" className="w-full h-10 px-3 text-sm rounded-xl border border-slate-300 focus:border-cyan-500 focus:outline-none"
-            value={mfgDate} onChange={e => setMfgDate(e.target.value)} />
-        </div>
-        <div>
-          <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Exp Date{isTrial ? ' (auto = min of contents)' : ''}</label>
-          <input type="date" className="w-full h-10 px-3 text-sm rounded-xl border border-slate-300 focus:border-cyan-500 focus:outline-none"
-            value={expDate}
-            onChange={e => setExpDate(e.target.value)}
-          />
-        </div>
+      {/* Batch No */}
+      <div>
+        <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Batch No</label>
+        <input
+          ref={batchRef}
+          style={{ fontSize: '16px' }}
+          className={INPUT_CLS}
+          value={batchNo}
+          onChange={e => setBatchNo(e.target.value)}
+          placeholder="e.g. B-20240201"
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); qtyRef.current?.focus(); } }}
+        />
       </div>
 
-      {/* Trial pack content lines — auto-shown if product is trial */}
+      {/* Qty Labels */}
+      <div>
+        <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Qty Labels</label>
+        <input
+          ref={qtyRef}
+          type="number"
+          min={1}
+          style={{ fontSize: '16px' }}
+          className={INPUT_CLS}
+          value={qtyLabels}
+          onChange={e => setQtyLabels(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); mfgRef.current?.focus(); } }}
+        />
+      </div>
+
+      {/* Mfg Date */}
+      <div>
+        <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Mfg Date</label>
+        <input
+          ref={mfgRef}
+          type="date"
+          style={{ fontSize: '16px' }}
+          className={INPUT_CLS}
+          value={mfgDate}
+          onChange={e => setMfgDate(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleSubmit(); } }}
+        />
+      </div>
+
+      {/* Exp Date — read only (auto-calculated from shelf life) */}
+      <div>
+        <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">
+          Exp Date {isTrial ? '(auto = min of contents)' : product?.shelf_life_days ? `(auto: mfg + ${product.shelf_life_days}d)` : ''}
+        </label>
+        <input
+          type="date"
+          style={{ fontSize: '16px' }}
+          className={`${INPUT_CLS} bg-slate-50 text-slate-500 cursor-not-allowed`}
+          value={expDate}
+          readOnly={!isTrial}
+          disabled={!isTrial && !!product?.shelf_life_days}
+          onChange={isTrial ? e => setExpDate(e.target.value) : undefined}
+        />
+        {!isTrial && product && !product.shelf_life_days && (
+          <p className="text-xs text-amber-600 mt-1">No shelf life set for this product — exp date cannot be calculated.</p>
+        )}
+      </div>
+
+      {/* Trial pack content lines */}
       {isTrial && (
         <div className="bg-purple-50 rounded-xl p-3 space-y-3 border border-purple-200">
           <p className="text-xs font-bold text-purple-600 uppercase">Trial Pack Contents</p>
           {lines.map((line, i) => (
             <div key={i} className="bg-white rounded-lg border border-purple-100 p-2 space-y-2">
-              {/* Product search for this line */}
               <div className="relative">
                 <input
-                  className="w-full h-8 px-2 text-xs rounded-lg border border-slate-300 focus:outline-none"
+                  style={{ fontSize: '16px' }}
+                  className="w-full h-10 px-2 text-sm rounded-lg border border-slate-300 focus:outline-none"
                   placeholder="Search product / item code…"
                   value={line.item_code ? `${line.item_code}${line.product_name ? ' – ' + line.product_name : ''}` : (lineSearch[i] || '')}
                   onChange={e => {
@@ -203,7 +246,7 @@ export default function BoxLabelForm({ products, user, onSubmitted }) {
                 {lineDropdown[i] && !line.item_code && getLineFilteredProducts(i).length > 0 && (
                   <div className="absolute z-20 top-full left-0 right-0 bg-white border border-slate-200 rounded-lg shadow-lg max-h-40 overflow-auto mt-0.5">
                     {getLineFilteredProducts(i).map(p => (
-                      <button key={p.item_code} className="w-full text-left px-2 py-1.5 hover:bg-slate-50 text-xs"
+                      <button key={p.item_code} className="w-full text-left px-2 py-2 hover:bg-slate-50 text-xs"
                         onMouseDown={() => selectLineProduct(i, p)}>
                         <span className="font-semibold">{p.item_code}</span>
                         <span className="text-slate-500 ml-1">{p.product_name}{p.flavour ? ` · ${p.flavour}` : ''}</span>
@@ -212,33 +255,33 @@ export default function BoxLabelForm({ products, user, onSubmitted }) {
                   </div>
                 )}
               </div>
-              <div className="grid grid-cols-4 gap-1.5">
+              <div className="grid grid-cols-2 gap-2">
                 <div>
                   <div className="text-xs text-slate-400 mb-0.5">Batch</div>
-                  <input className="h-8 w-full px-2 text-xs rounded-lg border border-slate-300 focus:outline-none"
+                  <input style={{ fontSize: '16px' }} className="h-10 w-full px-2 text-sm rounded-lg border border-slate-300 focus:outline-none"
                     placeholder="Batch No" value={line.batch_no} onChange={e => updateLine(i, 'batch_no', e.target.value)} />
                 </div>
                 <div>
+                  <div className="text-xs text-slate-400 mb-0.5">Qty Bottles</div>
+                  <div className="flex gap-1">
+                    <input type="number" style={{ fontSize: '16px' }} className="h-10 flex-1 px-2 text-sm rounded-lg border border-slate-300 focus:outline-none"
+                      placeholder="Qty" value={line.qty_bottles} onChange={e => updateLine(i, 'qty_bottles', e.target.value)} />
+                    {lines.length > 1 && (
+                      <button onClick={() => setLines(prev => prev.filter((_, idx) => idx !== i))} className="text-red-400 hover:text-red-600 p-1">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div>
                   <div className="text-xs text-slate-400 mb-0.5">Mfg Date</div>
-                  <input type="date" className="h-8 w-full px-2 text-xs rounded-lg border border-slate-300 focus:outline-none"
+                  <input type="date" style={{ fontSize: '16px' }} className="h-10 w-full px-2 text-sm rounded-lg border border-slate-300 focus:outline-none"
                     value={line.mfg_date} onChange={e => updateLine(i, 'mfg_date', e.target.value)} />
                 </div>
                 <div>
                   <div className="text-xs text-slate-400 mb-0.5">Exp Date</div>
-                  <input type="date" className="h-8 w-full px-2 text-xs rounded-lg border border-slate-300 focus:outline-none"
+                  <input type="date" style={{ fontSize: '16px' }} className="h-10 w-full px-2 text-sm rounded-lg border border-slate-300 focus:outline-none"
                     value={line.exp_date} onChange={e => updateLine(i, 'exp_date', e.target.value)} />
-                </div>
-                <div className="flex gap-1 items-end">
-                  <div className="flex-1">
-                    <div className="text-xs text-slate-400 mb-0.5">Qty Bottles</div>
-                    <input type="number" className="h-8 w-full px-2 text-xs rounded-lg border border-slate-300 focus:outline-none"
-                      placeholder="Qty" value={line.qty_bottles} onChange={e => updateLine(i, 'qty_bottles', e.target.value)} />
-                  </div>
-                  {lines.length > 1 && (
-                    <button onClick={() => setLines(prev => prev.filter((_, idx) => idx !== i))} className="text-red-400 hover:text-red-600 mb-0.5">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
                 </div>
               </div>
             </div>
@@ -253,7 +296,7 @@ export default function BoxLabelForm({ products, user, onSubmitted }) {
       <Button
         onClick={handleSubmit}
         disabled={submitting || !itemCode || !batchNo || !mfgDate || !expDate || qtyLabels < 1}
-        className="w-full h-11 rounded-xl bg-cyan-600 hover:bg-cyan-700"
+        className="w-full h-12 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-base"
       >
         {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Submit for Approval'}
       </Button>

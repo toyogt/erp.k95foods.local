@@ -1,17 +1,30 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { base44 } from '@/api/base44Client';
-import { X, CheckCircle, XCircle, AlertTriangle, Loader2 } from 'lucide-react';
+import { X, CheckCircle, XCircle, AlertTriangle, Loader2, Eye, EyeOff } from 'lucide-react';
+import BoxLabelTemplate from './BoxLabelTemplate';
 
 export default function ApprovalSidePanel({ request, products, user, onDone, onClose }) {
   const [rejectNote, setRejectNote] = useState('');
   const [showRejectInput, setShowRejectInput] = useState(false);
   const [confirmBig, setConfirmBig] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   const product = products.find(p => p.item_code === request.item_code);
   const isBigQty = request.qty_labels > 500;
   const missingExp = !request.exp_date;
+
+  // Build a mock label object for preview
+  const previewLabel = {
+    box_serial: 'PREVIEW-SAMPLE',
+    item_code: request.item_code,
+    batch_no: request.batch_no,
+    mfg_date: request.mfg_date,
+    exp_date: request.exp_date,
+    qr_payload: JSON.stringify({ s: 'PREVIEW-SAMPLE' }),
+    printed_at: new Date().toISOString(),
+  };
 
   async function fireAlert(severity, message) {
     await base44.entities.AlertEvent.create({
@@ -64,17 +77,46 @@ export default function ApprovalSidePanel({ request, products, user, onDone, onC
             <p className="font-bold text-slate-900 text-base">{request.request_id}</p>
             <p className="text-xs text-slate-500">Requested by {request.requested_by} · {request.requested_at ? new Date(request.requested_at).toLocaleString() : '—'}</p>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-1">
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-2 -mr-1">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
+
+          {/* Label Preview Toggle */}
+          <button
+            onClick={() => setShowPreview(v => !v)}
+            className="w-full flex items-center justify-between bg-cyan-50 border border-cyan-200 rounded-xl px-4 py-3 hover:bg-cyan-100 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <Eye className="w-4 h-4 text-cyan-600" />
+              <span className="text-sm font-semibold text-cyan-800">
+                {showPreview ? 'Hide Label Preview' : 'View Label Preview'}
+              </span>
+            </div>
+            {showPreview ? <EyeOff className="w-4 h-4 text-cyan-500" /> : <Eye className="w-4 h-4 text-cyan-500" />}
+          </button>
+
+          {/* Inline label preview (scaled down) */}
+          {showPreview && product && (
+            <div className="overflow-x-auto flex justify-center bg-slate-100 rounded-xl p-3">
+              <div style={{ transform: 'scale(0.62)', transformOrigin: 'top center', width: '4in', height: '6in', flexShrink: 0 }}>
+                <BoxLabelTemplate label={previewLabel} product={product} />
+              </div>
+            </div>
+          )}
+          {showPreview && !product && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-700">
+              Product master data not found for {request.item_code} — cannot render label preview.
+            </div>
+          )}
+
           {/* Product info */}
           <Section title="Product">
             <Row label="Item Code" value={request.item_code} bold />
-            <Row label="Product" value={product?.product_name || '—'} />
+            <Row label="Product" value={product?.product_name || request.product_name || '—'} />
             {product?.flavour && <Row label="Flavour" value={product.flavour} />}
             <Row label="Batch No" value={request.batch_no} bold />
             <Row label="Mfg Date" value={request.mfg_date || '—'} />
@@ -160,6 +202,7 @@ export default function ApprovalSidePanel({ request, products, user, onDone, onC
             <div className="space-y-2">
               <textarea
                 className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:border-red-400 resize-none"
+                style={{ fontSize: '16px' }}
                 rows={3}
                 placeholder="Reason for rejection (required)"
                 value={rejectNote}
@@ -180,7 +223,7 @@ export default function ApprovalSidePanel({ request, products, user, onDone, onC
         {request.status === 'PENDING' && !confirmBig && !showRejectInput && (
           <div className="border-t border-slate-200 px-5 py-4 flex gap-3 shrink-0">
             <Button
-              className="flex-1 gap-2 bg-emerald-600 hover:bg-emerald-700"
+              className="flex-1 gap-2 bg-emerald-600 hover:bg-emerald-700 h-12"
               onClick={handleApprove}
               disabled={missingExp || loading}
             >
@@ -189,7 +232,7 @@ export default function ApprovalSidePanel({ request, products, user, onDone, onC
             </Button>
             <Button
               variant="outline"
-              className="flex-1 gap-2 border-red-300 text-red-600 hover:bg-red-50"
+              className="flex-1 gap-2 border-red-300 text-red-600 hover:bg-red-50 h-12"
               onClick={() => setShowRejectInput(true)}
               disabled={loading}
             >
