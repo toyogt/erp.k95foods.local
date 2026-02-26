@@ -1,19 +1,20 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Loader2, ChevronRight } from 'lucide-react';
+import { Loader2, ChevronRight, ChevronLeft } from 'lucide-react';
 import PalletIdStep from '@/components/pallets/PalletIdStep';
 import BoxScanStep from '@/components/pallets/BoxScanStep';
 import SealAndPrint from '@/components/pallets/SealAndPrint';
 import HandoverStep from '@/components/pallets/HandoverStep';
 
-const STEPS = ['Pallet ID', 'Scan Boxes', 'Seal & Print', 'Handover'];
+const STEPS = ['Pallet ID', 'Scan Boxes', 'Seal & Print', 'Photo Proof'];
 
 export default function BoxPalletBuild() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [step, setStep] = useState(0); // 0-3
+  const [step, setStep] = useState(0);
   const [pallet, setPallet] = useState(null);
   const [scannedBoxes, setScannedBoxes] = useState([]);
+  const [backLoading, setBackLoading] = useState(false);
 
   useEffect(() => {
     base44.auth.me().then(u => { setUser(u); setLoading(false); }).catch(() => setLoading(false));
@@ -24,20 +25,19 @@ export default function BoxPalletBuild() {
       const { _preloadedBoxes, ...clean } = p;
       setPallet(clean);
       setScannedBoxes(_preloadedBoxes);
-      setStep(1);
     } else {
       setPallet(p);
       setScannedBoxes([]);
-      setStep(1);
     }
+    setStep(1);
   }
 
   function handleSealRequest() {
     setStep(2);
   }
 
-  function handleSealed() {
-    // stays on step 2 for printing
+  function handleSealed(data) {
+    if (data) setPallet(prev => ({ ...prev, ...data }));
   }
 
   function handleHandoverReady() {
@@ -45,10 +45,21 @@ export default function BoxPalletBuild() {
   }
 
   function handleComplete() {
-    // Reset all for next pallet
     setPallet(null);
     setScannedBoxes([]);
     setStep(0);
+  }
+
+  // Back from step 2 (Seal & Print) → step 1 (Scan Boxes)
+  // If pallet was already sealed, reopen it first
+  async function handleBackToScan() {
+    setBackLoading(true);
+    if (pallet?.status === 'SEALED') {
+      await base44.entities.BoxPallet.update(pallet.id, { status: 'OPEN' });
+      setPallet(prev => ({ ...prev, status: 'OPEN', sealed_at: null }));
+    }
+    setBackLoading(false);
+    setStep(1);
   }
 
   if (loading) return (
@@ -82,6 +93,20 @@ export default function BoxPalletBuild() {
           </div>
         ))}
       </div>
+
+      {/* Back button for steps 2 and 3 */}
+      {(step === 2 || step === 3) && (
+        <button
+          onClick={step === 2 ? handleBackToScan : () => setStep(2)}
+          disabled={backLoading}
+          className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 transition-colors disabled:opacity-50"
+        >
+          {backLoading
+            ? <><Loader2 className="w-4 h-4 animate-spin" /> Reopening pallet…</>
+            : <><ChevronLeft className="w-4 h-4" />{step === 2 ? 'Back to Scanning' : 'Back to Seal & Print'}</>
+          }
+        </button>
+      )}
 
       {/* Step content */}
       {step === 0 && (

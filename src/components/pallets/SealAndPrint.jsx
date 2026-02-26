@@ -27,10 +27,11 @@ export default function SealAndPrint({ pallet, scannedBoxes, user, onSealed, onH
       sealed_by: user?.email || '',
       total_boxes: scannedBoxes.length,
     });
+    const sealedData = { status: 'SEALED', sealed_at: now, sealed_by: user?.email, total_boxes: scannedBoxes.length };
     setSealing(false);
     setSealed(true);
-    setSealedPallet({ ...pallet, status: 'SEALED', sealed_at: now, sealed_by: user?.email, total_boxes: scannedBoxes.length });
-    onSealed?.();
+    setSealedPallet({ ...pallet, ...sealedData });
+    onSealed?.(sealedData);
   }
 
   function printPalletLabel() {
@@ -176,7 +177,7 @@ export default function SealAndPrint({ pallet, scannedBoxes, user, onSealed, onH
           </div>
 
           <Button onClick={onHandoverReady} className="w-full bg-emerald-600 hover:bg-emerald-700 gap-2 h-11">
-            Proceed to Handover →
+            Proceed to Photo Proof →
           </Button>
         </>
       )}

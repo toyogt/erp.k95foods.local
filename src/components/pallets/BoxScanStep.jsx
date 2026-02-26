@@ -4,12 +4,10 @@ import { base44 } from '@/api/base44Client';
 import { ScanLine, CheckCircle, AlertCircle, Loader2, Lock } from 'lucide-react';
 
 function parseSerial(raw) {
-  // Try JSON QR payload first
   try {
     const obj = JSON.parse(raw);
     if (obj.s) return obj.s;
   } catch (_) {}
-  // If it starts with BX- assume direct serial
   if (raw.startsWith('BX-')) return raw.trim();
   return raw.trim();
 }
@@ -17,7 +15,7 @@ function parseSerial(raw) {
 export default function BoxScanStep({ pallet, user, scannedBoxes, setScannedBoxes, onSealRequest }) {
   const [scanInput, setScanInput] = useState('');
   const [scanning, setScanning] = useState(false);
-  const [lastResult, setLastResult] = useState(null); // { ok, message }
+  const [lastResult, setLastResult] = useState(null);
   const inputRef = useRef(null);
 
   useEffect(() => { inputRef.current?.focus(); }, []);
@@ -35,46 +33,44 @@ export default function BoxScanStep({ pallet, user, scannedBoxes, setScannedBoxe
     const labels = await base44.entities.BoxLabel.filter({ box_serial: serial }, '-created_date', 1);
     if (!labels.length) {
       setLastResult({ ok: false, message: `Box serial not found: ${serial}` });
-      setScanning(false);
-      inputRef.current?.focus();
-      return;
+      setScanning(false); inputRef.current?.focus(); return;
     }
     const label = labels[0];
 
-    // Status check
-    const allowedStatuses = ['PRINTED_UNREGISTERED', 'ON_PALLET_REGISTERED'];
-    if (user?.role === 'admin') allowedStatuses.push('IN_STOCK');
-    if (!allowedStatuses.includes(label.status)) {
-      setLastResult({ ok: false, message: `Cannot add — box is ${label.status}` });
-      setScanning(false);
-      inputRef.current?.focus();
-      return;
-    }
-
-    // Duplicate check on current pallet
+    // Duplicate check on current pallet (local state)
     if (scannedBoxes.find(b => b.box_serial === serial)) {
-      setLastResult({ ok: false, message: `Already on this pallet: ${serial}` });
-      setScanning(false);
-      inputRef.current?.focus();
-      return;
+      setLastResult({ ok: false, message: `Already scanned on this pallet: ${serial}` });
+      setScanning(false); inputRef.current?.focus(); return;
     }
 
-    // If box is already ON_PALLET_REGISTERED, skip duplicate link check (it's preloaded)
+    // If box is ON_PALLET_REGISTERED — check which pallet it belongs to
     if (label.status === 'ON_PALLET_REGISTERED') {
-      setScannedBoxes(prev => [...prev, { ...label, box_serial: serial }]);
-      setLastResult({ ok: true, message: `✓ ${serial} already on pallet` });
-      setScanning(false);
-      inputRef.current?.focus();
-      return;
+      const links = await base44.entities.BoxPalletLink.filter({ box_serial: serial }, '-created_date', 1);
+      if (links.length > 0 && links[0].pallet_id === pallet.pallet_id) {
+        // It's already on this pallet (preloaded edge case) — add to local state
+        setScannedBoxes(prev => [...prev, { ...label, box_serial: serial }]);
+        setLastResult({ ok: true, message: `✓ ${serial} already on this pallet` });
+      } else if (links.length > 0) {
+        setLastResult({ ok: false, message: `❌ Already on pallet "${links[0].pallet_id}" — use a different box or void this label` });
+      } else {
+        setLastResult({ ok: false, message: `❌ Box is ON_PALLET_REGISTERED but link not found — contact admin` });
+      }
+      setScanning(false); inputRef.current?.focus(); return;
     }
 
-    // Duplicate across pallets
+    // Allow PRINTED_UNREGISTERED for normal scan; admin can also scan IN_STOCK
+    const allowed = ['PRINTED_UNREGISTERED'];
+    if (user?.role === 'admin') allowed.push('IN_STOCK');
+    if (!allowed.includes(label.status)) {
+      setLastResult({ ok: false, message: `❌ Cannot add — box status is ${label.status}` });
+      setScanning(false); inputRef.current?.focus(); return;
+    }
+
+    // Cross-pallet duplicate check via links table
     const existingLinks = await base44.entities.BoxPalletLink.filter({ box_serial: serial }, '-created_date', 1);
     if (existingLinks.length > 0) {
-      setLastResult({ ok: false, message: `Already linked to pallet ${existingLinks[0].pallet_id}` });
-      setScanning(false);
-      inputRef.current?.focus();
-      return;
+      setLastResult({ ok: false, message: `❌ Already linked to pallet "${existingLinks[0].pallet_id}"` });
+      setScanning(false); inputRef.current?.focus(); return;
     }
 
     // Create link
@@ -85,7 +81,7 @@ export default function BoxScanStep({ pallet, user, scannedBoxes, setScannedBoxe
       scanned_by: user?.email || '',
     });
 
-    // Register box
+    // Update box status
     await base44.entities.BoxLabel.update(label.id, {
       status: 'ON_PALLET_REGISTERED',
       registered_at: new Date().toISOString(),
@@ -103,7 +99,6 @@ export default function BoxScanStep({ pallet, user, scannedBoxes, setScannedBoxe
     if (e.key === 'Enter') handleScan();
   }
 
-  // Summary grouped by item_code + batch_no
   const summary = Object.values(
     scannedBoxes.reduce((acc, b) => {
       const key = `${b.item_code}|${b.batch_no}`;
@@ -131,7 +126,7 @@ export default function BoxScanStep({ pallet, user, scannedBoxes, setScannedBoxe
       <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-3">
         <div className="flex items-center gap-2">
           <ScanLine className="w-4 h-4 text-slate-400" />
-          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Scan Box QR</span>
+          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Scan Box QR / Serial</span>
         </div>
         <div className="flex gap-2">
           <input
@@ -151,7 +146,7 @@ export default function BoxScanStep({ pallet, user, scannedBoxes, setScannedBoxe
         {lastResult && (
           <div className={`flex items-center gap-2 text-sm px-3 py-2 rounded-xl ${lastResult.ok ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'}`}>
             {lastResult.ok ? <CheckCircle className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
-            {lastResult.message}
+            <span className="break-all">{lastResult.message}</span>
           </div>
         )}
       </div>
@@ -181,7 +176,7 @@ export default function BoxScanStep({ pallet, user, scannedBoxes, setScannedBoxe
         </div>
       )}
 
-      {/* Scanned list (last 10) */}
+      {/* Scanned list (last 20) */}
       {scannedBoxes.length > 0 && (
         <div className="bg-white rounded-2xl border border-slate-200 p-4">
           <p className="text-xs font-bold text-slate-500 uppercase mb-2">
