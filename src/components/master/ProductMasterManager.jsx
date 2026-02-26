@@ -11,7 +11,7 @@ const EMPTY_FORM = {
   ml_per_bottle: '', bottles_per_box: '', product_barcode: '', mrp_box: '',
   gross_weight_kg: '', fssai_no: '', manufacturer_name: '', address_1: '',
   address_2: '', customer_care_email: '', customer_care_phone: '',
-  shelf_life_days: '', is_active: true
+  shelf_life_days: '', is_trial_pack: false, is_active: true
 };
 
 const CSV_HEADERS = [
