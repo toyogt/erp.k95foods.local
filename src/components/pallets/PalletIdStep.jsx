@@ -70,7 +70,13 @@ export default function PalletIdStep({ user, onPalletOpened }) {
         return;
       }
 
-      if (pallet.status === 'HANDED_OVER' || pallet.status === 'RECEIVED') {
+      if (pallet.status === 'HANDED_OVER') {
+        setError(`Pallet ${pid} is already handed over and awaiting warehouse receive. Ask warehouse to receive it first.`);
+        setLoading(false);
+        return;
+      }
+
+      if (pallet.status === 'RECEIVED') {
         setHandedOverPallet(pallet);
         setLoading(false);
         return;
