@@ -7,22 +7,25 @@ export default function PrintPreview({ labels, product, onClose }) {
   const previewRef = useRef(null);
 
   function handlePrint() {
+    const printItems = previewRef.current?.querySelectorAll('.lbl-print-page') || [];
+    const pages = Array.from(printItems).map(el => el.innerHTML);
+    const pageHTML = pages.map((html, i) => `
+      <div class="lbl-print-page">${html}</div>
+    `).join('');
+
     const style = `
       <style>
         @page { size: 4in 6in; margin: 0; }
-        html, body { margin: 0; padding: 0; background: #fff; }
+        html, body { margin: 0; padding: 0; background: #fff; width: 4in; }
         .lbl-print-page {
-          display: block !important;
-          width: 4in !important;
-          height: 6in !important;
-          margin: 0 !important;
-          padding: 0 !important;
-          box-shadow: none !important;
+          display: block;
+          width: 4in;
+          height: 6in;
           overflow: hidden;
-        }
-        .lbl-print-page:not(:last-child) {
           page-break-after: always;
           break-after: page;
+          page-break-inside: avoid;
+          break-inside: avoid;
         }
         .lbl-print-page > div {
           transform: none !important;
@@ -33,12 +36,11 @@ export default function PrintPreview({ labels, product, onClose }) {
         * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       </style>
     `;
-    const bodyHTML = previewRef.current?.innerHTML || '';
     const win = window.open('', '_blank', 'width=700,height=900');
-    win.document.write(`<!DOCTYPE html><html><head>${style}</head><body>${bodyHTML}</body></html>`);
+    win.document.write(`<!DOCTYPE html><html><head>${style}</head><body>${pageHTML}</body></html>`);
     win.document.close();
     win.focus();
-    setTimeout(() => { win.print(); win.close(); }, 400);
+    setTimeout(() => { win.print(); win.close(); }, 500);
   }
 
   return (
