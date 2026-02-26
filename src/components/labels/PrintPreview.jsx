@@ -19,6 +19,8 @@ export default function PrintPreview({ labels, product, onClose }) {
           padding: 0 !important;
           box-shadow: none !important;
           overflow: hidden;
+        }
+        .lbl-print-page:not(:last-child) {
           page-break-after: always;
           break-after: page;
         }
