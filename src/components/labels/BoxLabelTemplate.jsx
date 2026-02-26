@@ -87,9 +87,9 @@ export default function BoxLabelTemplate({ label, product }) {
 
       {/* ── SPECS ── */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.08in 0.15in' }}>
-        {qtyVol && <Spec label="Qty × Vol" value={qtyVol} />}
+        {qtyVol && <Spec label="Qty × Vol (bottles)" value={qtyVol} />}
         {!qtyVol && product.ml_per_bottle && <Spec label="Vol / Bottle" value={`${product.ml_per_bottle} ml`} />}
-        {!qtyVol && product.bottles_per_box && <Spec label="Bottles / Box" value={product.bottles_per_box} />}
+        {!qtyVol && product.bottles_per_box && <Spec label="Bottles / Box" value={`${product.bottles_per_box} bottles`} />}
         {product.gross_weight_kg && <Spec label="Gross Weight" value={`${product.gross_weight_kg} kg`} />}
         {product.mrp_box && <Spec label="MRP (Box)" value={`₹ ${product.mrp_box}`} big />}
       </div>

@@ -105,10 +105,11 @@ export default function BoxLabelPrint() {
   }
 
   async function loadRequests(u) {
+    // Load last 100 for search; display handles pagination
     const reqs = await base44.entities.LabelPrintRequest.filter(
       { requested_by: (u || user)?.email || '' },
       '-requested_at',
-      20
+      100
     );
     setRequests(reqs);
   }
