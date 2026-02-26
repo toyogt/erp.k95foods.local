@@ -3,14 +3,52 @@ import { base44 } from '@/api/base44Client';
 import { Loader2, RefreshCw } from 'lucide-react';
 import ApprovalSidePanel from '@/components/labels/ApprovalSidePanel';
 
-const TABS = ['PENDING', 'HISTORY'];
-
 const STATUS_STYLE = {
   PENDING:  'bg-amber-100 text-amber-800',
   APPROVED: 'bg-emerald-100 text-emerald-800',
   REJECTED: 'bg-red-100 text-red-800',
   PRINTED:  'bg-slate-100 text-slate-600',
 };
+
+function fmtDate(d) {
+  if (!d) return '—';
+  const parts = d.split('-');
+  if (parts.length === 3) return `${parts[2]}-${parts[1]}-${parts[0]}`;
+  return d;
+}
+
+function RequestCard({ req, products, onClick }) {
+  const product = products.find(p => p.item_code === req.item_code);
+  return (
+    <div
+      onClick={() => onClick(req)}
+      className="bg-white border border-slate-200 rounded-xl p-4 cursor-pointer hover:bg-slate-50 active:bg-slate-100 transition-colors space-y-2"
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="font-mono text-xs text-slate-400 truncate">{req.request_id}</p>
+          <p className="font-bold text-slate-800 text-sm truncate">{req.item_code}</p>
+          {product && <p className="text-xs text-slate-500 truncate">{product.product_name}{product.flavour ? ` · ${product.flavour}` : ''}</p>}
+        </div>
+        <div className="flex flex-col items-end gap-1 shrink-0">
+          <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${STATUS_STYLE[req.status] || 'bg-slate-100 text-slate-500'}`}>
+            {req.status}
+          </span>
+          {req.is_trial_pack && <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full">TRIAL</span>}
+        </div>
+      </div>
+      <div className="grid grid-cols-3 gap-1 text-xs">
+        <div><span className="text-slate-400">Batch</span><br/><b className="text-slate-700">{req.batch_no}</b></div>
+        <div><span className="text-slate-400">Mfg</span><br/><span className="text-slate-700">{fmtDate(req.mfg_date)}</span></div>
+        <div><span className="text-slate-400">Qty</span><br/><b className="text-slate-700">{req.qty_labels}</b></div>
+      </div>
+      <div className="flex items-center justify-between text-xs text-slate-400">
+        <span>{req.requested_by}</span>
+        <span>{req.requested_at ? new Date(req.requested_at).toLocaleString('en-IN', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' }) : '—'}</span>
+      </div>
+    </div>
+  );
+}
 
 export default function BoxLabelApprovals() {
   const [user, setUser] = useState(null);
@@ -52,98 +90,45 @@ export default function BoxLabelApprovals() {
   );
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-slate-900">Label Approvals</h2>
           <p className="text-sm text-slate-500">Review and approve label print requests.</p>
         </div>
-        <button onClick={loadAll} className="text-slate-400 hover:text-slate-600">
+        <button onClick={loadAll} className="text-slate-400 hover:text-slate-600 p-1">
           <RefreshCw className="w-4 h-4" />
         </button>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-slate-100 rounded-xl p-1 w-fit">
-        {TABS.map(tab => (
+      <div className="flex gap-1 bg-slate-100 rounded-xl p-1">
+        {['PENDING', 'HISTORY'].map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${
+            className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${
               activeTab === tab ? 'bg-white shadow text-slate-900' : 'text-slate-500 hover:text-slate-700'
             }`}
           >
-            {tab === 'PENDING' ? `Pending (${pendingReqs.length})` : 'History'}
+            {tab === 'PENDING' ? `Pending (${pendingReqs.length})` : `History (${historyReqs.length})`}
           </button>
         ))}
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-        {rows.length === 0 ? (
-          <div className="p-12 text-center text-slate-400 text-sm">
-            {activeTab === 'PENDING' ? 'No pending requests.' : 'No history yet.'}
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50 border-b border-slate-200">
-                <tr className="text-xs text-slate-500 uppercase tracking-wide">
-                  <th className="text-left px-4 py-3">Request ID</th>
-                  <th className="text-left px-4 py-3">Product</th>
-                  <th className="text-left px-4 py-3">Batch</th>
-                  <th className="text-left px-4 py-3">Mfg</th>
-                  <th className="text-left px-4 py-3">Exp</th>
-                  <th className="text-right px-4 py-3">Qty</th>
-                  <th className="text-left px-4 py-3">Requested By</th>
-                  <th className="text-left px-4 py-3">Requested At</th>
-                  <th className="text-left px-4 py-3">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {rows.map(req => (
-                  <tr
-                    key={req.id}
-                    onClick={() => setSelected(req)}
-                    className="hover:bg-slate-50 cursor-pointer transition-colors"
-                  >
-                    <td className="px-4 py-3 font-mono text-xs text-slate-700 font-semibold">{req.request_id}</td>
-                    <td className="px-4 py-3">
-                      <div className="font-semibold text-slate-800">{req.item_code}</div>
-                      <div className="text-xs text-slate-500">
-                        {products.find(p => p.item_code === req.item_code)?.product_name || ''}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-slate-700">{req.batch_no}</td>
-                    <td className="px-4 py-3 text-slate-600 text-xs">{req.mfg_date || '—'}</td>
-                    <td className={`px-4 py-3 text-xs font-semibold ${!req.exp_date ? 'text-red-500' : 'text-slate-600'}`}>
-                      {req.exp_date || '⚠ Missing'}
-                    </td>
-                    <td className="px-4 py-3 text-right font-bold text-slate-800">{req.qty_labels}</td>
-                    <td className="px-4 py-3 text-xs text-slate-600">{req.requested_by}</td>
-                    <td className="px-4 py-3 text-xs text-slate-500">
-                      {req.requested_at ? new Date(req.requested_at).toLocaleString() : '—'}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${STATUS_STYLE[req.status] || 'bg-slate-100 text-slate-500'}`}>
-                        {req.status}
-                      </span>
-                      {req.is_trial_pack && (
-                        <span className="ml-1.5 px-2 py-0.5 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full">TRIAL</span>
-                      )}
-                      {req.qty_labels > 500 && req.status === 'PENDING' && (
-                        <span className="ml-1.5 px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-semibold rounded-full">LARGE</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+      {/* Card list – no table, no horizontal scroll */}
+      {rows.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center text-slate-400 text-sm">
+          {activeTab === 'PENDING' ? 'No pending requests.' : 'No history yet.'}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {rows.map(req => (
+            <RequestCard key={req.id} req={req} products={products} onClick={setSelected} />
+          ))}
+        </div>
+      )}
 
-      {/* Side panel */}
       {selected && (
         <ApprovalSidePanel
           request={selected}

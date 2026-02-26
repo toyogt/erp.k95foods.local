@@ -5,6 +5,7 @@ import PalletIdStep from '@/components/pallets/PalletIdStep';
 import BoxScanStep from '@/components/pallets/BoxScanStep';
 import SealAndPrint from '@/components/pallets/SealAndPrint';
 import HandoverStep from '@/components/pallets/HandoverStep';
+import DraftPalletList from '@/components/pallets/DraftPalletList';
 
 const STEPS = ['Pallet ID', 'Scan Boxes', 'Seal & Print', 'Photo Proof'];
 
@@ -101,7 +102,12 @@ export default function BoxPalletBuild() {
         </button>
       )}
 
-      {step === 0 && <PalletIdStep user={user} onPalletOpened={handlePalletOpened} />}
+      {step === 0 && (
+        <>
+          <DraftPalletList user={user} onResume={handlePalletOpened} />
+          <PalletIdStep user={user} onPalletOpened={handlePalletOpened} />
+        </>
+      )}
 
       {step === 1 && pallet && (
         <BoxScanStep
