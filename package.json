@@ -76,7 +76,9 @@
     "tailwindcss-animate": "^1.0.7",
     "three": "^0.171.0",
     "vaul": "^1.1.2",
-    "zod": "^3.24.2"
+    "zod": "^3.24.2",
+    "react-qr-code": "^2.0.15",
+    "react-barcode": "^1.6.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.19.0",
