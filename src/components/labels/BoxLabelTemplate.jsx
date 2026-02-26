@@ -5,8 +5,17 @@ import Barcode from 'react-barcode';
 export default function BoxLabelTemplate({ label, product }) {
   if (!label || !product) return null;
 
-  const mfg = label.mfg_date || '—';
-  const exp = label.exp_date || '—';
+  function fmtDate(d) {
+    if (!d) return '—';
+    const parts = d.split('-');
+    if (parts.length === 3) return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    return d;
+  }
+  const mfg = fmtDate(label.mfg_date);
+  const exp = fmtDate(label.exp_date);
+  const qtyVol = (product.bottles_per_box && product.ml_per_bottle)
+    ? `${product.bottles_per_box} × ${product.ml_per_bottle}ml`
+    : null;
   const barcodeVal = product.product_barcode || product.item_code || 'UNKNOWN';
   const qrVal = label.qr_payload || label.box_serial || 'NO-QR';
 
@@ -78,8 +87,9 @@ export default function BoxLabelTemplate({ label, product }) {
 
       {/* ── SPECS ── */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.08in 0.15in' }}>
-        {product.ml_per_bottle && <Spec label="Vol / Bottle" value={`${product.ml_per_bottle} ml`} />}
-        {product.bottles_per_box && <Spec label="Bottles / Box" value={product.bottles_per_box} />}
+        {qtyVol && <Spec label="Qty × Vol" value={qtyVol} />}
+        {!qtyVol && product.ml_per_bottle && <Spec label="Vol / Bottle" value={`${product.ml_per_bottle} ml`} />}
+        {!qtyVol && product.bottles_per_box && <Spec label="Bottles / Box" value={product.bottles_per_box} />}
         {product.gross_weight_kg && <Spec label="Gross Weight" value={`${product.gross_weight_kg} kg`} />}
         {product.mrp_box && <Spec label="MRP (Box)" value={`₹ ${product.mrp_box}`} big />}
       </div>
@@ -137,7 +147,7 @@ export default function BoxLabelTemplate({ label, product }) {
         </div>
 
         <div style={{ fontSize: '6pt', color: '#aaa', textAlign: 'right', marginTop: '4pt' }}>
-          {label.item_code} · Printed {label.printed_at ? new Date(label.printed_at).toLocaleString() : '—'}
+          {label.item_code} · Printed {label.printed_at ? new Date(label.printed_at).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'}
         </div>
       </div>
     </div>
