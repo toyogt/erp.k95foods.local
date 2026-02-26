@@ -187,12 +187,11 @@ export default function Dashboard() {
       )}
 
       <div>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-semibold text-slate-900">Stations</h2>
-          {isManager && (
+        {isManager && (
+          <div className="flex justify-end mb-3">
             <Link to={createPageUrl('CustomizeDashboard')} className="text-xs text-blue-600 font-medium">Customize ›</Link>
-          )}
-        </div>
+          </div>
+        )}
         <div className="space-y-3">
           {visibleStations.map(s => <StationCard key={s.page} {...s} />)}
         </div>
