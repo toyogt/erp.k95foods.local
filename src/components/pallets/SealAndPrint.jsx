@@ -13,7 +13,7 @@ export default function SealAndPrint({ pallet, scannedBoxes, user, onSealed, onH
   const summary = Object.values(
     scannedBoxes.reduce((acc, b) => {
       const key = `${b.item_code}|${b.batch_no}`;
-      if (!acc[key]) acc[key] = { item_code: b.item_code, batch_no: b.batch_no, count: 0 };
+      if (!acc[key]) acc[key] = { item_code: b.item_code, batch_no: b.batch_no, count: 0, product_name: b.product_name || b.item_code };
       acc[key].count++;
       return acc;
     }, {})

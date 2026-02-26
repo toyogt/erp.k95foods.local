@@ -18,14 +18,10 @@ function HomeScreen({ user, onNavigate }) {
 
   async function loadStats() {
     setLoading(true);
-    const [pendingPallets, inStockBoxes] = await Promise.all([
-      base44.entities.BoxPallet.filter({ status: 'HANDED_OVER' }, '-created_date', 100),
-      base44.entities.BoxLabel.filter({ status: 'IN_STOCK' }, 'item_code', 500),
-    ]);
+    const pendingPallets = await base44.entities.BoxPallet.filter({ status: 'HANDED_OVER' }, '-created_date', 100);
     setStats({
       pendingReceive: pendingPallets.length,
-      inStock: inStockBoxes.length,
-      pallets: pendingPallets.slice(0, 5),
+      pallets: pendingPallets,
     });
     setLoading(false);
   }
@@ -44,46 +40,46 @@ function HomeScreen({ user, onNavigate }) {
       {loading ? (
         <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>
       ) : (
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center justify-between">
+          <div>
             <p className="text-xs font-bold text-amber-600 uppercase tracking-wide">Pending Receive</p>
             <p className="text-3xl font-black text-amber-800 mt-1">{stats?.pendingReceive ?? 0}</p>
             <p className="text-xs text-amber-500 mt-0.5">pallets awaiting</p>
           </div>
-          <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4">
-            <p className="text-xs font-bold text-emerald-600 uppercase tracking-wide">In Stock</p>
-            <p className="text-3xl font-black text-emerald-800 mt-1">{stats?.inStock ?? 0}</p>
-            <p className="text-xs text-emerald-500 mt-0.5">boxes</p>
-          </div>
+          <button onClick={loadStats} className="text-amber-400 hover:text-amber-600">
+            <RefreshCw className="w-4 h-4" />
+          </button>
         </div>
       )}
 
       {/* Pending pallets list */}
       {stats?.pallets?.length > 0 && (
         <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-2">
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">Pallets to Receive</p>
-            <button onClick={loadStats} className="text-slate-400 hover:text-slate-600">
-              <RefreshCw className="w-3.5 h-3.5" />
-            </button>
-          </div>
-          {stats.pallets.map((p, i) => (
-            <div key={i} className="flex items-center justify-between py-2 border-b border-slate-50 last:border-0">
-              <span className="font-mono text-sm font-semibold text-slate-800">{p.pallet_id}</span>
-              <div className="flex items-center gap-3">
-                <span className="text-xs text-slate-400">{p.total_boxes} boxes</span>
-                <button
-                  onClick={() => onNavigate('receive')}
-                  className="text-xs font-semibold text-sky-600 hover:text-sky-800 bg-sky-50 px-2 py-1 rounded-lg"
-                >
-                  Receive →
-                </button>
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Pallets to Receive</p>
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            {stats.pallets.map((p, i) => (
+              <div key={i} className="flex items-center justify-between py-2.5 px-3 bg-slate-50 rounded-xl">
+                <div>
+                  <span className="font-mono text-sm font-bold text-slate-800">{p.pallet_id}</span>
+                  {p.product_name && <p className="text-xs text-slate-500 mt-0.5">{p.product_name}</p>}
+                  {!p.product_name && p.item_code && <p className="text-xs text-slate-500 mt-0.5">{p.item_code}</p>}
+                  {p.batch_no && <p className="text-xs text-slate-400">Batch: {p.batch_no}</p>}
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <div className="text-right">
+                    <span className="text-sm font-black text-slate-700">{p.total_boxes || '?'}</span>
+                    <p className="text-xs text-slate-400">boxes</p>
+                  </div>
+                  <button
+                    onClick={() => onNavigate('receive')}
+                    className="text-xs font-semibold text-sky-600 hover:text-sky-800 bg-sky-100 px-3 py-1.5 rounded-lg ml-1"
+                  >
+                    Receive →
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
-          {stats.pendingReceive > 5 && (
-            <p className="text-xs text-slate-400 text-center">+{stats.pendingReceive - 5} more</p>
-          )}
+            ))}
+          </div>
         </div>
       )}
 
