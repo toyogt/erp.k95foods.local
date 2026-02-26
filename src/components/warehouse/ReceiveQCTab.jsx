@@ -248,7 +248,8 @@ export default function ReceiveQCTab({ user }) {
             <div className="flex gap-2">
               <input
                 ref={palletRef}
-                className="flex-1 h-11 px-3 text-sm rounded-xl border border-slate-300 focus:border-sky-500 focus:outline-none font-mono"
+                style={{ fontSize: '16px' }}
+                className="flex-1 h-12 px-3 rounded-xl border border-slate-300 focus:border-sky-500 focus:outline-none font-mono"
                 placeholder="Scan or type Pallet ID…"
                 value={palletInput}
                 onChange={e => { setPalletInput(e.target.value.toUpperCase()); setSessionError(''); }}
