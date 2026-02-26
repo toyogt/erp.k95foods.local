@@ -194,9 +194,14 @@ export default function ProductMasterManager() {
                   <td className="px-4 py-3 text-right text-slate-600">{p.bottles_per_box || '—'}</td>
                   <td className="px-4 py-3 text-right text-slate-600">₹{p.mrp_box || '—'}</td>
                   <td className="px-4 py-3 text-center">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${p.is_active !== false ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
-                      {p.is_active !== false ? 'Active' : 'Inactive'}
-                    </span>
+                    <div className="flex flex-col items-center gap-1">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${p.is_active !== false ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
+                        {p.is_active !== false ? 'Active' : 'Inactive'}
+                      </span>
+                      {p.is_trial_pack && (
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700">Trial</span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-center">
                     <div className="flex justify-center gap-2">
