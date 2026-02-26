@@ -8,41 +8,31 @@ export default function PrintPreview({ labels, product, onClose }) {
 
   function handlePrint() {
     const printItems = previewRef.current?.querySelectorAll('.lbl-print-page') || [];
-    const pages = Array.from(printItems).map(el => el.innerHTML);
-    const pageHTML = pages.map((html, i) => `
-      <div class="lbl-print-page">${html}</div>
-    `).join('');
+
+    // Build one iframe per label, each in its own @page context
+    const pages = Array.from(printItems).map(el => {
+      // Get the inner label div HTML (inside the scale wrapper)
+      const inner = el.querySelector('.box-label-page');
+      return inner ? inner.outerHTML : el.innerHTML;
+    });
+
+    const labelBlocks = pages.map((html, i) => {
+      const isLast = i === pages.length - 1;
+      return `<div style="width:4in;height:6in;overflow:hidden;display:block;${isLast ? '' : 'page-break-after:always;'}">${html}</div>`;
+    }).join('');
 
     const style = `
       <style>
         @page { size: 4in 6in; margin: 0; }
-        html, body { margin: 0; padding: 0; background: #fff; width: 4in; }
-        .lbl-print-page {
-          display: block;
-          width: 4in;
-          height: 6in;
-          overflow: hidden;
-          page-break-inside: avoid;
-          break-inside: avoid;
-        }
-        .lbl-print-page:not(:last-child) {
-          page-break-after: always;
-          break-after: page;
-        }
-        .lbl-print-page > div {
-          transform: none !important;
-          width: 4in !important;
-          height: 6in !important;
-          transform-origin: top left !important;
-        }
-        * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        html, body { margin: 0; padding: 0; background: #fff; }
+        * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; box-sizing: border-box; }
       </style>
     `;
     const win = window.open('', '_blank', 'width=700,height=900');
-    win.document.write(`<!DOCTYPE html><html><head>${style}</head><body>${pageHTML}</body></html>`);
+    win.document.write(`<!DOCTYPE html><html><head>${style}</head><body>${labelBlocks}</body></html>`);
     win.document.close();
     win.focus();
-    setTimeout(() => { win.print(); win.close(); }, 500);
+    setTimeout(() => { win.print(); win.close(); }, 600);
   }
 
   return (
