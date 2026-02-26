@@ -53,6 +53,10 @@ export default function Layout({ children, currentPageName }) {
           :root { --factory-primary: #0f172a; --factory-accent: #2563eb; }
           body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; -webkit-font-smoothing: antialiased; }
           * { -webkit-tap-highlight-color: transparent; }
+          /* Prevent iOS auto-zoom on input focus (requires font-size >= 16px on inputs) */
+          input, select, textarea { font-size: 16px !important; }
+          /* Larger touch targets for header buttons */
+          .touch-target { min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; }
         `}</style>
         <OfflineBanner />
         {/* Header */}
