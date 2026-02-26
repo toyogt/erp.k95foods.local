@@ -18,7 +18,7 @@ const CSV_HEADERS = [
   'item_code','brand_name','product_name','flavour','ml_per_bottle',
   'bottles_per_box','product_barcode','mrp_box','gross_weight_kg',
   'fssai_no','manufacturer_name','address_1','address_2',
-  'customer_care_email','customer_care_phone','shelf_life_days'
+  'customer_care_email','customer_care_phone','shelf_life_days','is_trial_pack'
 ];
 
 export default function ProductMasterManager() {
