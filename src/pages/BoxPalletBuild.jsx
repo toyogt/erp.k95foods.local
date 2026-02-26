@@ -84,14 +84,14 @@ export default function BoxPalletBuild() {
   );
 
   return (
-    <div className="max-w-2xl mx-auto space-y-5">
+    <div className="max-w-2xl mx-auto space-y-4 pb-10">
       <div>
         <h2 className="text-xl font-bold text-slate-900">Pallet Build</h2>
         <p className="text-sm text-slate-500">Scan boxes to build, seal and hand over FG pallets.</p>
       </div>
 
       {/* Stepper */}
-      <div className="flex items-center gap-1 bg-white rounded-2xl border border-slate-200 px-3 py-3 overflow-x-auto">
+      <div className="flex items-center gap-1 bg-white rounded-2xl border border-slate-200 px-3 py-3 overflow-x-auto min-w-0">
         {STEPS.map((label, i) => (
           <div key={i} className="flex items-center gap-1 shrink-0">
             <div className={`flex items-center gap-1.5 ${i > step ? 'opacity-40' : ''}`}>
