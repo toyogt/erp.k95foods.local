@@ -8,6 +8,7 @@ export default function SealAndPrint({ pallet, scannedBoxes, user, onSealed, onH
   const [sealing, setSealing] = useState(false);
   const [sealed, setSealed] = useState(pallet.status === 'SEALED');
   const [sealedPallet, setSealedPallet] = useState(pallet.status === 'SEALED' ? pallet : null);
+  const [manifestPrinted, setManifestPrinted] = useState(false);
 
   const summary = Object.values(
     scannedBoxes.reduce((acc, b) => {
@@ -87,6 +88,11 @@ export default function SealAndPrint({ pallet, scannedBoxes, user, onSealed, onH
     win.document.close();
     win.focus();
     setTimeout(() => { win.print(); win.close(); }, 400);
+  }
+
+  function printManifestAndMark() {
+    setManifestPrinted(true);
+    printManifest();
   }
 
   function printManifest() {
@@ -171,12 +177,20 @@ export default function SealAndPrint({ pallet, scannedBoxes, user, onSealed, onH
             <Button onClick={printPalletLabel} variant="outline" className="gap-2 h-12">
               <Printer className="w-4 h-4" /> Pallet Label (6×4)
             </Button>
-            <Button onClick={printManifest} variant="outline" className="gap-2 h-12">
-              <FileText className="w-4 h-4" /> Full Manifest (A4)
+            <Button onClick={printManifestAndMark} variant="outline" className={`gap-2 h-12 ${manifestPrinted ? 'border-emerald-400 text-emerald-700 bg-emerald-50' : ''}`}>
+              <FileText className="w-4 h-4" /> {manifestPrinted ? '✓ Manifest Printed' : 'Full Manifest (A4)'}
             </Button>
           </div>
 
-          <Button onClick={onHandoverReady} className="w-full bg-emerald-600 hover:bg-emerald-700 gap-2 h-11">
+          {!manifestPrinted && (
+            <p className="text-xs text-amber-600 text-center font-medium">⚠ Print the manifest to proceed</p>
+          )}
+
+          <Button
+            onClick={onHandoverReady}
+            disabled={!manifestPrinted}
+            className="w-full bg-emerald-600 hover:bg-emerald-700 gap-2 h-11 disabled:opacity-40"
+          >
             Proceed to Photo Proof →
           </Button>
         </>

@@ -10,6 +10,7 @@ const STEPS = ['Pallet ID', 'Scan Boxes', 'Seal & Print', 'Photo Proof'];
 
 export default function BoxPalletBuild() {
   const [user, setUser] = useState(null);
+  const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [step, setStep] = useState(0);
   const [pallet, setPallet] = useState(null);
@@ -17,7 +18,14 @@ export default function BoxPalletBuild() {
   const [backLoading, setBackLoading] = useState(false);
 
   useEffect(() => {
-    base44.auth.me().then(u => { setUser(u); setLoading(false); }).catch(() => setLoading(false));
+    Promise.all([
+      base44.auth.me(),
+      base44.entities.ProductMaster.filter({ is_active: true }, 'product_name', 500),
+    ]).then(([u, prods]) => {
+      setUser(u);
+      setProducts(prods);
+      setLoading(false);
+    }).catch(() => setLoading(false));
   }, []);
 
   function handlePalletOpened(p) {
@@ -32,26 +40,11 @@ export default function BoxPalletBuild() {
     setStep(1);
   }
 
-  function handleSealRequest() {
-    setStep(2);
-  }
+  function handleSealRequest() { setStep(2); }
+  function handleSealed(data) { if (data) setPallet(prev => ({ ...prev, ...data })); }
+  function handleHandoverReady() { setStep(3); }
+  function handleComplete() { setPallet(null); setScannedBoxes([]); setStep(0); }
 
-  function handleSealed(data) {
-    if (data) setPallet(prev => ({ ...prev, ...data }));
-  }
-
-  function handleHandoverReady() {
-    setStep(3);
-  }
-
-  function handleComplete() {
-    setPallet(null);
-    setScannedBoxes([]);
-    setStep(0);
-  }
-
-  // Back from step 2 (Seal & Print) → step 1 (Scan Boxes)
-  // If pallet was already sealed, reopen it first
   async function handleBackToScan() {
     setBackLoading(true);
     if (pallet?.status === 'SEALED') {
@@ -108,15 +101,13 @@ export default function BoxPalletBuild() {
         </button>
       )}
 
-      {/* Step content */}
-      {step === 0 && (
-        <PalletIdStep user={user} onPalletOpened={handlePalletOpened} />
-      )}
+      {step === 0 && <PalletIdStep user={user} onPalletOpened={handlePalletOpened} />}
 
       {step === 1 && pallet && (
         <BoxScanStep
           pallet={pallet}
           user={user}
+          products={products}
           scannedBoxes={scannedBoxes}
           setScannedBoxes={setScannedBoxes}
           onSealRequest={handleSealRequest}

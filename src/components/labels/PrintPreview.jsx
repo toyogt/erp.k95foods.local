@@ -10,11 +10,23 @@ export default function PrintPreview({ labels, product, onClose }) {
     const style = `
       <style>
         @page { size: 4in 6in; margin: 0; }
-        body { margin: 0; padding: 0; background: #fff; }
-        .box-label-page {
-          width: 4in; height: 6in;
+        html, body { margin: 0; padding: 0; background: #fff; }
+        .lbl-print-page {
+          display: block !important;
+          width: 4in !important;
+          height: 6in !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          box-shadow: none !important;
+          overflow: hidden;
           page-break-after: always;
           break-after: page;
+        }
+        .lbl-print-page > div {
+          transform: none !important;
+          width: 4in !important;
+          height: 6in !important;
+          transform-origin: top left !important;
         }
         * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       </style>
@@ -37,7 +49,7 @@ export default function PrintPreview({ labels, product, onClose }) {
         </div>
         <div className="flex items-center gap-3">
           <Button onClick={handlePrint} className="gap-2 bg-cyan-600 hover:bg-cyan-700">
-            <Printer className="w-4 h-4" /> Print All
+            <Printer className="w-4 h-4" /> Print All ({labels.length})
           </Button>
           <Button variant="ghost" size="icon" onClick={onClose}><X className="w-5 h-5" /></Button>
         </div>
@@ -47,8 +59,18 @@ export default function PrintPreview({ labels, product, onClose }) {
       <div className="flex-1 overflow-auto bg-slate-200 p-6 flex flex-col items-center gap-4">
         <div ref={previewRef}>
           {labels.map((lbl, i) => (
-            <div key={i} style={{ marginBottom: '16px', boxShadow: '0 2px 12px rgba(0,0,0,0.15)', background: '#fff', display: 'inline-block' }}>
-              {/* Scale 4in×6in for screen preview */}
+            <div
+              key={i}
+              className="lbl-print-page"
+              style={{
+                marginBottom: '24px',
+                boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
+                background: '#fff',
+                width: `${0.85 * 4}in`,
+                height: `${0.85 * 6}in`,
+                overflow: 'hidden',
+              }}
+            >
               <div style={{ transform: 'scale(0.85)', transformOrigin: 'top left', width: '4in', height: '6in' }}>
                 <BoxLabelTemplate label={lbl} product={product} />
               </div>

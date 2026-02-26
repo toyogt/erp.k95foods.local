@@ -12,13 +12,19 @@ function parseSerial(raw) {
   return raw.trim();
 }
 
-export default function BoxScanStep({ pallet, user, scannedBoxes, setScannedBoxes, onSealRequest }) {
+export default function BoxScanStep({ pallet, user, products = [], scannedBoxes, setScannedBoxes, onSealRequest }) {
   const [scanInput, setScanInput] = useState('');
   const [scanning, setScanning] = useState(false);
   const [lastResult, setLastResult] = useState(null);
   const inputRef = useRef(null);
 
   useEffect(() => { inputRef.current?.focus(); }, []);
+
+  function getProductName(item_code) {
+    const p = products.find(p => p.item_code === item_code);
+    if (!p) return item_code;
+    return p.product_name + (p.flavour ? ` · ${p.flavour}` : '');
+  }
 
   async function handleScan() {
     const raw = scanInput.trim();
@@ -47,18 +53,18 @@ export default function BoxScanStep({ pallet, user, scannedBoxes, setScannedBoxe
     if (label.status === 'ON_PALLET_REGISTERED') {
       const links = await base44.entities.BoxPalletLink.filter({ box_serial: serial }, '-created_date', 1);
       if (links.length > 0 && links[0].pallet_id === pallet.pallet_id) {
-        // It's already on this pallet (preloaded edge case) — add to local state
+        // It's on this same pallet (preloaded) — just add to local state
         setScannedBoxes(prev => [...prev, { ...label, box_serial: serial }]);
         setLastResult({ ok: true, message: `✓ ${serial} already on this pallet` });
       } else if (links.length > 0) {
-        setLastResult({ ok: false, message: `❌ Already on pallet "${links[0].pallet_id}" — use a different box or void this label` });
+        setLastResult({ ok: false, message: `❌ Already on pallet "${links[0].pallet_id}" — use a different label` });
       } else {
-        setLastResult({ ok: false, message: `❌ Box is ON_PALLET_REGISTERED but link not found — contact admin` });
+        setLastResult({ ok: false, message: `❌ Box is ON_PALLET_REGISTERED but no link found — contact admin` });
       }
       setScanning(false); inputRef.current?.focus(); return;
     }
 
-    // Allow PRINTED_UNREGISTERED for normal scan; admin can also scan IN_STOCK
+    // Allow PRINTED_UNREGISTERED; admin can also scan IN_STOCK
     const allowed = ['PRINTED_UNREGISTERED'];
     if (user?.role === 'admin') allowed.push('IN_STOCK');
     if (!allowed.includes(label.status)) {
@@ -73,9 +79,23 @@ export default function BoxScanStep({ pallet, user, scannedBoxes, setScannedBoxe
       setScanning(false); inputRef.current?.focus(); return;
     }
 
-    // Create link
+    // Enforce single product per pallet
+    if (scannedBoxes.length > 0) {
+      const firstBox = scannedBoxes[0];
+      if (firstBox.item_code !== label.item_code) {
+        setLastResult({ ok: false, message: `❌ Pallet already has item "${firstBox.item_code}" — cannot mix products on one pallet` });
+        setScanning(false); inputRef.current?.focus(); return;
+      }
+      if (firstBox.batch_no !== label.batch_no) {
+        setLastResult({ ok: false, message: `❌ Pallet already has batch "${firstBox.batch_no}" — cannot mix batches on one pallet` });
+        setScanning(false); inputRef.current?.focus(); return;
+      }
+    }
+
+    // Create link with record reference
     await base44.entities.BoxPalletLink.create({
       pallet_id: pallet.pallet_id,
+      box_pallet_record_id: pallet.id,
       box_serial: serial,
       scanned_at: new Date().toISOString(),
       scanned_by: user?.email || '',
@@ -99,14 +119,9 @@ export default function BoxScanStep({ pallet, user, scannedBoxes, setScannedBoxe
     if (e.key === 'Enter') handleScan();
   }
 
-  const summary = Object.values(
-    scannedBoxes.reduce((acc, b) => {
-      const key = `${b.item_code}|${b.batch_no}`;
-      if (!acc[key]) acc[key] = { item_code: b.item_code, batch_no: b.batch_no, count: 0 };
-      acc[key].count++;
-      return acc;
-    }, {})
-  );
+  // Summary — single product/batch so just count
+  const firstBox = scannedBoxes[0];
+  const productName = firstBox ? getProductName(firstBox.item_code) : null;
 
   return (
     <div className="space-y-4">
@@ -151,32 +166,25 @@ export default function BoxScanStep({ pallet, user, scannedBoxes, setScannedBoxe
         )}
       </div>
 
-      {/* Summary table */}
-      {summary.length > 0 && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-4">
-          <p className="text-xs font-bold text-slate-500 uppercase mb-2">Contents Summary</p>
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-xs text-slate-400 uppercase border-b border-slate-100">
-                <th className="text-left pb-1">Item Code</th>
-                <th className="text-left pb-1">Batch</th>
-                <th className="text-right pb-1">Boxes</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {summary.map((row, i) => (
-                <tr key={i}>
-                  <td className="py-1.5 font-semibold text-slate-800">{row.item_code}</td>
-                  <td className="py-1.5 text-slate-600">{row.batch_no}</td>
-                  <td className="py-1.5 text-right font-bold text-slate-900">{row.count}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {/* Contents summary */}
+      {scannedBoxes.length > 0 && firstBox && (
+        <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-2">
+          <p className="text-xs font-bold text-slate-500 uppercase mb-1">Contents Summary</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-semibold text-slate-800 text-sm">{productName}</p>
+              <p className="text-xs text-slate-500 font-mono">{firstBox.item_code} · Batch: {firstBox.batch_no}</p>
+              {firstBox.exp_date && <p className="text-xs text-slate-400">Exp: {firstBox.exp_date}</p>}
+            </div>
+            <div className="text-right">
+              <span className="text-2xl font-black text-slate-900">{scannedBoxes.length}</span>
+              <p className="text-xs text-slate-500">boxes</p>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Scanned list (last 20) */}
+      {/* Scanned list */}
       {scannedBoxes.length > 0 && (
         <div className="bg-white rounded-2xl border border-slate-200 p-4">
           <p className="text-xs font-bold text-slate-500 uppercase mb-2">
