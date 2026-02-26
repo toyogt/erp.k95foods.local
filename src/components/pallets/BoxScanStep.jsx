@@ -169,7 +169,8 @@ export default function BoxScanStep({ pallet, user, products = [], scannedBoxes,
         <div className="flex gap-2">
           <input
             ref={inputRef}
-            className="flex-1 h-11 px-4 text-sm rounded-xl border border-slate-300 focus:border-emerald-500 focus:outline-none font-mono"
+            className="flex-1 h-12 px-4 rounded-xl border border-slate-300 focus:border-emerald-500 focus:outline-none font-mono"
+            style={{ fontSize: '16px' }}
             placeholder="Scan QR or type box serial…"
             value={scanInput}
             onChange={e => setScanInput(e.target.value)}
