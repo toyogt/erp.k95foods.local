@@ -80,7 +80,7 @@ export default function Layout({ children, currentPageName }) {
                 <h1 className="font-semibold text-slate-900 text-base">{pageTitle}</h1>
               )}
             </div>
-            <Button variant="ghost" size="icon" onClick={() => setMenuOpen(!menuOpen)} className="rounded-lg">
+            <Button variant="ghost" onClick={() => setMenuOpen(!menuOpen)} className="rounded-lg w-11 h-11 p-0">
               {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </Button>
           </div>
