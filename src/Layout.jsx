@@ -42,7 +42,8 @@ export default function Layout({ children, currentPageName }) {
   }, []);
 
   const isDashboard = currentPageName === 'Dashboard';
-  const NAV_ITEMS = ALL_NAV_ITEMS.filter(n => isEnabled(n.page));
+  // Only filter nav once user is loaded to avoid flashing admin items
+  const NAV_ITEMS = user ? ALL_NAV_ITEMS.filter(n => isEnabled(n.page)) : [];
   const pageTitle = ALL_NAV_ITEMS.find(n => n.page === currentPageName)?.label || currentPageName?.replace(/([A-Z])/g, ' $1').trim();
 
   return (
