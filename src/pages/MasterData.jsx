@@ -46,6 +46,7 @@ export default function MasterData() {
             {isAdmin   && <TabsTrigger value="settings"   className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Settings</TabsTrigger>}
           </TabsList>
         </div>
+        <TabsContent value="products"   className="mt-4"><ProductMasterManager /></TabsContent>
         <TabsContent value="bottles"    className="mt-4"><BottleTypeManager user={user} /></TabsContent>
         <TabsContent value="locations"  className="mt-4"><LocationManager user={user} /></TabsContent>
         <TabsContent value="machines"   className="mt-4"><MachineManager user={user} /></TabsContent>
