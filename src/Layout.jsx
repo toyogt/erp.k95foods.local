@@ -48,7 +48,7 @@ export default function Layout({ children, currentPageName }) {
 
   return (
     <OfflineProvider>
-      <div className="min-h-screen bg-slate-50">
+      <div className="min-h-screen bg-slate-50 overflow-x-hidden max-w-full">
         <style>{`
           :root { --factory-primary: #0f172a; --factory-accent: #2563eb; }
           body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; -webkit-font-smoothing: antialiased; }
