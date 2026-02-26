@@ -8,7 +8,11 @@ const MODULE_LIST = Object.values(MODULE_KEYS).map(k => ({
   key: k, name: k.replace(/_/g, ' ')
 }));
 
-const ALL_ROLES = ['admin','production_manager','stores','recipe_operator','qa','filling_operator','chamber_operator','labelling_receiver','line_operator','labelling_supervisor','warehouse'];
+const ALL_ROLES = [
+  'admin','production_manager','stores','recipe_operator','qa',
+  'filling_operator','chamber_operator','labelling_receiver','line_operator','labelling_supervisor',
+  'label_operator','label_supervisor','pallet_builder','warehouse_ops','warehouse','user',
+];
 
 export default function ModuleAccessManager() {
   const [moduleConfigs, setModuleConfigs] = useState([]);
