@@ -93,7 +93,7 @@ export default function PalletIdStep({ user, onPalletOpened }) {
             className="w-full h-11 px-4 text-sm rounded-xl border border-slate-300 focus:border-emerald-500 focus:outline-none font-mono tracking-wider"
             placeholder="Scan or type Pallet ID…"
             value={palletInput}
-            onChange={e => { setPalletInput(e.target.value.toUpperCase()); setError(''); }}
+            onChange={e => { setPalletInput(e.target.value.toUpperCase()); setError(''); setSealedPallet(null); }}
             onKeyDown={handleKey}
           />
           {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
@@ -107,6 +107,40 @@ export default function PalletIdStep({ user, onPalletOpened }) {
           </Button>
         </div>
       </div>
+
+      {/* Recovery panel for already-sealed pallets */}
+      {sealedPallet && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 space-y-4">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold text-amber-800">Pallet is already SEALED</p>
+              <p className="text-sm text-amber-700 mt-1">
+                <span className="font-mono font-semibold">{sealedPallet.pallet_id}</span> was sealed but not yet handed over.
+                How would you like to proceed?
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-col gap-2">
+            <Button
+              onClick={handleProceedToHandover}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 gap-2"
+            >
+              <CheckCircle className="w-4 h-4" />
+              Proceed to Handover (skip scanning)
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleReopen}
+              disabled={loading}
+              className="w-full gap-2 border-amber-300 text-amber-800 hover:bg-amber-100"
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
+              Re-open Pallet (re-scan boxes)
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
