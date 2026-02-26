@@ -20,11 +20,11 @@ export default function BoxPalletBuild() {
   }, []);
 
   function handlePalletOpened(p) {
-    if (p._resumeAtHandover) {
-      const { _resumeAtHandover, ...clean } = p;
+    if (p._preloadedBoxes) {
+      const { _preloadedBoxes, ...clean } = p;
       setPallet(clean);
-      setScannedBoxes([]);
-      setStep(3); // jump straight to handover
+      setScannedBoxes(_preloadedBoxes);
+      setStep(1);
     } else {
       setPallet(p);
       setScannedBoxes([]);
