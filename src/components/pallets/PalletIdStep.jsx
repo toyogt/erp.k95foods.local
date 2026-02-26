@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { base44 } from '@/api/base44Client';
-import { Layers, Loader2, RefreshCw, AlertTriangle, CheckCircle, RotateCcw } from 'lucide-react';
+import { Layers, Loader2, RefreshCw, AlertTriangle, RotateCcw } from 'lucide-react';
 
 function genPalletId() {
   const d = new Date().toISOString().slice(0, 10).replace(/-/g, '');
