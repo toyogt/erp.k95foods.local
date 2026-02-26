@@ -20,9 +20,16 @@ export default function BoxPalletBuild() {
   }, []);
 
   function handlePalletOpened(p) {
-    setPallet(p);
-    setScannedBoxes([]);
-    setStep(1);
+    if (p._resumeAtHandover) {
+      const { _resumeAtHandover, ...clean } = p;
+      setPallet(clean);
+      setScannedBoxes([]);
+      setStep(3); // jump straight to handover
+    } else {
+      setPallet(p);
+      setScannedBoxes([]);
+      setStep(1);
+    }
   }
 
   function handleSealRequest() {
