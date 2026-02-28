@@ -27,15 +27,16 @@ export default function useModuleAccess(user) {
   }, [user?.id, user?.role]);
 
   function isEnabled(page) {
-    // If no module config exists (empty DB) → fall back to legacy
-    if (!effectiveModules) {
-      return getAllowedPages(user).includes(page);
+    // roles.js ACCESS_MAP is ALWAYS the primary gate — never bypassed
+    if (!getAllowedPages(user).includes(page)) return false;
+    // If module configs exist, also check module-level enable/disable
+    if (effectiveModules) {
+      if (page === 'Dashboard') return true;
+      const moduleKey = PAGE_MODULE_MAP[page];
+      if (moduleKey) return effectiveModules.has(moduleKey);
     }
-    // Always allow Dashboard
-    if (page === 'Dashboard') return true;
-    const moduleKey = PAGE_MODULE_MAP[page];
-    if (!moduleKey) return getAllowedPages(user).includes(page);
-    return effectiveModules.has(moduleKey) && getAllowedPages(user).includes(page);
+    // No module config in DB → role-based access alone is sufficient
+    return true;
   }
 
   return { isEnabled, loading };
