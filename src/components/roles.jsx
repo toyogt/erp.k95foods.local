@@ -62,7 +62,8 @@ export function getRole(user) {
 
 export function getAllowedPages(user) {
   const role = getRole(user);
-  return ACCESS_MAP[role] || ACCESS_MAP['admin'];
+  // If role not found in map, return empty (deny all) rather than falling back to admin
+  return ACCESS_MAP[role] || ['Dashboard'];
 }
 
 export function canAccess(user, page) {

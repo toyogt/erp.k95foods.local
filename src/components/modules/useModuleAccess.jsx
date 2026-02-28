@@ -9,16 +9,19 @@ import { getAllowedPages } from '@/components/roles';
  */
 export default function useModuleAccess(user) {
   const [effectiveModules, setEffectiveModules] = useState(null);
+  // Keep loading=true until we have BOTH user AND module data resolved
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) { setLoading(false); return; }
+    // If user is not yet known, stay in loading state — don't resolve early
+    if (!user) return;
+    setLoading(true);
     Promise.all([
       base44.entities.ModuleConfig.list().catch(() => []),
-      base44.entities.RoleModuleAccess.filter({ role: user.role || 'admin' }).catch(() => []),
+      base44.entities.RoleModuleAccess.filter({ role: user.role }).catch(() => []),
       base44.entities.UserModuleOverride.filter({ user_id: user.id }).catch(() => []),
     ]).then(([moduleConfigs, roleAccesses, userOverrides]) => {
-      const modules = computeEffectiveModules(moduleConfigs, roleAccesses, userOverrides, user.role || 'admin', user.id);
+      const modules = computeEffectiveModules(moduleConfigs, roleAccesses, userOverrides, user.role, user.id);
       setEffectiveModules(modules);
     }).finally(() => setLoading(false));
   }, [user?.id, user?.role]);
