@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Loader2 } from 'lucide-react';
-import AdminDashboard from '@/components/dashboard/AdminDashboard';
-import OperatorDashboard from '@/components/dashboard/OperatorDashboard';
+import AdminDashboard from '@/components/dashboard/AdminDashboard.jsx';
+import OperatorDashboard from '@/components/dashboard/OperatorDashboard.jsx';
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
