@@ -295,10 +295,21 @@ export default function ProductMasterManager() {
                 <Input value={form.bottle_type} onChange={e => setForm(f => ({ ...f, bottle_type: e.target.value }))} className="text-sm" placeholder="Bottle type" />
               )}
             </div>
-            {/* Recipe ID input */}
+            {/* Recipe ID dropdown */}
             <div className="space-y-1">
               <Label className="text-xs">Recipe ID {form.is_active ? '*' : ''}</Label>
-              <Input value={form.recipe_id} onChange={e => setForm(f => ({ ...f, recipe_id: e.target.value }))} className="text-sm" placeholder="e.g. REC-001" />
+              {recipes.length > 0 ? (
+                <select
+                  value={form.recipe_id}
+                  onChange={e => setForm(f => ({ ...f, recipe_id: e.target.value }))}
+                  className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm bg-white"
+                >
+                  <option value="">— Select recipe —</option>
+                  {recipes.map(r => <option key={r.id} value={r.recipe_id}>{r.recipe_id} - {r.recipe_name}</option>)}
+                </select>
+              ) : (
+                <Input value={form.recipe_id} onChange={e => setForm(f => ({ ...f, recipe_id: e.target.value }))} className="text-sm" placeholder="e.g. REC-001" />
+              )}
             </div>
             <div className="space-y-1 col-span-2">
               <Label className="text-xs">Address Line 1</Label>
