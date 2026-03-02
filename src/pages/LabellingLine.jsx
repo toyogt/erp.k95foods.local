@@ -181,6 +181,9 @@ export default function LabellingLine() {
     if (session.id && !session.id.startsWith('_local_')) {
       try { await base44.entities.LineSession.update(session.id, { bottles_counted: newBottles, crates_used: newCrates, cases_counted: newCases, current_crate_id: crate.crate_id, state: newState, reason }); } catch { /* offline */ }
     }
+    // Record trace window (non-blocking, fire and update state)
+    recordTraceWindow(crate);
+
     // Mark crate as CONSUMED and check if pallet becomes empty
     try {
       const crates = await base44.entities.Crate.filter({ crate_id: crate.crate_id });
