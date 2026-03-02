@@ -51,7 +51,23 @@ export default function ProductMasterManager() {
   const openAdd = () => { setEditItem(null); setForm(EMPTY_FORM); setDialogOpen(true); };
   const openEdit = (p) => { setEditItem(p); setForm({ ...EMPTY_FORM, ...p }); setDialogOpen(true); };
 
+  const missingSetup = (f) => f.is_active && (!f.bottle_type || !f.recipe_id);
+
+  const handleToggleActive = async (p) => {
+    const next = !p.is_active;
+    if (next && (!p.bottle_type || !p.recipe_id)) {
+      alert('Cannot activate: bottle_type and recipe_id are required for active SKUs.');
+      return;
+    }
+    await base44.entities.ProductMaster.update(p.id, { is_active: next });
+    load();
+  };
+
   const handleSave = async () => {
+    if (missingSetup(form)) {
+      alert('Cannot set active: bottle_type and recipe_id are required for active SKUs.');
+      return;
+    }
     setSaving(true);
     const payload = { ...form };
     ['ml_per_bottle','bottles_per_box','mrp_box','gross_weight_kg','shelf_life_days'].forEach(k => {
