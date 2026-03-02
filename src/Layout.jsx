@@ -29,6 +29,7 @@ const ALL_NAV_ITEMS = [
   { label: 'Pull Lists',         page: 'PullLists',          icon: ListChecks      },
   { label: 'Alerts',             page: 'AlertsPage',         icon: Bell            },
   { label: 'Audit Log',          page: 'AuditLogPage',       icon: ScrollText      },
+  { label: 'Template Mapping',   page: 'TemplateMappingManager', icon: Settings    },
   { label: 'Master Data',        page: 'MasterData',         icon: Settings        },
 ];
 
