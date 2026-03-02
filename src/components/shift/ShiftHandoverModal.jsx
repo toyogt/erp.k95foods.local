@@ -133,10 +133,11 @@ export default function ShiftHandoverModal({ stationType, machineId, user, curre
               <button onClick={() => setStep('form')} className="text-xs text-slate-400 underline">Back</button>
             </div>
             <ChecklistRunner
-              stationType={stationType}
+              station_type={stationType}
               stage={checklistStage}
+              reference_type="ShiftHandover"
+              reference_id={`${stationType}-${machineId}`}
               user={user}
-              machineId={machineId}
               onComplete={handleChecklistDone}
               onCancel={() => setStep('form')}
             />
