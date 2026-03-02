@@ -195,13 +195,13 @@ export default function ProductMasterManager() {
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-slate-600 text-xs uppercase tracking-wide">
               <tr>
-                <th className="px-4 py-3 text-left">Item Code</th>
+                <th className="px-4 py-3 text-left">SKU Code</th>
                 <th className="px-4 py-3 text-left">Brand</th>
-                <th className="px-4 py-3 text-left">Product Name</th>
-                <th className="px-4 py-3 text-left">Flavour</th>
+                <th className="px-4 py-3 text-left">SKU Name</th>
+                <th className="px-4 py-3 text-left">Bottle Type</th>
+                <th className="px-4 py-3 text-left">Recipe ID</th>
+                <th className="px-4 py-3 text-left">Batch Prefix</th>
                 <th className="px-4 py-3 text-right">ML</th>
-                <th className="px-4 py-3 text-right">Btl/Box</th>
-                <th className="px-4 py-3 text-right">MRP (Box)</th>
                 <th className="px-4 py-3 text-center">Status</th>
                 <th className="px-4 py-3 text-center">Actions</th>
               </tr>
