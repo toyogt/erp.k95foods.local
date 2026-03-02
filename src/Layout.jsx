@@ -28,6 +28,7 @@ const ALL_NAV_ITEMS = [
   { label: 'Opening Stock',      page: 'OpeningStockImport', icon: Upload          },
   { label: 'Pull Lists',         page: 'PullLists',          icon: ListChecks      },
   { label: 'Alerts',             page: 'AlertsPage',         icon: Bell            },
+  { label: 'Shift KPIs',         page: 'ShiftKPIDashboard',  icon: BarChart3       },
   { label: 'Audit Log',          page: 'AuditLogPage',       icon: ScrollText      },
   { label: 'Template Mapping',   page: 'TemplateMappingManager', icon: Settings    },
   { label: 'Master Data',        page: 'MasterData',         icon: Settings        },

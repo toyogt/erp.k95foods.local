@@ -18,6 +18,7 @@ import SKUMappingBadge from '@/components/labelling/SKUMappingBadge';
 import ShiftSessionBar from '@/components/shift/ShiftSessionBar';
 import DowntimeBar from '@/components/downtime/DowntimeBar';
 import { useDowntime } from '@/components/downtime/useDowntime';
+import { useMetricSampler } from '@/components/labelling/useMetricSampler';
 
 const STEP = { MACHINE: 0, SELECT_WO: 1, SCAN_LABEL: 2, SCAN_CARTON: 3, CHECKLIST: 4, RUNNING: 5 };
 
@@ -51,6 +52,14 @@ export default function LabellingLine() {
     stationType: 'LABELLING',
     machineId: machine?.machine_id,
     user,
+  });
+
+  // Metric sampling — active only when line is truly RUNNING
+  useMetricSampler({
+    isRunning: step === STEP.RUNNING && session?.state === 'RUNNING' && !downtimeEvent,
+    machineId: machine?.machine_id,
+    woId: wo?.wo_id,
+    sessionId: session?.session_id,
   });
 
   const isSupervisor = user?.role === 'admin' || user?.role === 'labelling_supervisor' || user?.role === 'production_manager';
