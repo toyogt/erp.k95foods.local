@@ -352,6 +352,30 @@ export default function FillingStation() {
           <RefreshCw className="w-4 h-4" /> Retry / Refresh
         </Button>
       )}
+
+      {/* Admin-only tools */}
+      {user?.role === 'admin' && (
+        <div className="space-y-2 pt-2 border-t border-slate-100">
+          <Button variant="outline" size="sm" className="w-full gap-2 text-slate-500" onClick={handleCalibrationPrint}>
+            <Printer className="w-4 h-4" /> Print Calibration Label (6×4)
+          </Button>
+          <Button variant="outline" size="sm" className="w-full gap-2 text-slate-500" onClick={() => setShowReprint(v => !v)}>
+            <Printer className="w-4 h-4" /> Reprint Crate Label
+          </Button>
+          {showReprint && (
+            <div className="flex gap-2">
+              <input
+                className="flex-1 h-10 px-3 rounded-lg border border-slate-300 text-sm font-mono focus:outline-none focus:border-blue-500"
+                placeholder="Scan or type Crate ID…"
+                value={reprintInput}
+                onChange={e => setReprintInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleReprintCrate()}
+              />
+              <Button size="sm" onClick={handleReprintCrate} disabled={!reprintInput.trim()}>Print</Button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 
