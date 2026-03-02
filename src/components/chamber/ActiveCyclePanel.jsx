@@ -142,6 +142,15 @@ export default function ActiveCyclePanel({ machine, user, cycles, onRefresh }) {
     onRefresh();
   }
 
+  if (showAbortReason) return (
+    <DowntimeReasonModal
+      stationType="CHAMBER"
+      durationMinutes={abortDowntimeEvent ? (Date.now() - new Date(abortDowntimeEvent.started_at)) / 60000 : null}
+      onConfirm={handleAbortReasonConfirm}
+      onCancel={() => { setShowAbortReason(false); onRefresh(); }}
+    />
+  );
+
   if (checklist) return (
     <div className="space-y-4">
       <div className="rounded-2xl p-4 bg-slate-800 text-white">
