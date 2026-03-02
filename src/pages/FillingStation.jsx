@@ -216,6 +216,10 @@ export default function FillingStation() {
     await logMovement({ entityType: 'CRATE', entityId: crateId, from: '', to: LOC_FILLING, machineId: machine.machine_id, user });
     await logAudit({ action: 'CrateScanned', entity_type: 'Crate', entity_id: crateId, user, station: machine.machine_id, details: { batch_id: activeBatch.batch_id, product_code: activeBatch.product_code, label_serial: serial } });
 
+    // Auto-print crate label
+    printCrateLabel(crateId, now);
+    await logPrint('CRATE_LABEL', crateId, '');
+
     if (activeBatch.id) {
       const newCount = (activeBatch.created_crates || 0) + 1;
       await base44.entities.MachineActiveBatch.update(activeBatch.id, { created_crates: newCount }).catch(() => {});
