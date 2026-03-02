@@ -1,161 +1,203 @@
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { base44 } from '@/api/base44Client';
-import { Plus, Trash2, Loader2 } from 'lucide-react';
+import { Loader2, AlertTriangle } from 'lucide-react';
 import { addDays, format, parseISO } from 'date-fns';
 
 function genRequestId() {
   return 'LPR-' + Date.now().toString(36).toUpperCase();
 }
 
-const emptyLine = () => ({ item_code: '', product_name: '', batch_no: '', mfg_date: '', exp_date: '', qty_bottles: '' });
+function genLogId() {
+  return 'BPL-' + Date.now().toString(36).toUpperCase();
+}
 
 // Input style with min font-size 16px to prevent iOS zoom
 const INPUT_CLS = "w-full h-12 px-3 text-base rounded-xl border border-slate-300 focus:border-cyan-500 focus:outline-none bg-white";
 
-export default function BoxLabelForm({ products, user, onSubmitted }) {
+/**
+ * Props:
+ *   activeRun – PackingWO record (enriched with label_variant_id). Required for operators.
+ *   user – current user
+ *   products – all ProductMaster records (still used for trial pack content lines + shelf life lookup)
+ *   isAdminOverride – if true (admin with no active run), show override reason + free product picker
+ *   onSubmitted – callback after successful submit
+ */
+export default function BoxLabelForm({ activeRun, user, products, isAdminOverride, onSubmitted }) {
+  // Locked fields from active run (or manual entry in admin override)
   const [itemCode, setItemCode] = useState('');
+  const [productNameDisplay, setProductNameDisplay] = useState('');
   const [batchNo, setBatchNo] = useState('');
   const [mfgDate, setMfgDate] = useState('');
   const [expDate, setExpDate] = useState('');
   const [qtyLabels, setQtyLabels] = useState(1);
-  const [lines, setLines] = useState([emptyLine()]);
+  const [overrideReason, setOverrideReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // Admin free-search state
   const [search, setSearch] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
-  const [lineSearch, setLineSearch] = useState([]);
-  const [lineDropdown, setLineDropdown] = useState([]);
 
   const batchRef = useRef(null);
   const qtyRef = useRef(null);
   const mfgRef = useRef(null);
 
-  const product = products.find(p => p.item_code === itemCode) || null;
+  const product = products?.find(p => p.item_code === itemCode) || null;
   const isTrial = product?.is_trial_pack === true;
 
-  // Auto-calc exp when mfg changes (non-trial)
+  // When activeRun changes, pre-fill fields from it
   useEffect(() => {
-    if (isTrial) return;
+    if (!activeRun || isAdminOverride) return;
+    // item_code: use product_code as item_code lookup key, fall back to label_sku_code
+    const code = activeRun.product_code || activeRun.label_sku_code || '';
+    setItemCode(code);
+    setProductNameDisplay(activeRun.product || '');
+    setBatchNo(activeRun.batch_id || activeRun.print_variables?.batch_code || '');
+    // Pre-fill dates from print_variables if present
+    if (activeRun.print_variables?.mfg) setMfgDate(activeRun.print_variables.mfg);
+    if (activeRun.print_variables?.exp) setExpDate(activeRun.print_variables.exp);
+  }, [activeRun, isAdminOverride]);
+
+  // Auto-calc exp from shelf life (non-trial, non-override)
+  useEffect(() => {
+    if (isTrial || isAdminOverride) return;
     if (!mfgDate || !product?.shelf_life_days) return;
     const exp = format(addDays(parseISO(mfgDate), product.shelf_life_days), 'yyyy-MM-dd');
     setExpDate(exp);
-  }, [mfgDate, product]);
+  }, [mfgDate, product, isTrial, isAdminOverride]);
 
-  // Auto-calc trial pack outer exp = min expiry of lines
-  useEffect(() => {
-    if (!isTrial) return;
-    const dates = lines.map(l => l.exp_date).filter(Boolean);
-    if (!dates.length) return;
-    setExpDate(dates.sort()[0]);
-  }, [lines, isTrial]);
-
-  // Reset lines when trial status changes
-  useEffect(() => {
-    setLines([emptyLine()]);
-    setLineSearch([]);
-    setLineDropdown([]);
-  }, [isTrial]);
-
-  const filteredProducts = products.filter(p =>
+  const filteredProducts = (products || []).filter(p =>
     !search || [p.item_code, p.product_name, p.flavour].join(' ').toLowerCase().includes(search.toLowerCase())
   ).slice(0, 20);
 
-  function getLineFilteredProducts(idx) {
-    const s = lineSearch[idx] || '';
-    if (!s) return products.slice(0, 20);
-    return products.filter(p =>
-      [p.item_code, p.product_name, p.flavour].join(' ').toLowerCase().includes(s.toLowerCase())
-    ).slice(0, 20);
-  }
-
-  function updateLine(i, field, val) {
-    setLines(prev => prev.map((l, idx) => idx === i ? { ...l, [field]: val } : l));
-  }
-
-  function selectLineProduct(i, p) {
-    setLines(prev => prev.map((l, idx) => idx === i
-      ? { ...l, item_code: p.item_code, product_name: p.product_name + (p.flavour ? ` · ${p.flavour}` : '') }
-      : l
-    ));
-    setLineSearch(prev => { const a = [...prev]; a[i] = ''; return a; });
-    setLineDropdown(prev => { const a = [...prev]; a[i] = false; return a; });
-  }
-
   async function handleSubmit() {
     if (!itemCode || !batchNo || !mfgDate || !expDate || qtyLabels < 1) return;
+    if (isAdminOverride && !overrideReason.trim()) return;
+    if (!activeRun && !isAdminOverride) return; // safety
+
     setSubmitting(true);
     const reqId = genRequestId();
+    const logId = genLogId();
     const now = new Date().toISOString();
+
+    const woId = activeRun?.wo_id || '';
+    const labelVariantId = activeRun?.label_variant_id || '';
+    const lineMachineId = activeRun?.assigned_line || '';
+
+    // Create LabelPrintRequest
     await base44.entities.LabelPrintRequest.create({
       request_id: reqId,
       item_code: itemCode,
-      product_name: product ? (product.product_name + (product.flavour ? ` · ${product.flavour}` : '')) : itemCode,
+      product_name: productNameDisplay || itemCode,
       batch_no: batchNo,
       mfg_date: mfgDate,
       exp_date: expDate,
       qty_labels: Number(qtyLabels),
       is_trial_pack: isTrial,
-      contents_json: isTrial ? lines.filter(l => l.item_code) : [],
+      contents_json: [],
       status: 'PENDING',
       requested_by: user?.email || '',
       requested_at: now,
+      wo_id: woId,
+      product_code: activeRun?.product_code || '',
+      label_variant_id: labelVariantId,
     });
+
+    // Create BoxLabelPrintLog
+    await base44.entities.BoxLabelPrintLog.create({
+      log_id: logId,
+      request_id: reqId,
+      wo_id: woId,
+      line_machine_id: lineMachineId,
+      product_code: activeRun?.product_code || itemCode,
+      batch_no: batchNo,
+      label_variant_id: labelVariantId,
+      qty_printed: Number(qtyLabels),
+      print_type: isAdminOverride ? 'ADMIN_OVERRIDE' : 'PRODUCTION',
+      override_reason: isAdminOverride ? overrideReason : '',
+      printed_by: user?.email || '',
+      printed_at: now,
+    });
+
+    // Alert
     await base44.entities.AlertEvent.create({
       severity: 'INFO',
       station_type: 'BOX_LABELS',
-      message: `Label approval needed: ${reqId} (${qtyLabels} labels for ${itemCode})`,
+      message: `Label approval needed: ${reqId} (${qtyLabels} labels for ${itemCode}${woId ? ' / WO:' + woId : ''})`,
       reference_type: 'LabelPrintRequest',
       reference_id: reqId,
       status: 'OPEN',
     }).catch(() => {});
-    setItemCode(''); setBatchNo(''); setMfgDate(''); setExpDate('');
-    setQtyLabels(1); setLines([emptyLine()]); setSearch('');
-    setLineSearch([]); setLineDropdown([]);
+
+    // Reset
+    setQtyLabels(1);
+    setOverrideReason('');
+    if (isAdminOverride) {
+      setItemCode(''); setProductNameDisplay(''); setBatchNo(''); setMfgDate(''); setExpDate(''); setSearch('');
+    }
+
     setSubmitting(false);
     onSubmitted?.();
   }
+
+  const canSubmit = itemCode && batchNo && mfgDate && expDate && Number(qtyLabels) >= 1
+    && (!isAdminOverride || overrideReason.trim())
+    && (!!activeRun || isAdminOverride);
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
       <h3 className="font-bold text-slate-800 text-base">New Label Print Request</h3>
 
-      {/* Product search */}
-      <div className="relative">
-        <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Product</label>
-        <input
-          style={{ fontSize: '16px' }}
-          className={INPUT_CLS}
-          placeholder="Search item code / product name..."
-          value={product ? `${product.item_code} – ${product.product_name}${product.flavour ? ' · ' + product.flavour : ''}` : search}
-          onChange={e => { setSearch(e.target.value); setItemCode(''); setShowDropdown(true); }}
-          onFocus={() => setShowDropdown(true)}
-          onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
-        />
-        {showDropdown && !itemCode && filteredProducts.length > 0 && (
-          <div className="absolute z-20 top-full left-0 right-0 bg-white border border-slate-200 rounded-xl shadow-lg max-h-52 overflow-auto mt-1">
-            {filteredProducts.map(p => (
-              <button
-                key={p.item_code}
-                className="w-full text-left px-3 py-3 hover:bg-slate-50 text-sm border-b border-slate-50 last:border-0"
-                onMouseDown={() => { setItemCode(p.item_code); setSearch(''); setShowDropdown(false); }}
-              >
-                <span className="font-semibold text-slate-800">{p.item_code}</span>
-                <span className="text-slate-500 ml-2">{p.product_name}{p.flavour ? ` · ${p.flavour}` : ''}</span>
-                {p.is_trial_pack && <span className="ml-2 text-xs font-bold text-purple-600">TRIAL</span>}
-              </button>
-            ))}
+      {/* Active run summary (locked) */}
+      {activeRun && !isAdminOverride && (
+        <div className="bg-cyan-50 border border-cyan-200 rounded-xl px-3 py-3 space-y-1 text-sm">
+          <div className="flex justify-between">
+            <span className="text-xs font-semibold text-cyan-700 uppercase">Locked to Active Run</span>
+            <span className="font-mono text-xs text-cyan-800">{activeRun.wo_id}</span>
           </div>
-        )}
-      </div>
+          <p className="font-semibold text-cyan-900">{activeRun.product}</p>
+          {activeRun.product_code && <p className="text-xs font-mono text-cyan-700">{activeRun.product_code}</p>}
+          {activeRun.label_variant_id && <p className="text-xs text-cyan-600">Label variant: {activeRun.label_variant_id}</p>}
+        </div>
+      )}
 
-      {/* Product preview strip */}
-      {product && (
-        <div className={`border rounded-xl px-3 py-2 flex flex-wrap gap-3 text-xs ${isTrial ? 'bg-purple-50 border-purple-200 text-purple-800' : 'bg-cyan-50 border-cyan-200 text-cyan-800'}`}>
-          {isTrial && <span className="font-bold text-purple-700">⚗ Trial Pack — contents below</span>}
-          <span><b>Shelf life:</b> {product.shelf_life_days ?? '—'} days</span>
-          <span><b>Bottles/Box:</b> {product.bottles_per_box ?? '—'}</span>
-          <span><b>Vol:</b> {product.ml_per_bottle ?? '—'} ml</span>
-          <span><b>MRP:</b> ₹{product.mrp_box ?? '—'}</span>
+      {/* Admin override: free product search */}
+      {isAdminOverride && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-3 space-y-3">
+          <div className="flex items-center gap-2 text-red-700">
+            <AlertTriangle className="w-4 h-4" />
+            <span className="text-xs font-bold uppercase">Admin Override — No Active Run</span>
+          </div>
+          {/* Product search */}
+          <div className="relative">
+            <input
+              style={{ fontSize: '16px' }}
+              className="w-full h-12 px-3 text-base rounded-xl border border-red-300 focus:border-red-500 focus:outline-none bg-white"
+              placeholder="Search item code / product name..."
+              value={product ? `${product.item_code} – ${product.product_name}${product.flavour ? ' · ' + product.flavour : ''}` : search}
+              onChange={e => { setSearch(e.target.value); setItemCode(''); setProductNameDisplay(''); setShowDropdown(true); }}
+              onFocus={() => setShowDropdown(true)}
+              onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
+            />
+            {showDropdown && !itemCode && filteredProducts.length > 0 && (
+              <div className="absolute z-20 top-full left-0 right-0 bg-white border border-slate-200 rounded-xl shadow-lg max-h-52 overflow-auto mt-1">
+                {filteredProducts.map(p => (
+                  <button key={p.item_code} className="w-full text-left px-3 py-3 hover:bg-slate-50 text-sm border-b border-slate-50 last:border-0"
+                    onMouseDown={() => { setItemCode(p.item_code); setProductNameDisplay(p.product_name + (p.flavour ? ` · ${p.flavour}` : '')); setSearch(''); setShowDropdown(false); }}>
+                    <span className="font-semibold text-slate-800">{p.item_code}</span>
+                    <span className="text-slate-500 ml-2">{p.product_name}{p.flavour ? ` · ${p.flavour}` : ''}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          {/* Override reason */}
+          <div>
+            <label className="block text-xs font-semibold text-red-700 uppercase mb-1">Override Reason *</label>
+            <input style={{ fontSize: '16px' }} className="w-full h-12 px-3 rounded-xl border border-red-300 focus:outline-none bg-white"
+              placeholder="Enter reason for printing without active run…"
+              value={overrideReason} onChange={e => setOverrideReason(e.target.value)} />
+          </div>
         </div>
       )}
 
@@ -169,6 +211,7 @@ export default function BoxLabelForm({ products, user, onSubmitted }) {
           value={batchNo}
           onChange={e => setBatchNo(e.target.value)}
           placeholder="e.g. B-20240201"
+          readOnly={!isAdminOverride && !!activeRun?.batch_id}
           onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); qtyRef.current?.focus(); } }}
         />
       </div>
@@ -202,100 +245,24 @@ export default function BoxLabelForm({ products, user, onSubmitted }) {
         />
       </div>
 
-      {/* Exp Date — read only (auto-calculated from shelf life) */}
+      {/* Exp Date */}
       <div>
         <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">
-          Exp Date {isTrial ? '(auto = min of contents)' : product?.shelf_life_days ? `(auto: mfg + ${product.shelf_life_days}d)` : ''}
+          Exp Date {product?.shelf_life_days && !isTrial ? `(auto: mfg + ${product.shelf_life_days}d)` : ''}
         </label>
         <input
           type="date"
           style={{ fontSize: '16px' }}
-          className={`${INPUT_CLS} bg-slate-50 text-slate-500 cursor-not-allowed`}
+          className={`${INPUT_CLS} ${(!isAdminOverride && product?.shelf_life_days) ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : ''}`}
           value={expDate}
-          readOnly={!isTrial}
-          disabled={!isTrial && !!product?.shelf_life_days}
-          onChange={isTrial ? e => setExpDate(e.target.value) : undefined}
+          readOnly={!isAdminOverride && !!product?.shelf_life_days}
+          onChange={e => setExpDate(e.target.value)}
         />
-        {!isTrial && product && !product.shelf_life_days && (
-          <p className="text-xs text-amber-600 mt-1">No shelf life set for this product — exp date cannot be calculated.</p>
-        )}
       </div>
-
-      {/* Trial pack content lines */}
-      {isTrial && (
-        <div className="bg-purple-50 rounded-xl p-3 space-y-3 border border-purple-200">
-          <p className="text-xs font-bold text-purple-600 uppercase">Trial Pack Contents</p>
-          {lines.map((line, i) => (
-            <div key={i} className="bg-white rounded-lg border border-purple-100 p-2 space-y-2">
-              <div className="relative">
-                <input
-                  style={{ fontSize: '16px' }}
-                  className="w-full h-10 px-2 text-sm rounded-lg border border-slate-300 focus:outline-none"
-                  placeholder="Search product / item code…"
-                  value={line.item_code ? `${line.item_code}${line.product_name ? ' – ' + line.product_name : ''}` : (lineSearch[i] || '')}
-                  onChange={e => {
-                    const s = [...(lineSearch)]; s[i] = e.target.value;
-                    setLineSearch(s);
-                    const d = [...(lineDropdown)]; d[i] = true;
-                    setLineDropdown(d);
-                    updateLine(i, 'item_code', '');
-                    updateLine(i, 'product_name', '');
-                  }}
-                  onFocus={() => { const d = [...(lineDropdown)]; d[i] = true; setLineDropdown(d); }}
-                />
-                {lineDropdown[i] && !line.item_code && getLineFilteredProducts(i).length > 0 && (
-                  <div className="absolute z-20 top-full left-0 right-0 bg-white border border-slate-200 rounded-lg shadow-lg max-h-40 overflow-auto mt-0.5">
-                    {getLineFilteredProducts(i).map(p => (
-                      <button key={p.item_code} className="w-full text-left px-2 py-2 hover:bg-slate-50 text-xs"
-                        onMouseDown={() => selectLineProduct(i, p)}>
-                        <span className="font-semibold">{p.item_code}</span>
-                        <span className="text-slate-500 ml-1">{p.product_name}{p.flavour ? ` · ${p.flavour}` : ''}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <div className="text-xs text-slate-400 mb-0.5">Batch</div>
-                  <input style={{ fontSize: '16px' }} className="h-10 w-full px-2 text-sm rounded-lg border border-slate-300 focus:outline-none"
-                    placeholder="Batch No" value={line.batch_no} onChange={e => updateLine(i, 'batch_no', e.target.value)} />
-                </div>
-                <div>
-                  <div className="text-xs text-slate-400 mb-0.5">Qty Bottles</div>
-                  <div className="flex gap-1">
-                    <input type="number" style={{ fontSize: '16px' }} className="h-10 flex-1 px-2 text-sm rounded-lg border border-slate-300 focus:outline-none"
-                      placeholder="Qty" value={line.qty_bottles} onChange={e => updateLine(i, 'qty_bottles', e.target.value)} />
-                    {lines.length > 1 && (
-                      <button onClick={() => setLines(prev => prev.filter((_, idx) => idx !== i))} className="text-red-400 hover:text-red-600 p-1">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-xs text-slate-400 mb-0.5">Mfg Date</div>
-                  <input type="date" style={{ fontSize: '16px' }} className="h-10 w-full px-2 text-sm rounded-lg border border-slate-300 focus:outline-none"
-                    value={line.mfg_date} onChange={e => updateLine(i, 'mfg_date', e.target.value)} />
-                </div>
-                <div>
-                  <div className="text-xs text-slate-400 mb-0.5">Exp Date</div>
-                  <input type="date" style={{ fontSize: '16px' }} className="h-10 w-full px-2 text-sm rounded-lg border border-slate-300 focus:outline-none"
-                    value={line.exp_date} onChange={e => updateLine(i, 'exp_date', e.target.value)} />
-                </div>
-              </div>
-            </div>
-          ))}
-          <button onClick={() => setLines(prev => [...prev, emptyLine()])}
-            className="flex items-center gap-1 text-xs text-purple-600 hover:text-purple-800 font-semibold mt-1">
-            <Plus className="w-3.5 h-3.5" /> Add Bottle Line
-          </button>
-        </div>
-      )}
 
       <Button
         onClick={handleSubmit}
-        disabled={submitting || !itemCode || !batchNo || !mfgDate || !expDate || qtyLabels < 1}
+        disabled={submitting || !canSubmit}
         className="w-full h-12 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-base"
       >
         {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Submit for Approval'}
