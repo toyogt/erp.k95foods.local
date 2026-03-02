@@ -342,11 +342,22 @@ export default function LabellingLine() {
           <div className="bg-white rounded-2xl border border-slate-200 p-4">
             <p className="text-xs text-slate-500">WO</p>
             <p className="font-bold text-slate-900">{wo?.wo_id} — {wo?.product}</p>
+            {wo?.product_code && <p className="text-xs text-slate-400 font-mono">{wo.product_code}</p>}
           </div>
+          {/* SKU → Template mapping */}
+          {wo?.product_code && (
+            <SKUMappingBadge productCode={wo.product_code} onMappingLoaded={setSkuMapping} />
+          )}
           <p className="text-sm font-semibold text-slate-600 uppercase tracking-widest">Scan Label SKU</p>
           <ScanInput placeholder="Scan label roll barcode…" value={labelScan} onChange={setLabelScan} onScan={handleLabelScan} />
           {error && <p className="text-sm text-red-600 font-medium">{error}</p>}
           {wo?.label_sku_code && <p className="text-xs text-slate-400">Expected: <code className="bg-slate-100 px-1 rounded">{wo.label_sku_code}</code></p>}
+          {/* Block proceed if no mapping and product code present */}
+          {wo?.product_code && skuMapping === null && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-700 font-semibold text-center">
+              ⛔ Cannot proceed — no active SKU mapping configured for this product.
+            </div>
+          )}
         </div>
       )}
 
