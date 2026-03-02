@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 
 const ALL_NAV_ITEMS = [
   { label: 'Dashboard',          page: 'Dashboard',          icon: LayoutDashboard },
+  { label: 'Production',         page: 'ProductionControl',  icon: Factory         },
   { label: 'Filling Station',    page: 'FillingStation',     icon: Droplets        },
   { label: 'Chamber Station',    page: 'ChamberStation',     icon: Thermometer     },
   { label: 'Transfer/Receiving', page: 'TransferReceiving',  icon: Truck           },

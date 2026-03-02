@@ -23,7 +23,7 @@ export const ROLES = {
 // Pages each role can access
 const ACCESS_MAP = {
   admin: [
-    'Dashboard','StoresIssue','RecipeStation','FillingStation','ChamberStation',
+    'Dashboard','FillingStation','ChamberStation',
     'TransferReceiving','LabellingLine','FGPalletizing','AuditLogPage','MasterData',
     'AlertsPage','PullLists','CustomizeDashboard',
     'BoxLabelPrint','BoxLabelApprovals','BoxPalletBuild','WarehouseOps','BoxStockDashboard','OpeningStockImport',
