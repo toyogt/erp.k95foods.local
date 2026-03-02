@@ -128,6 +128,42 @@ export default function LabellingLine() {
     setStep(STEP.RUNNING);
   }
 
+  async function recordTraceWindow(crate) {
+    const now = new Date().toISOString();
+    // Try to get Ryan count
+    let ryanCount = null;
+    try {
+      const ryanRes = await callEdge('ryan_get_count', {});
+      if (ryanRes?.count != null) ryanCount = ryanRes.count;
+    } catch { /* non-blocking */ }
+
+    const traceId = 'TW-' + Date.now().toString(36).toUpperCase();
+    let newTrace = null;
+    try {
+      newTrace = await base44.entities.CrateTraceWindow.create({
+        trace_id: traceId,
+        wo_id: wo?.wo_id || '',
+        line_machine_id: machine?.machine_id || '',
+        crate_id: crate.crate_id,
+        scanned_at: now,
+        ryan_count_at_scan: ryanCount,
+        buffer_estimate_bottles: bufferEstimate,
+        window_prev_crate_id: latestTrace?.crate_id || null,
+      });
+    } catch { return; }
+
+    // Link: update previous record's window_next_crate_id
+    if (latestTrace?.id) {
+      try {
+        await base44.entities.CrateTraceWindow.update(latestTrace.id, {
+          window_next_crate_id: crate.crate_id,
+        });
+      } catch { /* non-blocking */ }
+    }
+
+    setLatestTrace({ ...newTrace, window_prev_crate_id: latestTrace?.crate_id || null });
+  }
+
   async function handleCrateLocked(crate) {
     const newBottles = (session.bottles_counted || 0) + (crate.bottle_count || 0);
     const caseDivisor = wo?.pack_type === 'CASE6' ? 6 : 12;
