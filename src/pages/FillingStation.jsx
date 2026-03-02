@@ -349,99 +349,13 @@ export default function FillingStation() {
         </div>
       )}
 
-      <div className="flex gap-2">
-        {activeBatch && bottleType && (
-          <Button className="flex-1 rounded-xl h-12 bg-blue-600 hover:bg-blue-700" onClick={startScanning}>Start Scanning Crates</Button>
-        )}
-        {isSupervisor && (
-          <Button variant="outline" className="rounded-xl h-12 gap-2" onClick={() => setShowSupervisorPanel(!showSupervisorPanel)}>
-            <ShieldAlert className="w-4 h-4" /> Supervisor
-          </Button>
-        )}
-      </div>
-
-      {isSupervisor && showSupervisorPanel && (
-        <div className="bg-slate-50 rounded-2xl border border-slate-200 p-4 space-y-3">
-          <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Supervisor Controls</p>
-          {['assign', 'close', 'change'].map(action => (
-            <Button key={action} variant={supervisorAction === action ? 'default' : 'outline'} size="sm"
-              className="rounded-xl mr-2 capitalize" onClick={() => setSupervisorAction(supervisorAction === action ? '' : action)}>
-              {action === 'assign' ? 'Assign Batch' : action === 'close' ? 'Close Batch' : 'Change Batch'}
-            </Button>
-          ))}
-
-          {(supervisorAction === 'assign' || supervisorAction === 'change') && (
-            <div className="space-y-2 pt-2">
-              {supervisorAction === 'change' && (
-                <div>
-                  <label className="text-xs text-slate-500 font-medium">Change Reason *</label>
-                  <input value={changeReason} onChange={e => setChangeReason(e.target.value)}
-                    className="w-full mt-1 h-10 rounded-xl border border-slate-300 px-3 text-sm focus:outline-none" />
-                </div>
-              )}
-              <div>
-                <label className="text-xs text-slate-500 font-medium">Select Batch</label>
-                <select value={selectedBatch} onChange={e => setSelectedBatch(e.target.value)}
-                  className="w-full mt-1 h-10 rounded-xl border border-slate-300 px-3 text-sm bg-white focus:outline-none">
-                  <option value="">-- Approved Batch --</option>
-                  {batches.map(b => <option key={b.id} value={b.batch_id}>{b.batch_id} — {b.product}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs text-slate-500 font-medium">Product Code</label>
-                <input value={productCodeInput} onChange={e => setProductCodeInput(e.target.value)}
-                  className="w-full mt-1 h-10 rounded-xl border border-slate-300 px-3 text-sm focus:outline-none" />
-              </div>
-              <div>
-                <label className="text-xs text-slate-500 font-medium">Bottle Type</label>
-                <select value={selectedBottleTypeStr} onChange={e => setSelectedBottleTypeStr(e.target.value)}
-                  className="w-full mt-1 h-10 rounded-xl border border-slate-300 px-3 text-sm bg-white focus:outline-none">
-                  <option value="">-- Select --</option>
-                  {bottleTypes.map(b => <option key={b.id} value={b.name}>{b.name}</option>)}
-                </select>
-              </div>
-              <Button className="w-full rounded-xl" onClick={handleAssignBatch} disabled={loading}>
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Assign Batch'}
-              </Button>
-            </div>
-          )}
-
-          {supervisorAction === 'close' && activeBatch && (
-            <div className="space-y-2 pt-2">
-              <p className="text-sm text-slate-600">Close batch <strong>{activeBatch.batch_id}</strong>?</p>
-              <div className="text-xs text-slate-500 bg-slate-100 rounded-lg p-2">
-                Created: {activeBatch.created_crates || 0} · Palletized: {activeBatch.palletized_crates || 0} · Policy: {activeBatch.close_policy || 'REQUIRE_PALLETIZED'}
-              </div>
-              {closeBlockMsg && !showCloseOverride && <p className="text-sm text-red-600">{closeBlockMsg}</p>}
-              {!showCloseOverride && (
-                <Button className="w-full rounded-xl bg-red-600 hover:bg-red-700" onClick={handleCloseBatch} disabled={loading}>
-                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Confirm Close Batch'}
-                </Button>
-              )}
-              {showCloseOverride && (
-                <div className="space-y-2 border border-amber-300 bg-amber-50 rounded-xl p-3">
-                  <p className="text-xs font-bold text-amber-700 flex items-center gap-1"><Lock className="w-3.5 h-3.5" /> Override Required</p>
-                  {closeBlockMsg && <p className="text-xs text-red-600">{closeBlockMsg}</p>}
-                  <div>
-                    <label className="text-xs text-slate-500">Supervisor PIN</label>
-                    <input type="password" value={closeOverridePIN} onChange={e => setCloseOverridePIN(e.target.value)}
-                      className="w-full mt-1 h-10 rounded-xl border border-slate-300 px-3 text-sm focus:outline-none" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-slate-500">Override Reason *</label>
-                    <input value={closeOverrideReason} onChange={e => setCloseOverrideReason(e.target.value)}
-                      className="w-full mt-1 h-10 rounded-xl border border-slate-300 px-3 text-sm focus:outline-none" />
-                  </div>
-                  <Button className="w-full rounded-xl bg-amber-600 hover:bg-amber-700" disabled={loading}
-                    onClick={() => doCloseBatch(closeOverridePIN, closeOverrideReason)}>
-                    {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Force Close with Override'}
-                  </Button>
-                  <Button variant="ghost" className="w-full" onClick={() => { setShowCloseOverride(false); setCloseBlockMsg(''); }}>Cancel</Button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+      {activeBatch && bottleType && (
+        <Button className="w-full rounded-xl h-12 bg-blue-600 hover:bg-blue-700" onClick={startScanning}>Start Scanning Crates</Button>
+      )}
+      {!activeBatch && (
+        <Button variant="outline" className="w-full rounded-xl h-11 gap-2" onClick={() => loadActiveBatch(machine.machine_id)} disabled={loading}>
+          <RefreshCw className="w-4 h-4" /> Retry / Refresh
+        </Button>
       )}
     </div>
   );
