@@ -411,15 +411,24 @@ function MappingsTab({ user }) {
             );
           })}
           {filtered.length === 0 && <p className="text-center text-slate-400 text-sm py-6">No mappings found.</p>}
-        </div>
-      )}
-    </div>
-  );
-}
+          </div>
+          )}
+
+          {previewRule && (
+          <BatchIdPreview rule={previewRule} onClose={() => setPreviewRule(null)} user={user} />
+          )}
+          </div>
+          );
+          }
 
 // ─── PAGE ────────────────────────────────────────────────────────────────────
 export default function TemplateMappingManager() {
   const [tab, setTab] = useState(0);
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    base44.auth.me().then(setUser).catch(() => {});
+  }, []);
 
   return (
     <div className="space-y-4 max-w-2xl mx-auto">
@@ -441,7 +450,7 @@ export default function TemplateMappingManager() {
         ))}
       </div>
 
-      {tab === 0 && <MappingsTab />}
+      {tab === 0 && <MappingsTab user={user} />}
       {tab === 1 && (
         <div className="space-y-3">
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs text-blue-700">
