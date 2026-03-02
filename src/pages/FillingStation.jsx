@@ -297,7 +297,7 @@ export default function FillingStation() {
         {!offline && pending > 0 && <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full font-semibold">{pending} Pending</span>}
       </div>
       <div className="bg-white rounded-2xl p-4 border border-slate-200 space-y-3">
-        <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Scan Machine QR</p>
+        <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Scan Filler Machine QR</p>
         <div className="relative">
           <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
           <input
