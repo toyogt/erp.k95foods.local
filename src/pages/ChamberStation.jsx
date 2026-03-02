@@ -8,6 +8,7 @@ import ChamberPalletOut from '@/components/chamber/ChamberPalletOut';
 import ActiveCyclePanel from '@/components/chamber/ActiveCyclePanel';
 import StartCycleModal from '@/components/chamber/StartCycleModal';
 import { pendingCount } from '@/components/wip/offlineQueue';
+import ShiftSessionBar from '@/components/shift/ShiftSessionBar';
 
 export default function ChamberStation() {
   const [user, setUser] = useState(null);

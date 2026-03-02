@@ -5,6 +5,7 @@ import { ScanLine, CheckCircle2, Loader2, AlertCircle, RefreshCw, Printer } from
 import { saveCrate, savePallet, linkCratesToPallet, logMovement } from '@/components/wip/wipHelpers';
 import { pendingCount } from '@/components/wip/offlineQueue';
 import { logAudit } from '@/components/AuditLogger';
+import ShiftSessionBar from '@/components/shift/ShiftSessionBar';
 import { printReactComponent } from '@/components/printing/printLabel';
 import CrateLabel6x4 from '@/components/printing/CrateLabel6x4';
 import CalibrationLabel6x4 from '@/components/printing/CalibrationLabel6x4';
