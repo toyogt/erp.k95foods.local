@@ -409,6 +409,16 @@ export default function LabellingLine() {
           {/* Shift session bar */}
           <ShiftSessionBar stationType="LABELLING" machineId={machine?.machine_id} user={user} />
 
+          {/* Downtime bar */}
+          <DowntimeBar
+            stationType="LABELLING"
+            activeEvent={downtimeEvent}
+            downtimeMinutesToday={downtimeMinutesToday}
+            onPause={() => startDowntime({ woId: wo?.wo_id })}
+            onResume={(reasonCode, notes, photo) => endDowntime({ reasonCode, notes, photoUrl: photo })}
+            disabled={session.state !== 'RUNNING'}
+          />
+
           {/* WO header */}
           <div className="bg-slate-900 text-white rounded-2xl p-4">
             <div className="flex justify-between items-start">
@@ -418,13 +428,18 @@ export default function LabellingLine() {
                 <p className="text-sm text-slate-300">{wo?.product}</p>
                 {wo?.product_code && <p className="text-xs text-slate-400 font-mono">{wo?.product_code}</p>}
               </div>
-              <span className={`text-xs font-bold px-2 py-1 rounded-full ${
-                session.state === 'RUNNING' ? 'bg-emerald-500/30 text-emerald-300' :
-                session.state === 'SOFT_STOP' ? 'bg-amber-500/30 text-amber-300' :
-                session.state === 'HARD_STOP' ? 'bg-red-500/30 text-red-300' :
-                session.state === 'COMPLETED' ? 'bg-purple-500/30 text-purple-300' :
-                'bg-slate-700 text-slate-300'
-              }`}>{session.state}</span>
+              <div className="flex flex-col items-end gap-1">
+                <span className={`text-xs font-bold px-2 py-1 rounded-full ${
+                  session.state === 'RUNNING' ? 'bg-emerald-500/30 text-emerald-300' :
+                  session.state === 'SOFT_STOP' ? 'bg-amber-500/30 text-amber-300' :
+                  session.state === 'HARD_STOP' ? 'bg-red-500/30 text-red-300' :
+                  session.state === 'COMPLETED' ? 'bg-purple-500/30 text-purple-300' :
+                  'bg-slate-700 text-slate-300'
+                }`}>{session.state}</span>
+                {downtimeMinutesToday > 0 && (
+                  <span className="text-xs text-red-300 font-medium">⏱ {downtimeMinutesToday.toFixed(0)}m DT</span>
+                )}
+              </div>
             </div>
           </div>
 
