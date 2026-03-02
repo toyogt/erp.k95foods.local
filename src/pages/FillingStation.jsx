@@ -1,10 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
-import { ScanLine, CheckCircle2, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { ScanLine, CheckCircle2, Loader2, AlertCircle, RefreshCw, Printer } from 'lucide-react';
 import { saveCrate, savePallet, linkCratesToPallet, logMovement } from '@/components/wip/wipHelpers';
 import { pendingCount } from '@/components/wip/offlineQueue';
 import { logAudit } from '@/components/AuditLogger';
+import { printReactComponent } from '@/components/printing/printLabel';
+import CrateLabel6x4 from '@/components/printing/CrateLabel6x4';
+import CalibrationLabel6x4 from '@/components/printing/CalibrationLabel6x4';
 
 const LOC_FILLING = 'WIP-FILLING-OUT';
 
