@@ -79,6 +79,7 @@ export default function LabellingLine() {
 
   function handleSelectWO(w) {
     setWo(w);
+    setSkuMapping(null); // will be loaded by SKUMappingBadge
     setStep(STEP.SCAN_LABEL);
   }
 
