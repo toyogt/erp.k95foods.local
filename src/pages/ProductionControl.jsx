@@ -53,7 +53,7 @@ export default function ProductionControl() {
   async function handleAssign() {
     if (!form.machine_id) { setFormError('Select a filler machine.'); return; }
     if (!form.batch_id.trim()) { setFormError('Batch ID is required.'); return; }
-    if (!form.product_code.trim()) { setFormError('Product code is required.'); return; }
+    if (!form.product_code.trim()) { setFormError('SKU code is required.'); return; }
     if (!form.bottle_type.trim()) { setFormError('Bottle type is required.'); return; }
 
     setSaving(true);
@@ -151,7 +151,7 @@ export default function ProductionControl() {
                       <p className="font-bold text-slate-900">{m.machine_id}</p>
                       <p className="text-xs text-slate-400">{m.display_name}</p>
                     </td>
-                    <td className="px-4 py-4 font-mono text-slate-700 text-xs">{batch?.product_code || <span className="text-slate-300">—</span>}</td>
+                    <td className="px-4 py-4 font-mono text-slate-700 text-xs">{batch?.product_code ? (() => { const p = products.find(x => x.item_code === batch.product_code); return p ? `${batch.product_code} — ${p.product_name}` : batch.product_code; })() : <span className="text-slate-300">—</span>}</td>
                     <td className="px-4 py-4 font-mono font-semibold text-slate-800">{batch?.batch_id || <span className="text-slate-300 font-normal">—</span>}</td>
                     <td className="px-4 py-4 text-slate-600 text-xs">{batch?.bottle_type || <span className="text-slate-300">—</span>}</td>
                     <td className="px-4 py-4 text-right">
@@ -232,19 +232,19 @@ export default function ProductionControl() {
             </div>
           )}
 
-          {/* Product */}
+          {/* SKU */}
           <div className="space-y-1">
-            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Product Code</label>
+            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">SKU Code</label>
             {products.length > 0 ? (
               <select
                 className="w-full h-10 rounded-xl border border-slate-300 px-3 text-sm focus:outline-none focus:border-blue-500 bg-white"
                 value={form.product_code} onChange={e => setForm(f => ({ ...f, product_code: e.target.value }))}>
-                <option value="">— Select product —</option>
-                {products.map(p => <option key={p.id} value={p.product_code || p.name}>{p.product_code || p.name} {p.name !== p.product_code ? `— ${p.name}` : ''}</option>)}
+                <option value="">— Select SKU —</option>
+                {products.map(p => <option key={p.id} value={p.item_code}>{p.item_code} — {p.product_name}</option>)}
               </select>
             ) : (
               <input className="w-full h-10 rounded-xl border border-slate-300 px-3 text-sm focus:outline-none focus:border-blue-500"
-                placeholder="Product code (manual)" value={form.product_code} onChange={e => setForm(f => ({ ...f, product_code: e.target.value }))} />
+                placeholder="SKU code (manual)" value={form.product_code} onChange={e => setForm(f => ({ ...f, product_code: e.target.value }))} />
             )}
           </div>
 
