@@ -10,6 +10,8 @@ import ChecklistRunner from '@/components/checklist/ChecklistRunner';
 import { callEdge } from '@/components/labelling/edgeClient';
 import { logAudit } from '@/components/AuditLogger';
 import { raiseAlert } from '@/components/alerts/alertHelpers';
+import CrateTraceWindowPanel from '@/components/labelling/CrateTraceWindowPanel';
+import TraceSearchPanel from '@/components/labelling/TraceSearchPanel';
 
 const STEP = { MACHINE: 0, SELECT_WO: 1, SCAN_LABEL: 2, SCAN_CARTON: 3, CHECKLIST: 4, RUNNING: 5 };
 
