@@ -1,7 +1,5 @@
 import { AlertCircle } from 'lucide-react';
 
-const STEPS = ['before', 'while', 'after', 'submit'];
-
 export default function RecipeStation() {
   const [user, setUser] = useState(null);
   const [view, setView] = useState('list'); // list | new | run | qa_review
