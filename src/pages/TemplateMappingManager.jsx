@@ -27,15 +27,24 @@ function InlineForm({ fields, initial, onSave, onCancel, saving }) {
               <span className="text-sm text-slate-700">Active</span>
             </label>
           ) : f.type === 'json' ? (
-            <textarea
-              className="w-full h-24 px-3 py-2 rounded-lg border border-slate-300 text-xs font-mono focus:outline-none focus:border-blue-500"
-              placeholder='{"prefix":"BTH","date":"YYMMDD","seq":4}'
-              value={typeof form[f.key] === 'object' ? JSON.stringify(form[f.key], null, 2) : (form[f.key] || '')}
-              onChange={e => {
-                try { setForm(v => ({ ...v, [f.key]: JSON.parse(e.target.value) })); }
-                catch { setForm(v => ({ ...v, [f.key]: e.target.value })); }
-              }}
-            />
+           <textarea
+             className="w-full h-24 px-3 py-2 rounded-lg border border-slate-300 text-xs font-mono focus:outline-none focus:border-blue-500"
+             placeholder='{"prefix":"BTH","date":"YYMMDD","seq":4}'
+             value={typeof form[f.key] === 'object' ? JSON.stringify(form[f.key], null, 2) : (form[f.key] || '')}
+             onChange={e => {
+               try { setForm(v => ({ ...v, [f.key]: JSON.parse(e.target.value) })); }
+               catch { setForm(v => ({ ...v, [f.key]: e.target.value })); }
+             }}
+           />
+          ) : f.type === 'select' ? (
+           <select
+             className="w-full h-9 px-3 rounded-lg border border-slate-300 text-sm focus:outline-none focus:border-blue-500 bg-white"
+             value={form[f.key] || ''}
+             onChange={e => setForm(v => ({ ...v, [f.key]: e.target.value }))}
+           >
+             <option value="">— Select —</option>
+             {f.options?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+           </select>
           ) : (
             <input
               className="w-full h-9 px-3 rounded-lg border border-slate-300 text-sm focus:outline-none focus:border-blue-500 font-mono"
