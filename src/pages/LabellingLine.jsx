@@ -37,6 +37,8 @@ export default function LabellingLine() {
   // Traceability
   const [latestTrace, setLatestTrace] = useState(null);
   const [bufferEstimate, setBufferEstimate] = useState(null);
+  // Roll tracking
+  const [activeRoll, setActiveRoll] = useState(null);
 
   const isSupervisor = user?.role === 'admin' || user?.role === 'labelling_supervisor' || user?.role === 'production_manager';
 
