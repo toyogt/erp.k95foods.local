@@ -3,7 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { Loader2, WifiOff } from 'lucide-react';
 import StationCard from '@/components/StationCard';
 import { getAllowedPages } from '@/components/roles';
-import { Store, Beaker, Droplets, Thermometer, Truck, Tag,
+import { Droplets, Thermometer, Truck, Tag,
          ScrollText, Settings, ListChecks, Bell,
          Printer, ClipboardCheck, Layers, Warehouse, BarChart3, Upload } from 'lucide-react';
 

@@ -7,7 +7,7 @@ import LiveCounters from './LiveCounters';
 import LocationHeatmap from './LocationHeatmap';
 import RecentActivity from './RecentActivity';
 import StationCard from '@/components/StationCard';
-import { Store, Beaker, Droplets, Thermometer, Truck, Tag,
+import { Droplets, Thermometer, Truck, Tag,
          ScrollText, Settings, ListChecks, Printer,
          ClipboardCheck, Layers, Warehouse, BarChart3, Upload } from 'lucide-react';
 

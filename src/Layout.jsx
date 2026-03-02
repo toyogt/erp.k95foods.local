@@ -7,7 +7,7 @@ import useModuleAccess from '@/components/modules/useModuleAccess';
 import {
   LayoutDashboard, ScrollText, Settings, ChevronLeft,
   Factory, LogOut, Menu, X,
-  Store, Beaker, Droplets, Thermometer, Truck, Tag,
+  Droplets, Thermometer, Truck, Tag,
   ListChecks, Bell, Printer, ClipboardCheck, Layers, Warehouse, BarChart3, Upload
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
