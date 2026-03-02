@@ -26,6 +26,10 @@ Deno.serve(async (req) => {
       soft_stop: '/edge/soft_stop',
       hard_stop: '/edge/hard_stop',
       printer_select_message: '/edge/printer/select_message',
+      ryan_get_count: '/edge/ryan/get_count',
+      ryan_start: '/edge/ryan/start',
+      ryan_stop: '/edge/ryan/stop',
+      ryan_print_sample: '/edge/ryan/print_sample',
     }[action];
 
     if (!path) return Response.json({ error: 'Unknown action: ' + action }, { status: 400 });
