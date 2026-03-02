@@ -145,32 +145,15 @@ export default function ProductionOrders() {
       return;
     }
 
-    const selectedLineObjs = Array.from(selectedLines).map(id => lines.find(l => l.id === id)).filter(Boolean);
-
-    // Group by recipe_id
-    const grouped = {};
-    for (const line of selectedLineObjs) {
-      const sku = products.find(p => p.item_code === line.sku_code);
-      const recipeId = sku?.recipe_id || 'UNKNOWN';
-      if (!grouped[recipeId]) grouped[recipeId] = [];
-      grouped[recipeId].push(line);
-    }
-
     setCreatingPlan(true);
     try {
-      const planIds = [];
-      for (const [recipeId, groupLines] of Object.entries(grouped)) {
-        // Create one LiquidBatchPlan per recipe
-        const plan = await base44.entities.LiquidBatchPlan.create({
-          plan_id: `LBP-${Date.now()}-${recipeId.slice(0, 5)}`,
-          recipe_id: recipeId,
-          status: 'DRAFT',
-          notes: `Created from production order lines: ${groupLines.map(l => l.sku_code).join(', ')}`,
-        });
-        planIds.push(plan.id);
-      }
-      alert(`Created ${planIds.length} liquid batch plan(s)`);
+      const response = await base44.functions.invoke('createLiquidPlansFromOrders', {
+        selectedLineIds: Array.from(selectedLines),
+        skuProducts: products,
+      });
+      alert(`Created ${response.data.plansCreated} liquid batch plan(s)`);
       setSelectedLines(new Set());
+      loadData();
     } catch (err) {
       alert('Error: ' + err.message);
     } finally {
