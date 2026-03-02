@@ -135,6 +135,8 @@ export default function ChamberStation() {
         </div>
       </div>
 
+      <ShiftSessionBar stationType="CHAMBER" machineId={machine.machine_id} user={user} />
+
       {/* Pallets in chamber summary */}
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">

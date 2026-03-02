@@ -319,6 +319,8 @@ export default function FillingStation() {
         <button onClick={() => { setMachine(null); setStep('machine'); }} className="text-xs text-slate-400 underline">Change Machine</button>
       </div>
 
+      <ShiftSessionBar stationType="FILLING" machineId={machine.machine_id} user={user} />
+
       <div className="bg-white rounded-2xl border border-slate-200 p-4">
         <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Machine</p>
         <p className="font-bold text-slate-900">{machine.display_name || machine.machine_id}</p>
