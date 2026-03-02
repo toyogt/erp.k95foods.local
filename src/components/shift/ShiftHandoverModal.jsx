@@ -17,7 +17,7 @@ export default function ShiftHandoverModal({ stationType, machineId, user, curre
 
   const checklistStage = `HANDOVER_${stationType}`;
 
-  async function handleChecklistDone(runId) {
+  async function handleChecklistDone(status, runId) {
     setChecklistRunId(runId);
     await completeHandover(runId);
   }
