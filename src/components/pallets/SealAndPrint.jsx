@@ -33,6 +33,62 @@ export default function SealAndPrint({ pallet, scannedBoxes, user, onSealed, onH
       total_boxes: scannedBoxes.length,
     });
     const sealedData = { status: 'SEALED', sealed_at: now, sealed_by: user?.email, total_boxes: scannedBoxes.length };
+
+    // Create PackedOutputEvent records
+    const allBoxLabels = await base44.entities.BoxLabel.list('-created_date', 5000);
+    const allAllocations = await base44.entities.SKUAllocation.list('-created_date', 5000);
+    const allProducts = await base44.entities.ProductMaster.list('-created_date', 500);
+
+    // Group scanned boxes by wo_id and sku_code
+    const grouped = {};
+    for (const scannedBox of scannedBoxes) {
+      const boxLabel = allBoxLabels.find(bl => bl.box_serial === scannedBox.box_serial);
+      if (!boxLabel) continue;
+
+      const woId = boxLabel.wo_id;
+      const skuCode = boxLabel.item_code || scannedBox.item_code;
+      const key = `${woId}|${skuCode}`;
+
+      if (!grouped[key]) {
+        grouped[key] = {
+          wo_id: woId,
+          sku_code: skuCode,
+          boxes: [],
+          allocation: null,
+          product: null,
+        };
+      }
+      grouped[key].boxes.push(scannedBox);
+    }
+
+    // Create PackedOutputEvent for each group
+    let eventNum = 1;
+    for (const [key, group] of Object.entries(grouped)) {
+      const allocation = allAllocations.find(a => a.id === group.wo_id || 
+        (a.sku_code === group.sku_code && a.plan_id));
+      const product = allProducts.find(p => p.item_code === group.sku_code);
+
+      const boxesCount = group.boxes.length;
+      const bottlesPerBox = product?.bottles_per_box || 1;
+      const packedBottles = boxesCount * bottlesPerBox;
+
+      await base44.entities.PackedOutputEvent.create({
+        event_id: `PE-${pallet.pallet_id}-${eventNum}`,
+        pallet_id: pallet.pallet_id,
+        sealed_at: now,
+        status: 'ACTIVE',
+        wo_id: group.wo_id || '',
+        allocation_id: allocation?.allocation_id || '',
+        plan_id: allocation?.plan_id || '',
+        order_id: allocation?.order_id || '',
+        sku_code: group.sku_code,
+        boxes_count: boxesCount,
+        bottles_per_box: bottlesPerBox,
+        packed_bottles: packedBottles,
+      });
+      eventNum++;
+    }
+
     setSealing(false);
     setSealed(true);
     setSealedPallet({ ...pallet, ...sealedData });
