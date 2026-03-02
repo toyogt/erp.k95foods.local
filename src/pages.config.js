@@ -64,6 +64,7 @@ import LabellingLine from './pages/LabellingLine';
 import MasterData from './pages/MasterData';
 import OpeningStockImport from './pages/OpeningStockImport';
 import ProductionControl from './pages/ProductionControl';
+import ProductionOrders from './pages/ProductionOrders';
 import PullLists from './pages/PullLists';
 import RecipeStation from './pages/RecipeStation';
 import ShiftKPIDashboard from './pages/ShiftKPIDashboard';
@@ -72,7 +73,7 @@ import TemplateMappingManager from './pages/TemplateMappingManager';
 import TraceInvestigation from './pages/TraceInvestigation';
 import TransferReceiving from './pages/TransferReceiving';
 import WarehouseOps from './pages/WarehouseOps';
-import ProductionOrders from './pages/ProductionOrders';
+import LiquidPlans from './pages/LiquidPlans';
 import __Layout from './Layout.jsx';
 
 
@@ -94,6 +95,7 @@ export const PAGES = {
     "MasterData": MasterData,
     "OpeningStockImport": OpeningStockImport,
     "ProductionControl": ProductionControl,
+    "ProductionOrders": ProductionOrders,
     "PullLists": PullLists,
     "RecipeStation": RecipeStation,
     "ShiftKPIDashboard": ShiftKPIDashboard,
@@ -102,7 +104,7 @@ export const PAGES = {
     "TraceInvestigation": TraceInvestigation,
     "TransferReceiving": TransferReceiving,
     "WarehouseOps": WarehouseOps,
-    "ProductionOrders": ProductionOrders,
+    "LiquidPlans": LiquidPlans,
 }
 
 export const pagesConfig = {
