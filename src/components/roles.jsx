@@ -41,7 +41,7 @@ const ACCESS_MAP = {
   chamber_operator:     ['Dashboard','ChamberStation','PullLists'],
   labelling_receiver:   ['Dashboard','TransferReceiving','PullLists'],
   line_operator:        ['Dashboard','LabellingLine'],
-  labelling_supervisor: ['Dashboard','LabellingLine','TransferReceiving','AlertsPage','PullLists'],
+  labelling_supervisor: ['Dashboard','LabellingLine','TransferReceiving','AlertsPage','PullLists','LabelRollManager'],
   // Legacy warehouse role – no longer gets FGPalletizing or new pages by default
   warehouse:            ['Dashboard'],
   // New roles
