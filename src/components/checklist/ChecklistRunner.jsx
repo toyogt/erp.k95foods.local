@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
-import { CheckSquare, Square, Loader2, AlertCircle } from 'lucide-react';
+import { CheckSquare, Square, Loader2, AlertCircle, Camera, CheckCircle2 } from 'lucide-react';
 
 function genRunId() { return 'RUN-' + Date.now().toString(36).toUpperCase(); }
 
