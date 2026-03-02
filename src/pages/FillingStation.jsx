@@ -42,13 +42,7 @@ export default function FillingStation() {
 
   async function loadSetupData() {
     try {
-      const [bt, settings, batchList] = await Promise.all([
-        base44.entities.BottleType.list(),
-        base44.entities.AppSetting.filter({ key: 'WIP_PALLET_CRATE_CAPACITY' }),
-        base44.entities.Batch.filter({ status: 'APPROVED' }),
-      ]);
-      setBottleTypes(bt);
-      setBatches(batchList);
+      const settings = await base44.entities.AppSetting.filter({ key: 'WIP_PALLET_CRATE_CAPACITY' });
       if (settings.length > 0) setCapacity(parseInt(settings[0].value) || 20);
     } catch { /* offline */ }
   }
