@@ -20,12 +20,12 @@ function InlineForm({ fields, initial, onSave, onCancel, saving }) {
     const form = { ...initial } || {};
     fields.forEach(f => {
       if (f.type === 'json' && typeof form[f.key] === 'string' && form[f.key]?.trim()) {
-        try { form[f.key] = JSON.parse(form[f.key]); } catch { /* stay as string */ }
+        try { form[f.key] = JSON.parse(form[f.key]); } catch (e) { /* keep as string */ }
       }
     });
     return form;
   };
-  const [form, setForm] = useState(buildInitForm);
+  const [form, setForm] = useState(() => buildInitForm());
   return (
     <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
       {fields.map(f => (
