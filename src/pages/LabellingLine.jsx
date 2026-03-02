@@ -122,8 +122,17 @@ export default function LabellingLine() {
     }
     const edgeRes = await callEdge('start_job', { wo_id: wo.wo_id, line_machine_id: machine.machine_id, mrp: wo.mrp, pack_type: wo.pack_type, target_bottles: wo.target_bottles, label_sku_code: wo.label_sku_code });
     setEdgeStatus(edgeRes.edge_offline ? 'offline' : 'ok');
-    if (!edgeRes.edge_offline && wo.printer_template_id) {
-      await callEdge('printer_select_message', { wo_id: wo.wo_id, template_id: wo.printer_template_id, variables: wo.print_variables || {} });
+    // Use SKU mapping template if available, fall back to WO printer_template_id
+    const labelTemplateName = skuMapping?.label_variant_id
+      ? (await base44.entities.LabelVariant.filter({ label_variant_id: skuMapping.label_variant_id }).catch(() => []))[0]?.label_template_name
+      : null;
+    const templateId = labelTemplateName || wo.printer_template_id;
+    if (!edgeRes.edge_offline && templateId) {
+      await callEdge('printer_select_message', { wo_id: wo.wo_id, template_id: templateId, variables: wo.print_variables || {} });
+    }
+    // Lock Ryan to correct template
+    if (!edgeRes.edge_offline && skuMapping?.ryan_template_id) {
+      await callEdge('ryan_select_template', { wo_id: wo.wo_id, template_id: skuMapping.ryan_template_id });
     }
     if (newSession?.id) {
       try { await base44.entities.LineSession.update(newSession.id, { state: 'RUNNING' }); } catch { /* offline */ }
