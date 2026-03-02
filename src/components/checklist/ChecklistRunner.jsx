@@ -134,7 +134,47 @@ export default function ChecklistRunner({ station_type, stage, reference_type, r
   );
 }
 
+function PhotoItem({ item, value, onChange }) {
+  const [uploading, setUploading] = useState(false);
+  const inputRef = useRef(null);
+
+  async function handleFile(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    onChange(file_url);
+    setUploading(false);
+  }
+
+  return (
+    <div className="bg-white rounded-xl border border-slate-200 p-3">
+      <label className="text-xs text-slate-500 font-medium">
+        {item.label}{item.required && <span className="text-red-500 ml-1">*</span>}
+      </label>
+      <input ref={inputRef} type="file" accept="image/*" capture="environment"
+        className="hidden" onChange={handleFile} />
+      {value ? (
+        <div className="mt-2 space-y-2">
+          <img src={value} alt="captured" className="w-full max-h-40 object-cover rounded-lg border border-slate-200" />
+          <button onClick={() => inputRef.current?.click()}
+            className="text-xs text-blue-600 font-medium flex items-center gap-1">
+            <Camera className="w-3 h-3" /> Retake
+          </button>
+        </div>
+      ) : (
+        <button onClick={() => inputRef.current?.click()} disabled={uploading}
+          className="mt-2 w-full h-16 rounded-xl border-2 border-dashed border-slate-300 flex items-center justify-center gap-2 text-sm text-slate-500 hover:border-blue-400 hover:text-blue-600 transition-colors disabled:opacity-50">
+          {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Camera className="w-4 h-4" /> Take / Upload Photo</>}
+        </button>
+      )}
+    </div>
+  );
+}
+
 function ChecklistItem({ item, value, onChange }) {
+  if (item.type === 'photo') return <PhotoItem item={item} value={value} onChange={onChange} />;
+
   if (item.type === 'checkbox') return (
     <button
       onClick={() => onChange(value === 'true' ? '' : 'true')}
