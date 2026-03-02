@@ -106,6 +106,9 @@ export default function ChecklistRunner({ station_type, stage, reference_type, r
         <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{station_type} · {stage}</p>
         <p className="font-bold text-slate-900 text-lg">{template.name}</p>
         <p className="text-xs text-slate-400">v{template.version} · {(template.items_json || []).length} items</p>
+        {(template.items_json || []).some(i => i.type === 'photo') && (
+          <p className="text-xs text-blue-600 mt-1 flex items-center gap-1"><Camera className="w-3 h-3" /> Some items require a photo</p>
+        )}
       </div>
 
       <div className="space-y-2">
