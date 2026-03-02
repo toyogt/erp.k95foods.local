@@ -19,7 +19,7 @@ function InlineForm({ fields, initial, onSave, onCancel, saving }) {
   const buildInitForm = () => {
     const form = { ...initial } || {};
     fields.forEach(f => {
-      if (f.type === 'json' && typeof form[f.key] === 'string' && form[f.key]) {
+      if (f.type === 'json' && typeof form[f.key] === 'string' && form[f.key]?.trim()) {
         try { form[f.key] = JSON.parse(form[f.key]); } catch { /* stay as string */ }
       }
     });
