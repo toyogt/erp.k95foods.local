@@ -41,6 +41,8 @@ export default function LabellingLine() {
   const [bufferEstimate, setBufferEstimate] = useState(null);
   // Roll tracking
   const [activeRoll, setActiveRoll] = useState(null);
+  // SKU mapping
+  const [skuMapping, setSkuMapping] = useState(null);
 
   const isSupervisor = user?.role === 'admin' || user?.role === 'labelling_supervisor' || user?.role === 'production_manager';
 
