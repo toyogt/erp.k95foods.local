@@ -33,6 +33,9 @@ export default function LabellingLine() {
   const [bottleTypeMismatchHardStop, setBottleTypeMismatchHardStop] = useState(false);
   // Supervisor restart checklist gate
   const [showRestartChecklist, setShowRestartChecklist] = useState(false);
+  // Traceability
+  const [latestTrace, setLatestTrace] = useState(null);
+  const [bufferEstimate, setBufferEstimate] = useState(null);
 
   const isSupervisor = user?.role === 'admin' || user?.role === 'labelling_supervisor' || user?.role === 'production_manager';
 
