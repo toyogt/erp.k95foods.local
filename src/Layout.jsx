@@ -8,7 +8,7 @@ import {
   LayoutDashboard, ScrollText, Settings, ChevronLeft,
   Factory, LogOut, Menu, X,
   Droplets, Thermometer, Truck, Tag,
-  ListChecks, Bell, Printer, ClipboardCheck, Layers, Warehouse, BarChart3, Upload
+  ListChecks, Bell, Printer, ClipboardCheck, Layers, Warehouse, BarChart3, Upload, Search
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
