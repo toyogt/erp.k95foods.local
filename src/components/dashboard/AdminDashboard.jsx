@@ -12,8 +12,6 @@ import { Store, Beaker, Droplets, Thermometer, Truck, Tag,
          ClipboardCheck, Layers, Warehouse, BarChart3, Upload } from 'lucide-react';
 
 const ALL_STATIONS = [
-  { icon: Store,          title: 'Stores Issue',        subtitle: 'Material issue',        page: 'StoresIssue',        color: 'bg-violet-600'  },
-  { icon: Beaker,         title: 'Recipe Station',      subtitle: 'Batch execution',       page: 'RecipeStation',      color: 'bg-rose-600'    },
   { icon: Droplets,       title: 'Filling Station',     subtitle: 'Crate creation',        page: 'FillingStation',     color: 'bg-blue-600'    },
   { icon: Thermometer,    title: 'Chamber Station',     subtitle: 'Pallet in/out',         page: 'ChamberStation',     color: 'bg-orange-600'  },
   { icon: Truck,          title: 'Transfer/Receiving',  subtitle: 'Transit & receive',     page: 'TransferReceiving',  color: 'bg-teal-600'    },

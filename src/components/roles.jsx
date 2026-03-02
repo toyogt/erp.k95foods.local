@@ -33,9 +33,9 @@ const ACCESS_MAP = {
     'FillingStation','LabellingLine',
     'BoxLabelApprovals','BoxStockDashboard',
   ],
-  stores:               ['Dashboard','StoresIssue'],
-  recipe_operator:      ['Dashboard','RecipeStation'],
-  qa:                   ['Dashboard','RecipeStation','AuditLogPage'],
+  stores:               ['Dashboard'],
+  recipe_operator:      ['Dashboard'],
+  qa:                   ['Dashboard','AuditLogPage'],
   filling_operator:     ['Dashboard','FillingStation'],
   chamber_operator:     ['Dashboard','ChamberStation','PullLists'],
   labelling_receiver:   ['Dashboard','TransferReceiving','PullLists'],
@@ -50,7 +50,7 @@ const ACCESS_MAP = {
   warehouse_ops:        ['Dashboard','WarehouseOps','BoxStockDashboard','OpeningStockImport'],
   // Default platform role – broad access (non-admin)
   user: [
-    'Dashboard','StoresIssue','RecipeStation','FillingStation','ChamberStation',
+    'Dashboard','FillingStation','ChamberStation',
     'TransferReceiving','LabellingLine','AuditLogPage','MasterData','AlertsPage','PullLists','CustomizeDashboard',
     'BoxLabelPrint','BoxLabelApprovals','BoxPalletBuild','WarehouseOps','BoxStockDashboard','OpeningStockImport',
   ],
