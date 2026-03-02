@@ -40,7 +40,10 @@ export default function ChecklistRunner({ station_type, stage, reference_type, r
       } else {
         setTemplate(results[0]);
         const initResponses = {};
-        (results[0].items_json || []).forEach(item => { initResponses[item.id] = ''; });
+        (results[0].items_json || []).forEach(item => {
+          const k = item.key || item.id || item.label;
+          initResponses[k] = '';
+        });
         setResponses(initResponses);
       }
     } catch {
@@ -53,7 +56,10 @@ export default function ChecklistRunner({ station_type, stage, reference_type, r
   async function handleSubmit() {
     if (!template) { onComplete('COMPLETED', null); return; }
     // Validate required
-    const missing = (template.items_json || []).filter(item => item.required && !responses[item.id]);
+    const missing = (template.items_json || []).filter(item => {
+      const k = item.key || item.id || item.label;
+      return item.required && !responses[k];
+    });
     if (missing.length > 0) {
       setError('Please complete all required items: ' + missing.map(m => m.label).join(', '));
       return;
@@ -69,7 +75,7 @@ export default function ChecklistRunner({ station_type, stage, reference_type, r
       stage,
       reference_type,
       reference_id,
-      responses_json: Object.entries(responses).map(([id, value]) => ({ id, value })),
+      responses_json: Object.entries(responses).map(([key, value]) => ({ key, value })),
       completed_by: user?.email || '',
       completed_at: now,
       status: 'COMPLETED',
@@ -81,8 +87,8 @@ export default function ChecklistRunner({ station_type, stage, reference_type, r
     onComplete('COMPLETED', runId);
   }
 
-  function setResponse(id, value) {
-    setResponses(prev => ({ ...prev, [id]: value }));
+  function setResponse(key, value) {
+    setResponses(prev => ({ ...prev, [key]: value }));
     if (error) setError('');
   }
 
@@ -112,9 +118,10 @@ export default function ChecklistRunner({ station_type, stage, reference_type, r
       </div>
 
       <div className="space-y-2">
-        {(template.items_json || []).map(item => (
-          <ChecklistItem key={item.id} item={item} value={responses[item.id]} onChange={v => setResponse(item.id, v)} />
-        ))}
+        {(template.items_json || []).map((item, idx) => {
+          const k = item.key || item.id || item.label || String(idx);
+          return <ChecklistItem key={k} item={item} value={responses[k]} onChange={v => setResponse(k, v)} />;
+        })}
       </div>
 
       {error && (
