@@ -14,6 +14,7 @@ import CrateTraceWindowPanel from '@/components/labelling/CrateTraceWindowPanel'
 import TraceSearchPanel from '@/components/labelling/TraceSearchPanel';
 import RollInstallPanel from '@/components/labelling/RollInstallPanel';
 import ReworkPanel from '@/components/labelling/ReworkPanel';
+import SKUMappingBadge from '@/components/labelling/SKUMappingBadge';
 
 const STEP = { MACHINE: 0, SELECT_WO: 1, SCAN_LABEL: 2, SCAN_CARTON: 3, CHECKLIST: 4, RUNNING: 5 };
 
