@@ -30,6 +30,7 @@ const ALL_NAV_ITEMS = [
   { label: 'Alerts',             page: 'AlertsPage',         icon: Bell            },
   { label: 'Shift KPIs',         page: 'ShiftKPIDashboard',  icon: BarChart3       },
   { label: 'Feeder Kiosk',       page: 'FeederKiosk',        icon: Tag             },
+  { label: 'Trace Investigation',page: 'TraceInvestigation', icon: Search          },
   { label: 'Audit Log',          page: 'AuditLogPage',       icon: ScrollText      },
   { label: 'Template Mapping',   page: 'TemplateMappingManager', icon: Settings    },
   { label: 'Master Data',        page: 'MasterData',         icon: Settings        },

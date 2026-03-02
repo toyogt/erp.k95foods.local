@@ -27,11 +27,11 @@ const ACCESS_MAP = {
     'TransferReceiving','LabellingLine','FGPalletizing','AuditLogPage','MasterData',
     'AlertsPage','PullLists','CustomizeDashboard',
     'BoxLabelPrint','BoxLabelApprovals','BoxPalletBuild','WarehouseOps','BoxStockDashboard','OpeningStockImport',
-    'ProductionControl','LabelRollManager','TemplateMappingManager','FeederKiosk',
+    'ProductionControl','LabelRollManager','TemplateMappingManager','FeederKiosk','TraceInvestigation',
   ],
   production_manager: [
     'Dashboard','AuditLogPage','MasterData','AlertsPage','PullLists','CustomizeDashboard',
-    'FillingStation','LabellingLine','FeederKiosk',
+    'FillingStation','LabellingLine','FeederKiosk','TraceInvestigation',
     'BoxLabelApprovals','BoxStockDashboard','ProductionControl',
   ],
   stores:               ['Dashboard'],
@@ -41,7 +41,7 @@ const ACCESS_MAP = {
   chamber_operator:     ['Dashboard','ChamberStation','PullLists'],
   labelling_receiver:   ['Dashboard','TransferReceiving','PullLists'],
   line_operator:        ['Dashboard','LabellingLine','FeederKiosk'],
-  labelling_supervisor: ['Dashboard','LabellingLine','TransferReceiving','AlertsPage','PullLists','LabelRollManager','FeederKiosk'],
+  labelling_supervisor: ['Dashboard','LabellingLine','TransferReceiving','AlertsPage','PullLists','LabelRollManager','FeederKiosk','TraceInvestigation'],
   // Legacy warehouse role – no longer gets FGPalletizing or new pages by default
   warehouse:            ['Dashboard'],
   // New roles
