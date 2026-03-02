@@ -133,7 +133,7 @@ export default function ProductMasterManager() {
       <div className="flex flex-wrap gap-2 items-center justify-between">
         <div className="relative">
           <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-slate-400" />
-          <Input className="pl-8 w-56 text-sm" placeholder="Search products…" value={search} onChange={e => setSearch(e.target.value)} />
+          <Input className="pl-8 w-56 text-sm" placeholder="Search SKUs…" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={downloadTemplate} className="gap-1.5 text-xs">

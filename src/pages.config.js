@@ -57,6 +57,7 @@ import ChamberStation from './pages/ChamberStation';
 import CustomizeDashboard from './pages/CustomizeDashboard';
 import Dashboard from './pages/Dashboard';
 import FGPalletizing from './pages/FGPalletizing';
+import FeederKiosk from './pages/FeederKiosk';
 import FillingStation from './pages/FillingStation';
 import LabelRollManager from './pages/LabelRollManager';
 import LabellingLine from './pages/LabellingLine';
@@ -65,13 +66,12 @@ import OpeningStockImport from './pages/OpeningStockImport';
 import ProductionControl from './pages/ProductionControl';
 import PullLists from './pages/PullLists';
 import RecipeStation from './pages/RecipeStation';
+import ShiftKPIDashboard from './pages/ShiftKPIDashboard';
 import StoresIssue from './pages/StoresIssue';
 import TemplateMappingManager from './pages/TemplateMappingManager';
+import TraceInvestigation from './pages/TraceInvestigation';
 import TransferReceiving from './pages/TransferReceiving';
 import WarehouseOps from './pages/WarehouseOps';
-import ShiftKPIDashboard from './pages/ShiftKPIDashboard';
-import FeederKiosk from './pages/FeederKiosk';
-import TraceInvestigation from './pages/TraceInvestigation';
 import __Layout from './Layout.jsx';
 
 
@@ -86,6 +86,7 @@ export const PAGES = {
     "CustomizeDashboard": CustomizeDashboard,
     "Dashboard": Dashboard,
     "FGPalletizing": FGPalletizing,
+    "FeederKiosk": FeederKiosk,
     "FillingStation": FillingStation,
     "LabelRollManager": LabelRollManager,
     "LabellingLine": LabellingLine,
@@ -94,13 +95,12 @@ export const PAGES = {
     "ProductionControl": ProductionControl,
     "PullLists": PullLists,
     "RecipeStation": RecipeStation,
+    "ShiftKPIDashboard": ShiftKPIDashboard,
     "StoresIssue": StoresIssue,
     "TemplateMappingManager": TemplateMappingManager,
+    "TraceInvestigation": TraceInvestigation,
     "TransferReceiving": TransferReceiving,
     "WarehouseOps": WarehouseOps,
-    "ShiftKPIDashboard": ShiftKPIDashboard,
-    "FeederKiosk": FeederKiosk,
-    "TraceInvestigation": TraceInvestigation,
 }
 
 export const pagesConfig = {

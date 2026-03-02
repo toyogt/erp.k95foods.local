@@ -37,7 +37,7 @@ export default function MasterData() {
       <Tabs defaultValue="bottles" className="w-full">
         <div className="overflow-x-auto">
           <TabsList className="inline-flex h-10 rounded-xl bg-slate-100 p-1 min-w-full">
-            <TabsTrigger value="products"   className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Products</TabsTrigger>
+            <TabsTrigger value="products"   className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">SKUs</TabsTrigger>
             <TabsTrigger value="bottles"    className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Bottles</TabsTrigger>
             <TabsTrigger value="locations"  className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Locations</TabsTrigger>
             <TabsTrigger value="machines"   className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Machines</TabsTrigger>

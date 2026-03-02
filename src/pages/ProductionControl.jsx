@@ -135,7 +135,7 @@ export default function ProductionControl() {
             <thead>
               <tr className="border-b border-slate-100 text-xs text-slate-500 uppercase tracking-wide">
                 <th className="text-left px-5 py-3 font-semibold">Machine</th>
-                <th className="text-left px-4 py-3 font-semibold">Product</th>
+                <th className="text-left px-4 py-3 font-semibold">SKU</th>
                 <th className="text-left px-4 py-3 font-semibold">Batch ID</th>
                 <th className="text-left px-4 py-3 font-semibold">Bottle Type</th>
                 <th className="text-right px-4 py-3 font-semibold">Crates</th>
