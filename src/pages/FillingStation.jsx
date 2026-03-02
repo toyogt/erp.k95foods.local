@@ -302,6 +302,11 @@ export default function FillingStation() {
           {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Confirm Machine'}
         </Button>
       </div>
+      {(user?.role === 'admin') && (
+        <Button variant="outline" className="w-full h-10 rounded-xl gap-2 text-slate-500" onClick={handleCalibrationPrint}>
+          <Printer className="w-4 h-4" /> Print Calibration Label (6×4)
+        </Button>
+      )}
     </div>
   );
 
