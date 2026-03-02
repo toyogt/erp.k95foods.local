@@ -67,6 +67,7 @@ import StoresIssue from './pages/StoresIssue';
 import TransferReceiving from './pages/TransferReceiving';
 import WarehouseOps from './pages/WarehouseOps';
 import ProductionControl from './pages/ProductionControl';
+import LabelRollManager from './pages/LabelRollManager';
 import __Layout from './Layout.jsx';
 
 
@@ -91,6 +92,7 @@ export const PAGES = {
     "TransferReceiving": TransferReceiving,
     "WarehouseOps": WarehouseOps,
     "ProductionControl": ProductionControl,
+    "LabelRollManager": LabelRollManager,
 }
 
 export const pagesConfig = {
