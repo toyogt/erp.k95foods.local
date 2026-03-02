@@ -16,7 +16,13 @@ function Badge({ ok }) {
 
 // ─── GENERIC INLINE EDITOR ──────────────────────────────────────────────────
 function InlineForm({ fields, initial, onSave, onCancel, saving }) {
-  const [form, setForm] = useState(initial || {});
+  const initForm = { ...initial } || {};
+  fields.forEach(f => {
+    if (f.type === 'json' && typeof initForm[f.key] === 'string' && initForm[f.key]) {
+      try { initForm[f.key] = JSON.parse(initForm[f.key]); } catch { }
+    }
+  });
+  const [form, setForm] = useState(initForm);
   return (
     <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
       {fields.map(f => (
