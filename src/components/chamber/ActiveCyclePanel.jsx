@@ -3,6 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Loader2, RefreshCw, Clock, ChevronRight, CheckCircle2 } from 'lucide-react';
 import ChecklistRunner from '@/components/checklist/ChecklistRunner';
+import DowntimeReasonModal from '@/components/downtime/DowntimeReasonModal';
 
 function useCountdown(targetIso) {
   const [diff, setDiff] = useState(0);
@@ -29,6 +30,8 @@ export default function ActiveCyclePanel({ machine, user, cycles, onRefresh }) {
   const [checklist, setChecklist] = useState(null); // { stage, check_type, prevDue }
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState(null);
+  const [abortDowntimeEvent, setAbortDowntimeEvent] = useState(null);
+  const [showAbortReason, setShowAbortReason] = useState(false);
 
   const cycle = cycles.find(c => c.id === selectedCycleId) || cycles[0] || null;
   const countdown = useCountdown(cycle?.next_check_due_at);
@@ -98,13 +101,45 @@ export default function ActiveCyclePanel({ machine, user, cycles, onRefresh }) {
   async function handleAbort() {
     if (!window.confirm('Abort this cycle? Pallet OUT will then be allowed.')) return;
     setLoading(true);
+    const now = new Date().toISOString();
+    // Create downtime event for the abort
+    const eventId = `DT-${Date.now()}`;
+    const ev = await base44.entities.DowntimeEvent.create({
+      event_id: eventId,
+      station_type: 'CHAMBER',
+      machine_id: cycle.chamber_machine_id,
+      cycle_id: cycle.cycle_id,
+      started_at: now,
+      started_by: user?.email || '',
+    }).catch(() => ({ event_id: eventId, started_at: now, id: null }));
+    setAbortDowntimeEvent(ev);
+
     await base44.entities.ChamberCycle.update(cycle.id, {
       status: 'ABORTED',
-      ended_at: new Date().toISOString(),
+      ended_at: now,
       ended_by: user?.email || '',
     });
-    onRefresh();
     setLoading(false);
+    setShowAbortReason(true);
+  }
+
+  async function handleAbortReasonConfirm(reasonCode, notes, photoUrl) {
+    if (abortDowntimeEvent?.id) {
+      const now = new Date().toISOString();
+      const durationMin = (new Date(now) - new Date(abortDowntimeEvent.started_at)) / 60000;
+      await base44.entities.DowntimeEvent.update(abortDowntimeEvent.id, {
+        ended_at: now,
+        ended_by: user?.email || '',
+        reason_code: reasonCode || '',
+        notes: notes || '',
+        photo: photoUrl || '',
+        duration_minutes: parseFloat(durationMin.toFixed(2)),
+        is_micro_stop: false,
+      }).catch(() => {});
+    }
+    setShowAbortReason(false);
+    setAbortDowntimeEvent(null);
+    onRefresh();
   }
 
   if (checklist) return (
