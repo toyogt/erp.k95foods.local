@@ -61,6 +61,7 @@ import FeederKiosk from './pages/FeederKiosk';
 import FillingStation from './pages/FillingStation';
 import LabelRollManager from './pages/LabelRollManager';
 import LabellingLine from './pages/LabellingLine';
+import LiquidPlans from './pages/LiquidPlans';
 import MasterData from './pages/MasterData';
 import OpeningStockImport from './pages/OpeningStockImport';
 import ProductionControl from './pages/ProductionControl';
@@ -73,7 +74,6 @@ import TemplateMappingManager from './pages/TemplateMappingManager';
 import TraceInvestigation from './pages/TraceInvestigation';
 import TransferReceiving from './pages/TransferReceiving';
 import WarehouseOps from './pages/WarehouseOps';
-import LiquidPlans from './pages/LiquidPlans';
 import __Layout from './Layout.jsx';
 
 
@@ -92,6 +92,7 @@ export const PAGES = {
     "FillingStation": FillingStation,
     "LabelRollManager": LabelRollManager,
     "LabellingLine": LabellingLine,
+    "LiquidPlans": LiquidPlans,
     "MasterData": MasterData,
     "OpeningStockImport": OpeningStockImport,
     "ProductionControl": ProductionControl,
@@ -104,7 +105,6 @@ export const PAGES = {
     "TraceInvestigation": TraceInvestigation,
     "TransferReceiving": TransferReceiving,
     "WarehouseOps": WarehouseOps,
-    "LiquidPlans": LiquidPlans,
 }
 
 export const pagesConfig = {

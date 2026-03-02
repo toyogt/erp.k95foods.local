@@ -37,11 +37,19 @@ export default function ProductionOrders() {
 
   const loadData = async () => {
     setLoading(true);
-    const [ords, lns, prods] = await Promise.all([
+    const [ords, lns, prods, packedEvents] = await Promise.all([
       base44.entities.ProductionOrder.list('-created_date', 500),
       base44.entities.ProductionOrderLine.list('-created_date', 1000),
       base44.entities.ProductMaster.filter({ is_active: true }, '-created_date', 500),
+      base44.entities.PackedOutputEvent.filter({ status: 'ACTIVE' }, '-created_date', 5000).catch(() => []),
     ]);
+    
+    // Compute produced_bottles_packed from PackedOutputEvent for each line
+    for (const line of lns) {
+      const events = packedEvents.filter(e => e.sku_code === line.sku_code && e.order_id === line.order_id);
+      line.produced_bottles_packed = events.reduce((sum, e) => sum + (e.packed_bottles || 0), 0);
+    }
+    
     setOrders(ords);
     setLines(lns);
     setProducts(prods);
