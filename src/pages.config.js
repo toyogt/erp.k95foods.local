@@ -69,6 +69,7 @@ import StoresIssue from './pages/StoresIssue';
 import TemplateMappingManager from './pages/TemplateMappingManager';
 import TransferReceiving from './pages/TransferReceiving';
 import WarehouseOps from './pages/WarehouseOps';
+import ShiftKPIDashboard from './pages/ShiftKPIDashboard';
 import __Layout from './Layout.jsx';
 
 
@@ -95,6 +96,7 @@ export const PAGES = {
     "TemplateMappingManager": TemplateMappingManager,
     "TransferReceiving": TransferReceiving,
     "WarehouseOps": WarehouseOps,
+    "ShiftKPIDashboard": ShiftKPIDashboard,
 }
 
 export const pagesConfig = {
