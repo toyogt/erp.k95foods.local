@@ -257,8 +257,8 @@ export default function ProductMasterManager() {
           </DialogHeader>
           <div className="grid grid-cols-2 gap-4 py-2">
             {[
-              { key: 'item_code', label: 'Item Code *', type: 'text' },
-              { key: 'product_name', label: 'Product Name *', type: 'text' },
+              { key: 'item_code', label: 'SKU Code (item_code) *', type: 'text' },
+              { key: 'product_name', label: 'SKU Name *', type: 'text' },
               { key: 'brand_name', label: 'Brand Name', type: 'text' },
               { key: 'flavour', label: 'Flavour', type: 'text' },
               { key: 'ml_per_bottle', label: 'ML per Bottle', type: 'number' },
@@ -269,12 +269,34 @@ export default function ProductMasterManager() {
               { key: 'shelf_life_days', label: 'Shelf Life (days)', type: 'number' },
               { key: 'fssai_no', label: 'FSSAI No', type: 'text' },
               { key: 'manufacturer_name', label: 'Manufacturer Name', type: 'text' },
+              { key: 'batch_prefix', label: 'Batch Prefix (optional)', type: 'text' },
             ].map(({ key, label, type }) => (
               <div key={key} className="space-y-1">
                 <Label className="text-xs">{label}</Label>
                 <Input type={type} value={form[key]} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} className="text-sm" />
               </div>
             ))}
+            {/* Bottle Type dropdown */}
+            <div className="space-y-1">
+              <Label className="text-xs">Bottle Type {form.is_active ? '*' : ''}</Label>
+              {bottleTypes.length > 0 ? (
+                <select
+                  value={form.bottle_type}
+                  onChange={e => setForm(f => ({ ...f, bottle_type: e.target.value }))}
+                  className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm bg-white"
+                >
+                  <option value="">— Select bottle type —</option>
+                  {bottleTypes.map(b => <option key={b.id} value={b.name}>{b.name}</option>)}
+                </select>
+              ) : (
+                <Input value={form.bottle_type} onChange={e => setForm(f => ({ ...f, bottle_type: e.target.value }))} className="text-sm" placeholder="Bottle type" />
+              )}
+            </div>
+            {/* Recipe ID input */}
+            <div className="space-y-1">
+              <Label className="text-xs">Recipe ID {form.is_active ? '*' : ''}</Label>
+              <Input value={form.recipe_id} onChange={e => setForm(f => ({ ...f, recipe_id: e.target.value }))} className="text-sm" placeholder="e.g. REC-001" />
+            </div>
             <div className="space-y-1 col-span-2">
               <Label className="text-xs">Address Line 1</Label>
               <Input value={form.address_1} onChange={e => setForm(f => ({ ...f, address_1: e.target.value }))} className="text-sm" />
