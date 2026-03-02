@@ -435,7 +435,15 @@ export default function TemplateMappingManager() {
       </div>
 
       {tab === 0 && <MappingsTab />}
-      {tab === 1 && <LabelVariantsTab />}
+      {tab === 1 && (
+        <div className="space-y-3">
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs text-blue-700">
+            <p className="font-semibold">💡 Tip:</p>
+            <p className="mt-1">If you treat each SKU as unique, set <code className="bg-white px-1.5 py-0.5 rounded font-mono">label_variant_id</code> = SKU Code to avoid confusion.</p>
+          </div>
+          <LabelVariantsTab />
+        </div>
+      )}
       {tab === 2 && <RyanTemplatesTab />}
       {tab === 3 && <BatchFormatRulesTab />}
     </div>
