@@ -212,19 +212,25 @@ export default function ProductMasterManager() {
                   <td className="px-4 py-3 font-mono text-xs font-semibold text-slate-700">{p.item_code}</td>
                   <td className="px-4 py-3 text-slate-600">{p.brand_name || '—'}</td>
                   <td className="px-4 py-3 font-medium text-slate-800">{p.product_name}</td>
-                  <td className="px-4 py-3 text-slate-600">{p.flavour || '—'}</td>
+                  <td className="px-4 py-3 text-slate-600 text-xs">{p.bottle_type || <span className="text-slate-300">—</span>}</td>
+                  <td className="px-4 py-3 text-slate-600 text-xs font-mono">{p.recipe_id || <span className="text-slate-300">—</span>}</td>
+                  <td className="px-4 py-3 text-slate-600 text-xs font-mono">{p.batch_prefix || <span className="text-slate-300">—</span>}</td>
                   <td className="px-4 py-3 text-right text-slate-600">{p.ml_per_bottle || '—'}</td>
-                  <td className="px-4 py-3 text-right text-slate-600">{p.bottles_per_box || '—'}</td>
-                  <td className="px-4 py-3 text-right text-slate-600">₹{p.mrp_box || '—'}</td>
                   <td className="px-4 py-3 text-center">
-                    <div className="flex flex-col items-center gap-1">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${p.is_active !== false ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
-                        {p.is_active !== false ? 'Active' : 'Inactive'}
-                      </span>
-                      {p.is_trial_pack && (
-                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700">Trial</span>
-                      )}
-                    </div>
+                   <div className="flex flex-col items-center gap-1">
+                     <button
+                       onClick={() => handleToggleActive(p)}
+                       className={`px-2 py-0.5 rounded-full text-xs font-medium transition-colors ${p.is_active !== false ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+                     >
+                       {p.is_active !== false ? 'Active' : 'Inactive'}
+                     </button>
+                     {p.is_active && missingSetup(p) && (
+                       <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Missing Setup</span>
+                     )}
+                     {p.is_trial_pack && (
+                       <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700">Trial</span>
+                     )}
+                   </div>
                   </td>
                   <td className="px-4 py-3 text-center">
                     <div className="flex justify-center gap-2">
