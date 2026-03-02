@@ -465,6 +465,15 @@ export default function LabellingLine() {
             onRollChanged={setActiveRoll}
           />
 
+          {/* Rework panel — always shown while session active */}
+          <ReworkPanel
+            wo={wo}
+            machine={machine}
+            user={user}
+            activeRoll={activeRoll}
+            isSupervisor={isSupervisor}
+          />
+
           {/* Active crate scanner — RUNNING only */}
           {session.state === 'RUNNING' && (
             <CrateScanner
