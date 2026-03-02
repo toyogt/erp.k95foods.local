@@ -25,6 +25,7 @@ const CSV_HEADERS = [
 
 export default function ProductMasterManager() {
   const [products, setProducts] = useState([]);
+  const [bottleTypes, setBottleTypes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -36,8 +37,12 @@ export default function ProductMasterManager() {
 
   const load = async () => {
     setLoading(true);
-    const data = await base44.entities.ProductMaster.list('-created_date', 500);
+    const [data, bts] = await Promise.all([
+      base44.entities.ProductMaster.list('-created_date', 500),
+      base44.entities.BottleType.list('-created_date', 100).catch(() => []),
+    ]);
     setProducts(data);
+    setBottleTypes(bts);
     setLoading(false);
   };
 
