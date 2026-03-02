@@ -62,7 +62,7 @@ export default function ProductMasterManager() {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this product?')) return;
+    if (!window.confirm('Delete this SKU?')) return;
     await base44.entities.ProductMaster.delete(id);
     load();
   };
@@ -146,7 +146,7 @@ export default function ProductMasterManager() {
             <input type="file" accept=".csv" className="hidden" onChange={handleCSVUpload} disabled={importing} />
           </label>
           <Button size="sm" onClick={openAdd} className="gap-1.5 text-xs">
-            <Plus className="w-3.5 h-3.5" /> Add Product
+            <Plus className="w-3.5 h-3.5" /> Add SKU
           </Button>
         </div>
       </div>
@@ -155,7 +155,7 @@ export default function ProductMasterManager() {
       {importResult && (
         <div className={`p-3 rounded-lg text-sm flex justify-between items-start ${importResult.errors.length ? 'bg-yellow-50 border border-yellow-200' : 'bg-green-50 border border-green-200'}`}>
           <div>
-            <p className="font-medium">{importResult.created} product(s) imported successfully.</p>
+            <p className="font-medium">{importResult.created} SKU(s) imported successfully.</p>
             {importResult.errors.map((e, i) => <p key={i} className="text-red-600 text-xs mt-1">{e}</p>)}
           </div>
           <button onClick={() => setImportResult(null)}><X className="w-4 h-4 text-slate-400" /></button>
@@ -166,7 +166,7 @@ export default function ProductMasterManager() {
       {loading ? (
         <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-12 text-slate-400 text-sm">No products found. Add one or import via CSV.</div>
+        <div className="text-center py-12 text-slate-400 text-sm">No SKUs found. Add one or import via CSV.</div>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-slate-200">
           <table className="w-full text-sm">
@@ -224,7 +224,7 @@ export default function ProductMasterManager() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editItem ? 'Edit Product' : 'Add Product'}</DialogTitle>
+            <DialogTitle>{editItem ? 'Edit SKU' : 'Add SKU'}</DialogTitle>
           </DialogHeader>
           <div className="grid grid-cols-2 gap-4 py-2">
             {[
