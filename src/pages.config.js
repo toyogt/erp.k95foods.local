@@ -71,6 +71,7 @@ import TransferReceiving from './pages/TransferReceiving';
 import WarehouseOps from './pages/WarehouseOps';
 import ShiftKPIDashboard from './pages/ShiftKPIDashboard';
 import FeederKiosk from './pages/FeederKiosk';
+import TraceInvestigation from './pages/TraceInvestigation';
 import __Layout from './Layout.jsx';
 
 
@@ -99,6 +100,7 @@ export const PAGES = {
     "WarehouseOps": WarehouseOps,
     "ShiftKPIDashboard": ShiftKPIDashboard,
     "FeederKiosk": FeederKiosk,
+    "TraceInvestigation": TraceInvestigation,
 }
 
 export const pagesConfig = {
