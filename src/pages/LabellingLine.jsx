@@ -463,6 +463,17 @@ export default function LabellingLine() {
             />
           )}
 
+          {/* Trace window — always visible while session active */}
+          <CrateTraceWindowPanel
+            session={session}
+            wo_id={wo?.wo_id}
+            line_machine_id={machine?.machine_id}
+            latestTrace={latestTrace}
+          />
+
+          {/* Trace search — supervisor/admin only */}
+          {isSupervisor && <TraceSearchPanel />}
+
           {/* Supervisor complete early */}
           {session.state === 'RUNNING' && isSupervisor && (
             <Button variant="outline" onClick={handleCompleteWO} disabled={loading} className="w-full h-12 rounded-xl border-purple-300 text-purple-700">
