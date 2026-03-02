@@ -398,6 +398,9 @@ export default function LabellingLine() {
       {/* STEP 5: Running */}
       {step === STEP.RUNNING && session && (
         <div className="space-y-4">
+          {/* Shift session bar */}
+          <ShiftSessionBar stationType="LABELLING" machineId={machine?.machine_id} user={user} />
+
           {/* WO header */}
           <div className="bg-slate-900 text-white rounded-2xl p-4">
             <div className="flex justify-between items-start">
