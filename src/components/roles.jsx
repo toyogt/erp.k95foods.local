@@ -27,7 +27,7 @@ const ACCESS_MAP = {
     'TransferReceiving','LabellingLine','FGPalletizing','AuditLogPage','MasterData',
     'AlertsPage','PullLists','CustomizeDashboard',
     'BoxLabelPrint','BoxLabelApprovals','BoxPalletBuild','WarehouseOps','BoxStockDashboard','OpeningStockImport',
-    'ProductionControl',
+    'ProductionControl','LabelRollManager',
   ],
   production_manager: [
     'Dashboard','AuditLogPage','MasterData','AlertsPage','PullLists','CustomizeDashboard',
