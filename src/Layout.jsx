@@ -24,6 +24,7 @@ const ALL_NAV_ITEMS = [
   { label: 'Warehouse Ops',      page: 'WarehouseOps',       icon: Warehouse       },
   { label: 'Box Stock',          page: 'BoxStockDashboard',  icon: BarChart3       },
   { label: 'Opening Stock',      page: 'OpeningStockImport', icon: Upload          },
+  { label: 'Production',         page: 'ProductionControl',  icon: Factory         },
   { label: 'Pull Lists',         page: 'PullLists',          icon: ListChecks      },
   { label: 'Alerts',             page: 'AlertsPage',         icon: Bell            },
   { label: 'Audit Log',          page: 'AuditLogPage',       icon: ScrollText      },

@@ -66,6 +66,7 @@ import RecipeStation from './pages/RecipeStation';
 import StoresIssue from './pages/StoresIssue';
 import TransferReceiving from './pages/TransferReceiving';
 import WarehouseOps from './pages/WarehouseOps';
+import ProductionControl from './pages/ProductionControl';
 import __Layout from './Layout.jsx';
 
 
@@ -89,6 +90,7 @@ export const PAGES = {
     "StoresIssue": StoresIssue,
     "TransferReceiving": TransferReceiving,
     "WarehouseOps": WarehouseOps,
+    "ProductionControl": ProductionControl,
 }
 
 export const pagesConfig = {
