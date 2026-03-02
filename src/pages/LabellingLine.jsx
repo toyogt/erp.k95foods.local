@@ -455,6 +455,15 @@ export default function LabellingLine() {
             </div>
           )}
 
+          {/* Roll install panel — always shown while running */}
+          <RollInstallPanel
+            wo={wo}
+            machine={machine}
+            user={user}
+            activeRoll={activeRoll}
+            onRollChanged={setActiveRoll}
+          />
+
           {/* Active crate scanner — RUNNING only */}
           {session.state === 'RUNNING' && (
             <CrateScanner
