@@ -48,6 +48,9 @@ export default function LabellingLine() {
     base44.entities.AppSetting.filter({ key: 'HARDWARE_ENABLED' })
       .then(r => { setHardwareEnabled(r[0]?.value === 'true'); })
       .catch(() => {});
+    base44.entities.AppSetting.filter({ key: 'LABEL_FEEDER_BUFFER_ESTIMATE_BOTTLES' })
+      .then(r => { if (r[0]?.value) setBufferEstimate(Number(r[0].value)); })
+      .catch(() => {});
   }, []);
 
   async function handleMachineConfirmed(m) {
