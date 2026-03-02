@@ -1,302 +1,255 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
-import { Loader2, PlusCircle, XCircle, RefreshCw, ChevronDown } from 'lucide-react';
-
-function genId() { return 'MAB-' + Date.now().toString(36).toUpperCase(); }
+import { Loader2, Play, Square } from 'lucide-react';
 
 export default function ProductionControl() {
   const [user, setUser] = useState(null);
-  const [fillers, setFillers] = useState([]);
+  const [machines, setMachines] = useState([]);
+  const [plans, setPlans] = useState([]);
   const [activeBatches, setActiveBatches] = useState([]);
-  const [products, setProducts] = useState([]);
-  const [bottleTypes, setBottleTypes] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  // Assign panel state
-  const [showAssign, setShowAssign] = useState(false);
-  const [form, setForm] = useState({ machine_id: '', product_code: '', bottle_type: '', batch_id: '', expected_crates: '', change_reason: '' });
-  const [saving, setSaving] = useState(false);
-  const [formError, setFormError] = useState('');
-
-  // Close batch state
-  const [closingId, setClosingId] = useState(null); // MachineActiveBatch db id
-  const [closeReason, setCloseReason] = useState('');
-  const [closeLoading, setCloseLoading] = useState(false);
+  const [startingMachine, setStartingMachine] = useState(null);
+  const [selectedPlan, setSelectedPlan] = useState(null);
+  const [stoppingMachine, setStoppingMachine] = useState(null);
 
   useEffect(() => {
-    base44.auth.me().then(setUser).catch(() => {});
-    loadAll();
+    base44.auth.me().then(u => {
+      setUser(u);
+      if (u?.role !== 'admin' && u?.role !== 'production_manager') {
+        alert('Access denied');
+        return;
+      }
+      loadData();
+    });
   }, []);
 
-  async function loadAll() {
+  const loadData = async () => {
     setLoading(true);
-    const [machines, batches, prods, bts] = await Promise.all([
-      base44.entities.Machine.filter({ machine_type: 'FILLER', is_active: true }),
-      base44.entities.MachineActiveBatch.filter({ status: 'ACTIVE' }, '-assigned_at', 20),
-      base44.entities.ProductMaster.list('-created_date', 200).catch(() => []),
-      base44.entities.BottleType.list('-created_date', 50).catch(() => []),
+    const [macs, pls, bats] = await Promise.all([
+      base44.entities.Machine.filter({ station_type: 'FILLING' }, '-created_date', 100),
+      base44.entities.LiquidBatchPlan.filter({ status: 'RELEASED' }, '-created_date', 100),
+      base44.entities.MachineActiveBatch.filter({ status: 'ACTIVE' }, '-created_date', 100),
     ]);
-    setFillers(machines);
-    setActiveBatches(batches);
-    setProducts(prods);
-    setBottleTypes(bts);
+    setMachines(macs);
+    setPlans(pls);
+    setActiveBatches(bats);
     setLoading(false);
-  }
+  };
 
-  function openAssignPanel(machine_id = '') {
-    setForm({ machine_id, product_code: '', bottle_type: '', batch_id: '', expected_crates: '', change_reason: '' });
-    setFormError('');
-    setShowAssign(true);
-  }
+  const getActiveBatch = (machineId) => activeBatches.find(b => b.machine_id === machineId);
 
-  async function handleAssign() {
-    if (!form.machine_id) { setFormError('Select a filler machine.'); return; }
-    if (!form.batch_id.trim()) { setFormError('Batch ID is required.'); return; }
-    if (!form.product_code.trim()) { setFormError('SKU code is required.'); return; }
-    if (!form.bottle_type.trim()) { setFormError('Bottle type is required.'); return; }
-
-    setSaving(true);
-    setFormError('');
-    const now = new Date().toISOString();
-
-    // Find existing ACTIVE batch for this machine
-    const existing = activeBatches.find(b => b.machine_id === form.machine_id && b.status === 'ACTIVE');
-    if (existing) {
-      if (!form.change_reason.trim()) { setFormError('Provide a change reason to replace the existing active batch.'); setSaving(false); return; }
-      await base44.entities.MachineActiveBatch.update(existing.id, {
-        status: 'CLOSED',
-        closed_by: user?.email || '',
-        closed_at: now,
-        change_reason: form.change_reason.trim(),
-      });
+  const handleStartFilling = async () => {
+    if (!startingMachine || !selectedPlan) {
+      alert('Select a machine and plan');
+      return;
     }
 
-    await base44.entities.MachineActiveBatch.create({
-      machine_id: form.machine_id,
-      batch_id: form.batch_id.trim(),
-      product_code: form.product_code.trim(),
-      bottle_type: form.bottle_type.trim(),
-      status: 'ACTIVE',
-      assigned_by: user?.email || '',
-      assigned_at: now,
-      expected_crates: form.expected_crates ? Number(form.expected_crates) : undefined,
-      created_crates: 0,
-    });
+    try {
+      const response = await base44.functions.invoke('startLiquidPlan', {
+        plan_id: selectedPlan.plan_id,
+        filler_machine_id: startingMachine.machine_id,
+      });
 
-    setShowAssign(false);
-    await loadAll();
-    setSaving(false);
-  }
+      if (response.data.success) {
+        alert(`Plan started. ${response.data.batch_ids_generated} batch IDs generated.`);
+        setStartingMachine(null);
+        setSelectedPlan(null);
+        loadData();
+      }
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
+  };
 
-  async function handleClose(batch) {
-    if (!closeReason.trim()) return;
-    setCloseLoading(true);
-    await base44.entities.MachineActiveBatch.update(batch.id, {
-      status: 'CLOSED',
-      closed_by: user?.email || '',
-      closed_at: new Date().toISOString(),
-      change_reason: closeReason.trim(),
-    });
-    setClosingId(null);
-    setCloseReason('');
-    await loadAll();
-    setCloseLoading(false);
-  }
+  const handleStopFilling = async (batch) => {
+    if (!window.confirm(`Stop filling batch ${batch.batch_id}?`)) return;
 
-  const existingForMachine = form.machine_id ? activeBatches.find(b => b.machine_id === form.machine_id && b.status === 'ACTIVE') : null;
+    try {
+      // Find the plan
+      const planObj = plans.find(p => p.plan_id === batch.batch_id);
+      if (planObj) {
+        await base44.entities.LiquidBatchPlan.update(planObj.id, {
+          status: 'COMPLETED',
+        });
+      }
 
-  if (loading) return <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-slate-400" /></div>;
+      // Close the active batch
+      await base44.entities.MachineActiveBatch.update(batch.id, {
+        status: 'CLOSED',
+      });
+
+      alert('Filling stopped');
+      loadData();
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
+  };
+
+  if (loading) return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>;
+  if (!user) return <div className="text-center py-12 text-slate-500">Unauthorized</div>;
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Production Control</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Assign batches to filling machines</p>
-        </div>
-        <div className="flex gap-2">
-          <button onClick={loadAll} className="p-2 rounded-xl hover:bg-slate-100 text-slate-500">
-            <RefreshCw className="w-4 h-4" />
-          </button>
-          <Button onClick={() => openAssignPanel()} className="gap-2 rounded-xl">
-            <PlusCircle className="w-4 h-4" /> Assign Batch
-          </Button>
-        </div>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-slate-900">Filling Start/Stop</h1>
+        <p className="text-sm text-slate-500">Manage liquid batch plans on filler machines</p>
       </div>
 
-      {/* Active Assignments Table */}
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-        <div className="px-5 py-3 border-b border-slate-100 bg-slate-50">
-          <p className="text-sm font-bold text-slate-700">Active Batch Assignments</p>
+      {/* Active Fillings */}
+      <div className="space-y-3">
+        <h2 className="font-semibold text-slate-900">Active Fillings</h2>
+        {activeBatches.length === 0 ? (
+          <div className="text-center py-8 text-slate-400 text-sm">No active fillings</div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {activeBatches.map(batch => {
+              const machine = machines.find(m => m.machine_id === batch.machine_id);
+              return (
+                <div key={batch.id} className="bg-green-50 border border-green-300 rounded-lg p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <p className="font-bold text-green-900">{machine?.machine_id || batch.machine_id}</p>
+                      <p className="text-sm text-green-700">{machine?.name}</p>
+                    </div>
+                    <span className="px-2 py-1 bg-green-200 text-green-800 rounded-full text-xs font-bold">ACTIVE</span>
+                  </div>
+                  <div className="bg-white rounded-lg p-3 space-y-1 mb-3">
+                    <p className="text-xs text-slate-600">Batch</p>
+                    <p className="font-mono font-semibold text-slate-800">{batch.batch_id}</p>
+                    <p className="text-xs text-slate-600 mt-2">{batch.product_name || batch.product_code}</p>
+                    {batch.started_at && (
+                      <p className="text-xs text-slate-500 mt-2">
+                        Started: {new Date(batch.started_at).toLocaleString('en-IN')}
+                      </p>
+                    )}
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => handleStopFilling(batch)}
+                    className="w-full gap-1.5"
+                  >
+                    <Square className="w-3.5 h-3.5" /> Stop Filling
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Start New Filling */}
+      <div className="bg-blue-50 border border-blue-300 rounded-lg p-4">
+        <h2 className="font-semibold text-slate-900 mb-3">Start New Filling</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+          {/* Machine Select */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-2">Filler Machine</label>
+            <select
+              value={startingMachine?.id || ''}
+              onChange={e => {
+                const id = e.target.value;
+                setStartingMachine(machines.find(m => m.id === id) || null);
+              }}
+              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white"
+            >
+              <option value="">— Select machine —</option>
+              {machines.map(m => (
+                <option key={m.id} value={m.id}>
+                  {m.machine_id} - {m.name}
+                </option>
+              ))}
+            </select>
+            {startingMachine && getActiveBatch(startingMachine.machine_id) && (
+              <p className="text-xs text-red-600 mt-1">Machine is already in use</p>
+            )}
+          </div>
+
+          {/* Plan Select */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-2">Liquid Batch Plan</label>
+            <select
+              value={selectedPlan?.id || ''}
+              onChange={e => {
+                const id = e.target.value;
+                setSelectedPlan(plans.find(p => p.id === id) || null);
+              }}
+              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white"
+            >
+              <option value="">— Select plan —</option>
+              {plans.map(p => (
+                <option key={p.id} value={p.id}>
+                  {p.plan_id} - {p.recipe_id} ({p.recipe_name})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Start Button */}
+          <div className="flex items-end">
+            <Button
+              onClick={handleStartFilling}
+              disabled={!startingMachine || !selectedPlan || (startingMachine && getActiveBatch(startingMachine.machine_id))}
+              className="w-full gap-1.5 bg-green-600 hover:bg-green-700"
+            >
+              <Play className="w-4 h-4" /> Start Filling
+            </Button>
+          </div>
         </div>
-        <div className="overflow-x-auto">
+
+        {selectedPlan && (
+          <div className="bg-white rounded-lg p-3 text-sm text-slate-700">
+            <p><strong>Recipe:</strong> {selectedPlan.recipe_id} - {selectedPlan.recipe_name}</p>
+            <p><strong>Status:</strong> {selectedPlan.status}</p>
+            {selectedPlan.linked_order_ids && (
+              <p><strong>Orders:</strong> {selectedPlan.linked_order_ids}</p>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Machines Overview */}
+      <div className="space-y-3">
+        <h2 className="font-semibold text-slate-900">All Filler Machines</h2>
+        <div className="overflow-x-auto rounded-lg border border-slate-200">
           <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-100 text-xs text-slate-500 uppercase tracking-wide">
-                <th className="text-left px-5 py-3 font-semibold">Machine</th>
-                <th className="text-left px-4 py-3 font-semibold">SKU</th>
-                <th className="text-left px-4 py-3 font-semibold">Batch ID</th>
-                <th className="text-left px-4 py-3 font-semibold">Bottle Type</th>
-                <th className="text-right px-4 py-3 font-semibold">Crates</th>
-                <th className="text-right px-5 py-3 font-semibold">Actions</th>
+            <thead className="bg-slate-100 text-slate-700 text-xs uppercase tracking-wide">
+              <tr>
+                <th className="px-4 py-3 text-left">Machine ID</th>
+                <th className="px-4 py-3 text-left">Name</th>
+                <th className="px-4 py-3 text-center">Status</th>
+                <th className="px-4 py-3 text-left">Active Batch</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
-              {fillers.map(m => {
-                const batch = activeBatches.find(b => b.machine_id === m.machine_id && b.status === 'ACTIVE');
+            <tbody className="divide-y divide-slate-200">
+              {machines.map(m => {
+                const activeBatch = getActiveBatch(m.machine_id);
                 return (
-                  <tr key={m.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-5 py-4">
-                      <p className="font-bold text-slate-900">{m.machine_id}</p>
-                      <p className="text-xs text-slate-400">{m.display_name}</p>
+                  <tr key={m.id} className="hover:bg-slate-50">
+                    <td className="px-4 py-3 font-mono font-semibold text-slate-800">{m.machine_id}</td>
+                    <td className="px-4 py-3 text-slate-700">{m.name}</td>
+                    <td className="px-4 py-3 text-center">
+                      {activeBatch ? (
+                        <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold">RUNNING</span>
+                      ) : (
+                        <span className="px-2 py-1 bg-slate-100 text-slate-600 rounded-full text-xs font-bold">IDLE</span>
+                      )}
                     </td>
-                    <td className="px-4 py-4 font-mono text-slate-700 text-xs">{batch?.product_code ? (() => { const p = products.find(x => x.item_code === batch.product_code); return p ? `${batch.product_code} — ${p.product_name}` : batch.product_code; })() : <span className="text-slate-300">—</span>}</td>
-                    <td className="px-4 py-4 font-mono font-semibold text-slate-800">{batch?.batch_id || <span className="text-slate-300 font-normal">—</span>}</td>
-                    <td className="px-4 py-4 text-slate-600 text-xs">{batch?.bottle_type || <span className="text-slate-300">—</span>}</td>
-                    <td className="px-4 py-4 text-right">
-                      {batch ? (
-                        <span className="font-bold text-slate-800">
-                          {batch.created_crates || 0}
-                          {batch.expected_crates ? <span className="text-slate-400 font-normal"> / {batch.expected_crates}</span> : null}
-                        </span>
-                      ) : <span className="text-slate-300">—</span>}
-                    </td>
-                    <td className="px-5 py-4 text-right">
-                      <div className="flex gap-2 justify-end">
-                        <button onClick={() => openAssignPanel(m.machine_id)}
-                          className="text-xs font-semibold text-blue-600 hover:text-blue-800 px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-colors">
-                          {batch ? 'Change' : 'Assign'}
-                        </button>
-                        {batch && closingId !== batch.id && (
-                          <button onClick={() => { setClosingId(batch.id); setCloseReason(''); }}
-                            className="text-xs font-semibold text-red-600 hover:text-red-800 px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors">
-                            Close
-                          </button>
-                        )}
-                      </div>
-                      {/* Inline close reason input */}
-                      {batch && closingId === batch.id && (
-                        <div className="mt-2 flex gap-2 items-center">
-                          <input
-                            className="flex-1 h-8 text-xs rounded-lg border border-slate-300 px-2 focus:outline-none focus:border-red-400"
-                            placeholder="Close reason…"
-                            value={closeReason}
-                            onChange={e => setCloseReason(e.target.value)}
-                          />
-                          <button onClick={() => handleClose(batch)} disabled={closeLoading || !closeReason.trim()}
-                            className="text-xs font-bold text-white bg-red-600 px-3 py-1.5 rounded-lg disabled:opacity-40 hover:bg-red-700">
-                            {closeLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Confirm'}
-                          </button>
-                          <button onClick={() => setClosingId(null)} className="text-slate-400 hover:text-slate-600">
-                            <XCircle className="w-4 h-4" />
-                          </button>
-                        </div>
+                    <td className="px-4 py-3 text-slate-700">
+                      {activeBatch ? (
+                        <span className="font-mono text-sm font-semibold">{activeBatch.batch_id}</span>
+                      ) : (
+                        <span className="text-slate-400">—</span>
                       )}
                     </td>
                   </tr>
                 );
               })}
-              {fillers.length === 0 && (
-                <tr><td colSpan={6} className="px-5 py-8 text-center text-slate-400 text-sm">No FILLER machines configured. Add machines in Master Data.</td></tr>
-              )}
             </tbody>
           </table>
         </div>
       </div>
-
-      {/* Assign / Change Panel */}
-      {showAssign && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
-          <div className="flex items-center justify-between">
-            <p className="font-bold text-slate-900">Assign Batch to Filler</p>
-            <button onClick={() => setShowAssign(false)} className="text-slate-400 hover:text-slate-600"><XCircle className="w-5 h-5" /></button>
-          </div>
-
-          {/* Machine */}
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Filler Machine</label>
-            <select
-              className="w-full h-10 rounded-xl border border-slate-300 px-3 text-sm focus:outline-none focus:border-blue-500 bg-white"
-              value={form.machine_id} onChange={e => setForm(f => ({ ...f, machine_id: e.target.value, change_reason: '' }))}>
-              <option value="">— Select machine —</option>
-              {fillers.map(m => <option key={m.id} value={m.machine_id}>{m.machine_id} — {m.display_name}</option>)}
-            </select>
-          </div>
-
-          {/* Existing active batch warning */}
-          {existingForMachine && (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-800">
-              <p className="font-semibold">⚠ Active batch exists: <span className="font-mono">{existingForMachine.batch_id}</span></p>
-              <p className="text-xs mt-0.5">It will be closed when you assign a new batch. Provide a change reason below.</p>
-            </div>
-          )}
-
-          {/* SKU */}
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">SKU Code</label>
-            {products.length > 0 ? (
-              <select
-                className="w-full h-10 rounded-xl border border-slate-300 px-3 text-sm focus:outline-none focus:border-blue-500 bg-white"
-                value={form.product_code} onChange={e => setForm(f => ({ ...f, product_code: e.target.value }))}>
-                <option value="">— Select SKU —</option>
-                {products.map(p => <option key={p.id} value={p.item_code}>{p.item_code} — {p.product_name}</option>)}
-              </select>
-            ) : (
-              <input className="w-full h-10 rounded-xl border border-slate-300 px-3 text-sm focus:outline-none focus:border-blue-500"
-                placeholder="SKU code (manual)" value={form.product_code} onChange={e => setForm(f => ({ ...f, product_code: e.target.value }))} />
-            )}
-          </div>
-
-          {/* Bottle Type */}
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Bottle Type</label>
-            {bottleTypes.length > 0 ? (
-              <select
-                className="w-full h-10 rounded-xl border border-slate-300 px-3 text-sm focus:outline-none focus:border-blue-500 bg-white"
-                value={form.bottle_type} onChange={e => setForm(f => ({ ...f, bottle_type: e.target.value }))}>
-                <option value="">— Select bottle type —</option>
-                {bottleTypes.map(b => <option key={b.id} value={b.name}>{b.name}</option>)}
-              </select>
-            ) : (
-              <input className="w-full h-10 rounded-xl border border-slate-300 px-3 text-sm focus:outline-none focus:border-blue-500"
-                placeholder="Bottle type (manual)" value={form.bottle_type} onChange={e => setForm(f => ({ ...f, bottle_type: e.target.value }))} />
-            )}
-          </div>
-
-          {/* Batch ID */}
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Batch ID</label>
-            <input className="w-full h-10 rounded-xl border border-slate-300 px-3 text-sm focus:outline-none focus:border-blue-500"
-              placeholder="e.g. B-20250302-001" value={form.batch_id} onChange={e => setForm(f => ({ ...f, batch_id: e.target.value }))} />
-          </div>
-
-          {/* Expected Crates */}
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Expected Crates (optional)</label>
-            <input type="number" min="0" className="w-full h-10 rounded-xl border border-slate-300 px-3 text-sm focus:outline-none focus:border-blue-500"
-              placeholder="0" value={form.expected_crates} onChange={e => setForm(f => ({ ...f, expected_crates: e.target.value }))} />
-          </div>
-
-          {/* Change Reason (required when replacing) */}
-          {existingForMachine && (
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-red-600 uppercase tracking-wide">Change Reason *</label>
-              <input className="w-full h-10 rounded-xl border border-red-300 px-3 text-sm focus:outline-none focus:border-red-500"
-                placeholder="Why are you changing the active batch?" value={form.change_reason} onChange={e => setForm(f => ({ ...f, change_reason: e.target.value }))} />
-            </div>
-          )}
-
-          {formError && <p className="text-sm text-red-600 font-medium">{formError}</p>}
-
-          <div className="flex gap-2 pt-1">
-            <Button variant="outline" className="flex-1 rounded-xl" onClick={() => setShowAssign(false)}>Cancel</Button>
-            <Button className="flex-1 rounded-xl bg-blue-600 hover:bg-blue-700" onClick={handleAssign} disabled={saving}>
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Assign Batch'}
-            </Button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
