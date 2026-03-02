@@ -19,6 +19,7 @@ const ALL_NAV_ITEMS = [
   { label: 'Chamber Station',    page: 'ChamberStation',     icon: Thermometer     },
   { label: 'Transfer/Receiving', page: 'TransferReceiving',  icon: Truck           },
   { label: 'Labelling Line',     page: 'LabellingLine',      icon: Tag             },
+  { label: 'Label Roll Mgr',     page: 'LabelRollManager',   icon: Printer         },
   { label: 'Box Label Print',    page: 'BoxLabelPrint',      icon: Printer         },
   { label: 'Label Approvals',    page: 'BoxLabelApprovals',  icon: ClipboardCheck  },
   { label: 'Pallet Build',       page: 'BoxPalletBuild',     icon: Layers          },
