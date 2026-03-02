@@ -55,6 +55,8 @@ export default function MasterData() {
           </TabsList>
         </div>
         <TabsContent value="products"   className="mt-4"><ProductMasterManager /></TabsContent>
+        <TabsContent value="recipes"    className="mt-4"><RecipeMasterManager /></TabsContent>
+        <TabsContent value="ingredients" className="mt-4"><RecipeIngredientManager /></TabsContent>
         <TabsContent value="bottles"    className="mt-4"><BottleTypeManager user={user} /></TabsContent>
         <TabsContent value="locations"  className="mt-4"><LocationManager user={user} /></TabsContent>
         <TabsContent value="machines"   className="mt-4"><MachineManager user={user} /></TabsContent>
