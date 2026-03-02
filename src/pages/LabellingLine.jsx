@@ -16,6 +16,8 @@ import RollInstallPanel from '@/components/labelling/RollInstallPanel';
 import ReworkPanel from '@/components/labelling/ReworkPanel';
 import SKUMappingBadge from '@/components/labelling/SKUMappingBadge';
 import ShiftSessionBar from '@/components/shift/ShiftSessionBar';
+import DowntimeBar from '@/components/downtime/DowntimeBar';
+import { useDowntime } from '@/components/downtime/useDowntime';
 
 const STEP = { MACHINE: 0, SELECT_WO: 1, SCAN_LABEL: 2, SCAN_CARTON: 3, CHECKLIST: 4, RUNNING: 5 };
 
@@ -44,6 +46,12 @@ export default function LabellingLine() {
   const [activeRoll, setActiveRoll] = useState(null);
   // SKU mapping
   const [skuMapping, setSkuMapping] = useState(null);
+
+  const { activeEvent: downtimeEvent, downtimeMinutesToday, startDowntime, endDowntime } = useDowntime({
+    stationType: 'LABELLING',
+    machineId: machine?.machine_id,
+    user,
+  });
 
   const isSupervisor = user?.role === 'admin' || user?.role === 'labelling_supervisor' || user?.role === 'production_manager';
 

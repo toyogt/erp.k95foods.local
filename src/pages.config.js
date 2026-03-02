@@ -58,17 +58,17 @@ import CustomizeDashboard from './pages/CustomizeDashboard';
 import Dashboard from './pages/Dashboard';
 import FGPalletizing from './pages/FGPalletizing';
 import FillingStation from './pages/FillingStation';
+import LabelRollManager from './pages/LabelRollManager';
 import LabellingLine from './pages/LabellingLine';
 import MasterData from './pages/MasterData';
 import OpeningStockImport from './pages/OpeningStockImport';
+import ProductionControl from './pages/ProductionControl';
 import PullLists from './pages/PullLists';
 import RecipeStation from './pages/RecipeStation';
 import StoresIssue from './pages/StoresIssue';
+import TemplateMappingManager from './pages/TemplateMappingManager';
 import TransferReceiving from './pages/TransferReceiving';
 import WarehouseOps from './pages/WarehouseOps';
-import ProductionControl from './pages/ProductionControl';
-import LabelRollManager from './pages/LabelRollManager';
-import TemplateMappingManager from './pages/TemplateMappingManager';
 import __Layout from './Layout.jsx';
 
 
@@ -84,17 +84,17 @@ export const PAGES = {
     "Dashboard": Dashboard,
     "FGPalletizing": FGPalletizing,
     "FillingStation": FillingStation,
+    "LabelRollManager": LabelRollManager,
     "LabellingLine": LabellingLine,
     "MasterData": MasterData,
     "OpeningStockImport": OpeningStockImport,
+    "ProductionControl": ProductionControl,
     "PullLists": PullLists,
     "RecipeStation": RecipeStation,
     "StoresIssue": StoresIssue,
+    "TemplateMappingManager": TemplateMappingManager,
     "TransferReceiving": TransferReceiving,
     "WarehouseOps": WarehouseOps,
-    "ProductionControl": ProductionControl,
-    "LabelRollManager": LabelRollManager,
-    "TemplateMappingManager": TemplateMappingManager,
 }
 
 export const pagesConfig = {
