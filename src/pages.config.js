@@ -70,6 +70,7 @@ import TemplateMappingManager from './pages/TemplateMappingManager';
 import TransferReceiving from './pages/TransferReceiving';
 import WarehouseOps from './pages/WarehouseOps';
 import ShiftKPIDashboard from './pages/ShiftKPIDashboard';
+import FeederKiosk from './pages/FeederKiosk';
 import __Layout from './Layout.jsx';
 
 
@@ -97,6 +98,7 @@ export const PAGES = {
     "TransferReceiving": TransferReceiving,
     "WarehouseOps": WarehouseOps,
     "ShiftKPIDashboard": ShiftKPIDashboard,
+    "FeederKiosk": FeederKiosk,
 }
 
 export const pagesConfig = {

@@ -27,11 +27,11 @@ const ACCESS_MAP = {
     'TransferReceiving','LabellingLine','FGPalletizing','AuditLogPage','MasterData',
     'AlertsPage','PullLists','CustomizeDashboard',
     'BoxLabelPrint','BoxLabelApprovals','BoxPalletBuild','WarehouseOps','BoxStockDashboard','OpeningStockImport',
-    'ProductionControl','LabelRollManager','TemplateMappingManager',
+    'ProductionControl','LabelRollManager','TemplateMappingManager','FeederKiosk',
   ],
   production_manager: [
     'Dashboard','AuditLogPage','MasterData','AlertsPage','PullLists','CustomizeDashboard',
-    'FillingStation','LabellingLine',
+    'FillingStation','LabellingLine','FeederKiosk',
     'BoxLabelApprovals','BoxStockDashboard','ProductionControl',
   ],
   stores:               ['Dashboard'],
