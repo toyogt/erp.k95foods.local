@@ -8,7 +8,7 @@ import LocationHeatmap from './LocationHeatmap';
 import RecentActivity from './RecentActivity';
 import StationCard from '@/components/StationCard';
 import { Droplets, Thermometer, Truck, Tag,
-         ScrollText, Settings, ListChecks, Printer,
+         ScrollText, Settings, ListChecks, Printer, Factory,
          ClipboardCheck, Layers, Warehouse, BarChart3, Upload } from 'lucide-react';
 
 const ALL_STATIONS = [
