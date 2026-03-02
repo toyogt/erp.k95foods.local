@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Plus, Pencil, Trash2, CheckCircle2, XCircle, Search, Loader2 } from 'lucide-react';
+import BatchIdPreview from '@/components/batch/BatchIdPreview';
 
 const TABS = ['Mappings', 'Label Variants', 'Ryan Templates', 'Batch Format Rules'];
 
@@ -271,7 +272,7 @@ function BatchFormatRulesTab() {
 }
 
 // ─── MAPPINGS TAB (main) ─────────────────────────────────────────────────────
-function MappingsTab() {
+function MappingsTab({ user }) {
   const [items, setItems] = useState([]);
   const [variants, setVariants] = useState([]);
   const [ryanTpls, setRyanTpls] = useState([]);
@@ -280,6 +281,7 @@ function MappingsTab() {
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
+  const [previewRule, setPreviewRule] = useState(null);
 
   useEffect(() => { load(); }, []);
 
@@ -395,6 +397,11 @@ function MappingsTab() {
                       {item.batch_format_rule_id && <p className="text-xs text-slate-500">Batch rule: <span className="font-mono">{item.batch_format_rule_id}</span>{batchRule?.description ? ` — ${batchRule.description}` : ''}</p>}
                     </div>
                     <div className="flex gap-1 shrink-0">
+                      {batchRule && (
+                        <button onClick={() => setPreviewRule(batchRule)} className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-500 text-xs font-semibold" title="Preview batch ID">
+                          Preview
+                        </button>
+                      )}
                       <button onClick={() => setEditing(item.id)} className="p-1.5 rounded-lg hover:bg-slate-100"><Pencil className="w-4 h-4 text-slate-500" /></button>
                       <button onClick={() => del(item)} className="p-1.5 rounded-lg hover:bg-red-50"><Trash2 className="w-4 h-4 text-red-400" /></button>
                     </div>
