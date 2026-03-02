@@ -26,6 +26,7 @@ const CSV_HEADERS = [
 export default function ProductMasterManager() {
   const [products, setProducts] = useState([]);
   const [bottleTypes, setBottleTypes] = useState([]);
+  const [recipes, setRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
