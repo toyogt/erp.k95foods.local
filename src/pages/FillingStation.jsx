@@ -52,6 +52,58 @@ export default function FillingStation() {
     } catch { /* offline */ }
   }
 
+  function printCrateLabel(crateId, filledAt) {
+    printReactComponent(CrateLabel6x4, {
+      crate_id: crateId,
+      product_code: activeBatch?.product_code || '',
+      batch_id: activeBatch?.batch_id || '',
+      bottle_type: activeBatch?.bottle_type || '',
+      filler_machine_id: machine?.machine_id || '',
+      filled_at: filledAt,
+      operator_name: user?.full_name || user?.email || '',
+    });
+  }
+
+  async function logPrint(printType, crateId, notes) {
+    const now = new Date().toISOString();
+    await base44.entities.CrateLabelPrintLog.create({
+      log_id: `PLG-${Date.now()}`,
+      crate_id: crateId || '',
+      filler_machine_id: machine?.machine_id || '',
+      batch_id: activeBatch?.batch_id || '',
+      product_code: activeBatch?.product_code || '',
+      bottle_type: activeBatch?.bottle_type || '',
+      printed_at: now,
+      printed_by: user?.email || '',
+      print_type: printType,
+      notes: notes || '',
+    }).catch(() => {});
+  }
+
+  async function handleCalibrationPrint() {
+    printReactComponent(CalibrationLabel6x4, {});
+    await logPrint('TEST_CALIBRATION', '', 'Calibration label');
+  }
+
+  async function handleReprintCrate() {
+    if (!reprintInput.trim()) return;
+    const crateId = reprintInput.trim();
+    const crates = await base44.entities.Crate.filter({ crate_id: crateId }).catch(() => []);
+    const c = crates[0];
+    printReactComponent(CrateLabel6x4, {
+      crate_id: crateId,
+      product_code: c?.product_code || '',
+      batch_id: c?.batch_id || '',
+      bottle_type: c?.bottle_type || '',
+      filler_machine_id: c?.filler_machine_id || machine?.machine_id || '',
+      filled_at: c?.filled_time || '',
+      operator_name: user?.full_name || user?.email || '',
+    });
+    await logPrint('REPRINT', crateId, 'Reprint requested');
+    setReprintInput('');
+    setShowReprint(false);
+  }
+
   async function confirmMachine() {
     setMachineError('');
     if (!machineInput.trim()) return;
