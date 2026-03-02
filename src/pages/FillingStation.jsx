@@ -30,6 +30,8 @@ export default function FillingStation() {
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState('');
   const [offline, setOffline] = useState(!navigator.onLine);
+  const [reprintInput, setReprintInput] = useState('');
+  const [showReprint, setShowReprint] = useState(false);
 
   const crateRef = useRef(null);
 
