@@ -288,7 +288,10 @@ function MappingsTab() {
 
   const fields = [
     { key: 'mapping_id', label: 'Mapping ID', required: true, readOnly: !!editing && editing !== 'new', placeholder: genId('MAP') },
-    { key: 'product_code', label: 'Product Code', required: true },
+    { key: 'product_code', label: 'SKU Code', required: true },
+    { key: 'batch_date_source', label: 'Batch Date Source', type: 'select', options: ['MFG_START', 'LABEL_START'] },
+    { key: 'sequence_reset_scope', label: 'Sequence Reset Scope', type: 'select', options: ['DAILY', 'MONTHLY', 'YEARLY', 'NEVER'] },
+    { key: 'use_batch_prefix_from_sku', label: 'Use Batch Prefix from SKU', type: 'boolean' },
     { key: 'label_variant_id', label: 'Label Variant ID', required: true },
     { key: 'ryan_template_id', label: 'Ryan Template ID' },
     { key: 'batch_format_rule_id', label: 'Batch Format Rule ID' },
@@ -296,10 +299,9 @@ function MappingsTab() {
   ];
 
   function validate(form) {
-    if (!form.product_code || !form.label_variant_id) return 'product_code and label_variant_id are required';
-    // Warn if template missing but don't block (still allow save as inactive)
-    if (form.is_active && (!form.ryan_template_id || !form.label_variant_id)) {
-      return 'Cannot activate mapping: ryan_template_id is required for active mappings';
+    if (!form.product_code || !form.label_variant_id) return 'SKU Code and label_variant_id are required';
+    if (form.is_active && (!form.ryan_template_id || !form.batch_format_rule_id || !form.label_variant_id)) {
+      return 'Cannot activate mapping: ryan_template_id, batch_format_rule_id, and label_variant_id are all required for active mappings';
     }
     return null;
   }
