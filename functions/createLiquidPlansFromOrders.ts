@@ -88,8 +88,6 @@ Deno.serve(async (req) => {
         const woId = `WO-${planId}-${woSeq}`;
         await base44.entities.PackingWO.create({
           wo_id: woId,
-          plan_id: planId,
-          allocation_id: allocId,
           product: product?.product_name || line.sku_code,
           label_sku_code: line.sku_code,
           bottle_type: product?.bottle_type || '',
