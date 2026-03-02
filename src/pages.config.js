@@ -68,6 +68,7 @@ import TransferReceiving from './pages/TransferReceiving';
 import WarehouseOps from './pages/WarehouseOps';
 import ProductionControl from './pages/ProductionControl';
 import LabelRollManager from './pages/LabelRollManager';
+import TemplateMappingManager from './pages/TemplateMappingManager';
 import __Layout from './Layout.jsx';
 
 
@@ -93,6 +94,7 @@ export const PAGES = {
     "WarehouseOps": WarehouseOps,
     "ProductionControl": ProductionControl,
     "LabelRollManager": LabelRollManager,
+    "TemplateMappingManager": TemplateMappingManager,
 }
 
 export const pagesConfig = {
