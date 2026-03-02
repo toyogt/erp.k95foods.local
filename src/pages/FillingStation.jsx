@@ -72,7 +72,7 @@ export default function FillingStation() {
       const records = await base44.entities.MachineActiveBatch.filter({ machine_id: machineId, status: 'ACTIVE' });
       if (records.length === 0) {
         setActiveBatch(null);
-        setActiveBatchError('No active batch assigned to this machine. A supervisor must assign a batch.');
+        setActiveBatchError('No active batch assigned to this filler. Ask Production Manager to assign in Production page.');
       } else {
         const ab = records[0];
         setActiveBatch(ab);
