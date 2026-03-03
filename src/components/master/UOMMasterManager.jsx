@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
-import { Plus, Pencil, Loader2, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Plus, Pencil, Loader2, ToggleLeft, ToggleRight, Trash2 } from 'lucide-react';
 
 function genUomId() { return 'UOM-' + Date.now().toString(36).toUpperCase().slice(-5); }
 
