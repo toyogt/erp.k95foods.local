@@ -74,6 +74,7 @@ import TemplateMappingManager from './pages/TemplateMappingManager';
 import TraceInvestigation from './pages/TraceInvestigation';
 import TransferReceiving from './pages/TransferReceiving';
 import WarehouseOps from './pages/WarehouseOps';
+import RecipeBuilder from './pages/RecipeBuilder';
 import __Layout from './Layout.jsx';
 
 
@@ -105,6 +106,7 @@ export const PAGES = {
     "TraceInvestigation": TraceInvestigation,
     "TransferReceiving": TransferReceiving,
     "WarehouseOps": WarehouseOps,
+    "RecipeBuilder": RecipeBuilder,
 }
 
 export const pagesConfig = {
