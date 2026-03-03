@@ -111,6 +111,12 @@ export default function IngredientGroupManager() {
     await load();
   }
 
+  async function del(item) {
+    if (!confirm(`Delete group "${item.group_code} — ${item.group_name}"? This cannot be undone.`)) return;
+    await base44.entities.IngredientGroup.delete(item.id);
+    await load();
+  }
+
   if (loading) return <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>;
 
   return (

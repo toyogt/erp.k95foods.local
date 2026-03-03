@@ -91,6 +91,12 @@ export default function UOMMasterManager() {
     await load();
   }
 
+  async function del(item) {
+    if (!confirm(`Delete UOM "${item.uom_code} — ${item.uom_name}"? This cannot be undone.`)) return;
+    await base44.entities.UOMMaster.delete(item.id);
+    await load();
+  }
+
   if (loading) return <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>;
 
   return (
