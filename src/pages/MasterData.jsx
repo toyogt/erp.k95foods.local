@@ -61,8 +61,8 @@ export default function MasterData() {
         <TabsContent value="products"   className="mt-4"><ProductMasterManager /></TabsContent>
         <TabsContent value="recipes"    className="mt-4"><RecipeMasterManager /></TabsContent>
         <TabsContent value="ingredients" className="mt-4"><IngredientMasterManager user={user} /></TabsContent>
-        <TabsContent value="ing-groups"  className="mt-4"><IngredientGroupManager /></TabsContent>
-        <TabsContent value="uom"         className="mt-4"><UOMMasterManager /></TabsContent>
+        <TabsContent value="ing-groups"  className="mt-4"><IngredientGroupManager user={user} /></TabsContent>
+        <TabsContent value="uom"         className="mt-4"><UOMMasterManager user={user} /></TabsContent>
         <TabsContent value="bottles"    className="mt-4"><BottleTypeManager user={user} /></TabsContent>
         <TabsContent value="locations"  className="mt-4"><LocationManager user={user} /></TabsContent>
         <TabsContent value="machines"   className="mt-4"><MachineManager user={user} /></TabsContent>
