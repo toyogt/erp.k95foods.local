@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
-import { Plus, Pencil, Loader2, ToggleLeft, ToggleRight, Trash2 } from 'lucide-react';
+import { Plus, Pencil, Loader2, ToggleLeft, ToggleRight, Trash2, ArrowLeftRight } from 'lucide-react';
+import ReplaceWizard from './ReplaceWizard';
 
 function genGroupId() { return 'GRP-' + Date.now().toString(36).toUpperCase().slice(-5); }
 
@@ -20,7 +21,6 @@ function GroupForm({ initial, onSave, onCancel, saving }) {
     is_active: initial?.is_active !== false,
     notes: initial?.notes || '',
   }));
-
   const isNew = !initial?.id;
 
   return (
@@ -79,18 +79,31 @@ function GroupForm({ initial, onSave, onCancel, saving }) {
   );
 }
 
-export default function IngredientGroupManager() {
+export default function IngredientGroupManager({ user }) {
   const [items, setItems] = useState([]);
+  const [ingredients, setIngredients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [wizard, setWizard] = useState(null);
+
+  const isAdmin = user?.role === 'admin';
 
   useEffect(() => { load(); }, []);
 
   async function load() {
     setLoading(true);
-    setItems(await base44.entities.IngredientGroup.list('group_code', 200));
+    const [grps, ings] = await Promise.all([
+      base44.entities.IngredientGroup.list('group_code', 200),
+      base44.entities.IngredientMaster.list('-created_date', 500),
+    ]);
+    setItems(grps);
+    setIngredients(ings);
     setLoading(false);
+  }
+
+  function usageOf(item) {
+    return ingredients.filter(i => i.group_id === item.group_id).length;
   }
 
   async function save(form) {
@@ -112,9 +125,32 @@ export default function IngredientGroupManager() {
   }
 
   async function del(item) {
+    const total = usageOf(item);
+    if (total > 0) { alert(`Cannot delete: ${total} ingredient(s) use this group. Use "Replace with…" first.`); return; }
     if (!confirm(`Delete group "${item.group_code} — ${item.group_name}"? This cannot be undone.`)) return;
     await base44.entities.IngredientGroup.delete(item.id);
     await load();
+  }
+
+  async function doReplace(oldItem, newGroupId) {
+    const newGroup = items.find(i => i.group_id === newGroupId);
+    const ingsToUpdate = ingredients.filter(i => i.group_id === oldItem.group_id);
+    // Update group_id only — do NOT change short_code
+    await Promise.all(ingsToUpdate.map(i => base44.entities.IngredientMaster.update(i.id, { group_id: newGroupId })));
+    // Deactivate old group
+    const oldRec = items.find(i => i.group_id === oldItem.group_id);
+    if (oldRec) await base44.entities.IngredientGroup.update(oldRec.id, { is_active: false });
+    // Audit log
+    await base44.entities.AuditLog.create({
+      action: 'GROUP_REPLACE',
+      entity_type: 'IngredientGroup',
+      entity_id: oldItem.group_id,
+      user_email: user?.email || '',
+      user_name: user?.full_name || '',
+      details: { old_id: oldItem.group_id, new_id: newGroupId, ingredients_updated: ingsToUpdate.length },
+    });
+    await load();
+    return `${ingsToUpdate.length} ingredient(s) moved to group "${newGroup?.group_code}". Short codes were NOT changed.`;
   }
 
   if (loading) return <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>;
@@ -129,34 +165,78 @@ export default function IngredientGroupManager() {
       {editing === 'new' && <GroupForm initial={null} onSave={save} onCancel={() => setEditing(null)} saving={saving} />}
 
       <div className="space-y-2">
-        {items.map(item => (
-          <div key={item.id} className="bg-white rounded-xl border border-slate-200 p-3">
-            {editing === item.id ? (
-              <GroupForm initial={item} onSave={save} onCancel={() => setEditing(null)} saving={saving} />
-            ) : (
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-3">
-                  <span className="font-mono font-black text-lg text-slate-800 bg-amber-50 border border-amber-200 px-3 py-1 rounded-lg w-14 text-center">{item.group_code}</span>
-                  <div>
-                    <p className="text-sm font-semibold text-slate-800">{item.group_name}</p>
-                    <p className="text-xs text-slate-400">Next: <span className="font-mono font-semibold">{item.group_code}{String(item.next_seq || 1).padStart(2, '0')}</span> · seq={item.next_seq || 1}</p>
-                    {item.notes && <p className="text-xs text-slate-500 mt-0.5">{item.notes}</p>}
+        {items.map(item => {
+          const total = usageOf(item);
+          return (
+            <div key={item.id} className="bg-white rounded-xl border border-slate-200 p-3">
+              {editing === item.id ? (
+                <GroupForm initial={item} onSave={save} onCancel={() => setEditing(null)} saving={saving} />
+              ) : (
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-3">
+                    <span className="font-mono font-black text-lg bg-amber-50 border border-amber-200 px-3 py-1 rounded-lg w-14 text-center">{item.group_code}</span>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800">{item.group_name}</p>
+                      <p className="text-xs text-slate-400">Next: <span className="font-mono font-semibold">{item.group_code}{String(item.next_seq || 1).padStart(2, '0')}</span></p>
+                      <p className="text-xs text-slate-500">
+                        Used by: <span className="font-semibold">{total}</span> ingredient(s)
+                        {total > 0 && <span className="ml-1 text-amber-600 font-semibold">({total} total)</span>}
+                      </p>
+                      {item.notes && <p className="text-xs text-slate-400 mt-0.5">{item.notes}</p>}
+                    </div>
+                    <Badge ok={item.is_active} />
                   </div>
-                  <Badge ok={item.is_active} />
+                  <div className="flex gap-1 items-center">
+                    <button onClick={() => toggleActive(item)} className="p-1.5 rounded-lg hover:bg-slate-100" title={item.is_active ? 'Deactivate' : 'Activate'}>
+                      {item.is_active ? <ToggleRight className="w-5 h-5 text-emerald-500" /> : <ToggleLeft className="w-5 h-5 text-slate-400" />}
+                    </button>
+                    <button onClick={() => setEditing(item.id)} className="p-1.5 rounded-lg hover:bg-slate-100"><Pencil className="w-4 h-4 text-slate-500" /></button>
+                    {isAdmin && total > 0 && (
+                      <button
+                        onClick={() => setWizard(item)}
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200"
+                      >
+                        <ArrowLeftRight className="w-3.5 h-3.5" /> Replace
+                      </button>
+                    )}
+                    {isAdmin && (
+                      <button
+                        onClick={() => del(item)}
+                        className={`p-1.5 rounded-lg ${total > 0 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-red-50'}`}
+                        title={total > 0 ? `Used by ${total} ingredient(s)` : 'Delete'}
+                      >
+                        <Trash2 className="w-4 h-4 text-red-400" />
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <div className="flex gap-1">
-                  <button onClick={() => toggleActive(item)} className="p-1.5 rounded-lg hover:bg-slate-100" title={item.is_active ? 'Deactivate' : 'Activate'}>
-                    {item.is_active ? <ToggleRight className="w-5 h-5 text-emerald-500" /> : <ToggleLeft className="w-5 h-5 text-slate-400" />}
-                  </button>
-                  <button onClick={() => setEditing(item.id)} className="p-1.5 rounded-lg hover:bg-slate-100"><Pencil className="w-4 h-4 text-slate-500" /></button>
-                  <button onClick={() => del(item)} className="p-1.5 rounded-lg hover:bg-red-50"><Trash2 className="w-4 h-4 text-red-400" /></button>
-                </div>
-              </div>
-            )}
-          </div>
-        ))}
-        {items.length === 0 && <p className="text-center text-slate-400 text-sm py-8">No groups defined yet. Add groups like FL (Flavour), AC (Acid), SW (Sweetener).</p>}
+              )}
+            </div>
+          );
+        })}
+        {items.length === 0 && <p className="text-center text-slate-400 text-sm py-8">No groups defined yet.</p>}
       </div>
+
+      {wizard && (
+        <ReplaceWizard
+          title={`Replace Group: ${wizard.group_code}`}
+          oldItem={{ label: `${wizard.group_code} — ${wizard.group_name}`, id: wizard.group_id }}
+          options={items
+            .filter(i => i.group_id !== wizard.group_id && i.is_active)
+            .map(i => ({ value: i.group_id, label: `${i.group_code} — ${i.group_name}` }))}
+          previewLines={(newId) => {
+            const total = usageOf(wizard);
+            const newGrp = items.find(i => i.group_id === newId);
+            return [
+              `${total} ingredient(s) will be re-assigned to group "${newGrp?.group_code}"`,
+              `Existing short_codes will NOT be changed (FL01 stays FL01)`,
+              `Old group "${wizard.group_code}" will be deactivated`,
+            ];
+          }}
+          onConfirm={(newId) => doReplace(wizard, newId)}
+          onClose={() => { setWizard(null); load(); }}
+        />
+      )}
     </div>
   );
 }
