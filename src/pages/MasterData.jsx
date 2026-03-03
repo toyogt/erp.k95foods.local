@@ -12,7 +12,7 @@ import ModuleAccessManager from '@/components/master/ModuleAccessManager';
 import ProductMasterManager from '@/components/master/ProductMasterManager';
 import ErrorMessagesManager from '@/components/master/ErrorMessagesManager';
 import DowntimeReasonManager from '@/components/master/DowntimeReasonManager';
-import RecipeMasterManager from '@/components/master/RecipeMasterManager';
+// RecipeMasterManager deprecated — use RecipeBuilder page
 import IngredientMasterManager from '@/components/master/IngredientMasterManager';
 import IngredientGroupManager from '@/components/master/IngredientGroupManager';
 import UOMMasterManager from '@/components/master/UOMMasterManager';
