@@ -14,6 +14,8 @@ import ErrorMessagesManager from '@/components/master/ErrorMessagesManager';
 import DowntimeReasonManager from '@/components/master/DowntimeReasonManager';
 import RecipeMasterManager from '@/components/master/RecipeMasterManager';
 import IngredientMasterManager from '@/components/master/IngredientMasterManager';
+import IngredientGroupManager from '@/components/master/IngredientGroupManager';
+import UOMMasterManager from '@/components/master/UOMMasterManager';
 import { Loader2 } from 'lucide-react';
 
 export default function MasterData() {
