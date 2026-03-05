@@ -11,7 +11,7 @@ import SetupChecklist, { isSetupComplete } from '@/components/sku/SetupChecklist
 import PayloadMapBuilder from '@/components/sku/PayloadMapBuilder';
 import ArtworkTab from '@/components/sku/ArtworkTab';
 import BatchRuleBuilder from '@/components/batch/BatchRuleBuilder';
-import BatchRulePreview from '@/components/batch/BatchRulePreview';
+import BatchRulePreview from '@/components/batch/BatchRulePreview.jsx';
 
 function genId(prefix) { return prefix + '-' + Date.now().toString(36).toUpperCase().slice(-5); }
 
