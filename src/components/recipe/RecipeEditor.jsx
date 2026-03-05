@@ -280,7 +280,12 @@ export default function RecipeEditor({ group, specs, uoms, brandItems, user, onG
               {activeVersion.change_note} · {activeVersion.created_by} · {activeVersion.created_at ? new Date(activeVersion.created_at).toLocaleDateString() : ''}
             </p>
           </div>
-          <span className="text-xs text-slate-400">{versions.length} version(s) total</span>
+          <button
+            onClick={() => setShowHistory(true)}
+            className="text-xs text-blue-600 font-semibold hover:underline whitespace-nowrap"
+          >
+            {versions.length} version(s) · History
+          </button>
         </div>
       )}
 
