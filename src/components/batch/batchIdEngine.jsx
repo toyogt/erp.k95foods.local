@@ -106,8 +106,29 @@ export async function peekNextSequence(rule_id, sku_code, period_key) {
  *   ]
  * }
  */
-export function renderBatchId({ rule, sku, date, seq }) {
-  if (!rule?.format_json?.parts) {
+/**
+ * Resolve format_json — handles both string (from DB) and parsed object.
+ */
+function resolveFormatJson(rule) {
+  if (!rule) return null;
+  if (typeof rule.format_json === 'string') {
+    try { return JSON.parse(rule.format_json); } catch { return null; }
+  }
+  return rule.format_json;
+}
+
+/**
+ * Render batch ID based on rule format and inputs.
+ * @param {Object} params
+ *   - rule: BatchFormatRule object with format_json (string or object)
+ *   - sku: Product/SKU info { batch_prefix?, item_code? }
+ *   - date: Date object
+ *   - seq: Sequence number (e.g., 1, 2, 3...)
+ *   - useBatchPrefix: boolean — if true and sku.batch_prefix exists, use it for sku_prefix token
+ */
+export function renderBatchId({ rule, sku, date, seq, useBatchPrefix }) {
+  const fmtJson = resolveFormatJson(rule);
+  if (!fmtJson?.parts) {
     return '';
   }
 
