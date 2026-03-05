@@ -223,8 +223,10 @@ export default function IngredientSpecTab({ user }) {
   const [items, setItems] = useState([]);
   const [groups, setGroups] = useState([]);
   const [uoms, setUoms] = useState([]);
-  const [recipes, setRecipes] = useState([]);
-  const [recipeIngredients, setRecipeIngredients] = useState([]);
+  const [recipeVersionIngredients, setRecipeVersionIngredients] = useState([]);
+  const [recipeVersions, setRecipeVersions] = useState([]);
+  const [recipeOptions, setRecipeOptions] = useState([]);
+  const [recipeGroups, setRecipeGroups] = useState([]);
   const [brandItems, setBrandItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(null);
