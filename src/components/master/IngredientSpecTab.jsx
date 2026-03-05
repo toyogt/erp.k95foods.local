@@ -318,8 +318,9 @@ export default function IngredientSpecTab({ user }) {
 
   async function doReplace(oldItem, newIngId) {
     const newIng = items.find(i => i.ingredient_id === newIngId);
-    const risToUpdate = recipeIngredients.filter(ri => ri.ingredient_id === oldItem.ingredient_id || ri.ingredient_name === oldItem.ingredient_name);
-    await Promise.all(risToUpdate.map(ri => base44.entities.RecipeIngredient.update(ri.id, { ingredient_id: newIngId, ingredient_name: newIng?.ingredient_name || ri.ingredient_name })));
+    // Update RecipeVersionIngredient rows
+    const rvIsToUpdate = recipeVersionIngredients.filter(ri => ri.ingredient_id === oldItem.ingredient_id);
+    await Promise.all(rvIsToUpdate.map(ri => base44.entities.RecipeVersionIngredient.update(ri.id, { ingredient_id: newIngId })));
     // Re-assign brand items
     const itemsToUpdate = brandItems.filter(bi => bi.ingredient_id === oldItem.ingredient_id);
     await Promise.all(itemsToUpdate.map(bi => base44.entities.IngredientItem.update(bi.id, { ingredient_id: newIngId })));
@@ -332,10 +333,10 @@ export default function IngredientSpecTab({ user }) {
       entity_id: oldItem.ingredient_id,
       user_email: user?.email || '',
       user_name: user?.full_name || '',
-      details: { old_id: oldItem.ingredient_id, new_id: newIngId, recipe_lines_updated: risToUpdate.length, brand_items_moved: itemsToUpdate.length },
+      details: { old_id: oldItem.ingredient_id, new_id: newIngId, recipe_lines_updated: rvIsToUpdate.length, brand_items_moved: itemsToUpdate.length },
     });
     await load();
-    return `${risToUpdate.length} recipe line(s) and ${itemsToUpdate.length} brand item(s) moved to "${newIng?.ingredient_name}". Old spec deactivated.`;
+    return `${rvIsToUpdate.length} recipe line(s) and ${itemsToUpdate.length} brand item(s) moved to "${newIng?.ingredient_name}". Old spec deactivated.`;
   }
 
   async function runMigration() {
