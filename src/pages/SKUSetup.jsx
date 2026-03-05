@@ -510,13 +510,8 @@ export default function SKUSetup() {
               </div>
 
               {/* Payload Map Builder */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold text-slate-700">Ryan Payload Mapping</p>
-                  {templatePlaceholders.length > 0 && (
-                    <span className="text-xs text-slate-400">Placeholders from template: {templatePlaceholders.join(', ')}</span>
-                  )}
-                </div>
+               <div className="space-y-2">
+                 <p className="text-sm font-semibold text-slate-700">Ryan Payload Mapping</p>
                 <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
                   <PayloadMapBuilder
                     rows={payloadRows}
