@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
-import { Loader2, Plus, Trash2, ToggleLeft, ToggleRight, Save, Upload, AlertTriangle, CheckCircle2, Clock, History } from 'lucide-react';
+import { Loader2, Plus, Trash2, ToggleLeft, ToggleRight, Save, Upload, AlertTriangle, History } from 'lucide-react';
 import IngredientGrid from './IngredientGrid';
 import SaveVersionModal from './SaveVersionModal';
 import ImportCSVModal from './ImportCSVModal';
+import VersionHistoryModal from './VersionHistoryModal';
 
 function genId(prefix) { return prefix + '-' + Date.now().toString(36).toUpperCase().slice(-5); }
 
