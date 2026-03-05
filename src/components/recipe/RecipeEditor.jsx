@@ -247,7 +247,12 @@ export default function RecipeEditor({ group, specs, uoms, brandItems, user, onG
                 <span>Options: <strong className="text-slate-700">{options.length}</strong></span>
               </div>
             </div>
-            {isAdmin && <Button size="sm" variant="outline" onClick={() => setEditingGroup(true)}>Edit</Button>}
+            {isAdmin && (
+              <div className="flex items-center gap-2 shrink-0">
+                <Button size="sm" variant="outline" onClick={() => setEditingGroup(true)}>Edit</Button>
+                <Button size="sm" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50" onClick={deleteRecipe}>Delete</Button>
+              </div>
+            )}
           </div>
         )}
       </div>
