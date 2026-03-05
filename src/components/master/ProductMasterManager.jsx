@@ -288,7 +288,6 @@ export default function ProductMasterManager() {
               { key: 'brand_name', label: 'Brand Name', type: 'text' },
               { key: 'flavour', label: 'Flavour', type: 'text' },
               { key: 'ml_per_bottle', label: 'ML per Bottle', type: 'number' },
-              { key: 'bottles_per_box', label: 'Bottles per Box', type: 'number' },
               { key: 'product_barcode', label: 'Product Barcode', type: 'text' },
               { key: 'mrp_box', label: 'MRP per Box (₹)', type: 'number' },
               { key: 'gross_weight_kg', label: 'Gross Weight (kg)', type: 'number' },
@@ -302,6 +301,60 @@ export default function ProductMasterManager() {
                 <Input type={type} value={form[key]} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} className="text-sm" />
               </div>
             ))}
+
+            {/* Box Type dropdown */}
+            <div className="space-y-1 col-span-2">
+              <Label className="text-xs">Box Type {form.is_active ? '*' : ''}</Label>
+              {boxTypes.length > 0 ? (
+                <select
+                  value={form.box_type_id}
+                  onChange={e => {
+                    const bt = boxTypes.find(b => b.box_type_id === e.target.value);
+                    setForm(f => ({
+                      ...f,
+                      box_type_id: e.target.value,
+                      bottles_per_box: bt ? bt.bottles_per_box : f.bottles_per_box,
+                    }));
+                  }}
+                  className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm bg-white"
+                >
+                  <option value="">— Select box type —</option>
+                  {boxTypes.map(b => (
+                    <option key={b.id} value={b.box_type_id}>
+                      {b.box_name}{b.box_code ? ` (${b.box_code})` : ''} — {b.bottles_per_box} btls/box
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">No active Box Types found. Add one in Master Data → Box Types first.</p>
+              )}
+              {/* Show derived bottles_per_box + dimensions read-only */}
+              {form.box_type_id && (() => {
+                const bt = boxTypes.find(b => b.box_type_id === form.box_type_id);
+                if (!bt) return null;
+                const dims = [bt.length_mm, bt.width_mm, bt.height_mm].filter(Boolean);
+                return (
+                  <div className="mt-1 flex flex-wrap gap-3 text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-md px-3 py-2">
+                    <span>📦 <strong className="text-slate-700">{bt.bottles_per_box}</strong> bottles/box</span>
+                    {dims.length === 3 && <span>📐 {bt.length_mm} × {bt.width_mm} × {bt.height_mm} mm</span>}
+                    {bt.empty_weight_kg && <span>⚖️ {bt.empty_weight_kg} kg empty</span>}
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Bottles per box — read-only, derived */}
+            <div className="space-y-1">
+              <Label className="text-xs">Bottles per Box (auto from Box Type)</Label>
+              <Input
+                type="number"
+                value={form.bottles_per_box}
+                readOnly
+                className="text-sm bg-slate-50 font-bold"
+                placeholder="Set by Box Type"
+              />
+            </div>
+
             {/* Bottle Type dropdown */}
             <div className="space-y-1">
               <Label className="text-xs">Bottle Type {form.is_active ? '*' : ''}</Label>
