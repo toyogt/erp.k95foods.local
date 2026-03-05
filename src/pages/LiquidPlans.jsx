@@ -257,15 +257,18 @@ function CreatePlanDialog({ open, onClose, products, boxTypes, recipeGroups, rec
     const planId = genPlanId();
     await base44.entities.LiquidBatchPlan.create({
       plan_id: planId,
-      recipe_id: recipeGroupId,           // reusing recipe_id field as group ref
+      recipe_id: recipeGroupId,
       recipe_name: recipeGroups.find(g => g.recipe_group_id === recipeGroupId)?.recipe_name || recipeGroupId,
-      status: 'DRAFT',
+      status: 'RELEASED',
       notes,
     });
 
+    let seq = 1;
     for (const a of allocs) {
+      const allocId = genAllocId();
+      const product = products.find(p => p.item_code === a.sku_code);
       await base44.entities.SKUAllocation.create({
-        allocation_id: genAllocId(),
+        allocation_id: allocId,
         plan_id: planId,
         sku_code: a.sku_code,
         allocation_type: a.allocation_type,
@@ -274,6 +277,26 @@ function CreatePlanDialog({ open, onClose, products, boxTypes, recipeGroups, rec
         produced_bottles_packed: 0,
         status: 'RELEASED',
       });
+
+      // Auto-create one PackingWO per allocation
+      const woId = `WO-${planId}-${seq}`;
+      await base44.entities.PackingWO.create({
+        wo_id: woId,
+        plan_id: planId,
+        allocation_id: allocId,
+        sku_code: a.sku_code,
+        product: product?.product_name || a.sku_code,
+        product_code: a.sku_code,
+        label_sku_code: a.sku_code,
+        bottle_type: product?.bottle_type || '',
+        target_bottles: a.required_bottles,
+        required_bottles: a.required_bottles,
+        assigned_line: '',
+        status: 'RELEASED',
+        priority: seq,
+        batch_id: '',
+      });
+      seq++;
     }
     setSaving(false);
     onCreated(planId);
