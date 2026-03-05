@@ -12,6 +12,7 @@ function genId(prefix) { return prefix + '-' + Date.now().toString(36).toUpperCa
 const OPTION_NAMES = ['PRIMARY', 'FALLBACK_1', 'FALLBACK_2', 'FALLBACK_3'];
 
 export default function RecipeEditor({ group, specs, uoms, brandItems, user, onGroupUpdated }) {
+  // specs is passed in but needed inside saveVersion closure — keep ref
   const [options, setOptions] = useState([]);
   const [versions, setVersions] = useState([]);
   const [versionIngredients, setVersionIngredients] = useState([]);
