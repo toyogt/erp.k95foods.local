@@ -21,23 +21,12 @@ export default function RecipeGroupList({ groups, loading, selectedId, onSelect,
       notes: form.notes.trim(),
       is_active: true,
     });
-    // 2. Create PRIMARY option
-    const opt = await base44.entities.RecipeOption.create({
+    // 2. Create PRIMARY option only — no version yet (version is created on first Save Version)
+    await base44.entities.RecipeOption.create({
       option_id: genId('OPT'),
       recipe_group_id: grp.recipe_group_id,
       option_name: 'PRIMARY',
       is_default: true,
-      is_active: true,
-    });
-    // 3. Create initial v1 version (active, empty)
-    await base44.entities.RecipeVersion.create({
-      version_id: genId('RV'),
-      option_id: opt.option_id,
-      version_no: 1,
-      version_name: '',
-      change_note: 'Initial version',
-      created_at: new Date().toISOString(),
-      created_by: user?.email || '',
       is_active: true,
     });
     setForm({ recipe_name: '', notes: '' });
