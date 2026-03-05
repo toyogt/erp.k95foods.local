@@ -35,7 +35,8 @@ export default function ImportCSVModal({ specs, uoms, brandItems, onImport, onCa
           (row.ingredient_id && s.ingredient_id === row.ingredient_id)
         );
         if (!spec) { warns.push(`Row ${i + 2}: ingredient not found (${row.ingredient_short_code || row.ingredient_id})`); return; }
-        const uom = uoms.find(u => u.uom_code?.toLowerCase() === (row.uom_code || '').toLowerCase());
+        // Always use spec's default UOM — ignore CSV uom_code for standardization
+        const uom_id = spec.uom_id || '';
         const lockBrand = row.lock_brand?.toLowerCase() === 'true';
         let itemId = '';
         if (lockBrand && row.brand_name) {
@@ -47,8 +48,8 @@ export default function ImportCSVModal({ specs, uoms, brandItems, onImport, onCa
           _key: Date.now() + i,
           ingredient_id: spec.ingredient_id,
           qty: parseFloat(row.qty) || 0,
-          uom_id: uom?.uom_id || '',
-          phase: row.phase?.toUpperCase() || 'MIX',
+          uom_id,
+          phase: 'MIX',
           notes: row.notes || '',
           lock_brand: lockBrand && !!itemId,
           ingredient_item_id: itemId,
