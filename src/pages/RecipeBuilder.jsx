@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Loader2, ShieldOff, ArrowLeft } from 'lucide-react';
+import { Loader2, ShieldOff, ArrowLeft, FlaskConical } from 'lucide-react';
 import RecipeGroupList from '@/components/recipe/RecipeGroupList';
 import RecipeEditor from '@/components/recipe/RecipeEditor';
 
