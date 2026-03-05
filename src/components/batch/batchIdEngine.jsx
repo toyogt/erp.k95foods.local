@@ -84,29 +84,6 @@ export async function peekNextSequence(rule_id, sku_code, period_key) {
 }
 
 /**
- * Render batch ID based on rule format and inputs.
- * @param {Object} params
- *   - rule: BatchFormatRule object with format_json
- *   - sku: Product/SKU info { batch_prefix?, item_code? }
- *   - date: Date object
- *   - seq: Sequence number (e.g., 1, 2, 3...)
- * @returns {string} Rendered batch ID
- *
- * format_json structure:
- * {
- *   "parts": [
- *     {"type":"text","value":"KFB"},
- *     {"type":"day","pad":2},
- *     {"type":"month_letter"},
- *     {"type":"year2"},
- *     {"type":"seq","pad":2},
- *     {"type":"sku_prefix"},
- *     {"type":"date_serial_ddmmyyyy"},
- *     {"type":"suffix_if_seq_gt_1","prefix":"-","value":"seq_minus_1"}
- *   ]
- * }
- */
-/**
  * Resolve format_json — handles both string (from DB) and parsed object.
  */
 function resolveFormatJson(rule) {
