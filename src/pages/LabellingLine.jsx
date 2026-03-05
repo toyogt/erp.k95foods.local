@@ -47,6 +47,8 @@ export default function LabellingLine() {
   const [activeRoll, setActiveRoll] = useState(null);
   // SKU mapping
   const [skuMapping, setSkuMapping] = useState(null);
+  // Expected artwork for the current WO
+  const [expectedArtwork, setExpectedArtwork] = useState(null);
 
   const { activeEvent: downtimeEvent, downtimeMinutesToday, startDowntime, endDowntime } = useDowntime({
     stationType: 'LABELLING',
@@ -97,8 +99,19 @@ export default function LabellingLine() {
 
   function handleSelectWO(w) {
     setWo(w);
-    setSkuMapping(null); // will be loaded by SKUMappingBadge
+    setSkuMapping(null);
+    setExpectedArtwork(null);
     setStep(STEP.SCAN_LABEL);
+    // Load expected artwork from SKU's default_artwork_id
+    if (w?.product_code) {
+      base44.entities.ProductMaster.filter({ item_code: w.product_code }).then(async skus => {
+        const sku = skus[0];
+        if (sku?.default_artwork_id) {
+          const arts = await base44.entities.LabelArtwork.filter({ artwork_id: sku.default_artwork_id }).catch(() => []);
+          if (arts[0]) setExpectedArtwork(arts[0]);
+        }
+      }).catch(() => {});
+    }
   }
 
   function handleLabelScan(val) {
