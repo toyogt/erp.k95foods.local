@@ -42,6 +42,7 @@ export default function MasterData() {
         <div className="overflow-x-auto">
           <TabsList className="inline-flex h-10 rounded-xl bg-slate-100 p-1 min-w-full">
             <TabsTrigger value="products"   className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">SKUs</TabsTrigger>
+            <TabsTrigger value="boxtypes"   className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Box Types</TabsTrigger>
 
             <TabsTrigger value="ingredients" className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Ingredients</TabsTrigger>
             <TabsTrigger value="ing-groups"  className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Ing. Groups</TabsTrigger>
