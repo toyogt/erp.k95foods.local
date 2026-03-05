@@ -78,7 +78,8 @@ export default function ImportCSVModal({ specs, uoms, brandItems, onImport, onCa
         <div className="p-6 space-y-4">
           <div className="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-xl p-3">
             <p className="font-semibold mb-1">Expected columns:</p>
-            <p className="font-mono">ingredient_short_code, qty, uom_code, phase, notes, lock_brand, brand_name</p>
+            <p className="font-mono">ingredient_short_code, qty, notes, lock_brand, brand_name</p>
+            <p className="text-slate-400 mt-1">UOM is auto-set from ingredient spec. phase is not needed.</p>
           </div>
 
           <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={handleFile} />
