@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
-import { Loader2, Plus, Trash2, ToggleLeft, ToggleRight, Save, Upload, AlertTriangle, History } from 'lucide-react';
+import { Loader2, Plus, Trash2, ToggleLeft, ToggleRight, Save, Upload, AlertTriangle, History, FlaskConical } from 'lucide-react';
 import IngredientGrid from './IngredientGrid';
 import SaveVersionModal from './SaveVersionModal';
 import ImportCSVModal from './ImportCSVModal';
@@ -11,7 +11,7 @@ function genId(prefix) { return prefix + '-' + Date.now().toString(36).toUpperCa
 
 const OPTION_NAMES = ['PRIMARY', 'FALLBACK_1', 'FALLBACK_2', 'FALLBACK_3'];
 
-export default function RecipeEditor({ group, specs, uoms, brandItems, user, onGroupUpdated }) {
+export default function RecipeEditor({ group, specs, uoms, brandItems, user, onGroupUpdated, onGroupDeleted }) {
   // specs is passed in but needed inside saveVersion closure — keep ref
   const [options, setOptions] = useState([]);
   const [versions, setVersions] = useState([]);
