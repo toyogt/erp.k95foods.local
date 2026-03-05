@@ -181,8 +181,10 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Render batch ID
-      const batchId = renderBatchId(rule, sku, mfgDate, seq);
+      // Render batch ID (respect use_batch_prefix_from_sku flag)
+      const usePfx = mapping.use_batch_prefix_from_sku === true;
+      const skuForBatch = usePfx ? sku : { ...sku, batch_prefix: null };
+      const batchId = renderBatchId(rule, skuForBatch, mfgDate, seq);
 
       // Record in SKUBatch
       await base44.entities.SKUBatch.create({
