@@ -14,6 +14,7 @@ import ErrorMessagesManager from '@/components/master/ErrorMessagesManager';
 import DowntimeReasonManager from '@/components/master/DowntimeReasonManager';
 // RecipeMasterManager deprecated — use RecipeBuilder page
 import IngredientMasterManager from '@/components/master/IngredientMasterManager';
+import BoxTypeManager from '@/components/master/BoxTypeManager';
 import IngredientGroupManager from '@/components/master/IngredientGroupManager';
 import UOMMasterManager from '@/components/master/UOMMasterManager';
 import { Loader2 } from 'lucide-react';
