@@ -462,6 +462,18 @@ export default function LabellingLine() {
                 <p className="font-bold text-lg">{wo?.wo_id}</p>
                 <p className="text-sm text-slate-300">{wo?.product}</p>
                 {wo?.product_code && <p className="text-xs text-slate-400 font-mono">{wo?.product_code}</p>}
+                {expectedArtwork && (
+                  <p className="text-xs mt-1">
+                    <span className="text-slate-400">Expected artwork: </span>
+                    <span className="text-blue-300 font-semibold">{expectedArtwork.artwork_name}</span>
+                    {expectedArtwork.artwork_version && (
+                      <span className="ml-1 bg-blue-600/40 text-blue-200 font-bold px-1.5 py-0.5 rounded text-xs">{expectedArtwork.artwork_version}</span>
+                    )}
+                  </p>
+                )}
+                {activeRoll && (
+                  <p className="text-xs mt-0.5 text-emerald-300 font-mono">Roll: {activeRoll.roll_id}</p>
+                )}
               </div>
               <div className="flex flex-col items-end gap-1">
                 <span className={`text-xs font-bold px-2 py-1 rounded-full ${
