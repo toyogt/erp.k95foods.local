@@ -265,7 +265,21 @@ export default function IngredientSpecTab({ user }) {
   }
 
   function usageOf(item) {
-    return recipeIngredients.filter(ri => ri.ingredient_id === item.ingredient_id || ri.ingredient_name === item.ingredient_name).length;
+    // Count distinct RecipeGroups that have this ingredient in an active version
+    const activeVersionIds = new Set(recipeVersions.filter(v => v.is_active).map(v => v.version_id));
+    const usedVersionIds = new Set(
+      recipeVersionIngredients
+        .filter(ri => ri.ingredient_id === item.ingredient_id && activeVersionIds.has(ri.version_id))
+        .map(ri => ri.version_id)
+    );
+    const groupIds = new Set();
+    usedVersionIds.forEach(vid => {
+      const ver = recipeVersions.find(v => v.version_id === vid);
+      if (!ver) return;
+      const opt = recipeOptions.find(o => o.option_id === ver.option_id);
+      if (opt) groupIds.add(opt.recipe_group_id);
+    });
+    return groupIds.size;
   }
 
   async function save(form) {
