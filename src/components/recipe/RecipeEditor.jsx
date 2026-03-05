@@ -98,17 +98,25 @@ export default function RecipeEditor({ group, specs, uoms, brandItems, user, onG
       await Promise.all(ings.map(i => base44.entities.RecipeVersionIngredient.delete(i.id)));
       await base44.entities.RecipeVersion.delete(v.id);
     }));
-    await base44.entities.RecipeOption.delete(opt.id);
+    // Filter by option_id to get correct DB record id
+    const allOpts = await base44.entities.RecipeOption.filter({ recipe_group_id: group.recipe_group_id });
+    const dbOpt = allOpts.find(o => o.option_id === opt.option_id);
+    if (dbOpt) await base44.entities.RecipeOption.delete(dbOpt.id);
     await loadOptions();
   }
 
   async function setDefault(opt) {
-    await Promise.all(options.map(o => base44.entities.RecipeOption.update(o.id, { is_default: o.option_id === opt.option_id })));
+    const allOpts = await base44.entities.RecipeOption.filter({ recipe_group_id: group.recipe_group_id });
+    await Promise.all(allOpts.map(o => base44.entities.RecipeOption.update(o.id, { is_default: o.option_id === opt.option_id })));
     await loadOptions();
   }
 
   async function toggleOptionActive(opt) {
-    await base44.entities.RecipeOption.update(opt.id, { is_active: !opt.is_active });
+    // Re-fetch to get the latest DB record to avoid stale id issues
+    const allOpts = await base44.entities.RecipeOption.filter({ recipe_group_id: group.recipe_group_id });
+    const dbOpt = allOpts.find(o => o.option_id === opt.option_id);
+    if (!dbOpt) return;
+    await base44.entities.RecipeOption.update(dbOpt.id, { is_active: !opt.is_active });
     await loadOptions();
   }
 
