@@ -216,6 +216,9 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Write batch_id to PackingWOs for MFG_START SKUs that may not have been updated yet
+    // (PackingWO update already done in loop above — this is the return)
+
     return Response.json({
       success: true,
       plan_id,
