@@ -178,25 +178,40 @@ function IngredientSpecForm({ initial, groups, uoms, allSpecs, onSave, onCancel,
   );
 }
 
-function WhereUsedPanel({ ingredient, recipeIngredients, recipes }) {
-  const used = recipeIngredients.filter(ri => ri.ingredient_id === ingredient.ingredient_id || ri.ingredient_name === ingredient.ingredient_name);
+function WhereUsedPanel({ ingredient, recipeVersionIngredients, recipeVersions, recipeOptions, recipeGroups }) {
+  // Filter only rows for this ingredient in ACTIVE versions
+  const activeVersionIds = new Set(recipeVersions.filter(v => v.is_active).map(v => v.version_id));
+  const used = recipeVersionIngredients.filter(ri =>
+    ri.ingredient_id === ingredient.ingredient_id && activeVersionIds.has(ri.version_id)
+  );
+
+  // Group by RecipeGroup (distinct recipes)
   const grouped = used.reduce((acc, ri) => {
-    const recipe = recipes.find(r => r.recipe_id === ri.recipe_id);
-    if (!recipe) return acc;
-    if (!acc[recipe.recipe_id]) acc[recipe.recipe_id] = { recipe, lines: [] };
-    acc[recipe.recipe_id].lines.push(ri);
+    const version = recipeVersions.find(v => v.version_id === ri.version_id);
+    if (!version) return acc;
+    const option = recipeOptions.find(o => o.option_id === version.option_id);
+    if (!option) return acc;
+    const group = recipeGroups.find(g => g.recipe_group_id === option.recipe_group_id);
+    if (!group) return acc;
+    const key = group.recipe_group_id;
+    if (!acc[key]) acc[key] = { group, lines: [] };
+    acc[key].lines.push({ ri, option, version });
     return acc;
   }, {});
+
   const entries = Object.values(grouped);
-  if (entries.length === 0) return <p className="text-sm text-slate-400 italic py-2">Not used in any recipe.</p>;
+  if (entries.length === 0) return <p className="text-sm text-slate-400 italic py-2">Not used in any active recipe version.</p>;
   return (
     <div className="space-y-2 mt-2">
       <p className="text-xs font-semibold text-slate-500">Used in {entries.length} recipe(s):</p>
-      {entries.map(({ recipe, lines }) => (
-        <div key={recipe.recipe_id} className="bg-white border border-slate-200 rounded-lg p-3">
-          <p className="font-semibold text-sm text-slate-800">{recipe.recipe_name || recipe.recipe_id}</p>
-          {lines.map((l, i) => (
-            <p key={i} className="text-xs text-slate-600 mt-1">Phase: <span className="font-mono">{l.phase}</span> · {l.qty} {l.uom}</p>
+      {entries.map(({ group, lines }) => (
+        <div key={group.recipe_group_id} className="bg-white border border-slate-200 rounded-lg p-3">
+          <p className="font-semibold text-sm text-slate-800">{group.recipe_name}</p>
+          {lines.map(({ ri, option, version }, i) => (
+            <p key={i} className="text-xs text-slate-600 mt-1">
+              <span className="font-mono font-semibold">{option.option_name}</span>
+              {' '} v{version.version_no} · {ri.qty}
+            </p>
           ))}
         </div>
       ))}
