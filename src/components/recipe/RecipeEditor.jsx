@@ -132,14 +132,15 @@ export default function RecipeEditor({ group, specs, uoms, brandItems, user, onG
       is_active: true,
     });
 
-    // Write ingredients
-    await Promise.all(draftRows.filter(r => r.ingredient_id).map(r =>
-      base44.entities.RecipeVersionIngredient.create({
-        version_id: newVer.version_id,
-        ingredient_id: r.ingredient_id,
-        qty: parseFloat(r.qty) || 0,
-        uom_id: r.uom_id || '',
-        phase: r.phase || 'MIX',
+    // Write ingredients — auto-fill uom from spec, force phase=MIX
+    await Promise.all(draftRows.filter(r => r.ingredient_id).map(r => {
+    const spec = specs ? specs.find(s => s.ingredient_id === r.ingredient_id) : null;
+    return base44.entities.RecipeVersionIngredient.create({
+      version_id: newVer.version_id,
+      ingredient_id: r.ingredient_id,
+      qty: parseFloat(r.qty) || 0,
+      uom_id: spec?.uom_id || r.uom_id || '',
+      phase: 'MIX',
         notes: r.notes || '',
         lock_brand: r.lock_brand || false,
         ingredient_item_id: r.lock_brand ? (r.ingredient_item_id || '') : '',
