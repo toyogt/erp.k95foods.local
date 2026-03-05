@@ -34,7 +34,7 @@ const ALL_NAV_ITEMS = [
   { label: 'Feeder Kiosk',       page: 'FeederKiosk',        icon: Tag             },
   { label: 'Trace Investigation',page: 'TraceInvestigation', icon: Search          },
   { label: 'Audit Log',          page: 'AuditLogPage',       icon: ScrollText      },
-  { label: 'SKU Setup',          page: 'SKUSetup',            icon: Settings        },
+  { label: 'SKU Setup',          page: 'SKUSetup',            icon: PackageSearch   },
   { label: 'Recipe Builder',     page: 'RecipeBuilder',       icon: FlaskConical    },
   { label: 'Master Data',        page: 'MasterData',         icon: Settings        },
 ];
