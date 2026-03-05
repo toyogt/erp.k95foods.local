@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Loader2, AlertTriangle, CheckCircle2, ShieldAlert, Lock } from 'lucide-react';
-import { logAudit } from '@/components/AuditLogger';
 import MachineScanner from '@/components/wip/MachineScanner';
 import ScanInput from '@/components/wip/ScanInput';
 import CrateScanner from '@/components/labelling/CrateScanner';
