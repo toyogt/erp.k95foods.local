@@ -78,7 +78,9 @@ Deno.serve(async (req) => {
 
     // Helper: renderBatchId (from batchIdEngine logic)
     function renderBatchId(rule, sku, date, seq) {
-      if (!rule?.format_json?.parts) return '';
+      let fmtJson = rule?.format_json;
+      if (typeof fmtJson === 'string') { try { fmtJson = JSON.parse(fmtJson); } catch { fmtJson = null; } }
+      if (!fmtJson?.parts) return '';
 
       const year = date.getFullYear();
       const month = date.getMonth() + 1;
