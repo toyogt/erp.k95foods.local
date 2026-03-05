@@ -309,8 +309,8 @@ export default function IngredientSpecTab({ user }) {
   }
 
   async function del(item) {
-    const total = usageOf(item);
-    if (total > 0) { alert(`Cannot delete: used in ${total} recipe line(s). Use "Replace with…" first.`); return; }
+    const total = recipeVersionIngredients.filter(ri => ri.ingredient_id === item.ingredient_id).length;
+    if (total > 0) { alert(`Cannot delete: used in ${total} recipe version line(s). Use "Merge" first.`); return; }
     if (!confirm(`Delete ingredient spec "${item.ingredient_name}"? This cannot be undone.`)) return;
     await base44.entities.IngredientMaster.delete(item.id);
     await load();
