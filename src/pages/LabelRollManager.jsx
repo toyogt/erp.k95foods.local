@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Plus, Printer, Package } from 'lucide-react';
+import { Loader2, Plus, Printer } from 'lucide-react';
 import { printReactComponent } from '@/components/printing/printLabel';
 import RollBarcodeLabel from '@/components/labelling/RollBarcodeLabel';
 import RollLookup from '@/components/labelling/RollLookup';
@@ -27,25 +27,48 @@ export default function LabelRollManager() {
   const [tab, setTab] = useState('rolls');
 
   // Create roll form
-  const [form, setForm] = useState({ label_variant_id: '', product_code: '', declared_qty_labels: '', notes: '' });
+  const [skus, setSkus] = useState([]);
+  const [artworks, setArtworks] = useState([]);
+  const [form, setForm] = useState({ sku_code: '', artwork_id: '', declared_qty_labels: '', notes: '' });
   const [newRollId, setNewRollId] = useState(genRollId());
   const [saving, setSaving] = useState(false);
   const [savedRoll, setSavedRoll] = useState(null);
+  const [loadingArtworks, setLoadingArtworks] = useState(false);
 
   // Roll list
   const [rolls, setRolls] = useState([]);
+  const [rollArtworkMap, setRollArtworkMap] = useState({});
   const [loadingRolls, setLoadingRolls] = useState(false);
 
   useEffect(() => {
     base44.auth.me().then(setUser).catch(() => {});
     loadRolls();
+    base44.entities.ProductMaster.filter({ is_active: true }, 'item_code', 200)
+      .then(setSkus).catch(() => {});
   }, []);
+
+  // Load artworks whenever SKU changes
+  useEffect(() => {
+    if (!form.sku_code) { setArtworks([]); setForm(f => ({ ...f, artwork_id: '' })); return; }
+    setLoadingArtworks(true);
+    base44.entities.LabelArtwork.filter({ sku_code: form.sku_code, is_active: true }, 'artwork_name', 50)
+      .then(r => { setArtworks(r); setLoadingArtworks(false); })
+      .catch(() => setLoadingArtworks(false));
+  }, [form.sku_code]);
 
   async function loadRolls() {
     setLoadingRolls(true);
     try {
       const r = await base44.entities.LabelRoll.list('-created_at', 100);
       setRolls(r);
+      // Load artworks for display
+      const artworkIds = [...new Set(r.map(x => x.artwork_id).filter(Boolean))];
+      if (artworkIds.length) {
+        const arts = await base44.entities.LabelArtwork.list('artwork_name', 200);
+        const map = {};
+        arts.forEach(a => { map[a.artwork_id] = a; });
+        setRollArtworkMap(map);
+      }
     } catch { /* offline */ }
     setLoadingRolls(false);
   }
@@ -53,10 +76,11 @@ export default function LabelRollManager() {
   async function createRoll() {
     setSaving(true);
     const now = new Date().toISOString();
+    const artwork = artworks.find(a => a.artwork_id === form.artwork_id);
     const roll = {
       roll_id: newRollId,
-      label_variant_id: form.label_variant_id,
-      product_code: form.product_code,
+      sku_code: form.sku_code,
+      artwork_id: form.artwork_id,
       declared_qty_labels: form.declared_qty_labels ? Number(form.declared_qty_labels) : undefined,
       status: 'AVAILABLE',
       created_at: now,
@@ -72,23 +96,23 @@ export default function LabelRollManager() {
       created_at: now,
       created_by: user?.email || '',
     });
-    setSavedRoll(roll);
-    setForm({ label_variant_id: '', product_code: '', declared_qty_labels: '', notes: '' });
+    setSavedRoll({ ...roll, _artwork: artwork });
+    setForm({ sku_code: '', artwork_id: '', declared_qty_labels: '', notes: '' });
     setNewRollId(genRollId());
     setSaving(false);
     loadRolls();
   }
 
-  function printSticker(roll) {
+  function printSticker(roll, artwork) {
     printReactComponent(RollBarcodeLabel, {
       roll_id: roll.roll_id,
-      label_variant_id: roll.label_variant_id,
-      product_code: roll.product_code,
+      sku_code: roll.sku_code,
+      artwork_name: artwork?.artwork_name,
+      artwork_version: artwork?.artwork_version,
+      barcode: artwork?.barcode,
       declared_qty_labels: roll.declared_qty_labels,
     });
   }
-
-  const isSupervisor = user?.role === 'admin' || user?.role === 'labelling_supervisor' || user?.role === 'production_manager';
 
   return (
     <div className="space-y-4">
@@ -116,22 +140,30 @@ export default function LabelRollManager() {
             <p className="text-sm text-slate-400 text-center py-8">No rolls found. Create one first.</p>
           )}
           <div className="space-y-2">
-            {rolls.map(r => (
-              <div key={r.id} className="bg-white rounded-2xl border border-slate-200 p-4 flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="font-mono font-bold text-slate-900 truncate">{r.roll_id}</p>
-                  {r.product_code && <p className="text-xs text-slate-500 truncate">{r.product_code}</p>}
-                  {r.label_variant_id && <p className="text-xs text-slate-400 truncate">Variant: {r.label_variant_id}</p>}
-                  {r.declared_qty_labels != null && <p className="text-xs text-slate-400">Declared: {r.declared_qty_labels.toLocaleString()}</p>}
+            {rolls.map(r => {
+              const art = rollArtworkMap[r.artwork_id];
+              return (
+                <div key={r.id} className="bg-white rounded-2xl border border-slate-200 p-4 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-mono font-bold text-slate-900 truncate">{r.roll_id}</p>
+                    {r.sku_code && <p className="text-xs text-slate-500 truncate">SKU: {r.sku_code}</p>}
+                    {art && (
+                      <p className="text-xs text-slate-500 truncate">
+                        {art.artwork_name}
+                        {art.artwork_version && <span className="ml-1 font-bold text-blue-600">{art.artwork_version}</span>}
+                      </p>
+                    )}
+                    {r.declared_qty_labels != null && <p className="text-xs text-slate-400">Declared: {r.declared_qty_labels.toLocaleString()}</p>}
+                  </div>
+                  <div className="flex flex-col items-end gap-2 shrink-0">
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${STATUS_STYLE[r.status] || 'bg-slate-100 text-slate-700'}`}>{r.status}</span>
+                    <Button size="sm" variant="ghost" onClick={() => printSticker(r, art)} className="h-7 px-2 gap-1 text-xs text-slate-500">
+                      <Printer className="w-3 h-3" /> Sticker
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex flex-col items-end gap-2 shrink-0">
-                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${STATUS_STYLE[r.status] || 'bg-slate-100 text-slate-700'}`}>{r.status}</span>
-                  <Button size="sm" variant="ghost" onClick={() => printSticker(r)} className="h-7 px-2 gap-1 text-xs text-slate-500">
-                    <Printer className="w-3 h-3" /> Sticker
-                  </Button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </TabsContent>
 
@@ -141,8 +173,9 @@ export default function LabelRollManager() {
             <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex items-center justify-between">
               <div>
                 <p className="text-sm font-semibold text-emerald-800">Roll created: {savedRoll.roll_id}</p>
+                {savedRoll._artwork && <p className="text-xs text-emerald-600">{savedRoll._artwork.artwork_name} {savedRoll._artwork.artwork_version}</p>}
               </div>
-              <Button size="sm" variant="outline" onClick={() => printSticker(savedRoll)} className="gap-1">
+              <Button size="sm" variant="outline" onClick={() => printSticker(savedRoll, savedRoll._artwork)} className="gap-1">
                 <Printer className="w-4 h-4" /> Print Sticker
               </Button>
             </div>
@@ -164,32 +197,46 @@ export default function LabelRollManager() {
             </div>
 
             <div className="space-y-1">
-              <p className="text-xs text-slate-500">Product Code</p>
-              <input
-                className="w-full h-10 px-3 rounded-lg border border-slate-300 text-sm focus:outline-none focus:border-blue-500"
-                placeholder="e.g. PRD-001"
-                value={form.product_code}
-                onChange={e => setForm(f => ({ ...f, product_code: e.target.value }))}
-              />
+              <p className="text-xs text-slate-500">SKU *</p>
+              <select
+                className="w-full h-10 px-3 rounded-lg border border-slate-300 text-sm bg-white"
+                value={form.sku_code}
+                onChange={e => setForm(f => ({ ...f, sku_code: e.target.value, artwork_id: '' }))}
+              >
+                <option value="">— Select SKU —</option>
+                {skus.map(s => (
+                  <option key={s.id} value={s.item_code}>{s.item_code}{s.product_name ? ` — ${s.product_name}` : ''}</option>
+                ))}
+              </select>
             </div>
 
             <div className="space-y-1">
-              <p className="text-xs text-slate-500">Label Variant / SKU</p>
-              <input
-                className="w-full h-10 px-3 rounded-lg border border-slate-300 text-sm focus:outline-none focus:border-blue-500"
-                placeholder="e.g. LBL-500ML-MANGO"
-                value={form.label_variant_id}
-                onChange={e => setForm(f => ({ ...f, label_variant_id: e.target.value }))}
-              />
+              <p className="text-xs text-slate-500">Artwork *</p>
+              {loadingArtworks
+                ? <div className="h-10 flex items-center px-3 text-sm text-slate-400"><Loader2 className="w-4 h-4 animate-spin mr-2" />Loading…</div>
+                : (
+                  <select
+                    className="w-full h-10 px-3 rounded-lg border border-slate-300 text-sm bg-white disabled:opacity-50"
+                    value={form.artwork_id}
+                    onChange={e => setForm(f => ({ ...f, artwork_id: e.target.value }))}
+                    disabled={!form.sku_code || artworks.length === 0}
+                  >
+                    <option value="">— {form.sku_code ? (artworks.length === 0 ? 'No artworks for this SKU' : 'Select Artwork') : 'Select SKU first'} —</option>
+                    {artworks.map(a => (
+                      <option key={a.id} value={a.artwork_id}>
+                        {a.artwork_name}{a.artwork_version ? ` (${a.artwork_version})` : ''}{a.barcode ? ` — ${a.barcode}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                )
+              }
             </div>
 
             <div className="space-y-1">
               <p className="text-xs text-slate-500">Declared Qty (labels on roll)</p>
               <input
-                className="w-full h-10 px-3 rounded-lg border border-slate-300 text-sm focus:outline-none focus:border-blue-500"
-                type="number"
-                min="0"
-                placeholder="e.g. 5000 (optional)"
+                className="w-full h-10 px-3 rounded-lg border border-slate-300 text-sm"
+                type="number" min="0" placeholder="e.g. 5000 (optional)"
                 value={form.declared_qty_labels}
                 onChange={e => setForm(f => ({ ...f, declared_qty_labels: e.target.value }))}
               />
@@ -198,14 +245,14 @@ export default function LabelRollManager() {
             <div className="space-y-1">
               <p className="text-xs text-slate-500">Notes (optional)</p>
               <input
-                className="w-full h-10 px-3 rounded-lg border border-slate-300 text-sm focus:outline-none focus:border-blue-500"
+                className="w-full h-10 px-3 rounded-lg border border-slate-300 text-sm"
                 placeholder="e.g. Lot 2024-A"
                 value={form.notes}
                 onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
               />
             </div>
 
-            <Button className="w-full h-11" onClick={createRoll} disabled={saving || !newRollId.trim()}>
+            <Button className="w-full h-11" onClick={createRoll} disabled={saving || !newRollId.trim() || !form.sku_code || !form.artwork_id}>
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Plus className="w-4 h-4 mr-2" />Create Roll</>}
             </Button>
           </div>
