@@ -574,6 +574,121 @@ function Field({ label, children, className = '' }) {
   );
 }
 
+/**
+ * Ryan Template selector with inline placeholder editor when placeholders_json is empty.
+ */
+function RyanTemplateField({ value, onChange, templates, templatePlaceholders, activeTpl, isAdmin, onTemplateUpdated }) {
+  const [showAddPlaceholders, setShowAddPlaceholders] = useState(false);
+  const [chipInput, setChipInput] = useState('');
+  const [chips, setChips] = useState([]);
+  const [saving, setSaving] = useState(false);
+
+  // When template changes, reset
+  useEffect(() => {
+    setShowAddPlaceholders(false);
+    setChips([]);
+    setChipInput('');
+  }, [value]);
+
+  function addChip(raw) {
+    const val = raw.trim().toUpperCase().replace(/[^A-Z0-9_]/g, '');
+    if (!val || chips.includes(val)) { setChipInput(''); return; }
+    setChips(prev => [...prev, val]);
+    setChipInput('');
+  }
+
+  async function savePlaceholders() {
+    if (!activeTpl || chips.length === 0) return;
+    setSaving(true);
+    await base44.entities.RyanTemplate.update(activeTpl.id, {
+      placeholders_json: JSON.stringify(chips),
+    });
+    setSaving(false);
+    setShowAddPlaceholders(false);
+    onTemplateUpdated && onTemplateUpdated();
+  }
+
+  const noPlaceholders = value && activeTpl && templatePlaceholders.length === 0;
+
+  return (
+    <div className="space-y-2">
+      <select
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm bg-white h-9"
+      >
+        <option value="">— Select template —</option>
+        {templates.map(t => (
+          <option key={t.ryan_template_id} value={t.ryan_template_id}>
+            {t.ryan_template_id}{t.description ? ` — ${t.description}` : ''}
+          </option>
+        ))}
+      </select>
+
+      {/* Show placeholders chips */}
+      {value && templatePlaceholders.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 items-center">
+          <span className="text-xs text-slate-400">Placeholders:</span>
+          {templatePlaceholders.map(p => (
+            <span key={p} className="bg-blue-50 text-blue-700 font-mono text-xs px-2 py-0.5 rounded-md font-semibold">{p}</span>
+          ))}
+        </div>
+      )}
+
+      {/* Warning + inline editor when no placeholders */}
+      {noPlaceholders && !showAddPlaceholders && (
+        <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+          <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+          <p className="text-xs text-amber-700 flex-1">No placeholders configured for this template.</p>
+          {isAdmin && (
+            <button
+              onClick={() => { setChips([]); setShowAddPlaceholders(true); }}
+              className="text-xs text-amber-700 font-semibold underline shrink-0"
+            >Add now</button>
+          )}
+        </div>
+      )}
+
+      {noPlaceholders && showAddPlaceholders && isAdmin && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-3 space-y-2">
+          <p className="text-xs font-semibold text-amber-800">Add placeholders for <span className="font-mono">{value}</span></p>
+          <div
+            className="min-h-[36px] flex flex-wrap gap-1.5 items-center border border-amber-300 rounded-lg px-2 py-1.5 bg-white cursor-text"
+            onClick={() => document.getElementById('inline-chip-input')?.focus()}
+          >
+            {chips.map(p => (
+              <span key={p} className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 text-xs font-mono font-bold px-2 py-0.5 rounded-md">
+                {p}
+                <button type="button" onClick={(e) => { e.stopPropagation(); setChips(prev => prev.filter(c => c !== p)); }}>
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            ))}
+            <input
+              id="inline-chip-input"
+              value={chipInput}
+              onChange={e => setChipInput(e.target.value.toUpperCase())}
+              onKeyDown={e => {
+                if (e.key === 'Enter' || e.key === ',' || e.key === ' ') { e.preventDefault(); addChip(chipInput); }
+                else if (e.key === 'Backspace' && chipInput === '' && chips.length > 0) setChips(prev => prev.slice(0, -1));
+              }}
+              onBlur={() => chipInput && addChip(chipInput)}
+              className="flex-1 min-w-[80px] outline-none text-xs font-mono bg-transparent"
+              placeholder="BATCH, MFG …"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={savePlaceholders} disabled={saving || chips.length === 0} className="h-7 text-xs">
+              {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Save Placeholders'}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setShowAddPlaceholders(false)} className="h-7 text-xs">Cancel</Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SelectInput({ value, onChange, placeholder, options, empty, disabled }) {
   if (empty && options.length === 0) {
     return <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">{empty}</p>;
