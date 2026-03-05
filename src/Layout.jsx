@@ -54,8 +54,11 @@ export default function Layout({ children, currentPageName }) {
   useEffect(() => { window.scrollTo(0, 0); }, [currentPageName]);
 
   const isDashboard = currentPageName === 'Dashboard';
+  const isAdmin = user?.role === 'admin';
   // Only filter nav once user is loaded to avoid flashing admin items
-  const NAV_ITEMS = user ? ALL_NAV_ITEMS.filter(n => isEnabled(n.page)) : [];
+  const NAV_ITEMS = user
+    ? ALL_NAV_ITEMS.filter(n => isEnabled(n.page) && (!n.adminOnly || isAdmin))
+    : [];
   const pageTitle = ALL_NAV_ITEMS.find(n => n.page === currentPageName)?.label || currentPageName?.replace(/([A-Z])/g, ' $1').trim();
 
   return (
