@@ -218,11 +218,13 @@ export default function ProductionOrders() {
 
   const loadData = async () => {
     setLoading(true);
-    const [ords, lns, prods, bts, packedEvents] = await Promise.all([
+    const [ords, lns, prods, bts, rgs, opts, packedEvents] = await Promise.all([
       base44.entities.ProductionOrder.list('-created_date', 500),
       base44.entities.ProductionOrderLine.list('-created_date', 1000),
       base44.entities.ProductMaster.filter({ is_active: true }, '-created_date', 500),
       base44.entities.BoxType.list('-created_date', 200).catch(() => []),
+      base44.entities.RecipeGroup.list('-created_date', 200).catch(() => []),
+      base44.entities.RecipeOption.list('-created_date', 500).catch(() => []),
       base44.entities.PackedOutputEvent.filter({ status: 'ACTIVE' }, '-created_date', 5000).catch(() => []),
     ]);
 
