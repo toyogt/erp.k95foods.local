@@ -203,6 +203,10 @@ export default function ProductionOrders() {
   const [selectedLines, setSelectedLines] = useState(new Set());
   const [creatingPlan, setCreatingPlan] = useState(false);
   const [importing, setImporting] = useState(null); // order_id being imported to
+  const [planFromOrderOpen, setPlanFromOrderOpen] = useState(false);
+  const [recipeGroups, setRecipeGroups] = useState([]);
+  const [recipeOptions, setRecipeOptions] = useState([]);
+  const [optionOverrides, setOptionOverrides] = useState({}); // { [recipe_group_id]: option_id }
   const csvRef = useRef(null);
 
   useEffect(() => {
