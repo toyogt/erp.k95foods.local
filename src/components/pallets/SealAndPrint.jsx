@@ -34,40 +34,41 @@ export default function SealAndPrint({ pallet, scannedBoxes, user, onSealed, onH
     });
     const sealedData = { status: 'SEALED', sealed_at: now, sealed_by: user?.email, total_boxes: scannedBoxes.length };
 
-    // Create PackedOutputEvent records
-    const allBoxLabels = await base44.entities.BoxLabel.list('-created_date', 5000);
-    const allAllocations = await base44.entities.SKUAllocation.list('-created_date', 5000);
-    const allProducts = await base44.entities.ProductMaster.list('-created_date', 500);
+    // Create PackedOutputEvent records and update progress
+    const [allBoxLabels, allAllocations, allProducts] = await Promise.all([
+      base44.entities.BoxLabel.list('-created_date', 5000),
+      base44.entities.SKUAllocation.list('-created_date', 5000),
+      base44.entities.ProductMaster.list('-created_date', 500),
+    ]);
+
+    // Build WO → allocation map
+    const allPackingWOs = await base44.entities.PackingWO.list('-created_date', 2000).catch(() => []);
+    const woMap = {};
+    for (const wo of allPackingWOs) { woMap[wo.wo_id] = wo; }
 
     // Group scanned boxes by wo_id and sku_code
     const grouped = {};
     for (const scannedBox of scannedBoxes) {
       const boxLabel = allBoxLabels.find(bl => bl.box_serial === scannedBox.box_serial);
-      if (!boxLabel) continue;
-
-      const woId = boxLabel.wo_id;
-      const skuCode = boxLabel.item_code || scannedBox.item_code;
+      const woId = boxLabel?.wo_id || scannedBox.wo_id || '';
+      const skuCode = boxLabel?.item_code || scannedBox.item_code || '';
       const key = `${woId}|${skuCode}`;
-
       if (!grouped[key]) {
-        grouped[key] = {
-          wo_id: woId,
-          sku_code: skuCode,
-          boxes: [],
-          allocation: null,
-          product: null,
-        };
+        grouped[key] = { wo_id: woId, sku_code: skuCode, boxes: [] };
       }
       grouped[key].boxes.push(scannedBox);
     }
 
-    // Create PackedOutputEvent for each group
+    // Create PackedOutputEvent for each group + update allocation/order progress
     let eventNum = 1;
-    for (const [key, group] of Object.entries(grouped)) {
-      const allocation = allAllocations.find(a => a.id === group.wo_id || 
-        (a.sku_code === group.sku_code && a.plan_id));
-      const product = allProducts.find(p => p.item_code === group.sku_code);
+    for (const group of Object.values(grouped)) {
+      const wo = woMap[group.wo_id];
+      // Find allocation: via PackingWO.allocation_id first, else by sku_code match
+      const allocation = wo?.allocation_id
+        ? allAllocations.find(a => a.allocation_id === wo.allocation_id)
+        : allAllocations.find(a => a.sku_code === group.sku_code && a.plan_id === wo?.plan_id);
 
+      const product = allProducts.find(p => p.item_code === group.sku_code);
       const boxesCount = group.boxes.length;
       const bottlesPerBox = product?.bottles_per_box || 1;
       const packedBottles = boxesCount * bottlesPerBox;
@@ -77,9 +78,9 @@ export default function SealAndPrint({ pallet, scannedBoxes, user, onSealed, onH
         pallet_id: pallet.pallet_id,
         sealed_at: now,
         status: 'ACTIVE',
-        wo_id: group.wo_id || '',
+        wo_id: group.wo_id,
         allocation_id: allocation?.allocation_id || '',
-        plan_id: allocation?.plan_id || '',
+        plan_id: allocation?.plan_id || wo?.plan_id || '',
         order_id: allocation?.order_id || '',
         sku_code: group.sku_code,
         boxes_count: boxesCount,
@@ -87,6 +88,40 @@ export default function SealAndPrint({ pallet, scannedBoxes, user, onSealed, onH
         packed_bottles: packedBottles,
       });
       eventNum++;
+
+      // Update SKUAllocation progress
+      if (allocation) {
+        const existingEvents = await base44.entities.PackedOutputEvent.filter({
+          allocation_id: allocation.allocation_id,
+          status: 'ACTIVE',
+        });
+        const totalProduced = existingEvents.reduce((s, e) => s + (e.packed_bottles || 0), 0) + packedBottles;
+        const isDone = allocation.required_bottles > 0 && totalProduced >= allocation.required_bottles;
+        await base44.entities.SKUAllocation.update(allocation.id, {
+          produced_bottles_packed: totalProduced,
+          status: isDone ? 'DONE' : (totalProduced > 0 ? 'RUNNING' : allocation.status),
+        }).catch(() => {});
+      }
+
+      // Update ProductionOrderLine progress (if allocation has order_id / order_line_id)
+      if (allocation?.order_line_id) {
+        const orderLines = await base44.entities.ProductionOrderLine.filter({ id: allocation.order_line_id }).catch(() => []);
+        if (orderLines.length > 0) {
+          const line = orderLines[0];
+          // Sum all active events for this order_line
+          const lineEvents = await base44.entities.PackedOutputEvent.filter({
+            order_id: allocation.order_id,
+            sku_code: group.sku_code,
+            status: 'ACTIVE',
+          }).catch(() => []);
+          const lineProduced = lineEvents.reduce((s, e) => s + (e.packed_bottles || 0), 0) + packedBottles;
+          const lineDone = line.required_bottles > 0 && lineProduced >= line.required_bottles;
+          await base44.entities.ProductionOrderLine.update(line.id, {
+            produced_bottles_packed: lineProduced,
+            status: lineDone ? 'DONE' : (lineProduced > 0 ? 'PARTIAL' : 'OPEN'),
+          }).catch(() => {});
+        }
+      }
     }
 
     setSealing(false);
