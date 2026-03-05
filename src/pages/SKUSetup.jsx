@@ -538,6 +538,31 @@ export default function SKUSetup() {
           </Tabs>
         </div>
       </div>
+      {/* Batch Rule Builder Modal */}
+      <Dialog open={ruleBuilderOpen} onOpenChange={setRuleBuilderOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {ruleBuilderMode === 'create' ? 'Create Batch Format Rule' :
+               ruleBuilderMode === 'edit' ? 'Edit Batch Format Rule' :
+               'Duplicate Batch Format Rule'}
+            </DialogTitle>
+          </DialogHeader>
+          <BatchRuleBuilder
+            rule={ruleBuilderMode === 'create' ? null : ruleBuilderRule}
+            saveAsNew={ruleBuilderMode === 'duplicate'}
+            skus={skus}
+            isAdmin={isAdmin}
+            onSaved={async (saved) => {
+              setRuleBuilderOpen(false);
+              await loadAll();
+              // Auto-select saved rule
+              setMappingForm(f => ({ ...f, batch_format_rule_id: saved.rule_id }));
+            }}
+            onCancel={() => setRuleBuilderOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
