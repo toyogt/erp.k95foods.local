@@ -116,7 +116,21 @@ export default function IngredientBrandTab({ user }) {
       await base44.entities.IngredientItem.create(form);
     } else {
       const rec = brandItems.find(i => i.id === editing);
-      if (rec) await base44.entities.IngredientItem.update(rec.id, form);
+      if (rec) {
+        const oldStatus = rec.status;
+        await base44.entities.IngredientItem.update(rec.id, form);
+        // Audit log if status changed
+        if (oldStatus !== form.status) {
+          await base44.entities.AuditLog.create({
+            action: 'BRAND_ITEM_STATUS_CHANGED',
+            entity_type: 'IngredientItem',
+            entity_id: rec.item_id,
+            user_email: user?.email || '',
+            user_name: user?.full_name || '',
+            details: { brand_name: rec.brand_name, ingredient_id: rec.ingredient_id, old_status: oldStatus, new_status: form.status },
+          });
+        }
+      }
     }
     setEditing(null);
     await load();
