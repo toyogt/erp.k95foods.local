@@ -168,7 +168,7 @@ export default function SaveVersionModal({ currentVersionNo, rows, specs, uoms, 
               <Button variant="ghost" onClick={onCancel} className="h-12 flex-1">Cancel</Button>
               <Button
                 className="h-12 flex-1"
-                disabled={validRows.length === 0 || saving}
+                disabled={validRows.length === 0 || hasZeroQty || saving}
                 onClick={handleConfirmReview}
               >
                 {saving
