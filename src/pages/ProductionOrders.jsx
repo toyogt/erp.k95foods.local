@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import {
   Plus, Pencil, Trash2, Loader2, Search, Zap,
-  Download, Upload, ChevronDown, ChevronRight, Info
+  Download, Upload, ChevronDown, ChevronRight, Info, FlaskConical
 } from 'lucide-react';
 
 function genOrderId() {
