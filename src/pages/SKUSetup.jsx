@@ -50,6 +50,11 @@ export default function SKUSetup() {
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState('');
 
+  // Batch Rule Builder modal
+  const [ruleBuilderOpen, setRuleBuilderOpen] = useState(false);
+  const [ruleBuilderMode, setRuleBuilderMode] = useState('create'); // 'create' | 'edit' | 'duplicate'
+  const [ruleBuilderRule, setRuleBuilderRule] = useState(null);
+
   const isAdmin = user?.role === 'admin';
 
   const loadAll = useCallback(async () => {
