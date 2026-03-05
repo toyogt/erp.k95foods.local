@@ -161,7 +161,7 @@ export function renderBatchId({ rule, sku, date, seq, useBatchPrefix }) {
       const pad = part.pad || 1;
       result += String(seq).padStart(pad, '0');
     } else if (type === 'sku_prefix') {
-      result += sku?.batch_prefix || sku?.item_code || '';
+      result += prefixValue;
     } else if (type === 'date_serial_ddmmyyyy') {
       // DATEVALUE-like: concatenate dd + mm + yyyy
       const dd = String(day).padStart(2, '0');
