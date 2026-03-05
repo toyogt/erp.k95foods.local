@@ -79,8 +79,14 @@ export default function RecipeEditor({ group, specs, uoms, brandItems, user, onG
       is_default: false,
       is_active: true,
     });
-    await loadOptions();
+    // Load fresh options list, then set active to the new one
+    setLoading(true);
+    const opts = await base44.entities.RecipeOption.filter({ recipe_group_id: group.recipe_group_id });
+    const sorted = opts.sort((a, b) => OPTION_NAMES.indexOf(a.option_name) - OPTION_NAMES.indexOf(b.option_name));
+    setOptions(sorted);
     setActiveOptionId(newOpt.option_id);
+    await loadVersionData(newOpt.option_id);
+    setLoading(false);
   }
 
   async function removeOption(opt) {
