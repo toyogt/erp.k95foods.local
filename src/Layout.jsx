@@ -8,7 +8,7 @@ import {
   LayoutDashboard, ScrollText, Settings, ChevronLeft,
   Factory, LogOut, Menu, X,
   Droplets, Thermometer, Truck, Tag,
-  ListChecks, Bell, Printer, ClipboardCheck, Layers, Warehouse, BarChart3, Upload, Search, FlaskConical, PackageSearch
+  ListChecks, Bell, Printer, ClipboardCheck, Layers, Warehouse, BarChart3, Upload, Search, FlaskConical, PackageSearch, Zap
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -37,9 +37,15 @@ const ALL_NAV_ITEMS = [
   { label: 'Trace Investigation',page: 'TraceInvestigation', icon: Search          },
   { label: 'Audit Log',          page: 'AuditLogPage',       icon: ScrollText      },
   // ── Admin: master setup ───────────────────────────────────────────────────
-  { label: 'SKU Setup',          page: 'SKUSetup',           icon: PackageSearch,  adminOnly: true },
-  { label: 'Recipe Builder',     page: 'RecipeBuilder',      icon: FlaskConical,   adminOnly: true },
-  { label: 'Master Data',        page: 'MasterData',         icon: Settings,       adminOnly: true },
+  { label: 'SKU Setup',             page: 'SKUSetup',                icon: PackageSearch,  adminOnly: true },
+  { label: 'Recipe Builder',        page: 'RecipeBuilder',           icon: FlaskConical,   adminOnly: true },
+  { label: 'Ingredients',           page: 'IngredientManager',       icon: Zap,            adminOnly: true },
+  { label: 'Ingredient Groups',     page: 'IngredientGroupManager',  icon: Zap,            adminOnly: true },
+  { label: 'UOMs',                  page: 'UOMManager',              icon: Tag,            adminOnly: true },
+  { label: 'Box Types',             page: 'BoxTypeManager',          icon: Layers,         adminOnly: true },
+  { label: 'Label Artworks',        page: 'LabelArtworkManager',     icon: Printer,        adminOnly: true },
+  { label: 'Ryan Templates',        page: 'RyanTemplateManager',     icon: Printer,        adminOnly: true },
+  { label: 'Master Data',           page: 'MasterData',              icon: Settings,       adminOnly: true },
 ];
 
 export default function Layout({ children, currentPageName }) {
