@@ -21,8 +21,6 @@ import { Loader2 } from 'lucide-react';
 export default function MasterData() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
-
   useEffect(() => {
     base44.auth.me().then(u => { setUser(u); setLoading(false); });
   }, []);
