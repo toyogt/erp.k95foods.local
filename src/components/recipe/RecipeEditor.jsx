@@ -144,8 +144,8 @@ export default function RecipeEditor({ group, specs, uoms, brandItems, user, onG
         notes: r.notes || '',
         lock_brand: r.lock_brand || false,
         ingredient_item_id: r.lock_brand ? (r.ingredient_item_id || '') : '',
-      })
-    ));
+      });
+    }));
 
     await base44.entities.AuditLog.create({
       action: 'RECIPE_VERSION_SAVED',
