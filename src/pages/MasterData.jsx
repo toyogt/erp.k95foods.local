@@ -63,8 +63,14 @@ export default function MasterData() {
         </div>
         <TabsContent value="products"   className="mt-4"><ProductMasterManager /></TabsContent>
         <TabsContent value="recipes"    className="mt-4">
-          <div className="bg-amber-50 border border-amber-300 rounded-xl p-4 text-amber-800 text-sm font-semibold">
-            ⚠ Recipes have moved to the <a href="/RecipeBuilder" className="underline font-bold">Recipe Builder</a> page. Editing is disabled here.
+          <div className="flex flex-col items-start gap-3 bg-slate-50 border border-slate-200 rounded-xl p-5">
+            <p className="text-sm text-slate-600">Recipes are managed in the dedicated Recipe Builder.</p>
+            <button
+              onClick={() => navigate(createPageUrl('RecipeBuilder'))}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 text-white text-sm font-semibold hover:bg-slate-700 transition-colors"
+            >
+              <ExternalLink className="w-4 h-4" /> Open Recipe Builder
+            </button>
           </div>
         </TabsContent>
         <TabsContent value="ingredients" className="mt-4"><IngredientMasterManager user={user} /></TabsContent>
