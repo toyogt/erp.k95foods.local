@@ -237,6 +237,8 @@ export default function ProductionOrders() {
     setLines(lns);
     setProducts(prods);
     setBoxTypes(bts);
+    setRecipeGroups(rgs);
+    setRecipeOptions(opts);
     setLoading(false);
   };
 
