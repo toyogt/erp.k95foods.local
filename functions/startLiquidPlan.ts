@@ -158,17 +158,46 @@ Deno.serve(async (req) => {
       const resetScope = mapping.sequence_reset_scope || 'DAILY';
       const periodKey = getPeriodKey(mfgDate, resetScope);
 
-      // Peek next sequence (no increment yet)
-      const seq = await peekNextSequence(mapping.batch_format_rule_id, alloc.sku_code, periodKey);
+      // Atomically get next sequence and increment
+      const existingCounters = await base44.entities.BatchSeqCounter.filter({
+        rule_id: mapping.batch_format_rule_id,
+        sku_code: alloc.sku_code,
+        period_key: periodKey,
+      });
+
+      let seq;
+      if (existingCounters.length > 0) {
+        seq = existingCounters[0].next_seq;
+        await base44.entities.BatchSeqCounter.update(existingCounters[0].id, { next_seq: seq + 1 });
+      } else {
+        seq = 1;
+        await base44.entities.BatchSeqCounter.create({
+          rule_id: mapping.batch_format_rule_id,
+          sku_code: alloc.sku_code,
+          period_key: periodKey,
+          next_seq: 2,
+        });
+      }
 
       // Render batch ID
       const batchId = renderBatchId(rule, sku, mfgDate, seq);
 
-      // Update SKUAllocation with batch ID
-      updates.push({
-        allocId: alloc.id,
-        batchId,
-      });
+      // Record in SKUBatch
+      await base44.entities.SKUBatch.create({
+        sku_batch_id: batchId,
+        plan_id: plan_id,
+        allocation_id: alloc.allocation_id,
+        sku_code: alloc.sku_code,
+        date_used: mfgDate.toISOString().split('T')[0],
+        date_source: 'MFG_START',
+        rule_id: mapping.batch_format_rule_id,
+        seq_used: seq,
+        period_key: periodKey,
+        generated_at: now.toISOString(),
+        generated_by: user.email,
+      }).catch(() => {}); // non-blocking if duplicate
+
+      updates.push({ allocId: alloc.id, batchId });
 
       // Update corresponding PackingWO
       const wo = allPackingWOs.find(w => w.allocation_id === alloc.allocation_id);
