@@ -215,6 +215,16 @@ export default function RecipeEditor({ group, specs, uoms, brandItems, user, onG
     const item = brandItems.find(bi => bi.item_id === r.ingredient_item_id);
     return r.lock_brand && item?.status === 'BLOCKED';
   });
+  // Non-approved locked brands (BLOCKED or HOLD) for the banner
+  const nonApprovedLockedRows = draftRows
+    .filter(r => r.lock_brand && r.ingredient_item_id)
+    .map(r => {
+      const item = brandItems.find(bi => bi.item_id === r.ingredient_item_id);
+      const spec = specs.find(s => s.ingredient_id === r.ingredient_id);
+      if (!item || item.status === 'APPROVED') return null;
+      return { ingredient_name: spec?.ingredient_name || r.ingredient_id, brand_name: item.brand_name, status: item.status };
+    })
+    .filter(Boolean);
 
   if (loading && options.length === 0) return <div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>;
 
