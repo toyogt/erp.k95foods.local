@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Save, CheckCircle2, AlertTriangle, Plus, Pencil, Copy, X } from 'lucide-react';
+import { Loader2, Save, CheckCircle2, AlertTriangle, Plus, Pencil, Copy, X, ExternalLink } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import SKUList from '@/components/sku/SKUList';
 import SetupChecklist, { isSetupComplete } from '@/components/sku/SetupChecklist';
