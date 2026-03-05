@@ -30,6 +30,8 @@ export default function LabellingLine() {
   const [machine, setMachine] = useState(null);
   const [wos, setWos] = useState([]);
   const [wo, setWo] = useState(null);
+  const [remainderBlockWo, setRemainderBlockWo] = useState(null); // WO blocked pending override
+  const [remainderOverrideReason, setRemainderOverrideReason] = useState('');
   const [labelScan, setLabelScan] = useState('');
   const [cartonScan, setCartonScan] = useState('');
   const [session, setSession] = useState(null);
