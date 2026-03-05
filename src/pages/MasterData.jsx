@@ -23,6 +23,7 @@ import { useNavigate } from 'react-router-dom';
 export default function MasterData() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     base44.auth.me().then(u => { setUser(u); setLoading(false); });
