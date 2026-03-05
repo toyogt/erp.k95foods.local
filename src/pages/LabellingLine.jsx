@@ -136,8 +136,98 @@ export default function LabellingLine() {
     setStep(STEP.CHECKLIST);
   }
 
+  // Generate batch ID for LABEL_START SKUs when line is approved/started
+  async function generateLabelStartBatchId() {
+    if (!wo?.product_code) return;
+    try {
+      const [mappings, rules, products] = await Promise.all([
+        base44.entities.SKUPrintMapping.filter({ product_code: wo.product_code }),
+        base44.entities.BatchFormatRule.list('-created_date', 500),
+        base44.entities.ProductMaster.filter({ item_code: wo.product_code }),
+      ]);
+      const mapping = mappings[0];
+      if (!mapping || mapping.batch_date_source !== 'LABEL_START' || !mapping.batch_format_rule_id) return;
+      const rule = rules.find(r => r.rule_id === mapping.batch_format_rule_id);
+      if (!rule) return;
+      const sku = products[0];
+      const labelDate = new Date();
+      const resetScope = mapping.sequence_reset_scope || 'DAILY';
+
+      function getPeriodKey(date, scope) {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        if (scope === 'DAILY') return `${y}${m}${d}`;
+        if (scope === 'MONTHLY') return `${y}${m}`;
+        if (scope === 'YEARLY') return `${y}`;
+        return 'NEVER';
+      }
+      const periodKey = getPeriodKey(labelDate, resetScope);
+
+      const existing = await base44.entities.BatchSeqCounter.filter({
+        rule_id: mapping.batch_format_rule_id,
+        sku_code: wo.product_code,
+        period_key: periodKey,
+      });
+      let seq;
+      if (existing.length > 0) {
+        seq = existing[0].next_seq;
+        await base44.entities.BatchSeqCounter.update(existing[0].id, { next_seq: seq + 1 });
+      } else {
+        seq = 1;
+        await base44.entities.BatchSeqCounter.create({
+          rule_id: mapping.batch_format_rule_id,
+          sku_code: wo.product_code,
+          period_key: periodKey,
+          next_seq: 2,
+        });
+      }
+
+      // renderBatchId inline
+      const { renderBatchId } = await import('@/components/batch/batchIdEngine');
+      let parsedRule = rule;
+      if (typeof rule.format_json === 'string') {
+        parsedRule = { ...rule, format_json: JSON.parse(rule.format_json) };
+      }
+      const batchId = renderBatchId({ rule: parsedRule, sku, date: labelDate, seq });
+
+      // Write to PackingWO and find allocation to update
+      const wos = await base44.entities.PackingWO.filter({ wo_id: wo.wo_id });
+      if (wos[0]) await base44.entities.PackingWO.update(wos[0].id, { batch_id: batchId });
+
+      // Find allocation via wo allocation_id link
+      if (wo.allocation_id) {
+        const allocs = await base44.entities.SKUAllocation.filter({ allocation_id: wo.allocation_id });
+        if (allocs[0]) await base44.entities.SKUAllocation.update(allocs[0].id, { sku_batch_id: batchId });
+      }
+
+      // Record SKUBatch
+      await base44.entities.SKUBatch.create({
+        sku_batch_id: batchId,
+        plan_id: wo.plan_id || '',
+        allocation_id: wo.allocation_id || '',
+        wo_id: wo.wo_id,
+        sku_code: wo.product_code,
+        date_used: labelDate.toISOString().split('T')[0],
+        date_source: 'LABEL_START',
+        rule_id: mapping.batch_format_rule_id,
+        seq_used: seq,
+        period_key: periodKey,
+        generated_at: labelDate.toISOString(),
+        generated_by: user?.email || '',
+      }).catch(() => {});
+
+      // Push BATCH to Ryan via edge
+      await callEdge('ryan_set_variable', { variable: 'BATCH', value: batchId }).catch(() => {});
+    } catch (e) {
+      console.error('LABEL_START batch gen failed:', e);
+    }
+  }
+
   async function handleChecklistDone(status, runId) {
     setLoading(true);
+    // Generate LABEL_START batch ID before starting session
+    await generateLabelStartBatchId();
     const sessionId = genSessionId();
     const now = new Date().toISOString();
     let newSession = null;
