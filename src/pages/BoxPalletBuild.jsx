@@ -72,6 +72,54 @@ export default function BoxPalletBuild() {
     if (pallet?.status === 'SEALED') {
       await base44.entities.BoxPallet.update(pallet.id, { status: 'OPEN' });
       setPallet(prev => ({ ...prev, status: 'OPEN', sealed_at: null }));
+
+      // Void PackedOutputEvents and reverse progress
+      try {
+        const events = await base44.entities.PackedOutputEvent.filter({ pallet_id: pallet.pallet_id, status: 'ACTIVE' });
+        const [allAllocations, allOrderLines] = await Promise.all([
+          base44.entities.SKUAllocation.list('-created_date', 2000),
+          base44.entities.ProductionOrderLine.list('-created_date', 2000),
+        ]);
+
+        for (const evt of events) {
+          await base44.entities.PackedOutputEvent.update(evt.id, { status: 'VOID' }).catch(() => {});
+
+          // Recompute allocation produced
+          if (evt.allocation_id) {
+            const allocation = allAllocations.find(a => a.allocation_id === evt.allocation_id);
+            if (allocation) {
+              const remaining = await base44.entities.PackedOutputEvent.filter({
+                allocation_id: evt.allocation_id,
+                status: 'ACTIVE',
+              });
+              const totalProduced = remaining.reduce((s, e) => s + (e.packed_bottles || 0), 0);
+              const isDone = allocation.required_bottles > 0 && totalProduced >= allocation.required_bottles;
+              await base44.entities.SKUAllocation.update(allocation.id, {
+                produced_bottles_packed: totalProduced,
+                status: isDone ? 'DONE' : (totalProduced > 0 ? 'RUNNING' : 'RELEASED'),
+              }).catch(() => {});
+            }
+          }
+
+          // Recompute order line produced
+          if (evt.order_id && evt.sku_code) {
+            const orderLine = allOrderLines.find(l => l.order_id === evt.order_id && l.sku_code === evt.sku_code);
+            if (orderLine) {
+              const remaining = await base44.entities.PackedOutputEvent.filter({
+                order_id: evt.order_id,
+                sku_code: evt.sku_code,
+                status: 'ACTIVE',
+              });
+              const lineProduced = remaining.reduce((s, e) => s + (e.packed_bottles || 0), 0);
+              const lineDone = orderLine.required_bottles > 0 && lineProduced >= orderLine.required_bottles;
+              await base44.entities.ProductionOrderLine.update(orderLine.id, {
+                produced_bottles_packed: lineProduced,
+                status: lineDone ? 'DONE' : (lineProduced > 0 ? 'PARTIAL' : 'OPEN'),
+              }).catch(() => {});
+            }
+          }
+        }
+      } catch { /* non-blocking */ }
     }
     setBackLoading(false);
     setStep(1);
