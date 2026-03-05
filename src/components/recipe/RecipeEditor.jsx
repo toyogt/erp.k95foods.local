@@ -128,6 +128,9 @@ export default function RecipeEditor({ group, specs, uoms, brandItems, user, onG
     });
     if (hasBlocked) { alert('Cannot save: one or more rows have a BLOCKED brand item locked. Please replace it first.'); return; }
 
+    const hasZeroQty = draftRows.some(r => r.ingredient_id && (!r.qty || parseFloat(r.qty) <= 0));
+    if (hasZeroQty) { alert('Cannot save: all ingredients must have a quantity greater than 0.'); return; }
+
     const allVersions = await base44.entities.RecipeVersion.filter({ option_id: activeOptionId });
     const maxVer = allVersions.reduce((m, v) => Math.max(m, v.version_no || 0), 0);
 
