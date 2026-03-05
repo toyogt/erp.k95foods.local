@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Loader2, Upload, AlertTriangle } from 'lucide-react';
+import { Loader2, Upload, AlertTriangle, Download } from 'lucide-react';
 
 function parseCSV(text) {
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
@@ -12,6 +12,18 @@ function parseCSV(text) {
     headers.forEach((h, i) => { obj[h] = vals[i] || ''; });
     return obj;
   });
+}
+
+function downloadTemplate() {
+  const header = 'ingredient_short_code,qty,notes,lock_brand,brand_name';
+  const example = 'AC03,100,Example note,false,';
+  const blob = new Blob([header + '\n' + example], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'recipe_ingredients_template.csv';
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 export default function ImportCSVModal({ specs, uoms, brandItems, onImport, onCancel }) {
@@ -35,7 +47,6 @@ export default function ImportCSVModal({ specs, uoms, brandItems, onImport, onCa
           (row.ingredient_id && s.ingredient_id === row.ingredient_id)
         );
         if (!spec) { warns.push(`Row ${i + 2}: ingredient not found (${row.ingredient_short_code || row.ingredient_id})`); return; }
-        // Always use spec's default UOM — ignore CSV uom_code for standardization
         const uom_id = spec.uom_id || '';
         const lockBrand = row.lock_brand?.toLowerCase() === 'true';
         let itemId = '';
@@ -79,13 +90,18 @@ export default function ImportCSVModal({ specs, uoms, brandItems, onImport, onCa
           <div className="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-xl p-3">
             <p className="font-semibold mb-1">Expected columns:</p>
             <p className="font-mono">ingredient_short_code, qty, notes, lock_brand, brand_name</p>
-            <p className="text-slate-400 mt-1">UOM is auto-set from ingredient spec. phase is not needed.</p>
+            <p className="text-slate-400 mt-1">UOM is auto-set from ingredient spec.</p>
           </div>
 
-          <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={handleFile} />
-          <Button variant="outline" className="w-full gap-2" onClick={() => fileRef.current.click()}>
-            <Upload className="w-4 h-4" /> Choose CSV file
-          </Button>
+          <div className="flex gap-2">
+            <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={handleFile} />
+            <Button variant="outline" className="flex-1 gap-2" onClick={() => fileRef.current.click()}>
+              <Upload className="w-4 h-4" /> Choose CSV File
+            </Button>
+            <Button variant="outline" className="gap-2" onClick={downloadTemplate} title="Download template CSV">
+              <Download className="w-4 h-4" /> Template
+            </Button>
+          </div>
 
           {warnings.length > 0 && (
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-1">
@@ -95,7 +111,7 @@ export default function ImportCSVModal({ specs, uoms, brandItems, onImport, onCa
 
           {rows && (
             <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-xs text-emerald-700">
-              {rows.length} ingredient row(s) parsed successfully.
+              ✓ {rows.length} ingredient row(s) ready to import.
             </div>
           )}
 

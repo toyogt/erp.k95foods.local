@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Plus, Trash2, Lock, Unlock, ShieldBan } from 'lucide-react';
+import { Plus, Trash2, Lock, Unlock, ShieldBan, Search } from 'lucide-react';
 
 const STATUS_STYLE = {
   APPROVED: 'bg-emerald-100 text-emerald-700',
@@ -12,12 +12,99 @@ function emptyRow() {
   return { _key: Date.now() + Math.random(), ingredient_id: '', qty: '', uom_id: '', phase: 'MIX', notes: '', lock_brand: false, ingredient_item_id: '' };
 }
 
+// Searchable ingredient dropdown
+function IngredientSearch({ value, specs, usedIds, onChange }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const ref = useRef(null);
+  const inputRef = useRef(null);
+
+  const selected = specs.find(s => s.ingredient_id === value);
+
+  // Close on outside click
+  useEffect(() => {
+    function handler(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const filtered = specs.filter(s => {
+    if (usedIds.includes(s.ingredient_id) && s.ingredient_id !== value) return false;
+    if (!query) return true;
+    return (
+      s.ingredient_name?.toLowerCase().includes(query.toLowerCase()) ||
+      s.short_code?.toLowerCase().includes(query.toLowerCase())
+    );
+  });
+
+  function select(id) {
+    onChange(id);
+    setOpen(false);
+    setQuery('');
+  }
+
+  return (
+    <div ref={ref} className="relative w-full">
+      <button
+        type="button"
+        onClick={() => { setOpen(o => !o); setTimeout(() => inputRef.current?.focus(), 50); }}
+        className="w-full h-10 px-3 rounded-lg border border-slate-200 text-sm text-left flex items-center justify-between bg-white hover:border-blue-400 focus:outline-none focus:border-blue-500 transition-colors"
+      >
+        <span className={selected ? 'text-slate-800 font-medium' : 'text-slate-400'}>
+          {selected ? `${selected.short_code} · ${selected.ingredient_name}` : '— Select Ingredient —'}
+        </span>
+        <Search className="w-3.5 h-3.5 text-slate-400 shrink-0 ml-1" />
+      </button>
+
+      {open && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden">
+          <div className="p-2 border-b border-slate-100">
+            <input
+              ref={inputRef}
+              autoFocus
+              className="w-full h-8 px-3 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-blue-500"
+              placeholder="Search by name or code…"
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+            />
+          </div>
+          <div className="max-h-48 overflow-y-auto">
+            {filtered.length === 0 && (
+              <p className="text-xs text-slate-400 px-3 py-3 text-center">No results</p>
+            )}
+            {filtered.map(s => {
+              const alreadyUsed = usedIds.includes(s.ingredient_id) && s.ingredient_id !== value;
+              return (
+                <button
+                  key={s.ingredient_id}
+                  type="button"
+                  disabled={alreadyUsed}
+                  onClick={() => select(s.ingredient_id)}
+                  className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors ${
+                    s.ingredient_id === value
+                      ? 'bg-slate-900 text-white'
+                      : alreadyUsed
+                      ? 'opacity-40 cursor-not-allowed'
+                      : 'hover:bg-slate-50 text-slate-700'
+                  }`}
+                >
+                  <span className="font-mono text-xs text-slate-500 w-10 shrink-0">{s.short_code}</span>
+                  <span className="truncate">{s.ingredient_name}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function IngredientGrid({ rows, onChange, specs, uoms, brandItems, isAdmin }) {
   function update(key, field, value) {
     onChange(rows.map(r => {
       if (r._key !== key) return r;
       const updated = { ...r, [field]: value };
-      // Auto-fill UOM from spec when ingredient changes, clear brand lock
       if (field === 'ingredient_id') {
         const spec = specs.find(s => s.ingredient_id === value);
         updated.uom_id = spec?.uom_id || '';
@@ -31,95 +118,88 @@ export default function IngredientGrid({ rows, onChange, specs, uoms, brandItems
   function addRow() { onChange([...rows, emptyRow()]); }
   function removeRow(key) { onChange(rows.filter(r => r._key !== key)); }
 
+  // IDs already used in other rows (for deduplication)
+  const usedIngredientIds = rows.filter(r => r.ingredient_id).map(r => r.ingredient_id);
+
   return (
     <div className="space-y-2">
-      {/* Header — hidden on mobile, shown on desktop */}
-      <div className="hidden lg:grid grid-cols-12 gap-2 px-3 text-xs font-semibold text-slate-400 uppercase tracking-wide pb-1">
-        <div className="col-span-4">Ingredient Spec</div>
-        <div className="col-span-2">Qty</div>
-        <div className="col-span-1">UOM</div>
-        <div className="col-span-4">Brand Lock</div>
-        <div className="col-span-1"></div>
-      </div>
-
-      {rows.map(row => {
+      {rows.map((row, idx) => {
         const spec = specs.find(s => s.ingredient_id === row.ingredient_id);
         const specBrands = brandItems.filter(bi => bi.ingredient_id === row.ingredient_id && bi.is_active);
         const lockedItem = brandItems.find(bi => bi.item_id === row.ingredient_item_id);
         const isBlocked = lockedItem?.status === 'BLOCKED';
         const uom = uoms.find(u => u.uom_id === row.uom_id);
+        // usedIds for this row = all other rows' ingredient_ids
+        const usedByOthers = rows.filter(r => r._key !== row._key).map(r => r.ingredient_id).filter(Boolean);
 
         return (
           <div
             key={row._key}
-            className={`rounded-xl border p-3 space-y-2 lg:space-y-0 lg:grid lg:grid-cols-12 lg:gap-2 lg:items-center ${isBlocked ? 'border-red-300 bg-red-50' : 'border-slate-200 bg-white'}`}
+            className={`rounded-xl border p-3 space-y-2 ${isBlocked ? 'border-red-300 bg-red-50' : 'border-slate-200 bg-slate-50/50'}`}
           >
-            {/* Ingredient SPEC */}
-            <div className="col-span-4">
-              <label className="block text-xs text-slate-400 mb-1 lg:hidden">Ingredient</label>
-              <select
-                className="w-full h-10 px-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-blue-500 bg-white"
-                value={row.ingredient_id}
-                onChange={e => update(row._key, 'ingredient_id', e.target.value)}
+            {/* Row number + delete */}
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-400">#{idx + 1}</span>
+              <button
+                onClick={() => removeRow(row._key)}
+                className="p-1.5 rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-500 transition-colors"
               >
-                <option value="">— Select Ingredient —</option>
-                {specs.map(s => (
-                  <option key={s.ingredient_id} value={s.ingredient_id}>
-                    {s.short_code} · {s.ingredient_name}
-                  </option>
-                ))}
-              </select>
+                <Trash2 className="w-4 h-4" />
+              </button>
             </div>
 
-            {/* Qty + UOM side by side on mobile */}
-            <div className="col-span-2 flex gap-2 lg:block">
+            {/* Ingredient selector */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 mb-1">Ingredient</label>
+              <IngredientSearch
+                value={row.ingredient_id}
+                specs={specs}
+                usedIds={usedByOthers}
+                onChange={val => update(row._key, 'ingredient_id', val)}
+              />
+            </div>
+
+            {/* Qty + UOM */}
+            <div className="flex gap-2 items-end">
               <div className="flex-1">
-                <label className="block text-xs text-slate-400 mb-1 lg:hidden">Qty</label>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">Quantity</label>
                 <input
                   type="number"
                   min="0"
                   step="any"
-                  className="w-full h-10 px-3 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-blue-500"
-                  placeholder="Qty"
+                  className="w-full h-10 px-3 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-blue-500 bg-white"
+                  placeholder="0"
                   value={row.qty}
                   onChange={e => update(row._key, 'qty', e.target.value)}
                 />
               </div>
-              {/* UOM chip — mobile shows inline */}
-              <div className="flex-none lg:hidden flex items-end pb-0">
-                <span className="h-10 flex items-center px-3 rounded-lg bg-blue-50 border border-blue-200 text-sm font-semibold text-blue-700 font-mono whitespace-nowrap min-w-[48px] justify-center">
-                  {uom ? uom.uom_code : <span className="text-slate-300">—</span>}
+              <div className="shrink-0">
+                <label className="block text-xs font-semibold text-slate-500 mb-1">UOM</label>
+                <span className="h-10 flex items-center px-4 rounded-lg bg-blue-50 border border-blue-200 text-sm font-bold text-blue-700 font-mono min-w-[64px] justify-center">
+                  {uom ? uom.uom_code : <span className="text-slate-300 font-normal text-xs">—</span>}
                 </span>
               </div>
             </div>
 
-            {/* UOM chip — desktop only */}
-            <div className="col-span-1 hidden lg:flex items-center">
-              <span className="h-10 w-full flex items-center justify-center rounded-lg bg-blue-50 border border-blue-200 text-sm font-semibold text-blue-700 font-mono">
-                {uom ? uom.uom_code : <span className="text-slate-300 text-xs">—</span>}
-              </span>
-            </div>
-
             {/* Brand Lock */}
-            <div className="col-span-4">
-              <label className="block text-xs text-slate-400 mb-1 lg:hidden">Brand Lock</label>
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
+            {row.ingredient_id && (
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">Brand Lock</label>
+                <div className="flex items-center gap-2 flex-wrap">
                   <button
                     onClick={() => update(row._key, 'lock_brand', !row.lock_brand)}
-                    className={`flex items-center gap-1.5 h-10 px-3 rounded-lg text-sm font-semibold transition-colors border ${
+                    className={`flex items-center gap-1.5 h-9 px-3 rounded-lg text-sm font-semibold transition-colors border ${
                       row.lock_brand
                         ? 'bg-orange-100 text-orange-700 border-orange-300'
-                        : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'
+                        : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-100'
                     }`}
-                    title={row.lock_brand ? 'Remove brand lock' : 'Lock to brand'}
                   >
                     {row.lock_brand ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
-                    {row.lock_brand ? 'Locked' : 'Any'}
+                    {row.lock_brand ? 'Locked' : 'Any Brand'}
                   </button>
                   {row.lock_brand && (
                     <select
-                      className={`flex-1 h-10 px-2 rounded-lg border text-sm focus:outline-none bg-white ${
+                      className={`flex-1 h-9 px-2 rounded-lg border text-sm focus:outline-none bg-white ${
                         isBlocked ? 'border-red-400' : 'border-slate-200 focus:border-blue-500'
                       }`}
                       value={row.ingredient_item_id}
@@ -133,36 +213,29 @@ export default function IngredientGrid({ rows, onChange, specs, uoms, brandItems
                       ))}
                     </select>
                   )}
+                  {row.lock_brand && lockedItem && (
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${STATUS_STYLE[lockedItem.status] || ''}`}>
+                      {lockedItem.status}
+                    </span>
+                  )}
                 </div>
                 {isBlocked && (
-                  <p className="text-xs text-red-600 font-semibold flex items-center gap-1">
+                  <p className="text-xs text-red-600 font-semibold flex items-center gap-1 mt-1">
                     <ShieldBan className="w-3 h-3" /> BLOCKED — cannot save
                   </p>
                 )}
-                {row.lock_brand && lockedItem && lockedItem.status !== 'BLOCKED' && (
-                  <span className={`inline-flex text-xs px-2 py-0.5 rounded-full font-semibold ${STATUS_STYLE[lockedItem.status] || ''}`}>
-                    {lockedItem.status}
-                  </span>
-                )}
               </div>
-            </div>
-
-            {/* Delete */}
-            <div className="col-span-1 flex justify-end lg:justify-center">
-              <button
-                onClick={() => removeRow(row._key)}
-                className="p-2 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
+            )}
           </div>
         );
       })}
 
-      <Button size="default" variant="outline" onClick={addRow} className="gap-2 w-full border-dashed h-10 mt-2">
-        <Plus className="w-4 h-4" /> Add Row
-      </Button>
+      <button
+        onClick={addRow}
+        className="w-full h-11 rounded-xl border-2 border-dashed border-slate-200 text-sm font-semibold text-slate-400 hover:border-blue-300 hover:text-blue-500 hover:bg-blue-50/30 transition-all flex items-center justify-center gap-2"
+      >
+        <Plus className="w-4 h-4" /> Add Ingredient
+      </button>
     </div>
   );
 }
