@@ -138,8 +138,9 @@ export function renderBatchId({ rule, sku, date, seq, useBatchPrefix }) {
   const monthLetter = String.fromCharCode(64 + month); // A=Jan, L=Dec
 
   let result = '';
+  const prefixValue = useBatchPrefix !== false && sku?.batch_prefix ? sku.batch_prefix : (sku?.item_code || '');
 
-  for (const part of rule.format_json.parts) {
+  for (const part of fmtJson.parts) {
     const type = part.type;
 
     if (type === 'text') {
