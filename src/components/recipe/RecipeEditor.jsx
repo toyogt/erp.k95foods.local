@@ -168,6 +168,23 @@ export default function RecipeEditor({ group, specs, uoms, brandItems, user, onG
     await saveVersion({ changeNote, versionName: 'CSV Import' });
   }
 
+  async function deleteRecipe() {
+    if (!confirm(`Delete recipe "${group.recipe_name}"? This will remove all options, versions, and ingredients. This cannot be undone.`)) return;
+    // Delete all options → versions → ingredients
+    const opts = await base44.entities.RecipeOption.filter({ recipe_group_id: group.recipe_group_id });
+    for (const opt of opts) {
+      const vers = await base44.entities.RecipeVersion.filter({ option_id: opt.option_id });
+      for (const v of vers) {
+        const ings = await base44.entities.RecipeVersionIngredient.filter({ version_id: v.version_id });
+        await Promise.all(ings.map(i => base44.entities.RecipeVersionIngredient.delete(i.id)));
+        await base44.entities.RecipeVersion.delete(v.id);
+      }
+      await base44.entities.RecipeOption.delete(opt.id);
+    }
+    await base44.entities.RecipeGroup.delete(group.id);
+    if (onGroupDeleted) onGroupDeleted();
+  }
+
   async function saveGroupHeader() {
     setSavingGroup(true);
     await base44.entities.RecipeGroup.update(group.id, groupForm);
