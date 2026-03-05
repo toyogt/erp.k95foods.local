@@ -291,13 +291,40 @@ export default function ProductionOrders() {
     setSelectedLines(s);
   };
 
-  const handleCreateLiquidPlans = async () => {
+  // Build preview groups from selected lines (for the option-picker dialog)
+  const buildGroups = () => {
+    const lineArr = lines.filter(l => selectedLines.has(l.id));
+    const map = {};
+    for (const line of lineArr) {
+      const prod = products.find(p => p.item_code === line.sku_code);
+      const gid = prod?.recipe_group_id || 'UNKNOWN';
+      if (!map[gid]) map[gid] = { recipe_group_id: gid, lines: [] };
+      map[gid].lines.push(line);
+    }
+    return Object.values(map);
+  };
+
+  const handleOpenPlanDialog = () => {
     if (selectedLines.size === 0) { alert('Select at least one line'); return; }
+    // Initialize option overrides to default option per group
+    const groups = buildGroups();
+    const overrides = {};
+    for (const g of groups) {
+      const opts = recipeOptions.filter(o => o.recipe_group_id === g.recipe_group_id && o.is_active !== false);
+      const def = opts.find(o => o.is_default) || opts[0];
+      if (def) overrides[g.recipe_group_id] = def.option_id;
+    }
+    setOptionOverrides(overrides);
+    setPlanFromOrderOpen(true);
+  };
+
+  const handleCreateLiquidPlans = async () => {
     setCreatingPlan(true);
+    setPlanFromOrderOpen(false);
     try {
       const response = await base44.functions.invoke('createLiquidPlansFromOrders', {
         selectedLineIds: Array.from(selectedLines),
-        skuProducts: products,
+        optionOverrides,
       });
       alert(`Created ${response.data.plansCreated} liquid batch plan(s)`);
       setSelectedLines(new Set());
