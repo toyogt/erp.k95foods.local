@@ -12,16 +12,13 @@ function emptyRow() {
   return { _key: Date.now() + Math.random(), ingredient_id: '', qty: '', uom_id: '', phase: 'MIX', notes: '', lock_brand: false, ingredient_item_id: '' };
 }
 
-// Searchable ingredient dropdown
 function IngredientSearch({ value, specs, usedIds, onChange }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const ref = useRef(null);
   const inputRef = useRef(null);
-
   const selected = specs.find(s => s.ingredient_id === value);
 
-  // Close on outside click
   useEffect(() => {
     function handler(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
     document.addEventListener('mousedown', handler);
@@ -37,23 +34,19 @@ function IngredientSearch({ value, specs, usedIds, onChange }) {
     );
   });
 
-  function select(id) {
-    onChange(id);
-    setOpen(false);
-    setQuery('');
-  }
+  function select(id) { onChange(id); setOpen(false); setQuery(''); }
 
   return (
     <div ref={ref} className="relative w-full">
       <button
         type="button"
         onClick={() => { setOpen(o => !o); setTimeout(() => inputRef.current?.focus(), 50); }}
-        className="w-full h-10 px-3 rounded-lg border border-slate-200 text-sm text-left flex items-center justify-between bg-white hover:border-blue-400 focus:outline-none focus:border-blue-500 transition-colors"
+        className="w-full h-12 px-3 rounded-lg border border-slate-200 text-sm text-left flex items-center justify-between bg-white hover:border-blue-400 focus:outline-none focus:border-blue-500 transition-colors"
       >
         <span className={selected ? 'text-slate-800 font-medium' : 'text-slate-400'}>
           {selected ? `${selected.short_code} · ${selected.ingredient_name}` : '— Select Ingredient —'}
         </span>
-        <Search className="w-3.5 h-3.5 text-slate-400 shrink-0 ml-1" />
+        <Search className="w-4 h-4 text-slate-400 shrink-0 ml-1" />
       </button>
 
       {open && (
@@ -62,13 +55,13 @@ function IngredientSearch({ value, specs, usedIds, onChange }) {
             <input
               ref={inputRef}
               autoFocus
-              className="w-full h-8 px-3 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-blue-500"
+              className="w-full h-10 px-3 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-blue-500"
               placeholder="Search by name or code…"
               value={query}
               onChange={e => setQuery(e.target.value)}
             />
           </div>
-          <div className="max-h-48 overflow-y-auto">
+          <div className="max-h-52 overflow-y-auto">
             {filtered.length === 0 && (
               <p className="text-xs text-slate-400 px-3 py-3 text-center">No results</p>
             )}
@@ -80,7 +73,7 @@ function IngredientSearch({ value, specs, usedIds, onChange }) {
                   type="button"
                   disabled={alreadyUsed}
                   onClick={() => select(s.ingredient_id)}
-                  className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors ${
+                  className={`w-full text-left px-3 py-2.5 text-sm flex items-center gap-2 transition-colors ${
                     s.ingredient_id === value
                       ? 'bg-slate-900 text-white'
                       : alreadyUsed
@@ -88,7 +81,7 @@ function IngredientSearch({ value, specs, usedIds, onChange }) {
                       : 'hover:bg-slate-50 text-slate-700'
                   }`}
                 >
-                  <span className="font-mono text-xs text-slate-500 w-10 shrink-0">{s.short_code}</span>
+                  <span className="font-mono text-xs text-slate-400 w-10 shrink-0">{s.short_code}</span>
                   <span className="truncate">{s.ingredient_name}</span>
                 </button>
               );
@@ -118,31 +111,30 @@ export default function IngredientGrid({ rows, onChange, specs, uoms, brandItems
   function addRow() { onChange([...rows, emptyRow()]); }
   function removeRow(key) { onChange(rows.filter(r => r._key !== key)); }
 
-  // IDs already used in other rows (for deduplication)
   const usedIngredientIds = rows.filter(r => r.ingredient_id).map(r => r.ingredient_id);
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {rows.map((row, idx) => {
         const spec = specs.find(s => s.ingredient_id === row.ingredient_id);
-        const specBrands = brandItems.filter(bi => bi.ingredient_id === row.ingredient_id && bi.is_active);
+        // Only show APPROVED brand items
+        const specBrands = brandItems.filter(bi => bi.ingredient_id === row.ingredient_id && bi.is_active && bi.status === 'APPROVED');
         const lockedItem = brandItems.find(bi => bi.item_id === row.ingredient_item_id);
         const isBlocked = lockedItem?.status === 'BLOCKED';
         const uom = uoms.find(u => u.uom_id === row.uom_id);
-        // usedIds for this row = all other rows' ingredient_ids
         const usedByOthers = rows.filter(r => r._key !== row._key).map(r => r.ingredient_id).filter(Boolean);
 
         return (
           <div
             key={row._key}
-            className={`rounded-xl border p-3 space-y-2 ${isBlocked ? 'border-red-300 bg-red-50' : 'border-slate-200 bg-slate-50/50'}`}
+            className={`rounded-xl border p-4 space-y-3 ${isBlocked ? 'border-red-300 bg-red-50' : 'border-slate-200 bg-slate-50/50'}`}
           >
             {/* Row number + delete */}
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-400">#{idx + 1}</span>
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">Ingredient #{idx + 1}</span>
               <button
                 onClick={() => removeRow(row._key)}
-                className="p-1.5 rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-500 transition-colors"
+                className="h-9 w-9 rounded-lg hover:bg-red-100 text-slate-400 hover:text-red-600 transition-colors flex items-center justify-center"
               >
                 <Trash2 className="w-4 h-4" />
               </button>
@@ -150,7 +142,7 @@ export default function IngredientGrid({ rows, onChange, specs, uoms, brandItems
 
             {/* Ingredient selector */}
             <div>
-              <label className="block text-xs font-semibold text-slate-500 mb-1">Ingredient</label>
+              <label className="block text-xs font-semibold text-slate-500 mb-1.5">Ingredient</label>
               <IngredientSearch
                 value={row.ingredient_id}
                 specs={specs}
@@ -160,22 +152,23 @@ export default function IngredientGrid({ rows, onChange, specs, uoms, brandItems
             </div>
 
             {/* Qty + UOM */}
-            <div className="flex gap-2 items-end">
+            <div className="flex gap-3 items-end">
               <div className="flex-1">
-                <label className="block text-xs font-semibold text-slate-500 mb-1">Quantity</label>
+                <label className="block text-xs font-semibold text-slate-500 mb-1.5">Quantity</label>
                 <input
                   type="number"
                   min="0"
                   step="any"
-                  className="w-full h-10 px-3 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-blue-500 bg-white"
+                  inputMode="decimal"
+                  className="w-full h-12 px-3 rounded-lg border border-slate-200 text-base focus:outline-none focus:border-blue-500 bg-white"
                   placeholder="0"
                   value={row.qty}
                   onChange={e => update(row._key, 'qty', e.target.value)}
                 />
               </div>
               <div className="shrink-0">
-                <label className="block text-xs font-semibold text-slate-500 mb-1">UOM</label>
-                <span className="h-10 flex items-center px-4 rounded-lg bg-blue-50 border border-blue-200 text-sm font-bold text-blue-700 font-mono min-w-[64px] justify-center">
+                <label className="block text-xs font-semibold text-slate-500 mb-1.5">UOM</label>
+                <span className="h-12 flex items-center px-4 rounded-lg bg-blue-50 border border-blue-200 text-sm font-bold text-blue-700 font-mono min-w-[64px] justify-center">
                   {uom ? uom.uom_code : <span className="text-slate-300 font-normal text-xs">—</span>}
                 </span>
               </div>
@@ -184,22 +177,22 @@ export default function IngredientGrid({ rows, onChange, specs, uoms, brandItems
             {/* Brand Lock */}
             {row.ingredient_id && (
               <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1">Brand Lock</label>
-                <div className="flex items-center gap-2 flex-wrap">
+                <label className="block text-xs font-semibold text-slate-500 mb-1.5">Brand Lock</label>
+                <div className="space-y-2">
                   <button
                     onClick={() => update(row._key, 'lock_brand', !row.lock_brand)}
-                    className={`flex items-center gap-1.5 h-9 px-3 rounded-lg text-sm font-semibold transition-colors border ${
+                    className={`flex items-center gap-2 h-11 px-4 rounded-lg text-sm font-semibold transition-colors border ${
                       row.lock_brand
                         ? 'bg-orange-100 text-orange-700 border-orange-300'
                         : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-100'
                     }`}
                   >
-                    {row.lock_brand ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
-                    {row.lock_brand ? 'Locked' : 'Any Brand'}
+                    {row.lock_brand ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+                    {row.lock_brand ? 'Locked to Brand' : 'Any Brand'}
                   </button>
                   {row.lock_brand && (
                     <select
-                      className={`flex-1 h-9 px-2 rounded-lg border text-sm focus:outline-none bg-white ${
+                      className={`w-full h-12 px-3 rounded-lg border text-sm focus:outline-none bg-white ${
                         isBlocked ? 'border-red-400' : 'border-slate-200 focus:border-blue-500'
                       }`}
                       value={row.ingredient_item_id}
@@ -208,22 +201,17 @@ export default function IngredientGrid({ rows, onChange, specs, uoms, brandItems
                       <option value="">— Pick brand —</option>
                       {specBrands.map(bi => (
                         <option key={bi.item_id} value={bi.item_id}>
-                          {bi.brand_name}{bi.supplier_name ? ` (${bi.supplier_name})` : ''} [{bi.status}]
+                          {bi.brand_name}{bi.supplier_name ? ` (${bi.supplier_name})` : ''}
                         </option>
                       ))}
                     </select>
                   )}
-                  {row.lock_brand && lockedItem && (
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${STATUS_STYLE[lockedItem.status] || ''}`}>
-                      {lockedItem.status}
-                    </span>
+                  {isBlocked && (
+                    <p className="text-xs text-red-600 font-semibold flex items-center gap-1">
+                      <ShieldBan className="w-3 h-3" /> BLOCKED — cannot save
+                    </p>
                   )}
                 </div>
-                {isBlocked && (
-                  <p className="text-xs text-red-600 font-semibold flex items-center gap-1 mt-1">
-                    <ShieldBan className="w-3 h-3" /> BLOCKED — cannot save
-                  </p>
-                )}
               </div>
             )}
           </div>
@@ -232,7 +220,7 @@ export default function IngredientGrid({ rows, onChange, specs, uoms, brandItems
 
       <button
         onClick={addRow}
-        className="w-full h-11 rounded-xl border-2 border-dashed border-slate-200 text-sm font-semibold text-slate-400 hover:border-blue-300 hover:text-blue-500 hover:bg-blue-50/30 transition-all flex items-center justify-center gap-2"
+        className="w-full h-12 rounded-xl border-2 border-dashed border-slate-200 text-sm font-semibold text-slate-500 hover:border-blue-300 hover:text-blue-500 hover:bg-blue-50/30 transition-all flex items-center justify-center gap-2"
       >
         <Plus className="w-4 h-4" /> Add Ingredient
       </button>
