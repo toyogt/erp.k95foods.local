@@ -98,9 +98,11 @@ export default function RecipeBuilder() {
               brandItems={brandItems}
               user={user}
               onGroupUpdated={handleGroupUpdated}
+              onGroupDeleted={handleGroupDeleted}
             />
           ) : (
             <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-3">
+              <FlaskConical className="w-12 h-12 opacity-30" />
               <p className="text-lg font-semibold">Select a recipe</p>
               <p className="text-sm">Or create a new one using the list on the left.</p>
             </div>
