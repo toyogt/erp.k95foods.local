@@ -124,9 +124,9 @@ export default function RecipeEditor({ group, specs, uoms, brandItems, user, onG
   async function saveVersion({ changeNote, versionName }) {
     const hasBlocked = draftRows.some(r => {
       const item = brandItems.find(bi => bi.item_id === r.ingredient_item_id);
-      return r.lock_brand && item?.status === 'BLOCKED';
+      return r.lock_brand && (item?.status === 'BLOCKED');
     });
-    if (hasBlocked) { alert('Cannot save: one or more rows have a BLOCKED brand item locked.'); return; }
+    if (hasBlocked) { alert('Cannot save: one or more rows have a BLOCKED brand item locked. Please replace it first.'); return; }
 
     const allVersions = await base44.entities.RecipeVersion.filter({ option_id: activeOptionId });
     const maxVer = allVersions.reduce((m, v) => Math.max(m, v.version_no || 0), 0);
