@@ -140,6 +140,7 @@ export default function RecipeBuilder() {
                 brandItems={brandItems}
                 user={user}
                 onGroupUpdated={handleGroupUpdated}
+                onGroupDeleted={handleGroupDeleted}
               />
             )}
           </div>
