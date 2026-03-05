@@ -8,6 +8,7 @@ import CrateScanner from '@/components/labelling/CrateScanner';
 import SessionStatus from '@/components/labelling/SessionStatus';
 import ChecklistRunner from '@/components/checklist/ChecklistRunner';
 import { callEdge } from '@/components/labelling/edgeClient';
+import { logAudit } from '@/components/AuditLogger';
 import { raiseAlert } from '@/components/alerts/alertHelpers';
 import CrateTraceWindowPanel from '@/components/labelling/CrateTraceWindowPanel';
 import TraceSearchPanel from '@/components/labelling/TraceSearchPanel';
