@@ -559,7 +559,9 @@ export default function LabellingLine() {
             wo={wo}
             machine={machine}
             user={user}
+            isSupervisor={isSupervisor}
             activeRoll={activeRoll}
+            expectedArtworkId={expectedArtwork?.artwork_id}
             onRollChanged={setActiveRoll}
           />
 
