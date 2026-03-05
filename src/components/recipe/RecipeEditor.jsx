@@ -21,6 +21,7 @@ export default function RecipeEditor({ group, specs, uoms, brandItems, user, onG
   const [loading, setLoading] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [editingGroup, setEditingGroup] = useState(false);
   const [groupForm, setGroupForm] = useState({ recipe_name: group.recipe_name, notes: group.notes || '', is_active: group.is_active !== false });
   const [savingGroup, setSavingGroup] = useState(false);
