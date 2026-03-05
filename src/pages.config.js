@@ -76,6 +76,12 @@ import TemplateMappingManager from './pages/TemplateMappingManager';
 import TraceInvestigation from './pages/TraceInvestigation';
 import TransferReceiving from './pages/TransferReceiving';
 import WarehouseOps from './pages/WarehouseOps';
+import IngredientManager from './pages/IngredientManager';
+import UOMManager from './pages/UOMManager';
+import BoxTypeManager from './pages/BoxTypeManager';
+import LabelArtworkManager from './pages/LabelArtworkManager';
+import RyanTemplateManager from './pages/RyanTemplateManager';
+import IngredientGroupManager from './pages/IngredientGroupManager';
 import __Layout from './Layout.jsx';
 
 
@@ -109,6 +115,12 @@ export const PAGES = {
     "TraceInvestigation": TraceInvestigation,
     "TransferReceiving": TransferReceiving,
     "WarehouseOps": WarehouseOps,
+    "IngredientManager": IngredientManager,
+    "UOMManager": UOMManager,
+    "BoxTypeManager": BoxTypeManager,
+    "LabelArtworkManager": LabelArtworkManager,
+    "RyanTemplateManager": RyanTemplateManager,
+    "IngredientGroupManager": IngredientGroupManager,
 }
 
 export const pagesConfig = {
