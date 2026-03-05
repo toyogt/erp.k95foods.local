@@ -549,11 +549,11 @@ export default function IngredientSpecTab({ user }) {
           oldItem={{ label: `${wizard.short_code || ''} ${wizard.ingredient_name}`, id: wizard.ingredient_id }}
           options={items.filter(i => i.ingredient_id !== wizard.ingredient_id && i.is_active).map(i => ({ value: i.ingredient_id, label: `${i.short_code || ''} — ${i.ingredient_name}` }))}
           previewLines={(newId) => {
-            const total = usageOf(wizard);
+            const rvLines = recipeVersionIngredients.filter(ri => ri.ingredient_id === wizard.ingredient_id);
             const newIng = items.find(i => i.ingredient_id === newId);
             const bis = brandItems.filter(bi => bi.ingredient_id === wizard.ingredient_id);
             return [
-              `${total} recipe line(s) → "${newIng?.ingredient_name}"`,
+              `${rvLines.length} recipe version line(s) → "${newIng?.ingredient_name}"`,
               `${bis.length} brand item(s) will be re-assigned`,
               `Old spec will be deactivated`,
             ];
