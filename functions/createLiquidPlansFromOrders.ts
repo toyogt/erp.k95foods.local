@@ -83,16 +83,22 @@ Deno.serve(async (req) => {
           status: 'RELEASED',
         });
 
-        // Create PackingWO for compatibility with downstream
+        // Create PackingWO linked to this allocation
         const woId = `WO-${planId}-${seq}`;
         await base44.asServiceRole.entities.PackingWO.create({
           wo_id: woId,
+          plan_id: planId,
+          allocation_id: allocId,
+          sku_code: line.sku_code,
           product: line._product?.product_name || line.sku_code,
+          product_code: line.sku_code,
           label_sku_code: line.sku_code,
           bottle_type: line._product?.bottle_type || '',
           target_bottles: line.required_bottles,
+          required_bottles: line.required_bottles,
           assigned_line: '',
           status: 'RELEASED',
+          priority: seq,
           batch_id: '',
         });
         seq++;
