@@ -6,6 +6,7 @@ import IngredientGrid from './IngredientGrid';
 import SaveVersionModal from './SaveVersionModal';
 import ImportCSVModal from './ImportCSVModal';
 import VersionHistoryModal from './VersionHistoryModal';
+import BrandApprovalBanner from './BrandApprovalBanner';
 
 function genId(prefix) { return prefix + '-' + Date.now().toString(36).toUpperCase().slice(-5); }
 
