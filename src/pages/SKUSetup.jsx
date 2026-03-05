@@ -417,14 +417,54 @@ export default function SKUSetup() {
                   />
                 </Field>
 
-                <Field label="Batch Format Rule *">
-                  <SelectInput
-                    value={mappingForm.batch_format_rule_id}
-                    onChange={v => setMappingForm(f => ({ ...f, batch_format_rule_id: v }))}
-                    placeholder="— Select rule —"
-                    options={batchRules.map(r => ({ value: r.rule_id, label: `${r.rule_id}${r.description ? ' — ' + r.description : ''}` }))}
-                    empty="No active Batch Format Rules found."
-                  />
+                <Field label="Batch Format Rule *" className="sm:col-span-2">
+                  <div className="flex gap-2 items-start">
+                    <div className="flex-1 min-w-0">
+                      <select
+                        value={mappingForm.batch_format_rule_id}
+                        onChange={e => setMappingForm(f => ({ ...f, batch_format_rule_id: e.target.value }))}
+                        className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm bg-white h-9"
+                      >
+                        <option value="">— Select rule —</option>
+                        {batchRules.map(r => (
+                          <option key={r.rule_id} value={r.rule_id}>
+                            {r.rule_name || r.description || r.rule_id}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <button
+                      onClick={() => { setRuleBuilderRule(null); setRuleBuilderMode('create'); setRuleBuilderOpen(true); }}
+                      className="h-9 px-2 border border-slate-200 rounded-md hover:bg-slate-50 text-slate-600 text-xs flex items-center gap-1 shrink-0"
+                      title="Create New Rule"
+                    ><Plus className="w-3.5 h-3.5" /><span className="hidden sm:inline">New</span></button>
+                    {mappingForm.batch_format_rule_id && (() => {
+                      const selRule = batchRules.find(r => r.rule_id === mappingForm.batch_format_rule_id);
+                      return selRule ? (
+                        <>
+                          <button
+                            onClick={() => { setRuleBuilderRule(selRule); setRuleBuilderMode('edit'); setRuleBuilderOpen(true); }}
+                            className="h-9 px-2 border border-slate-200 rounded-md hover:bg-slate-50 text-slate-600 text-xs flex items-center gap-1 shrink-0"
+                            title="Edit Rule"
+                          ><Pencil className="w-3.5 h-3.5" /><span className="hidden sm:inline">Edit</span></button>
+                          <button
+                            onClick={() => { setRuleBuilderRule(selRule); setRuleBuilderMode('duplicate'); setRuleBuilderOpen(true); }}
+                            className="h-9 px-2 border border-slate-200 rounded-md hover:bg-slate-50 text-slate-600 text-xs flex items-center gap-1 shrink-0"
+                            title="Duplicate Rule"
+                          ><Copy className="w-3.5 h-3.5" /><span className="hidden sm:inline">Dup</span></button>
+                        </>
+                      ) : null;
+                    })()}
+                  </div>
+                  {/* Inline preview for selected rule */}
+                  {mappingForm.batch_format_rule_id && batchRules.find(r => r.rule_id === mappingForm.batch_format_rule_id) && (
+                    <div className="mt-2">
+                      <BatchRulePreview
+                        rule={batchRules.find(r => r.rule_id === mappingForm.batch_format_rule_id)}
+                        sku={skuForm}
+                      />
+                    </div>
+                  )}
                 </Field>
 
                 <Field label="Batch Date Source">
