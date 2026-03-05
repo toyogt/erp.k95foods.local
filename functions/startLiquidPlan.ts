@@ -88,7 +88,7 @@ Deno.serve(async (req) => {
       const monthLetter = String.fromCharCode(64 + month);
 
       let result = '';
-      for (const part of rule.format_json.parts) {
+      for (const part of fmtJson.parts) {
         const type = part.type;
         if (type === 'text') {
           result += part.value || '';
