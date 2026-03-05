@@ -12,7 +12,9 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
+// adminOnly: true  → only shown to admin users
 const ALL_NAV_ITEMS = [
+  // ── Daily ops ──────────────────────────────────────────────────────────────
   { label: 'Dashboard',          page: 'Dashboard',          icon: LayoutDashboard },
   { label: 'Production',         page: 'ProductionControl',  icon: Factory         },
   { label: 'Production Orders',  page: 'ProductionOrders',   icon: ListChecks      },
@@ -34,9 +36,10 @@ const ALL_NAV_ITEMS = [
   { label: 'Feeder Kiosk',       page: 'FeederKiosk',        icon: Tag             },
   { label: 'Trace Investigation',page: 'TraceInvestigation', icon: Search          },
   { label: 'Audit Log',          page: 'AuditLogPage',       icon: ScrollText      },
-  { label: 'SKU Setup',          page: 'SKUSetup',            icon: PackageSearch   },
-  { label: 'Recipe Builder',     page: 'RecipeBuilder',       icon: FlaskConical    },
-  { label: 'Master Data',        page: 'MasterData',         icon: Settings        },
+  // ── Admin: master setup ───────────────────────────────────────────────────
+  { label: 'SKU Setup',          page: 'SKUSetup',           icon: PackageSearch,  adminOnly: true },
+  { label: 'Recipe Builder',     page: 'RecipeBuilder',      icon: FlaskConical,   adminOnly: true },
+  { label: 'Master Data',        page: 'MasterData',         icon: Settings,       adminOnly: true },
 ];
 
 export default function Layout({ children, currentPageName }) {
