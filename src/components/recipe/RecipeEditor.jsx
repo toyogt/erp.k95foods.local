@@ -355,6 +355,15 @@ export default function RecipeEditor({ group, specs, uoms, brandItems, user, onG
           onCancel={() => setShowImport(false)}
         />
       )}
+
+      {showHistory && (
+        <VersionHistoryModal
+          versions={versions}
+          specs={specs}
+          uoms={uoms}
+          onClose={() => setShowHistory(false)}
+        />
+      )}
     </div>
   );
 }
