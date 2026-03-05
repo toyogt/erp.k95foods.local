@@ -376,13 +376,8 @@ export default function RecipeEditor({ group, specs, uoms, brandItems, user, onG
         </div>
       )}
 
-      {/* Blocked brand warning */}
-      {blockedRows.length > 0 && (
-        <div className="bg-red-50 border border-red-300 rounded-xl p-3 flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
-          <p className="text-sm text-red-700 font-semibold">{blockedRows.length} row(s) have a BLOCKED brand item — fix before saving.</p>
-        </div>
-      )}
+      {/* Non-approved brand banner */}
+      <BrandApprovalBanner blockedRows={nonApprovedLockedRows} />
 
       {/* Ingredients */}
       {loading ? (
