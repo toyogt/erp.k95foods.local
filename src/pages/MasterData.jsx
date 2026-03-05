@@ -17,6 +17,7 @@ import IngredientMasterManager from '@/components/master/IngredientMasterManager
 import BoxTypeManager from '@/components/master/BoxTypeManager';
 import IngredientGroupManager from '@/components/master/IngredientGroupManager';
 import UOMMasterManager from '@/components/master/UOMMasterManager';
+import LabelArtworkManager from '@/components/master/LabelArtworkManager';
 import { Loader2 } from 'lucide-react';
 
 export default function MasterData() {
@@ -42,6 +43,7 @@ export default function MasterData() {
         <div className="overflow-x-auto">
           <TabsList className="inline-flex h-10 rounded-xl bg-slate-100 p-1 min-w-full">
             {isAdmin && <TabsTrigger value="products"   className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">SKUs (Adv)</TabsTrigger>}
+            <TabsTrigger value="artworks"   className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Label Artworks</TabsTrigger>
             <TabsTrigger value="boxtypes"   className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Box Types</TabsTrigger>
 
             <TabsTrigger value="ingredients" className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Ingredients</TabsTrigger>
@@ -60,6 +62,7 @@ export default function MasterData() {
           </TabsList>
         </div>
         {isAdmin && <TabsContent value="products"   className="mt-4"><ProductMasterManager /></TabsContent>}
+        <TabsContent value="artworks"   className="mt-4"><LabelArtworkManager user={user} /></TabsContent>
         <TabsContent value="boxtypes"   className="mt-4"><BoxTypeManager user={user} /></TabsContent>
 
         <TabsContent value="ingredients" className="mt-4"><IngredientMasterManager user={user} /></TabsContent>
