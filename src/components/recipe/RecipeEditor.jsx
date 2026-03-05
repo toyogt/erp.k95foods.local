@@ -425,6 +425,10 @@ export default function RecipeEditor({ group, specs, uoms, brandItems, user, onG
       {showSaveModal && (
         <SaveVersionModal
           currentVersionNo={activeVersion?.version_no || 0}
+          rows={draftRows}
+          specs={specs}
+          uoms={uoms}
+          brandItems={brandItems}
           onSave={saveVersion}
           onCancel={() => setShowSaveModal(false)}
         />
