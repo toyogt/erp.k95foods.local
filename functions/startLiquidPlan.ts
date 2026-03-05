@@ -219,6 +219,10 @@ Deno.serve(async (req) => {
       plan_id,
       started_at: now.toISOString(),
       batch_ids_generated: updates.length,
+      batch_map: updates.map(u => {
+        const a = allAllocs.find(x => x.id === u.allocId);
+        return { sku_code: a?.sku_code, sku_batch_id: u.batchId };
+      }),
     });
   } catch (error) {
     console.error('Error:', error);
