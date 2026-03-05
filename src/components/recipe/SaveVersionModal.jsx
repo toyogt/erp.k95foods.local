@@ -18,6 +18,7 @@ export default function SaveVersionModal({ currentVersionNo, rows, specs, uoms, 
   const [saving, setSaving] = useState(false);
 
   const validRows = rows.filter(r => r.ingredient_id);
+  const hasZeroQty = validRows.some(r => !r.qty || parseFloat(r.qty) <= 0);
 
   async function handleConfirmReview() {
     if (isFirstVersion) {
