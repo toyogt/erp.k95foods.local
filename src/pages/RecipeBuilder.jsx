@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Loader2, ShieldOff } from 'lucide-react';
+import { Loader2, ShieldOff, ArrowLeft } from 'lucide-react';
 import RecipeGroupList from '@/components/recipe/RecipeGroupList';
 import RecipeEditor from '@/components/recipe/RecipeEditor';
 
@@ -13,6 +13,8 @@ export default function RecipeBuilder() {
   const [uoms, setUoms] = useState([]);
   const [brandItems, setBrandItems] = useState([]);
   const [selectedGroup, setSelectedGroup] = useState(null);
+  // mobile: 'list' | 'detail'
+  const [mobileView, setMobileView] = useState('list');
 
   useEffect(() => {
     base44.auth.me().then(u => { setUser(u); setAuthLoading(false); });
@@ -38,6 +40,19 @@ export default function RecipeBuilder() {
     setGroupsLoading(false);
   }
 
+  function handleSelectGroup(g) {
+    setSelectedGroup(g);
+    setMobileView('detail');
+  }
+
+  function handleGroupUpdated() {
+    loadGroups();
+    if (selectedGroup) {
+      base44.entities.RecipeGroup.filter({ recipe_group_id: selectedGroup.recipe_group_id })
+        .then(grps => { if (grps[0]) setSelectedGroup(grps[0]); });
+    }
+  }
+
   if (authLoading) return <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-slate-400" /></div>;
 
   if (user?.role !== 'admin' && user?.role !== 'production_manager') {
@@ -51,42 +66,77 @@ export default function RecipeBuilder() {
   }
 
   return (
-    <div className="flex gap-4 h-[calc(100vh-120px)]">
-      {/* Left pane */}
-      <div className="w-64 shrink-0 bg-white border border-slate-200 rounded-2xl p-4 overflow-hidden flex flex-col">
-        <RecipeGroupList
-          groups={groups}
-          loading={groupsLoading}
-          selectedId={selectedGroup?.recipe_group_id}
-          onSelect={g => setSelectedGroup(g)}
-          onCreated={() => { loadGroups(); }}
-        />
+    <>
+      {/* ── DESKTOP: side-by-side ── */}
+      <div className="hidden md:flex gap-4 h-[calc(100vh-120px)]">
+        {/* Left pane */}
+        <div className="w-64 shrink-0 bg-white border border-slate-200 rounded-2xl p-4 overflow-hidden flex flex-col">
+          <RecipeGroupList
+            groups={groups}
+            loading={groupsLoading}
+            selectedId={selectedGroup?.recipe_group_id}
+            onSelect={handleSelectGroup}
+            onCreated={async (newGroup) => { await loadGroups(); handleSelectGroup(newGroup); }}
+            user={user}
+          />
+        </div>
+
+        {/* Right pane */}
+        <div className="flex-1 overflow-y-auto">
+          {selectedGroup ? (
+            <RecipeEditor
+              key={selectedGroup.recipe_group_id}
+              group={selectedGroup}
+              specs={specs}
+              uoms={uoms}
+              brandItems={brandItems}
+              user={user}
+              onGroupUpdated={handleGroupUpdated}
+            />
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-3">
+              <p className="text-lg font-semibold">Select a recipe</p>
+              <p className="text-sm">Or create a new one using the list on the left.</p>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Right pane */}
-      <div className="flex-1 overflow-y-auto">
-        {selectedGroup ? (
-          <RecipeEditor
-            key={selectedGroup.recipe_group_id}
-            group={selectedGroup}
-            specs={specs}
-            uoms={uoms}
-            brandItems={brandItems}
-            user={user}
-            onGroupUpdated={() => {
-              loadGroups();
-              // Refresh selected group data
-              base44.entities.RecipeGroup.filter({ recipe_group_id: selectedGroup.recipe_group_id })
-                .then(grps => { if (grps[0]) setSelectedGroup(grps[0]); });
-            }}
-          />
+      {/* ── MOBILE: single panel ── */}
+      <div className="md:hidden">
+        {mobileView === 'list' ? (
+          <div className="bg-white border border-slate-200 rounded-2xl p-4">
+            <RecipeGroupList
+              groups={groups}
+              loading={groupsLoading}
+              selectedId={selectedGroup?.recipe_group_id}
+              onSelect={handleSelectGroup}
+              onCreated={async (newGroup) => { await loadGroups(); handleSelectGroup(newGroup); }}
+              user={user}
+            />
+          </div>
         ) : (
-          <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-3">
-            <p className="text-lg font-semibold">Select a recipe to edit</p>
-            <p className="text-sm">Or create a new one using the list on the left.</p>
+          <div>
+            <button
+              onClick={() => setMobileView('list')}
+              className="flex items-center gap-2 text-sm font-semibold text-slate-600 mb-4 px-1 py-2"
+            >
+              <ArrowLeft className="w-4 h-4" /> Back to Recipes
+            </button>
+            {selectedGroup && (
+              <RecipeEditor
+                key={selectedGroup.recipe_group_id}
+                group={selectedGroup}
+                specs={specs}
+                uoms={uoms}
+                brandItems={brandItems}
+                user={user}
+                onGroupUpdated={handleGroupUpdated}
+              />
+            )}
           </div>
         )}
       </div>
-    </div>
+    </>
   );
 }
