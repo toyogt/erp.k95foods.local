@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
-import { Loader2, Plus, Trash2, ToggleLeft, ToggleRight, Save, Upload, AlertTriangle, History, FlaskConical } from 'lucide-react';
+import { Loader2, Plus, Trash2, ToggleLeft, ToggleRight, Save, Upload, History, FlaskConical } from 'lucide-react';
 import IngredientGrid from './IngredientGrid';
 import SaveVersionModal from './SaveVersionModal';
 import ImportCSVModal from './ImportCSVModal';
