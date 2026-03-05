@@ -568,6 +568,57 @@ export default function ProductionOrders() {
         )}
       </div>
 
+      {/* Recipe Option Picker Dialog (before creating liquid plans from orders) */}
+      <Dialog open={planFromOrderOpen} onOpenChange={setPlanFromOrderOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Choose Recipe Options</DialogTitle>
+          </DialogHeader>
+          <div className="py-2 space-y-4">
+            <p className="text-xs text-slate-500">
+              Lines are grouped by recipe group. Choose the recipe option (PRIMARY / FALLBACK) for each group below.
+            </p>
+            {buildGroups().map(g => {
+              const rg = recipeGroups.find(r => r.recipe_group_id === g.recipe_group_id);
+              const opts = recipeOptions.filter(o => o.recipe_group_id === g.recipe_group_id && o.is_active !== false);
+              return (
+                <div key={g.recipe_group_id} className="bg-slate-50 rounded-lg p-3 space-y-2 border border-slate-200">
+                  <p className="text-sm font-semibold text-slate-800">
+                    {rg?.recipe_name || g.recipe_group_id}
+                    <span className="ml-2 text-xs text-slate-400 font-normal font-mono">{g.recipe_group_id}</span>
+                  </p>
+                  <p className="text-xs text-slate-500">{g.lines.length} SKU line(s): {g.lines.map(l => l.sku_code).join(', ')}</p>
+                  <div>
+                    <Label className="text-xs">Recipe Option *</Label>
+                    {opts.length === 0
+                      ? <p className="text-xs text-amber-600 mt-1">No recipe options found for this group.</p>
+                      : <select
+                          value={optionOverrides[g.recipe_group_id] || ''}
+                          onChange={e => setOptionOverrides(prev => ({ ...prev, [g.recipe_group_id]: e.target.value }))}
+                          className="w-full border border-slate-200 rounded-md px-2 py-1.5 text-sm bg-white h-9 mt-1"
+                        >
+                          <option value="">— Select —</option>
+                          {opts.map(o => (
+                            <option key={o.id} value={o.option_id}>
+                              {o.option_name}{o.is_default ? ' (PRIMARY)' : ''}
+                            </option>
+                          ))}
+                        </select>
+                    }
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPlanFromOrderOpen(false)}>Cancel</Button>
+            <Button onClick={handleCreateLiquidPlans} disabled={creatingPlan}>
+              {creatingPlan ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Create Plans'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Order Dialog */}
       <Dialog open={orderDialogOpen} onOpenChange={setOrderDialogOpen}>
         <DialogContent className="max-w-lg">
