@@ -138,11 +138,14 @@ export default function ProductMasterManager() {
     setImporting(true);
     setImportResult(null);
 
+    // Load current box types for deriving bottles_per_box
+    const allBoxTypes = await base44.entities.BoxType.list('-created_date', 200).catch(() => []);
+
     const text = await file.text();
     const lines = text.trim().split('\n');
     const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
 
-    let created = 0, errors = [];
+    let created = 0, warnings = [], errors = [];
     for (let i = 1; i < lines.length; i++) {
       const vals = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''));
       const row = {};
@@ -153,18 +156,35 @@ export default function ProductMasterManager() {
         continue;
       }
 
-      const payload = { ...row, is_active: true };
-      ['ml_per_bottle','bottles_per_box','mrp_box','gross_weight_kg','shelf_life_days'].forEach(k => {
+      const payload = { ...row };
+      ['ml_per_bottle','mrp_box','gross_weight_kg','shelf_life_days'].forEach(k => {
         if (payload[k] !== '' && !isNaN(payload[k])) payload[k] = Number(payload[k]);
         else if (payload[k] === '') delete payload[k];
       });
       payload.is_trial_pack = payload.is_trial_pack === 'true' || payload.is_trial_pack === true;
 
+      // Derive bottles_per_box from box_type_id if provided
+      if (payload.box_type_id) {
+        const bt = allBoxTypes.find(b => b.box_type_id === payload.box_type_id);
+        if (bt) {
+          payload.bottles_per_box = bt.bottles_per_box;
+        } else {
+          warnings.push(`Row ${i + 1}: box_type_id "${payload.box_type_id}" not found — bottles_per_box kept as-is.`);
+          if (payload.bottles_per_box !== '' && !isNaN(payload.bottles_per_box)) payload.bottles_per_box = Number(payload.bottles_per_box);
+          else delete payload.bottles_per_box;
+        }
+      } else {
+        warnings.push(`Row ${i + 1}: SKU "${row.item_code}" missing Box Type — set is_active=false until fixed.`);
+        payload.is_active = false;
+        if (payload.bottles_per_box !== '' && !isNaN(payload.bottles_per_box)) payload.bottles_per_box = Number(payload.bottles_per_box);
+        else delete payload.bottles_per_box;
+      }
+
       await base44.entities.ProductMaster.create(payload);
       created++;
     }
 
-    setImportResult({ created, errors });
+    setImportResult({ created, errors: [...errors, ...warnings] });
     setImporting(false);
     load();
   };
