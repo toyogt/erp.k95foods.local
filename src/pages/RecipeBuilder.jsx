@@ -53,6 +53,12 @@ export default function RecipeBuilder() {
     }
   }
 
+  function handleGroupDeleted() {
+    setSelectedGroup(null);
+    setMobileView('list');
+    loadGroups();
+  }
+
   if (authLoading) return <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-slate-400" /></div>;
 
   if (user?.role !== 'admin' && user?.role !== 'production_manager') {
