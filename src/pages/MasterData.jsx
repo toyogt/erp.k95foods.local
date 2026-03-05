@@ -9,16 +9,8 @@ import PackingWOManager from '@/components/master/PackingWOManager';
 import ChecklistTemplateManager from '@/components/master/ChecklistTemplateManager';
 import SyncQueueViewer from '@/components/master/SyncQueueViewer';
 import ModuleAccessManager from '@/components/master/ModuleAccessManager';
-import ProductMasterManager from '@/components/master/ProductMasterManager';
 import ErrorMessagesManager from '@/components/master/ErrorMessagesManager';
 import DowntimeReasonManager from '@/components/master/DowntimeReasonManager';
-// RecipeMasterManager deprecated — use RecipeBuilder page
-import IngredientMasterManager from '@/components/master/IngredientMasterManager';
-import BoxTypeManager from '@/components/master/BoxTypeManager';
-import IngredientGroupManager from '@/components/master/IngredientGroupManager';
-import UOMMasterManager from '@/components/master/UOMMasterManager';
-import LabelArtworkManager from '@/components/master/LabelArtworkManager';
-import RyanTemplateManager from '@/components/master/RyanTemplateManager';
 import { Loader2 } from 'lucide-react';
 
 export default function MasterData() {
