@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+// Advanced masters (SKUs, Recipes, Ingredients, BoxTypes, UOMs, Artworks) live in side-menu pages
 import BottleTypeManager from '@/components/master/BottleTypeManager';
 import LocationManager from '@/components/master/LocationManager';
 import MachineManager from '@/components/master/MachineManager';
