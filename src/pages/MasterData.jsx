@@ -16,9 +16,7 @@ import DowntimeReasonManager from '@/components/master/DowntimeReasonManager';
 import IngredientMasterManager from '@/components/master/IngredientMasterManager';
 import IngredientGroupManager from '@/components/master/IngredientGroupManager';
 import UOMMasterManager from '@/components/master/UOMMasterManager';
-import { Loader2, ExternalLink } from 'lucide-react';
-import { createPageUrl } from '@/utils';
-import { useNavigate } from 'react-router-dom';
+import { Loader2 } from 'lucide-react';
 
 export default function MasterData() {
   const [user, setUser] = useState(null);
