@@ -407,13 +407,15 @@ export default function SKUSetup() {
             {/* ─── Tab 3: Printing & Batch ──────────────────── */}
             <TabsContent value="printing" className="mt-4 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="Ryan Template *">
-                  <SelectInput
+                <Field label="Ryan Template *" className="sm:col-span-2">
+                  <RyanTemplateField
                     value={mappingForm.ryan_template_id}
                     onChange={v => setMappingForm(f => ({ ...f, ryan_template_id: v }))}
-                    placeholder="— Select template —"
-                    options={ryanTemplates.map(t => ({ value: t.ryan_template_id, label: `${t.ryan_template_id}${t.description ? ' — ' + t.description : ''}` }))}
-                    empty="No active Ryan Templates found."
+                    templates={ryanTemplates}
+                    templatePlaceholders={templatePlaceholders}
+                    activeTpl={activeTpl}
+                    isAdmin={isAdmin}
+                    onTemplateUpdated={loadAll}
                   />
                 </Field>
 
