@@ -496,6 +496,41 @@ export default function LabellingLine() {
           <p className="text-sm font-semibold text-slate-600 uppercase tracking-widest">Select Packing WO</p>
           {loading && <div className="flex justify-center py-6"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>}
           {!loading && wos.length === 0 && <p className="text-slate-500 text-sm text-center py-6">No RELEASED work orders for this line.</p>}
+
+          {/* REMAINDER blocker modal */}
+          {remainderBlockWo && (
+            <div className="bg-amber-50 border-2 border-amber-400 rounded-2xl p-5 space-y-3">
+              <div className="flex items-center gap-2 text-amber-800 font-bold">
+                <Lock className="w-5 h-5" />
+                REMAINDER WO — Blocked
+              </div>
+              <p className="text-sm text-amber-700">
+                <span className="font-semibold">{remainderBlockWo.wo_id}</span> is a REMAINDER allocation.
+                Other allocations in this plan must be DONE before starting it.
+              </p>
+              {isSupervisor ? (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-amber-800 uppercase tracking-wide">Supervisor Override — Enter reason:</p>
+                  <input
+                    className="w-full border border-amber-300 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    placeholder="Reason for override…"
+                    value={remainderOverrideReason}
+                    onChange={e => setRemainderOverrideReason(e.target.value)}
+                  />
+                  <div className="flex gap-2">
+                    <Button onClick={handleRemainderOverride} disabled={!remainderOverrideReason.trim()} className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-bold">Override & Proceed</Button>
+                    <Button variant="outline" onClick={() => setRemainderBlockWo(null)} className="flex-1">Cancel</Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <p className="text-xs text-amber-700">Supervisor must approve override.</p>
+                  <Button variant="outline" onClick={() => setRemainderBlockWo(null)} className="ml-auto">Back</Button>
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="space-y-2">
             {wos.map(w => (
               <button key={w.id} onClick={() => handleSelectWO(w)}
@@ -504,10 +539,16 @@ export default function LabellingLine() {
                   <div>
                     <p className="font-bold text-slate-900">{w.wo_id}</p>
                     <p className="text-sm text-slate-600">{w.product}</p>
-                    <p className="text-xs text-slate-400 mt-1">{w.pack_type} · {w.target_bottles} bottles · Prio {w.priority}</p>
+                    <p className="text-xs text-slate-400 mt-1">{w.pack_type ? `${w.pack_type} · ` : ''}{(w.required_bottles || w.target_bottles)} bottles · Prio {w.priority}</p>
                     {w.product_code && <p className="text-xs text-slate-400 font-mono">{w.product_code}</p>}
                   </div>
-                  <span className="text-xs bg-blue-100 text-blue-700 font-semibold px-2 py-1 rounded-full">{w.assigned_line}</span>
+                  <div className="flex flex-col items-end gap-1">
+                    {w.assigned_line
+                      ? <span className="text-xs bg-blue-100 text-blue-700 font-semibold px-2 py-1 rounded-full">{w.assigned_line}</span>
+                      : <span className="text-xs bg-slate-100 text-slate-500 font-semibold px-2 py-1 rounded-full">Unassigned</span>
+                    }
+                    {w.sku_batch_id && <span className="text-xs bg-green-100 text-green-700 font-mono px-2 py-0.5 rounded-full">{w.sku_batch_id || w.batch_id}</span>}
+                  </div>
                 </div>
               </button>
             ))}
