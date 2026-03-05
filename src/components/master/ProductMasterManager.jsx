@@ -57,7 +57,7 @@ export default function ProductMasterManager() {
   const openAdd = () => { setEditItem(null); setForm(EMPTY_FORM); setDialogOpen(true); };
   const openEdit = (p) => { setEditItem(p); setForm({ ...EMPTY_FORM, ...p }); setDialogOpen(true); };
 
-  const missingSetup = (f) => f.is_active && (!f.bottle_type || !f.recipe_id);
+  const missingSetup = (f) => f.is_active && (!f.bottle_type || !f.recipe_id || !f.box_type_id);
 
   const handleToggleActive = async (p) => {
     const next = !p.is_active;
@@ -65,17 +65,37 @@ export default function ProductMasterManager() {
       alert('Cannot activate: bottle_type and recipe_id are required for active SKUs.');
       return;
     }
+    if (next && !p.box_type_id) {
+      alert('Cannot activate: Box Type is required for active SKUs.');
+      return;
+    }
+    const bt = boxTypes.find(b => b.box_type_id === p.box_type_id);
+    if (next && bt && !bt.is_active) {
+      alert('Cannot activate: the linked Box Type is inactive. Please update the Box Type first.');
+      return;
+    }
     await base44.entities.ProductMaster.update(p.id, { is_active: next });
     load();
   };
 
   const handleSave = async () => {
-    if (missingSetup(form)) {
+    if (form.is_active && !form.box_type_id) {
+      alert('Box Type is required for active SKUs.');
+      return;
+    }
+    if (form.is_active && (!form.bottle_type || !form.recipe_id)) {
       alert('Cannot set active: bottle_type and recipe_id are required for active SKUs.');
+      return;
+    }
+    const bt = boxTypes.find(b => b.box_type_id === form.box_type_id);
+    if (form.is_active && bt && !bt.is_active) {
+      alert('Cannot activate: the linked Box Type is inactive.');
       return;
     }
     setSaving(true);
     const payload = { ...form };
+    // Derive bottles_per_box from box type
+    if (bt) payload.bottles_per_box = bt.bottles_per_box;
     ['ml_per_bottle','bottles_per_box','mrp_box','gross_weight_kg','shelf_life_days'].forEach(k => {
       if (payload[k] !== '') payload[k] = Number(payload[k]);
       else delete payload[k];
