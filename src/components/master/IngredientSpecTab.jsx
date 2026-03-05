@@ -243,19 +243,23 @@ export default function IngredientSpecTab({ user }) {
 
   async function load() {
     setLoading(true);
-    const [ings, grps, uomList, recs, ris, bis] = await Promise.all([
+    const [ings, grps, uomList, rvis, rvs, ropts, rgrps, bis] = await Promise.all([
       base44.entities.IngredientMaster.list('-created_date', 500),
       base44.entities.IngredientGroup.filter({ is_active: true }),
       base44.entities.UOMMaster.filter({ is_active: true }),
-      base44.entities.RecipeMaster.list('-created_date', 200),
-      base44.entities.RecipeIngredient.list('-created_date', 2000),
+      base44.entities.RecipeVersionIngredient.list('-created_date', 3000),
+      base44.entities.RecipeVersion.list('-created_date', 1000),
+      base44.entities.RecipeOption.list('-created_date', 500),
+      base44.entities.RecipeGroup.list('-created_date', 200),
       base44.entities.IngredientItem.list('-created_date', 1000),
     ]);
     setItems(ings);
     setGroups(grps.sort((a, b) => a.group_code?.localeCompare(b.group_code)));
     setUoms(uomList.sort((a, b) => a.uom_code?.localeCompare(b.uom_code)));
-    setRecipes(recs);
-    setRecipeIngredients(ris);
+    setRecipeVersionIngredients(rvis);
+    setRecipeVersions(rvs);
+    setRecipeOptions(ropts);
+    setRecipeGroups(rgrps);
     setBrandItems(bis);
     setLoading(false);
   }
