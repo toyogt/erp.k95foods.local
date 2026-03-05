@@ -89,20 +89,62 @@ export default function LabellingLine() {
     setError('');
     const lineNum = m.machine_id.match(/(\d+)$/)?.[1];
     const lineMap = { '1': 'LABEL-LINE-1', '2': 'LABEL-LINE-2' };
-    const assignedLine = lineNum ? lineMap[lineNum] : null;
+    const thisLine = lineNum ? lineMap[lineNum] : null;
     try {
-      const filter = { status: 'RELEASED' };
-      if (assignedLine) filter.assigned_line = assignedLine;
-      setWos(await base44.entities.PackingWO.filter(filter, '-priority', 50));
+      // Load WOs that are RELEASED and either unassigned (blank) or assigned to this line
+      const allReleased = await base44.entities.PackingWO.filter({ status: 'RELEASED' }, 'priority', 100);
+      const visible = allReleased.filter(w =>
+        !w.assigned_line || w.assigned_line === '' || w.assigned_line === thisLine
+      );
+      setWos(visible);
     } catch { setWos([]); }
     setLoading(false);
     setStep(STEP.SELECT_WO);
   }
 
-  function handleSelectWO(w) {
-    setWo(w);
+  async function handleSelectWO(w) {
     setSkuMapping(null);
     setExpectedArtwork(null);
+    setRemainderBlockWo(null);
+    setRemainderOverrideReason('');
+
+    const lineNum = machine?.machine_id?.match(/(\d+)$/)?.[1];
+    const lineMap = { '1': 'LABEL-LINE-1', '2': 'LABEL-LINE-2' };
+    const thisLine = lineNum ? lineMap[lineNum] : null;
+
+    // Claim line if not yet assigned
+    if ((!w.assigned_line || w.assigned_line === '') && thisLine) {
+      try {
+        await base44.entities.PackingWO.update(w.id, { assigned_line: thisLine });
+        w = { ...w, assigned_line: thisLine };
+        await logAudit({ action: `WO ${w.wo_id} claimed for ${thisLine}`, entity_type: 'PackingWO', entity_id: w.wo_id, user, station: machine?.machine_id });
+      } catch { /* non-blocking */ }
+    }
+
+    // REMAINDER enforcement: check if any sibling allocation in same plan is not DONE
+    if (w.plan_id && w.allocation_id) {
+      try {
+        const [siblingAllocs] = await Promise.all([
+          base44.entities.SKUAllocation.filter({ plan_id: w.plan_id }),
+        ]);
+        const thisAlloc = siblingAllocs.find(a => a.allocation_id === w.allocation_id);
+        if (thisAlloc?.allocation_type === 'REMAINDER') {
+          const blockers = siblingAllocs.filter(a =>
+            a.allocation_id !== w.allocation_id && a.status !== 'DONE'
+          );
+          if (blockers.length > 0) {
+            setRemainderBlockWo(w);
+            return; // Hold — show blocker UI instead of proceeding
+          }
+        }
+      } catch { /* non-blocking */ }
+    }
+
+    proceedWithWO(w);
+  }
+
+  function proceedWithWO(w) {
+    setWo(w);
     setStep(STEP.SCAN_LABEL);
     // Load expected artwork from SKU's default_artwork_id
     if (w?.product_code) {
@@ -114,6 +156,20 @@ export default function LabellingLine() {
         }
       }).catch(() => {});
     }
+  }
+
+  async function handleRemainderOverride() {
+    if (!remainderOverrideReason.trim() || !isSupervisor) return;
+    await logAudit({
+      action: `REMAINDER override for WO ${remainderBlockWo?.wo_id} — reason: ${remainderOverrideReason}`,
+      entity_type: 'PackingWO',
+      entity_id: remainderBlockWo?.wo_id,
+      user,
+      station: machine?.machine_id,
+    }).catch(() => {});
+    proceedWithWO(remainderBlockWo);
+    setRemainderBlockWo(null);
+    setRemainderOverrideReason('');
   }
 
   function handleLabelScan(val) {
