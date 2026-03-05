@@ -39,13 +39,15 @@ export default function ProductMasterManager() {
 
   const load = async () => {
     setLoading(true);
-    const [data, bts, recs] = await Promise.all([
+    const [data, bts, boxs, recs] = await Promise.all([
       base44.entities.ProductMaster.list('-created_date', 500),
       base44.entities.BottleType.list('-created_date', 100).catch(() => []),
+      base44.entities.BoxType.filter({ is_active: true }, '-created_date', 200).catch(() => []),
       base44.entities.RecipeMaster.filter({ is_active: true }, '-created_date', 500).catch(() => []),
     ]);
     setProducts(data);
     setBottleTypes(bts);
+    setBoxTypes(boxs);
     setRecipes(recs);
     setLoading(false);
   };
