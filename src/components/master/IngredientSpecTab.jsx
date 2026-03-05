@@ -526,7 +526,13 @@ export default function IngredientSpecTab({ user }) {
                   </div>
                   {isExpanded && (
                     <div className="mt-3 pt-3 border-t border-slate-100">
-                      <WhereUsedPanel ingredient={item} recipeIngredients={recipeIngredients} recipes={recipes} />
+                      <WhereUsedPanel
+                        ingredient={item}
+                        recipeVersionIngredients={recipeVersionIngredients}
+                        recipeVersions={recipeVersions}
+                        recipeOptions={recipeOptions}
+                        recipeGroups={recipeGroups}
+                      />
                     </div>
                   )}
                 </div>
