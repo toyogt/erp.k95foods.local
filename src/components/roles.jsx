@@ -11,12 +11,21 @@ export const ROLES = {
   LabellingReceiver:  'labelling_receiver',
   LabellingOperator:  'line_operator',
   LabellingSupervisor:'labelling_supervisor',
-  // New FG/warehouse roles
+  // FG/warehouse roles
   LabelOperator:      'label_operator',
   LabelSupervisor:    'label_supervisor',
   PalletBuilder:      'pallet_builder',
   WarehouseOps:       'warehouse_ops',
-  // Legacy (kept for backward compat, access removed)
+  // Purchase roles
+  PurchaseUser:       'purchase_user',
+  PurchaseManager:    'purchase_manager',
+  // Receiving / QC / Accounts (for future pages)
+  SecurityGuard:      'security_guard',
+  StoreReceiver:      'store_receiver',
+  QCInspector:        'qc_inspector',
+  AccountsUser:       'accounts_user',
+  AccountsManager:    'accounts_manager',
+  // Legacy
   FGOperator:         'warehouse',
 };
 
