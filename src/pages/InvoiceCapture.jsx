@@ -9,7 +9,7 @@ import { genId, logAccountsAudit, findCandidatePOs } from '@/components/accounts
 export default function InvoiceCapture() {
   const [user, setUser] = useState(null);
   const [step, setStep] = useState(1); // 1=upload, 2=details, 3=items
-  const [suppliers, setSuppliers] = useState([]);
+  const [suppliers, setSuppliersList] = useState([]);
   const [uoms, setUoms] = useState([]);
 
   const [invId, setInvId] = useState('');
@@ -40,7 +40,7 @@ export default function InvoiceCapture() {
         base44.entities.Supplier.list(),
         base44.entities.UOMMaster.list(),
       ]);
-      setSuppliers(supps);
+      setSuppliersList(supps);
       setUoms(uomList);
     })();
   }, []);
