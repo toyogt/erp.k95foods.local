@@ -48,6 +48,7 @@
  * The mainPage value must match a key in the PAGES object exactly.
  */
 import AlertsPage from './pages/AlertsPage';
+import ApprovalsInbox from './pages/ApprovalsInbox';
 import AuditLogPage from './pages/AuditLogPage';
 import BoxLabelApprovals from './pages/BoxLabelApprovals';
 import BoxLabelPrint from './pages/BoxLabelPrint';
@@ -60,6 +61,9 @@ import Dashboard from './pages/Dashboard';
 import FGPalletizing from './pages/FGPalletizing';
 import FeederKiosk from './pages/FeederKiosk';
 import FillingStation from './pages/FillingStation';
+import GRNReceive from './pages/GRNReceive';
+import GateEntry from './pages/GateEntry';
+import GateInbox from './pages/GateInbox';
 import IngredientGroupManager from './pages/IngredientGroupManager';
 import IngredientManager from './pages/IngredientManager';
 import LabelArtworkManager from './pages/LabelArtworkManager';
@@ -71,31 +75,29 @@ import OpeningStockImport from './pages/OpeningStockImport';
 import ProductionControl from './pages/ProductionControl';
 import ProductionOrders from './pages/ProductionOrders';
 import PullLists from './pages/PullLists';
+import PurchaseOps from './pages/PurchaseOps';
+import Putaway from './pages/Putaway';
 import RecipeBuilder from './pages/RecipeBuilder';
 import RecipeStation from './pages/RecipeStation';
 import RyanTemplateManager from './pages/RyanTemplateManager';
 import SKUSetup from './pages/SKUSetup';
 import ShiftKPIDashboard from './pages/ShiftKPIDashboard';
 import StoresIssue from './pages/StoresIssue';
+import SupplierManager from './pages/SupplierManager';
 import TemplateMappingManager from './pages/TemplateMappingManager';
 import TraceInvestigation from './pages/TraceInvestigation';
 import TransferReceiving from './pages/TransferReceiving';
 import UOMManager from './pages/UOMManager';
-import WarehouseOps from './pages/WarehouseOps';
-import PurchaseOps from './pages/PurchaseOps';
-import SupplierManager from './pages/SupplierManager';
-import ApprovalsInbox from './pages/ApprovalsInbox';
-import GateEntry from './pages/GateEntry';
-import GateInbox from './pages/GateInbox';
-import GRNReceive from './pages/GRNReceive';
-import QCInbox from './pages/QCInbox';
-import Putaway from './pages/Putaway';
 import WarehouseBins from './pages/WarehouseBins';
+import WarehouseOps from './pages/WarehouseOps';
+import QCInbox from './pages/QCInbox';
+import InvoiceCapture from './pages/InvoiceCapture';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
     "AlertsPage": AlertsPage,
+    "ApprovalsInbox": ApprovalsInbox,
     "AuditLogPage": AuditLogPage,
     "BoxLabelApprovals": BoxLabelApprovals,
     "BoxLabelPrint": BoxLabelPrint,
@@ -108,6 +110,9 @@ export const PAGES = {
     "FGPalletizing": FGPalletizing,
     "FeederKiosk": FeederKiosk,
     "FillingStation": FillingStation,
+    "GRNReceive": GRNReceive,
+    "GateEntry": GateEntry,
+    "GateInbox": GateInbox,
     "IngredientGroupManager": IngredientGroupManager,
     "IngredientManager": IngredientManager,
     "LabelArtworkManager": LabelArtworkManager,
@@ -119,26 +124,23 @@ export const PAGES = {
     "ProductionControl": ProductionControl,
     "ProductionOrders": ProductionOrders,
     "PullLists": PullLists,
+    "PurchaseOps": PurchaseOps,
+    "Putaway": Putaway,
     "RecipeBuilder": RecipeBuilder,
     "RecipeStation": RecipeStation,
     "RyanTemplateManager": RyanTemplateManager,
     "SKUSetup": SKUSetup,
     "ShiftKPIDashboard": ShiftKPIDashboard,
     "StoresIssue": StoresIssue,
+    "SupplierManager": SupplierManager,
     "TemplateMappingManager": TemplateMappingManager,
     "TraceInvestigation": TraceInvestigation,
     "TransferReceiving": TransferReceiving,
     "UOMManager": UOMManager,
-    "WarehouseOps": WarehouseOps,
-    "PurchaseOps": PurchaseOps,
-    "SupplierManager": SupplierManager,
-    "ApprovalsInbox": ApprovalsInbox,
-    "GateEntry": GateEntry,
-    "GateInbox": GateInbox,
-    "GRNReceive": GRNReceive,
-    "QCInbox": QCInbox,
-    "Putaway": Putaway,
     "WarehouseBins": WarehouseBins,
+    "WarehouseOps": WarehouseOps,
+    "QCInbox": QCInbox,
+    "InvoiceCapture": InvoiceCapture,
 }
 
 export const pagesConfig = {
