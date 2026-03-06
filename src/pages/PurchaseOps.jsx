@@ -54,12 +54,12 @@ export default function PurchaseOps() {
 
       {/* Tabs */}
       <div className="flex bg-slate-100 rounded-2xl p-1 gap-1">
-        {TABS.map(({ id, label, Icon }) => (
+        {TABS.map(({ id, label, Icon: TabIcon }) => (
           <button key={id} onClick={() => setTab(id)}
             className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
               tab === id ? 'bg-white shadow text-slate-900' : 'text-slate-500 hover:text-slate-700'
             }`}>
-            {<Icon className="w-4 h-4" />}
+            <TabIcon className="w-4 h-4" />
             <span className="hidden sm:inline">{label}</span>
           </button>
         ))}
