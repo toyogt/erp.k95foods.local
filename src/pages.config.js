@@ -88,6 +88,9 @@ import ApprovalsInbox from './pages/ApprovalsInbox';
 import GateEntry from './pages/GateEntry';
 import GateInbox from './pages/GateInbox';
 import GRNReceive from './pages/GRNReceive';
+import QCInbox from './pages/QCInbox';
+import Putaway from './pages/Putaway';
+import WarehouseBins from './pages/WarehouseBins';
 import __Layout from './Layout.jsx';
 
 
@@ -133,6 +136,9 @@ export const PAGES = {
     "GateEntry": GateEntry,
     "GateInbox": GateInbox,
     "GRNReceive": GRNReceive,
+    "QCInbox": QCInbox,
+    "Putaway": Putaway,
+    "WarehouseBins": WarehouseBins,
 }
 
 export const pagesConfig = {
