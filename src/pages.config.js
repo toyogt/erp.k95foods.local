@@ -53,12 +53,16 @@ import BoxLabelApprovals from './pages/BoxLabelApprovals';
 import BoxLabelPrint from './pages/BoxLabelPrint';
 import BoxPalletBuild from './pages/BoxPalletBuild';
 import BoxStockDashboard from './pages/BoxStockDashboard';
+import BoxTypeManager from './pages/BoxTypeManager';
 import ChamberStation from './pages/ChamberStation';
 import CustomizeDashboard from './pages/CustomizeDashboard';
 import Dashboard from './pages/Dashboard';
 import FGPalletizing from './pages/FGPalletizing';
 import FeederKiosk from './pages/FeederKiosk';
 import FillingStation from './pages/FillingStation';
+import IngredientGroupManager from './pages/IngredientGroupManager';
+import IngredientManager from './pages/IngredientManager';
+import LabelArtworkManager from './pages/LabelArtworkManager';
 import LabelRollManager from './pages/LabelRollManager';
 import LabellingLine from './pages/LabellingLine';
 import LiquidPlans from './pages/LiquidPlans';
@@ -69,19 +73,15 @@ import ProductionOrders from './pages/ProductionOrders';
 import PullLists from './pages/PullLists';
 import RecipeBuilder from './pages/RecipeBuilder';
 import RecipeStation from './pages/RecipeStation';
+import RyanTemplateManager from './pages/RyanTemplateManager';
 import SKUSetup from './pages/SKUSetup';
 import ShiftKPIDashboard from './pages/ShiftKPIDashboard';
 import StoresIssue from './pages/StoresIssue';
 import TemplateMappingManager from './pages/TemplateMappingManager';
 import TraceInvestigation from './pages/TraceInvestigation';
 import TransferReceiving from './pages/TransferReceiving';
-import WarehouseOps from './pages/WarehouseOps';
-import IngredientManager from './pages/IngredientManager';
 import UOMManager from './pages/UOMManager';
-import BoxTypeManager from './pages/BoxTypeManager';
-import LabelArtworkManager from './pages/LabelArtworkManager';
-import RyanTemplateManager from './pages/RyanTemplateManager';
-import IngredientGroupManager from './pages/IngredientGroupManager';
+import WarehouseOps from './pages/WarehouseOps';
 import __Layout from './Layout.jsx';
 
 
@@ -92,12 +92,16 @@ export const PAGES = {
     "BoxLabelPrint": BoxLabelPrint,
     "BoxPalletBuild": BoxPalletBuild,
     "BoxStockDashboard": BoxStockDashboard,
+    "BoxTypeManager": BoxTypeManager,
     "ChamberStation": ChamberStation,
     "CustomizeDashboard": CustomizeDashboard,
     "Dashboard": Dashboard,
     "FGPalletizing": FGPalletizing,
     "FeederKiosk": FeederKiosk,
     "FillingStation": FillingStation,
+    "IngredientGroupManager": IngredientGroupManager,
+    "IngredientManager": IngredientManager,
+    "LabelArtworkManager": LabelArtworkManager,
     "LabelRollManager": LabelRollManager,
     "LabellingLine": LabellingLine,
     "LiquidPlans": LiquidPlans,
@@ -108,19 +112,15 @@ export const PAGES = {
     "PullLists": PullLists,
     "RecipeBuilder": RecipeBuilder,
     "RecipeStation": RecipeStation,
+    "RyanTemplateManager": RyanTemplateManager,
     "SKUSetup": SKUSetup,
     "ShiftKPIDashboard": ShiftKPIDashboard,
     "StoresIssue": StoresIssue,
     "TemplateMappingManager": TemplateMappingManager,
     "TraceInvestigation": TraceInvestigation,
     "TransferReceiving": TransferReceiving,
-    "WarehouseOps": WarehouseOps,
-    "IngredientManager": IngredientManager,
     "UOMManager": UOMManager,
-    "BoxTypeManager": BoxTypeManager,
-    "LabelArtworkManager": LabelArtworkManager,
-    "RyanTemplateManager": RyanTemplateManager,
-    "IngredientGroupManager": IngredientGroupManager,
+    "WarehouseOps": WarehouseOps,
 }
 
 export const pagesConfig = {

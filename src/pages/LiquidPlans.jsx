@@ -229,9 +229,16 @@ function CreatePlanDialog({ open, onClose, products, boxTypes, recipeGroups, rec
   const [allocs, setAllocs] = useState([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  // pending picker state (lifted up so save() can auto-commit)
+  const [pendingSku, setPendingSku] = useState('');
+  const [pendingType, setPendingType] = useState('FIXED');
+  const [pendingBottles, setPendingBottles] = useState('');
 
   useEffect(() => {
-    if (!open) { setRecipeGroupId(''); setOptionId(''); setNotes(''); setAllocs([]); setError(''); }
+    if (!open) {
+      setRecipeGroupId(''); setOptionId(''); setNotes(''); setAllocs([]); setError('');
+      setPendingSku(''); setPendingType('FIXED'); setPendingBottles('');
+    }
   }, [open]);
 
   // When group changes, default to PRIMARY option
@@ -241,16 +248,46 @@ function CreatePlanDialog({ open, onClose, products, boxTypes, recipeGroups, rec
     const primary = opts.find(o => o.is_default) || opts[0];
     setOptionId(primary?.option_id || '');
     setAllocs([]);
+    setPendingSku(''); setPendingType('FIXED'); setPendingBottles('');
   }, [recipeGroupId]);
 
   const groupOptions = recipeOptions.filter(o => o.recipe_group_id === recipeGroupId && o.is_active !== false);
-  const remainderCount = allocs.filter(a => a.allocation_type === 'REMAINDER').length;
+
+  // Build final allocs, auto-committing any pending row
+  function buildFinalAllocs() {
+    let final = [...allocs];
+    if (pendingSku) {
+      const product = products.find(p => p.item_code === pendingSku);
+      const bpb = product?.bottles_per_box || boxTypes.find(b => b.box_type_id === product?.box_type_id)?.bottles_per_box || null;
+      const required = bpb && pendingBottles && pendingType !== 'REMAINDER'
+        ? computeRequired(pendingBottles, bpb) : (pendingType !== 'REMAINDER' ? Number(pendingBottles) : 0);
+      final = [...final, {
+        _localId: Math.random().toString(36).slice(2),
+        sku_code: pendingSku,
+        allocation_type: pendingType,
+        target_bottles_requested: pendingType === 'REMAINDER' ? 0 : Number(pendingBottles),
+        required_bottles: pendingType === 'REMAINDER' ? 0 : required,
+        bpb,
+      }];
+    }
+    return final;
+  }
+
+  const remainderCount = allocs.filter(a => a.allocation_type === 'REMAINDER').length
+    + (pendingSku && pendingType === 'REMAINDER' ? 1 : 0);
 
   async function save() {
     setError('');
     if (!recipeGroupId) { setError('Select a recipe group.'); return; }
     if (!optionId)      { setError('Select a recipe option.'); return; }
-    if (allocs.length === 0) { setError('Add at least one SKU allocation.'); return; }
+
+    const finalAllocs = buildFinalAllocs();
+
+    // Validate pending row if partially filled
+    if (pendingSku && pendingType !== 'REMAINDER' && !pendingBottles) {
+      setError('Enter target bottles for the pending SKU row, or clear the selection.'); return;
+    }
+    if (finalAllocs.length === 0) { setError('Add at least one SKU allocation.'); return; }
     if (remainderCount > 1) { setError('Only one REMAINDER allocation allowed per plan.'); return; }
 
     setSaving(true);
