@@ -574,9 +574,14 @@ export default function LabellingLine() {
               ⚠️ Mapping exists but is inactive
             </div>
           )}
-          {wo?.product_code && skuMapping && skuMapping.is_active && (!skuMapping.ryan_template_id || !skuMapping.batch_format_rule_id || !skuMapping.label_variant_id) && (
+          {wo?.product_code && skuMapping && skuMapping.is_active && (!skuMapping.ryan_template_id || !skuMapping.batch_format_rule_id) && (
             <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-700 font-semibold text-center">
-              ⛔ Missing mapping — ryan_template_id, batch_format_rule_id, or label_variant_id not configured
+              ⛔ Missing mapping — ryan_template_id or batch_format_rule_id not configured
+            </div>
+          )}
+          {wo?.product_code && skuMapping && skuMapping.is_active && !skuMapping.label_variant_id && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700 text-center">
+              ⚠️ label_variant_id not set — edge printer template selection will be skipped
             </div>
           )}
           <p className="text-sm font-semibold text-slate-600 uppercase tracking-widest">Scan Label SKU</p>
