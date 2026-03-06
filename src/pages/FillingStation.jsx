@@ -245,7 +245,9 @@ export default function FillingStation() {
   async function handleCreatePallet() {
     if (!palletScan.trim()) return;
     setLoading(true);
-    const palletData = {
+    let palletData;
+    try {
+      palletData = {
       pallet_id: palletScan.trim(),
       pallet_type: 'WIP',
       current_location: LOC_FILLING,
