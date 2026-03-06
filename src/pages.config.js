@@ -92,6 +92,8 @@ import WarehouseBins from './pages/WarehouseBins';
 import WarehouseOps from './pages/WarehouseOps';
 import QCInbox from './pages/QCInbox';
 import InvoiceCapture from './pages/InvoiceCapture';
+import ThreeWayMatch from './pages/ThreeWayMatch';
+import PaymentRequests from './pages/PaymentRequests';
 import __Layout from './Layout.jsx';
 
 
@@ -141,6 +143,8 @@ export const PAGES = {
     "WarehouseOps": WarehouseOps,
     "QCInbox": QCInbox,
     "InvoiceCapture": InvoiceCapture,
+    "ThreeWayMatch": ThreeWayMatch,
+    "PaymentRequests": PaymentRequests,
 }
 
 export const pagesConfig = {
