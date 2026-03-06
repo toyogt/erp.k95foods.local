@@ -31,15 +31,20 @@ export default function MachineScanner({ stationType, onConfirmed }) {
 
   if (machine) {
     return (
-      <div className="rounded-2xl bg-slate-900 text-white p-5 flex items-center gap-4">
-        <CheckCircle2 className="w-8 h-8 text-emerald-400 flex-shrink-0" />
-        <div>
-          <p className="text-xs uppercase tracking-widest text-slate-400">Station</p>
-          <p className="text-xl font-bold">{machine.display_name}</p>
-          {machine.default_location && <p className="text-sm text-slate-300 mt-0.5">{machine.default_location}</p>}
+      <div className="space-y-3">
+        <div className="rounded-2xl bg-slate-900 text-white p-5 flex items-center gap-4">
+          <CheckCircle2 className="w-8 h-8 text-emerald-400 flex-shrink-0" />
+          <div>
+            <p className="text-xs uppercase tracking-widest text-slate-400">Station</p>
+            <p className="text-xl font-bold">{machine.display_name}</p>
+            {machine.default_location && <p className="text-sm text-slate-300 mt-0.5">{machine.default_location}</p>}
+          </div>
+          <Button variant="ghost" size="sm" className="ml-auto text-slate-400 hover:text-white" onClick={() => { setMachine(null); setScan(''); onConfirmed(null); }}>
+            Change
+          </Button>
         </div>
-        <Button variant="ghost" size="sm" className="ml-auto text-slate-400 hover:text-white" onClick={() => { setMachine(null); setScan(''); onConfirmed(null); }}>
-          Change
+        <Button className="w-full h-12 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-base" onClick={() => onConfirmed(machine)}>
+          Confirm &amp; Continue →
         </Button>
       </div>
     );
