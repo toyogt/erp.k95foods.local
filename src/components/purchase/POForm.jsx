@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
-import { Loader2, AlertTriangle } from 'lucide-react';
+import { Loader2, AlertTriangle, Plus, Trash2 } from 'lucide-react';
 import { genId, logPurchaseAudit } from './purchaseHelpers';
 
 export default function POForm({ user, isAdmin, sourceMR, sourceItems, onDone, onCancel }) {
@@ -11,9 +11,14 @@ export default function POForm({ user, isAdmin, sourceMR, sourceItems, onDone, o
   const [lines, setLines] = useState([]);
   const [terms, setTerms] = useState('');
   const [loading, setLoading] = useState(false);
+  const [ingredients, setIngredients] = useState([]);
+  const [uoms, setUoms] = useState([]);
+  const [searches, setSearches] = useState({});
 
   useEffect(() => {
     base44.entities.Supplier.list('supplier_name', 200).then(setSuppliers).catch(() => {});
+    base44.entities.IngredientMaster.filter({ is_active: true }, 'ingredient_name', 500).then(setIngredients).catch(() => {});
+    base44.entities.UOMMaster.list('uom_name', 200).then(setUoms).catch(() => {});
     if (sourceItems?.length) {
       setLines(sourceItems.map(it => ({
         item_code: it.item_code,
@@ -21,13 +26,38 @@ export default function POForm({ user, isAdmin, sourceMR, sourceItems, onDone, o
         uom_code: it.uom_code,
         qty: it.qty,
         rate: '',
+        amount: 0,
         schedule_date: it.required_by || '',
         remarks: it.remarks || '',
       })));
     } else {
-      setLines([{ item_code: '', item_name: '', uom_code: '', qty: '', rate: '', schedule_date: '', remarks: '' }]);
+      setLines([{ item_code: '', item_name: '', uom_code: '', qty: '', rate: '', amount: 0, schedule_date: '', remarks: '' }]);
     }
   }, []);
+
+  function setSearch(i, val) { setSearches(prev => ({ ...prev, [i]: val })); }
+
+  function getFiltered(i) {
+    const q = searches[i] || '';
+    if (q.length < 2) return [];
+    return ingredients.filter(g =>
+      g.ingredient_name?.toLowerCase().includes(q.toLowerCase()) ||
+      g.short_code?.toLowerCase().includes(q.toLowerCase())
+    ).slice(0, 8);
+  }
+
+  function selectIngredient(i, ing) {
+    setLines(prev => prev.map((l, idx) => idx === i ? { ...l, item_code: ing.short_code || ing.ingredient_id, item_name: ing.ingredient_name } : l));
+    setSearch(i, '');
+  }
+
+  function addLine() {
+    setLines(prev => [...prev, { item_code: '', item_name: '', uom_code: '', qty: '', rate: '', amount: 0, schedule_date: '', remarks: '' }]);
+  }
+
+  function removeLine(i) {
+    setLines(prev => prev.filter((_, idx) => idx !== i));
+  }
 
   function updateLine(i, field, val) {
     setLines(prev => prev.map((l, idx) => {
@@ -42,7 +72,8 @@ export default function POForm({ user, isAdmin, sourceMR, sourceItems, onDone, o
 
   const totalAmount = lines.reduce((s, l) => s + (Number(l.amount) || 0), 0);
   const isNonApproved = selectedSupplier && selectedSupplier.approval_status !== 'APPROVED';
-  const canSubmit = selectedSupplier && (!isNonApproved || (isAdmin && overrideReason.trim()));
+  const hasItems = lines.some(l => l.item_code);
+  const canSubmit = selectedSupplier && hasItems && (!isNonApproved || (isAdmin && overrideReason.trim()));
 
   async function handleSubmit() {
     if (!canSubmit) return;
@@ -127,31 +158,80 @@ export default function POForm({ user, isAdmin, sourceMR, sourceItems, onDone, o
       {/* Lines */}
       <div>
         <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Items</label>
-        <div className="mt-2 space-y-2">
-          {lines.map((l, i) => (
-            <div key={i} className="bg-slate-50 rounded-xl p-3 grid grid-cols-3 gap-2">
-              <div className="col-span-2">
-                <p className="text-sm font-medium text-slate-800">{l.item_name || l.item_code}</p>
-                <p className="text-xs text-slate-400">{l.uom_code}</p>
+        {!hasItems && <p className="text-xs text-red-500 mt-1">At least one item must be selected.</p>}
+        <div className="mt-2 space-y-3">
+          {lines.map((l, i) => {
+            const filtered = getFiltered(i);
+            const q = searches[i] || '';
+            return (
+              <div key={i} className="bg-slate-50 rounded-xl p-3 space-y-2">
+                {/* Item search */}
+                <div className="relative">
+                  <input
+                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white"
+                    placeholder="Search item by name or code..."
+                    value={l.item_code ? (l.item_name || l.item_code) : q}
+                    onChange={e => {
+                      if (l.item_code) { updateLine(i, 'item_code', ''); updateLine(i, 'item_name', ''); }
+                      setSearch(i, e.target.value);
+                    }}
+                  />
+                  {q.length > 1 && filtered.length > 0 && !l.item_code && (
+                    <div className="absolute z-10 left-0 right-0 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto mt-1">
+                      {filtered.map(ing => (
+                        <button key={ing.id} onClick={() => selectIngredient(i, ing)}
+                          className="w-full text-left px-3 py-2.5 text-sm hover:bg-blue-50 flex justify-between items-center border-b border-slate-50 last:border-0">
+                          <span className="font-medium">{ing.ingredient_name}</span>
+                          <span className="text-slate-400 font-mono text-xs">{ing.short_code}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {q.length > 1 && filtered.length === 0 && !l.item_code && (
+                    <div className="absolute z-10 left-0 right-0 bg-white border border-slate-200 rounded-xl shadow-lg mt-1 px-3 py-2.5 text-sm text-slate-400">
+                      No items found
+                    </div>
+                  )}
+                </div>
+                {l.item_code && (
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-green-600 font-mono">✓ {l.item_code}</p>
+                    <button className="text-xs text-slate-400 hover:text-red-500" onClick={() => { updateLine(i, 'item_code', ''); updateLine(i, 'item_name', ''); setSearch(i, ''); }}>Change</button>
+                  </div>
+                )}
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label className="text-xs text-slate-400">Qty</label>
+                    <input type="number" className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-sm bg-white"
+                      value={l.qty} onChange={e => updateLine(i, 'qty', e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-400">Rate (₹)</label>
+                    <input type="number" className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-sm bg-white"
+                      value={l.rate} onChange={e => updateLine(i, 'rate', e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-400">UOM</label>
+                    <select className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-sm bg-white"
+                      value={l.uom_code} onChange={e => updateLine(i, 'uom_code', e.target.value)}>
+                      <option value="">—</option>
+                      {uoms.map(u => <option key={u.id} value={u.uom_id}>{u.uom_name}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-slate-500">Amount: <span className="font-bold text-slate-800">₹{Number(l.amount || 0).toFixed(2)}</span></p>
+                  {lines.length > 1 && (
+                    <button onClick={() => removeLine(i)} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+                  )}
+                </div>
               </div>
-              <div className="text-right text-xs text-slate-400">{l.schedule_date}</div>
-              <div>
-                <label className="text-xs text-slate-400">Qty</label>
-                <input type="number" className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-sm bg-white"
-                  value={l.qty} onChange={e => updateLine(i, 'qty', e.target.value)} />
-              </div>
-              <div>
-                <label className="text-xs text-slate-400">Rate (₹)</label>
-                <input type="number" className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-sm bg-white"
-                  value={l.rate} onChange={e => updateLine(i, 'rate', e.target.value)} />
-              </div>
-              <div>
-                <label className="text-xs text-slate-400">Amount</label>
-                <p className="text-sm font-bold text-slate-800 pt-2">₹{Number(l.amount || 0).toFixed(2)}</p>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
+        <button onClick={addLine} className="flex items-center gap-1 text-blue-600 text-sm font-semibold mt-2 hover:text-blue-800">
+          <Plus className="w-4 h-4" /> Add another item
+        </button>
         <div className="flex justify-end mt-2">
           <p className="text-sm font-bold text-slate-800">Total: ₹{totalAmount.toFixed(2)}</p>
         </div>
