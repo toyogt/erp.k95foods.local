@@ -35,6 +35,7 @@ const ALL_NAV_ITEMS = [
   { label: 'Shift KPIs',         page: 'ShiftKPIDashboard',  icon: BarChart3       },
   { label: 'Feeder Kiosk',       page: 'FeederKiosk',        icon: Tag             },
   { label: 'Purchase',           page: 'PurchaseOps',         icon: ShoppingCart    },
+  { label: 'Approvals Inbox',    page: 'ApprovalsInbox',      icon: Inbox           },
   { label: 'Suppliers',          page: 'SupplierManager',     icon: Truck,          adminOnly: true },
   { label: 'Trace Investigation',page: 'TraceInvestigation', icon: Search          },
   { label: 'Audit Log',          page: 'AuditLogPage',       icon: ScrollText      },
