@@ -41,6 +41,7 @@ const ACCESS_MAP = {
     'BoxLabelPrint','BoxLabelApprovals','BoxPalletBuild','WarehouseOps','BoxStockDashboard','OpeningStockImport',
     'ProductionControl','LabelRollManager','TemplateMappingManager','FeederKiosk','TraceInvestigation',
     ...PURCHASE_PAGES, ...APPROVAL_PAGES,
+    'GateEntry', 'GateInbox', 'GRNReceive',
   ],
   production_manager: [
     'Dashboard','AuditLogPage','MasterData','AlertsPage','PullLists','CustomizeDashboard',
@@ -66,9 +67,9 @@ const ACCESS_MAP = {
   // Purchase roles
   purchase_user:        ['Dashboard', 'PurchaseOps'],
   purchase_manager:     ['Dashboard', 'PurchaseOps', 'SupplierManager', ...APPROVAL_PAGES],
-  // Receiving / QC / Accounts (future pages)
-  security_guard:       ['Dashboard'],
-  store_receiver:       ['Dashboard'],
+  // Receiving / QC / Accounts
+  security_guard:       ['Dashboard', 'GateEntry'],
+  store_receiver:       ['Dashboard', 'GateInbox', 'GRNReceive'],
   qc_inspector:         ['Dashboard'],
   accounts_user:        ['Dashboard'],
   accounts_manager:     ['Dashboard', ...APPROVAL_PAGES],
