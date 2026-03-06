@@ -11,12 +11,13 @@ export default function MachineScanner({ stationType, onConfirmed }) {
   const [machine, setMachine] = useState(null);
 
   async function handleScan(val) {
+    const normalised = val.trim().toUpperCase();
     setLoading(true);
     setError('');
     try {
-      const machines = await base44.entities.Machine.filter({ machine_id: val });
+      const machines = await base44.entities.Machine.filter({ machine_id: normalised });
       const m = machines[0];
-      if (!m) { setError('Machine not found: ' + val); setScan(''); setLoading(false); return; }
+      if (!m) { setError('Machine not found: ' + normalised); setScan(''); setLoading(false); return; }
       if (stationType && m.machine_type !== stationType) {
         setError(`Wrong station type. Expected ${stationType}, got ${m.machine_type}`);
         setScan(''); setLoading(false); return;
@@ -24,7 +25,7 @@ export default function MachineScanner({ stationType, onConfirmed }) {
       setMachine(m);
     } catch {
       // offline fallback — accept any scan
-      setMachine({ machine_id: val, display_name: val, default_location: '' });
+      setMachine({ machine_id: normalised, display_name: normalised, default_location: '' });
     }
     setLoading(false);
   }
