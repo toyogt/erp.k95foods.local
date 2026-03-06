@@ -98,6 +98,9 @@ function DispatchMode({ user, onBack }) {
               </div>
             ))}
           </div>
+          <Button className="w-full h-12 rounded-xl bg-teal-600 hover:bg-teal-700 mt-2" onClick={onBack}>
+            ✓ Done — {dispatched.length} Crate{dispatched.length !== 1 ? 's' : ''} Dispatched
+          </Button>
         </div>
       )}
     </div>
