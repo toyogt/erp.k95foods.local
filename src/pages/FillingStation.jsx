@@ -273,6 +273,24 @@ export default function FillingStation() {
     }
   }
 
+  async function loadUnpalletizedCrates() {
+    setLoading(true);
+    try {
+      // Get all crates for this batch that are FILLED (not yet linked to a pallet)
+      const allCrates = await base44.entities.Crate.filter({ batch_id: activeBatch.batch_id, status: 'FILLED' });
+      // Get crates already linked to a pallet
+      const allLinks = await base44.entities.PalletCrateLink.filter({});
+      const linkedCrateIds = new Set(allLinks.map(l => l.crate_id));
+      const unlinked = allCrates.filter(c => !linkedCrateIds.has(c.crate_id)).map(c => c.crate_id);
+      setCratesOnCurrentPallet(unlinked);
+      setSessionCrates(prev => [...new Set([...prev, ...unlinked])]);
+    } catch {
+      setCratesOnCurrentPallet([]);
+    }
+    setLoading(false);
+    setStep('pallet_prompt');
+  }
+
   function continueAfterPallet() {
     setCratesOnCurrentPallet([]);
     setPalletScan('');
