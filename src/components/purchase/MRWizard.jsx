@@ -12,7 +12,7 @@ export default function MRWizard({ user, onDone, onCancel }) {
   const [uoms, setUoms] = useState([]);
   const [loading, setLoading] = useState(false);
   const [ingredients, setIngredients] = useState([]);
-  const [search, setSearch] = useState('');
+  const [searches, setSearches] = useState({}); // per-item search state
 
   useEffect(() => {
     base44.entities.UOMMaster.list('uom_name', 200).then(setUoms).catch(() => {});
@@ -31,19 +31,25 @@ export default function MRWizard({ user, onDone, onCancel }) {
     setItems(prev => prev.map((it, idx) => idx === i ? { ...it, [field]: val } : it));
   }
 
+  function setSearch(i, val) {
+    setSearches(prev => ({ ...prev, [i]: val }));
+  }
+
   function selectIngredient(i, ing) {
     setItems(prev => prev.map((it, idx) =>
       idx === i ? { ...it, item_code: ing.short_code || ing.ingredient_id, item_name: ing.ingredient_name } : it
     ));
-    setSearch('');
+    setSearch(i, '');
   }
 
-  const filteredIng = search.length > 1
-    ? ingredients.filter(g =>
-        g.ingredient_name?.toLowerCase().includes(search.toLowerCase()) ||
-        g.short_code?.toLowerCase().includes(search.toLowerCase())
-      ).slice(0, 8)
-    : [];
+  function getFiltered(i) {
+    const q = searches[i] || '';
+    if (q.length < 2) return [];
+    return ingredients.filter(g =>
+      g.ingredient_name?.toLowerCase().includes(q.toLowerCase()) ||
+      g.short_code?.toLowerCase().includes(q.toLowerCase())
+    ).slice(0, 8);
+  }
 
   async function handleSubmit() {
     setLoading(true);
@@ -96,36 +102,58 @@ export default function MRWizard({ user, onDone, onCancel }) {
       {step === 1 && (
         <div className="space-y-3">
           <p className="text-sm font-semibold text-slate-700">Search and add items</p>
-          {items.map((it, i) => (
-            <div key={i} className="bg-slate-50 rounded-xl p-3 space-y-2">
-              <div className="flex gap-2">
-                <input
-                  className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white"
-                  placeholder="Search item..."
-                  value={it.item_name || it.item_code}
-                  onChange={e => { updateItem(i, 'item_name', e.target.value); setSearch(e.target.value); }}
-                  onFocus={() => setSearch(it.item_name || '')}
-                />
-                <button onClick={() => removeItem(i)} className="text-red-400 hover:text-red-600 p-1">
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-              {search.length > 1 && filteredIng.length > 0 && (
-                <div className="bg-white border border-slate-200 rounded-xl shadow-sm max-h-40 overflow-y-auto">
-                  {filteredIng.map(ing => (
-                    <button key={ing.id} onClick={() => selectIngredient(i, ing)}
-                      className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 flex justify-between">
-                      <span>{ing.ingredient_name}</span>
-                      <span className="text-slate-400 font-mono text-xs">{ing.short_code}</span>
-                    </button>
-                  ))}
+          {items.map((it, i) => {
+            const filtered = getFiltered(i);
+            const q = searches[i] || '';
+            return (
+              <div key={i} className="bg-slate-50 rounded-xl p-3 space-y-2">
+                <div className="flex gap-2">
+                  <div className="flex-1 relative">
+                    <input
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white"
+                      placeholder="Search item by name or code..."
+                      value={it.item_code ? it.item_name || it.item_code : q}
+                      onChange={e => {
+                        if (it.item_code) {
+                          // Clear selection if user types again
+                          updateItem(i, 'item_code', '');
+                          updateItem(i, 'item_name', '');
+                        }
+                        setSearch(i, e.target.value);
+                      }}
+                    />
+                    {q.length > 1 && filtered.length > 0 && !it.item_code && (
+                      <div className="absolute z-10 left-0 right-0 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto mt-1">
+                        {filtered.map(ing => (
+                          <button key={ing.id} onClick={() => selectIngredient(i, ing)}
+                            className="w-full text-left px-3 py-2.5 text-sm hover:bg-blue-50 flex justify-between items-center border-b border-slate-50 last:border-0">
+                            <span className="font-medium">{ing.ingredient_name}</span>
+                            <span className="text-slate-400 font-mono text-xs">{ing.short_code}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {q.length > 1 && filtered.length === 0 && !it.item_code && (
+                      <div className="absolute z-10 left-0 right-0 bg-white border border-slate-200 rounded-xl shadow-lg mt-1 px-3 py-2.5 text-sm text-slate-400">
+                        No items found for "{q}"
+                      </div>
+                    )}
+                  </div>
+                  <button onClick={() => removeItem(i)} className="text-red-400 hover:text-red-600 p-1 shrink-0">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
-              )}
-              {it.item_code && (
-                <p className="text-xs text-green-600 font-mono">✓ {it.item_code}</p>
-              )}
-            </div>
-          ))}
+                {it.item_code && (
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-green-600 font-mono">✓ {it.item_code}</p>
+                    <button className="text-xs text-slate-400 hover:text-red-500" onClick={() => { updateItem(i, 'item_code', ''); updateItem(i, 'item_name', ''); setSearch(i, ''); }}>
+                      Change
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
           <button onClick={addItem} className="flex items-center gap-2 text-blue-600 text-sm font-semibold hover:text-blue-800">
             <Plus className="w-4 h-4" /> Add another item
           </button>
