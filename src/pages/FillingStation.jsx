@@ -355,6 +355,20 @@ export default function FillingStation() {
       {activeBatch && bottleType && (
         <Button className="w-full rounded-xl h-12 bg-blue-600 hover:bg-blue-700" onClick={startScanning}>Start Scanning Crates</Button>
       )}
+      {activeBatch && (activeBatch.created_crates || 0) > (activeBatch.palletized_crates || 0) && (
+        <Button
+          className="w-full rounded-xl h-12 bg-amber-500 hover:bg-amber-600"
+          onClick={() => {
+            // Load existing unpalletized crates into current pallet buffer and go to pallet prompt
+            const unpalletized = (activeBatch.created_crates || 0) - (activeBatch.palletized_crates || 0);
+            // We don't have the exact crate IDs in memory, so we set a placeholder count
+            // and load from DB
+            loadUnpalletizedCrates();
+          }}
+        >
+          Palletize {(activeBatch.created_crates || 0) - (activeBatch.palletized_crates || 0)} Pending Crates
+        </Button>
+      )}
       {!activeBatch && (
         <Button variant="outline" className="w-full rounded-xl h-11 gap-2" onClick={() => loadActiveBatch(machine.machine_id)} disabled={loading}>
           <RefreshCw className="w-4 h-4" /> Retry / Refresh
