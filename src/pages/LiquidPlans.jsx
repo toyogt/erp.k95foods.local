@@ -146,8 +146,6 @@ function AddAllocPicker({ products, boxTypes, recipeGroupId, existingSkus, onAdd
       required_bottles: type === 'REMAINDER' ? 0 : (required || Number(bottles)),
       bpb,
     });
-    setSku(''); setBottles(''); setType('FIXED'); setQ('');
-    // clear local search
     setQ('');
   }
 
