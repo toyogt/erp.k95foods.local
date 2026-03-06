@@ -68,8 +68,12 @@ export default function StartCycleModal({ machine, user, pallet, onStarted, onSk
 
       <div className="flex gap-2">
         <Button variant="outline" className="flex-1 rounded-xl" onClick={onSkip}>Skip for now</Button>
-        <Button className="flex-1 rounded-xl bg-blue-600 hover:bg-blue-700" onClick={handleStart} disabled={!selectedTmpl || saving}>
-          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Start Cycle'}
+        <Button
+          className="flex-1 rounded-xl bg-blue-600 hover:bg-blue-700"
+          onClick={templates.length === 0 ? onSkip : handleStart}
+          disabled={templates.length > 0 && (!selectedTmpl || saving)}
+        >
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : templates.length === 0 ? 'Continue' : 'Start Cycle'}
         </Button>
       </div>
     </div>
