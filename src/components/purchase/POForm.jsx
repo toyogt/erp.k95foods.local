@@ -14,6 +14,7 @@ export default function POForm({ user, isAdmin, sourceMR, sourceItems, onDone, o
   const [ingredients, setIngredients] = useState([]);
   const [uoms, setUoms] = useState([]);
   const [searches, setSearches] = useState({});
+  const [focused, setFocused] = useState({});
 
   useEffect(() => {
     base44.entities.Supplier.list('supplier_name', 200).then(setSuppliers).catch(() => {});
@@ -169,17 +170,19 @@ export default function POForm({ user, isAdmin, sourceMR, sourceItems, onDone, o
                 <div className="relative">
                   <input
                     className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white"
-                    placeholder="Search item by name or code..."
+                    placeholder="Click to select or type to search..."
                     value={l.item_code ? (l.item_name || l.item_code) : q}
+                    onFocus={() => setFocused(prev => ({ ...prev, [i]: true }))}
+                    onBlur={() => setTimeout(() => setFocused(prev => ({ ...prev, [i]: false })), 150)}
                     onChange={e => {
                       if (l.item_code) { updateLine(i, 'item_code', ''); updateLine(i, 'item_name', ''); }
                       setSearch(i, e.target.value);
                     }}
                   />
-                  {q.length > 1 && filtered.length > 0 && !l.item_code && (
+                  {focused[i] && !l.item_code && filtered.length > 0 && (
                     <div className="absolute z-10 left-0 right-0 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto mt-1">
                       {filtered.map(ing => (
-                        <button key={ing.id} onClick={() => selectIngredient(i, ing)}
+                        <button key={ing.id} onMouseDown={() => selectIngredient(i, ing)}
                           className="w-full text-left px-3 py-2.5 text-sm hover:bg-blue-50 flex justify-between items-center border-b border-slate-50 last:border-0">
                           <span className="font-medium">{ing.ingredient_name}</span>
                           <span className="text-slate-400 font-mono text-xs">{ing.short_code}</span>
@@ -187,7 +190,7 @@ export default function POForm({ user, isAdmin, sourceMR, sourceItems, onDone, o
                       ))}
                     </div>
                   )}
-                  {q.length > 1 && filtered.length === 0 && !l.item_code && (
+                  {focused[i] && !l.item_code && q.length > 1 && filtered.length === 0 && (
                     <div className="absolute z-10 left-0 right-0 bg-white border border-slate-200 rounded-xl shadow-lg mt-1 px-3 py-2.5 text-sm text-slate-400">
                       No items found
                     </div>
