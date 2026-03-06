@@ -3,6 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Loader2, RefreshCw, CheckCircle2, Camera, Search } from 'lucide-react';
 import { GRN_STATUS_COLOR, logGrnAudit, getChecklistTemplate } from '@/components/grn/grnHelpers';
+import { postGRNtoQCHold } from '@/components/grn/stockLedger';
 import ChecklistGate from '@/components/grn/ChecklistGate';
 
 function GRNItemRow({ item, onChange }) {
@@ -151,6 +152,10 @@ export default function GRNReceive() {
     };
     if (checklistRunId) headerUpdate.checklist_run_id = checklistRunId;
     await base44.entities.GRNHeader.update(selected.id, headerUpdate);
+
+    // Post received items into QC_HOLD bin
+    const finalItems = Object.values(itemEdits).filter(it => (it.received_qty || 0) > 0);
+    await postGRNtoQCHold({ grn_id: selected.grn_id }, finalItems, user?.email || '').catch(e => console.warn('Stock post error:', e.message));
 
     await logGrnAudit({
       action: 'GRN_SUBMITTED_TO_QC',
