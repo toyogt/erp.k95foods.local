@@ -59,7 +59,7 @@ export default function PurchaseOps() {
             className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
               tab === id ? 'bg-white shadow text-slate-900' : 'text-slate-500 hover:text-slate-700'
             }`}>
-            <Icon className="w-4 h-4" />
+            {<Icon className="w-4 h-4" />}
             <span className="hidden sm:inline">{label}</span>
           </button>
         ))}
