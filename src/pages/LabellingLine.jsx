@@ -588,12 +588,12 @@ export default function LabellingLine() {
           <ScanInput placeholder="Scan label roll barcode…" value={labelScan} onChange={setLabelScan} onScan={handleLabelScan} />
           {error && <p className="text-sm text-red-600 font-medium">{error}</p>}
           {wo?.label_sku_code && <p className="text-xs text-slate-400">Expected: <code className="bg-slate-100 px-1 rounded">{wo.label_sku_code}</code></p>}
-          {/* Block proceed if incomplete active mapping or no mapping */}
+          {/* Block proceed only if critical fields missing (label_variant_id is optional) */}
           {wo?.product_code && (
-            skuMapping === null || (skuMapping.is_active && (!skuMapping.ryan_template_id || !skuMapping.batch_format_rule_id || !skuMapping.label_variant_id))
+            skuMapping === null || (skuMapping.is_active && (!skuMapping.ryan_template_id || !skuMapping.batch_format_rule_id))
           ) && (
             <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-700 font-semibold text-center">
-              ⛔ Cannot proceed — SKU mapping incomplete
+              ⛔ Cannot proceed — SKU mapping incomplete (ryan_template_id or batch_format_rule_id missing)
             </div>
           )}
         </div>
