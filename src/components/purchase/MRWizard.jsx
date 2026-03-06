@@ -44,11 +44,11 @@ export default function MRWizard({ user, onDone, onCancel }) {
 
   function getFiltered(i) {
     const q = searches[i] || '';
-    if (q.length < 2) return [];
+    if (!q) return ingredients.slice(0, 10);
     return ingredients.filter(g =>
       g.ingredient_name?.toLowerCase().includes(q.toLowerCase()) ||
       g.short_code?.toLowerCase().includes(q.toLowerCase())
-    ).slice(0, 8);
+    ).slice(0, 10);
   }
 
   async function handleSubmit() {
