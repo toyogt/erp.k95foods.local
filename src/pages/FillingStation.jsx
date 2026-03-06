@@ -271,6 +271,11 @@ export default function FillingStation() {
       };
       await savePallet(palletData, user);
       await linkCratesToPallet(palletScan.trim(), cratesOnCurrentPallet, user);
+      // Mark all crates as PALLETIZED so they cannot be re-scanned
+      await Promise.all(cratesOnCurrentPallet.map(async (crateId) => {
+        const crates = await base44.entities.Crate.filter({ crate_id: crateId }).catch(() => []);
+        if (crates[0]) await base44.entities.Crate.update(crates[0].id, { status: 'PALLETIZED' }).catch(() => {});
+      }));
       await logMovement({ entityType: 'PALLET', entityId: palletScan.trim(), from: '', to: LOC_FILLING, machineId: machine.machine_id, user });
       if (activeBatch?.id) {
         const newPalletized = (activeBatch.palletized_crates || 0) + cratesOnCurrentPallet.length;
