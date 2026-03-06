@@ -301,7 +301,7 @@ function CreatePlanDialog({ open, onClose, products, boxTypes, recipeGroups, rec
     });
 
     let seq = 1;
-    for (const a of allocs) {
+    for (const a of finalAllocs) {
       const allocId = genAllocId();
       const product = products.find(p => p.item_code === a.sku_code);
       await base44.entities.SKUAllocation.create({
