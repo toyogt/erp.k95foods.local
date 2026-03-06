@@ -30,6 +30,9 @@ export const ROLES = {
 };
 
 // Pages each role can access
+const PURCHASE_PAGES = ['PurchaseOps', 'SupplierManager'];
+const APPROVAL_PAGES = ['ApprovalsInbox'];
+
 const ACCESS_MAP = {
   admin: [
     'Dashboard','FillingStation','ChamberStation',
@@ -37,11 +40,13 @@ const ACCESS_MAP = {
     'AlertsPage','PullLists','CustomizeDashboard',
     'BoxLabelPrint','BoxLabelApprovals','BoxPalletBuild','WarehouseOps','BoxStockDashboard','OpeningStockImport',
     'ProductionControl','LabelRollManager','TemplateMappingManager','FeederKiosk','TraceInvestigation',
+    ...PURCHASE_PAGES, ...APPROVAL_PAGES,
   ],
   production_manager: [
     'Dashboard','AuditLogPage','MasterData','AlertsPage','PullLists','CustomizeDashboard',
     'FillingStation','LabellingLine','FeederKiosk','TraceInvestigation',
     'BoxLabelApprovals','BoxStockDashboard','ProductionControl',
+    'PurchaseOps', ...APPROVAL_PAGES,
   ],
   stores:               ['Dashboard'],
   recipe_operator:      ['Dashboard'],
@@ -51,18 +56,28 @@ const ACCESS_MAP = {
   labelling_receiver:   ['Dashboard','TransferReceiving','PullLists'],
   line_operator:        ['Dashboard','LabellingLine','FeederKiosk'],
   labelling_supervisor: ['Dashboard','LabellingLine','TransferReceiving','AlertsPage','PullLists','LabelRollManager','FeederKiosk','TraceInvestigation'],
-  // Legacy warehouse role – no longer gets FGPalletizing or new pages by default
+  // Legacy
   warehouse:            ['Dashboard'],
-  // New roles
+  // FG roles
   label_operator:       ['Dashboard','BoxLabelPrint','BoxLabelApprovals','BoxPalletBuild'],
   label_supervisor:     ['Dashboard','BoxLabelApprovals','AlertsPage'],
   pallet_builder:       ['Dashboard','BoxPalletBuild','BoxStockDashboard'],
   warehouse_ops:        ['Dashboard','WarehouseOps','BoxStockDashboard','OpeningStockImport'],
+  // Purchase roles
+  purchase_user:        ['Dashboard', 'PurchaseOps'],
+  purchase_manager:     ['Dashboard', 'PurchaseOps', 'SupplierManager', ...APPROVAL_PAGES],
+  // Receiving / QC / Accounts (future pages)
+  security_guard:       ['Dashboard'],
+  store_receiver:       ['Dashboard'],
+  qc_inspector:         ['Dashboard'],
+  accounts_user:        ['Dashboard'],
+  accounts_manager:     ['Dashboard', ...APPROVAL_PAGES],
   // Default platform role – broad access (non-admin)
   user: [
     'Dashboard','FillingStation','ChamberStation',
     'TransferReceiving','LabellingLine','AuditLogPage','MasterData','AlertsPage','PullLists','CustomizeDashboard',
     'BoxLabelPrint','BoxLabelApprovals','BoxPalletBuild','WarehouseOps','BoxStockDashboard','OpeningStockImport',
+    'PurchaseOps',
   ],
 };
 
