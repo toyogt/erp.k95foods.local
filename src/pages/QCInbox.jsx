@@ -13,10 +13,10 @@ const RESULT_OPTS = [
 ];
 
 function computeOverall(items) {
+  if (!items.length) return 'PASS';
   if (items.some(i => i.result === 'FAIL')) return 'FAIL';
   if (items.some(i => i.result === 'HOLD')) return 'HOLD';
-  if (items.every(i => i.result === 'PASS')) return 'PASS';
-  return null;
+  return 'PASS';
 }
 
 function ResultBadge({ result }) {
