@@ -85,6 +85,9 @@ import WarehouseOps from './pages/WarehouseOps';
 import PurchaseOps from './pages/PurchaseOps';
 import SupplierManager from './pages/SupplierManager';
 import ApprovalsInbox from './pages/ApprovalsInbox';
+import GateEntry from './pages/GateEntry';
+import GateInbox from './pages/GateInbox';
+import GRNReceive from './pages/GRNReceive';
 import __Layout from './Layout.jsx';
 
 
@@ -127,6 +130,9 @@ export const PAGES = {
     "PurchaseOps": PurchaseOps,
     "SupplierManager": SupplierManager,
     "ApprovalsInbox": ApprovalsInbox,
+    "GateEntry": GateEntry,
+    "GateInbox": GateInbox,
+    "GRNReceive": GRNReceive,
 }
 
 export const pagesConfig = {
