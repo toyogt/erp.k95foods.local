@@ -282,10 +282,10 @@ export default function QCInbox() {
         </label>
       </div>
 
-      <Button onClick={handleSubmitClick} disabled={submitting || !overall}
-        className={`w-full h-12 ${overall === 'PASS' ? 'bg-green-600 hover:bg-green-700' : overall === 'FAIL' ? 'bg-red-600 hover:bg-red-700' : 'bg-amber-500 hover:bg-amber-600'}`}>
+      <Button onClick={handleSubmitClick} disabled={submitting}
+        className={`w-full h-12 ${overall === 'PASS' || !overall ? 'bg-green-600 hover:bg-green-700' : overall === 'FAIL' ? 'bg-red-600 hover:bg-red-700' : 'bg-amber-500 hover:bg-amber-600'}`}>
         {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
-        {checklistTmpl ? 'Next: Checklist →' : `Submit QC — ${overall || '...'}`}
+        {checklistTmpl ? 'Next: Checklist →' : `Submit QC — ${overall || 'PASS'}`}
       </Button>
     </div>
   );
