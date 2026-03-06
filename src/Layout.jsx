@@ -8,7 +8,7 @@ import {
   LayoutDashboard, ScrollText, Settings, ChevronLeft,
   Factory, LogOut, Menu, X,
   Droplets, Thermometer, Truck, Tag,
-  ListChecks, Bell, Printer, ClipboardCheck, Layers, Warehouse, BarChart3, Upload, Search, FlaskConical, PackageSearch, Zap, ShoppingCart, Inbox, ShieldCheck, PackageOpen
+  ListChecks, Bell, Printer, ClipboardCheck, Layers, Warehouse, BarChart3, Upload, Search, FlaskConical, PackageSearch, Zap, ShoppingCart, Inbox, ShieldCheck, PackageOpen, TestTube2, Archive
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -39,7 +39,10 @@ const ALL_NAV_ITEMS = [
   { label: 'Gate Entry',         page: 'GateEntry',           icon: ShieldCheck     },
   { label: 'Gate Inbox',         page: 'GateInbox',           icon: Truck           },
   { label: 'GRN Receive',        page: 'GRNReceive',          icon: PackageOpen     },
+  { label: 'QC Inbox',           page: 'QCInbox',             icon: TestTube2       },
+  { label: 'Putaway',            page: 'Putaway',             icon: Archive         },
   { label: 'Suppliers',          page: 'SupplierManager',     icon: Truck,          adminOnly: true },
+  { label: 'Warehouses & Bins',  page: 'WarehouseBins',       icon: Warehouse,      adminOnly: true },
   { label: 'Trace Investigation',page: 'TraceInvestigation', icon: Search          },
   { label: 'Audit Log',          page: 'AuditLogPage',       icon: ScrollText      },
   // ── Admin: master setup ───────────────────────────────────────────────────
