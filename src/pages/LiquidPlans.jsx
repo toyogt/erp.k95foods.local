@@ -392,7 +392,11 @@ function CreatePlanDialog({ open, onClose, products, boxTypes, recipeGroups, rec
                 products={products} boxTypes={boxTypes}
                 recipeGroupId={recipeGroupId}
                 existingSkus={allocs.map(a => a.sku_code)}
-                onAdd={row => setAllocs(arr => [...arr, row])} />
+                onAdd={row => { setAllocs(arr => [...arr, row]); setPendingSku(''); setPendingType('FIXED'); setPendingBottles(''); }}
+                sku={pendingSku} setSku={setPendingSku}
+                type={pendingType} setType={setPendingType}
+                bottles={pendingBottles} setBottles={setPendingBottles}
+              />
               {remainderCount > 1 && (
                 <p className="text-xs text-red-600 flex items-center gap-1">
                   <AlertTriangle className="w-3.5 h-3.5" /> Only 1 REMAINDER allowed per plan.
