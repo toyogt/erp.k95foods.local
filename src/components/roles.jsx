@@ -41,7 +41,7 @@ const ACCESS_MAP = {
     'BoxLabelPrint','BoxLabelApprovals','BoxPalletBuild','WarehouseOps','BoxStockDashboard','OpeningStockImport',
     'ProductionControl','LabelRollManager','TemplateMappingManager','FeederKiosk','TraceInvestigation',
     ...PURCHASE_PAGES, ...APPROVAL_PAGES,
-    'GateEntry', 'GateInbox', 'GRNReceive',
+    'GateEntry', 'GateInbox', 'GRNReceive', 'QCInbox', 'Putaway', 'WarehouseBins',
   ],
   production_manager: [
     'Dashboard','AuditLogPage','MasterData','AlertsPage','PullLists','CustomizeDashboard',
@@ -69,8 +69,8 @@ const ACCESS_MAP = {
   purchase_manager:     ['Dashboard', 'PurchaseOps', 'SupplierManager', ...APPROVAL_PAGES],
   // Receiving / QC / Accounts
   security_guard:       ['Dashboard', 'GateEntry'],
-  store_receiver:       ['Dashboard', 'GateInbox', 'GRNReceive'],
-  qc_inspector:         ['Dashboard'],
+  store_receiver:       ['Dashboard', 'GateInbox', 'GRNReceive', 'Putaway'],
+  qc_inspector:         ['Dashboard', 'QCInbox'],
   accounts_user:        ['Dashboard'],
   accounts_manager:     ['Dashboard', ...APPROVAL_PAGES],
   // Default platform role – broad access (non-admin)
