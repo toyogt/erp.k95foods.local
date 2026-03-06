@@ -82,6 +82,8 @@ import TraceInvestigation from './pages/TraceInvestigation';
 import TransferReceiving from './pages/TransferReceiving';
 import UOMManager from './pages/UOMManager';
 import WarehouseOps from './pages/WarehouseOps';
+import PurchaseOps from './pages/PurchaseOps';
+import SupplierManager from './pages/SupplierManager';
 import __Layout from './Layout.jsx';
 
 
@@ -121,6 +123,8 @@ export const PAGES = {
     "TransferReceiving": TransferReceiving,
     "UOMManager": UOMManager,
     "WarehouseOps": WarehouseOps,
+    "PurchaseOps": PurchaseOps,
+    "SupplierManager": SupplierManager,
 }
 
 export const pagesConfig = {
