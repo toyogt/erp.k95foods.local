@@ -153,13 +153,26 @@ export default function FillingStation() {
   }
 
   // Step 1: scan crate ID
-  function handleCrateIdScan(val) {
+  async function handleCrateIdScan(val) {
     if (!val.trim()) return;
     const crateId = val.trim();
     if (cratesOnCurrentPallet.includes(crateId) || sessionCrates.includes(crateId)) {
       setMsg('⚠ Crate already scanned this session');
       setCrateIdScan('');
       return;
+    }
+    // Check DB — block if already palletized or consumed
+    setLoading(true);
+    const existing = await base44.entities.Crate.filter({ crate_id: crateId }).catch(() => []);
+    setLoading(false);
+    if (existing.length > 0) {
+      const status = existing[0].status;
+      if (status === 'PALLETIZED' || status === 'CONSUMED' || status === 'EMPTY_RETURNED') {
+        setMsg(`⛔ Crate ${crateId} is already ${status} — cannot re-use.`);
+        setCrateIdScan('');
+        setTimeout(() => crateRef.current?.focus(), 100);
+        return;
+      }
     }
     setPendingCrateId(crateId);
     setCrateIdScan('');
