@@ -13,7 +13,7 @@ export default function InvoiceCapture() {
   const [uoms, setUoms] = useState([]);
 
   const [invId, setInvId] = useState('');
-  const [supplierId, setSuppliers] = useState('');
+  const [supplierId, setSupplierId] = useState('');
   const [supplierName, setSupplierName] = useState('');
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [invoiceDate, setInvoiceDate] = useState('');
@@ -60,7 +60,7 @@ export default function InvoiceCapture() {
   };
 
   const handleSupplierChange = async (sid) => {
-    setSuppliers(sid);
+    setSupplierId(sid);
     const supp = suppliers.find(s => s.supplier_id === sid);
     setSupplierName(supp?.supplier_name || '');
     setCandidates([]);
