@@ -12,6 +12,7 @@ export default function GateEntryPage() {
   const [user, setUser] = useState(null);
   const [step, setStep] = useState(0);
   const [form, setForm] = useState({ 
+    transport_type: 'vehicle', // vehicle, bicycle, manual, other
     vehicle_number: '', 
     invoice_number: '',
     driver_name: '', 
@@ -36,20 +37,30 @@ export default function GateEntryPage() {
 
   function setField(k, v) { setForm(prev => ({ ...prev, [k]: v })); }
 
-  function canProceedStep1() { return form.vehicle_photo && form.invoice_photo; }
-  function canProceedStep2() { return form.vehicle_number?.trim().length >= 2 && form.invoice_number?.trim().length >= 1; }
+  function canProceedStep1() { return form.invoice_photo && (form.transport_type === 'vehicle' ? form.vehicle_photo : true); }
+  
+  function canProceedStep2() { 
+    const hasInvoice = form.invoice_number?.trim().length >= 1;
+    const hasVehicleNum = form.transport_type === 'vehicle' ? form.vehicle_number?.trim().length >= 2 : true;
+    return hasInvoice && hasVehicleNum;
+  }
 
   const handleAIExtract = async () => {
-    if (!form.vehicle_photo || !form.invoice_photo) {
-      alert('Upload both vehicle and invoice photos first');
+    if (!form.invoice_photo) {
+      alert('Upload invoice photo first');
+      return;
+    }
+    if (form.transport_type === 'vehicle' && !form.vehicle_photo) {
+      alert('Upload vehicle photo first');
       return;
     }
 
     setExtracting(true);
     try {
       const res = await base44.functions.invoke('extractGateEntryData', {
-        vehicle_photo: form.vehicle_photo,
+        vehicle_photo: form.transport_type === 'vehicle' ? form.vehicle_photo : null,
         invoice_photo: form.invoice_photo,
+        transport_type: form.transport_type,
       });
       
       setAiResult(res.data);
@@ -62,7 +73,21 @@ export default function GateEntryPage() {
 
   const applyAIExtraction = () => {
     if (!aiResult) return;
-    setField('vehicle_number', aiResult.vehicle_number || '');
+    
+    // If invoice number not detected, ask to retake photo
+    if (!aiResult.invoice_number) {
+      const shouldRetake = confirm('Invoice number not detected clearly. Would you like to retake the invoice photo? Click OK to retake, Cancel to enter manually.');
+      if (shouldRetake) {
+        setAiResult(null);
+        setField('invoice_photo', '');
+        setStep(0);
+        return;
+      }
+    }
+    
+    if (form.transport_type === 'vehicle') {
+      setField('vehicle_number', aiResult.vehicle_number || '');
+    }
     setField('invoice_number', aiResult.invoice_number || '');
     if (aiResult.supplier_name) setField('supplier_name_text', aiResult.supplier_name);
     setAiResult(null);
@@ -122,7 +147,7 @@ export default function GateEntryPage() {
         <Button onClick={() => { 
           setDone(null); 
           setStep(0); 
-          setForm({ vehicle_number: '', invoice_number: '', driver_name: '', supplier_name_text: '', notes: '', invoice_photo: '', vehicle_photo: '', material_photo: '', weighbridge_slip_photo: '' }); 
+          setForm({ transport_type: 'vehicle', vehicle_number: '', invoice_number: '', driver_name: '', supplier_name_text: '', notes: '', invoice_photo: '', vehicle_photo: '', material_photo: '', weighbridge_slip_photo: '' }); 
           setChecklistTemplate(null); 
           setChecklistDone(false);
           setAiResult(null);
@@ -176,11 +201,30 @@ export default function GateEntryPage() {
           
           <p className="text-sm text-slate-600">Take clear photos for AI to extract vehicle number and invoice details</p>
 
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">Transport Type *</label>
+            <select
+              value={form.transport_type}
+              onChange={e => setField('transport_type', e.target.value)}
+              className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm"
+            >
+              <option value="vehicle">Vehicle (Car, Truck, Bike)</option>
+              <option value="bicycle">Bicycle / Cycle Rickshaw</option>
+              <option value="manual">Manual (Foot/Hand Delivery)</option>
+              <option value="other">Other</option>
+            </select>
+            <p className="text-xs text-slate-500 mt-1">Select the type of transport used for delivery</p>
+          </div>
+
           <div className="space-y-4">
-            <PhotoUploader label="Vehicle Photo" required value={form.vehicle_photo} onChange={v => setField('vehicle_photo', v)} />
+            {form.transport_type === 'vehicle' && (
+              <PhotoUploader label="Vehicle Photo" required value={form.vehicle_photo} onChange={v => setField('vehicle_photo', v)} />
+            )}
             <PhotoUploader label="Invoice Photo" required value={form.invoice_photo} onChange={v => setField('invoice_photo', v)} />
             <PhotoUploader label="Material/Goods Photo (optional)" value={form.material_photo} onChange={v => setField('material_photo', v)} />
-            <PhotoUploader label="Weighbridge Slip (optional)" value={form.weighbridge_slip_photo} onChange={v => setField('weighbridge_slip_photo', v)} />
+            {form.transport_type === 'vehicle' && (
+              <PhotoUploader label="Weighbridge Slip (optional)" value={form.weighbridge_slip_photo} onChange={v => setField('weighbridge_slip_photo', v)} />
+            )}
           </div>
 
           <Button 
@@ -204,13 +248,18 @@ export default function GateEntryPage() {
               </div>
 
               <div className="space-y-2 bg-white rounded-lg p-3">
-                <div>
-                  <label className="text-xs font-medium text-slate-600">Vehicle Number</label>
-                  <div className="text-base font-mono font-semibold text-slate-900">{aiResult.vehicle_number || 'Not detected'}</div>
-                </div>
-                <div>
+                {form.transport_type === 'vehicle' && (
+                  <div>
+                    <label className="text-xs font-medium text-slate-600">Vehicle Number</label>
+                    <div className="text-base font-mono font-semibold text-slate-900">{aiResult.vehicle_number || 'Not detected'}</div>
+                  </div>
+                )}
+                <div className={aiResult.invoice_number ? '' : 'border-2 border-red-300 bg-red-50 rounded p-2'}>
                   <label className="text-xs font-medium text-slate-600">Invoice Number</label>
-                  <div className="text-base font-mono font-semibold text-slate-900">{aiResult.invoice_number || 'Not detected'}</div>
+                  <div className="text-base font-mono font-semibold text-slate-900">{aiResult.invoice_number || '❌ Not detected - Please retake'}</div>
+                  {!aiResult.invoice_number && (
+                    <p className="text-xs text-red-600 mt-1">Invoice number is crucial. Click "Reject" to retake the photo for better clarity.</p>
+                  )}
                 </div>
                 {aiResult.supplier_name && (
                   <div>
@@ -261,16 +310,18 @@ export default function GateEntryPage() {
             <h2 className="font-bold text-slate-900">Confirm Details</h2>
           </div>
 
-          <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1">Vehicle Number <span className="text-red-500">*</span></label>
-            <input 
-              type="text" 
-              value={form.vehicle_number} 
-              onChange={e => setField('vehicle_number', e.target.value.toUpperCase())}
-              placeholder="e.g. MH12AB1234" 
-              className="w-full border border-slate-200 rounded-xl px-4 py-3 text-base font-mono uppercase" 
-            />
-          </div>
+          {form.transport_type === 'vehicle' && (
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1">Vehicle Number <span className="text-red-500">*</span></label>
+              <input 
+                type="text" 
+                value={form.vehicle_number} 
+                onChange={e => setField('vehicle_number', e.target.value.toUpperCase())}
+                placeholder="e.g. MH12AB1234" 
+                className="w-full border border-slate-200 rounded-xl px-4 py-3 text-base font-mono uppercase" 
+              />
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-1">Invoice Number <span className="text-red-500">*</span></label>
@@ -338,7 +389,8 @@ export default function GateEntryPage() {
           </div>
 
           <div className="space-y-2 text-sm">
-            <Row label="Vehicle Number" value={form.vehicle_number} />
+            <Row label="Transport Type" value={form.transport_type.charAt(0).toUpperCase() + form.transport_type.slice(1)} />
+            {form.transport_type === 'vehicle' && <Row label="Vehicle Number" value={form.vehicle_number} />}
             <Row label="Invoice Number" value={form.invoice_number} />
             {form.driver_name && <Row label="Driver" value={form.driver_name} />}
             {form.supplier_name_text && <Row label="Supplier (text)" value={form.supplier_name_text} />}
