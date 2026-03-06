@@ -13,10 +13,10 @@ const RESULT_OPTS = [
 ];
 
 function computeOverall(items) {
-  if (!items.length) return 'PASS';
   if (items.some(i => i.result === 'FAIL')) return 'FAIL';
   if (items.some(i => i.result === 'HOLD')) return 'HOLD';
-  return 'PASS';
+  if (items.every(i => i.result === 'PASS')) return 'PASS';
+  return null;
 }
 
 function ResultBadge({ result }) {
@@ -282,10 +282,10 @@ export default function QCInbox() {
         </label>
       </div>
 
-      <Button onClick={handleSubmitClick} disabled={submitting}
-        className={`w-full h-12 ${overall === 'PASS' || !overall ? 'bg-green-600 hover:bg-green-700' : overall === 'FAIL' ? 'bg-red-600 hover:bg-red-700' : 'bg-amber-500 hover:bg-amber-600'}`}>
+      <Button onClick={handleSubmitClick} disabled={submitting || !overall}
+        className={`w-full h-12 ${overall === 'PASS' ? 'bg-green-600 hover:bg-green-700' : overall === 'FAIL' ? 'bg-red-600 hover:bg-red-700' : 'bg-amber-500 hover:bg-amber-600'}`}>
         {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
-        {checklistTmpl ? 'Next: Checklist →' : `Submit QC — ${overall || 'PASS'}`}
+        {checklistTmpl ? 'Next: Checklist →' : `Submit QC — ${overall || '...'}`}
       </Button>
     </div>
   );
