@@ -276,11 +276,17 @@ export default function FillingStation() {
   async function loadUnpalletizedCrates() {
     setLoading(true);
     try {
-      // Get all crates for this batch that are FILLED (not yet linked to a pallet)
+      // Get all FILLED crates for this batch
       const allCrates = await base44.entities.Crate.filter({ batch_id: activeBatch.batch_id, status: 'FILLED' });
-      // Get crates already linked to a pallet
-      const allLinks = await base44.entities.PalletCrateLink.filter({});
-      const linkedCrateIds = new Set(allLinks.map(l => l.crate_id));
+      // Get pallets for this batch to find which crate IDs are already linked
+      const batchPallets = await base44.entities.Pallet.filter({ batch_id: activeBatch.batch_id });
+      const palletIds = batchPallets.map(p => p.pallet_id);
+      // Only fetch links for this batch's pallets (one per pallet, small set)
+      let linkedCrateIds = new Set();
+      for (const pid of palletIds) {
+        const links = await base44.entities.PalletCrateLink.filter({ pallet_id: pid });
+        links.forEach(l => linkedCrateIds.add(l.crate_id));
+      }
       const unlinked = allCrates.filter(c => !linkedCrateIds.has(c.crate_id)).map(c => c.crate_id);
       setCratesOnCurrentPallet(unlinked);
       setSessionCrates(prev => [...new Set([...prev, ...unlinked])]);
