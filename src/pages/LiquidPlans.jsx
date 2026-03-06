@@ -147,6 +147,8 @@ function AddAllocPicker({ products, boxTypes, recipeGroupId, existingSkus, onAdd
       bpb,
     });
     setSku(''); setBottles(''); setType('FIXED'); setQ('');
+    // clear local search
+    setQ('');
   }
 
   return (
