@@ -84,6 +84,7 @@ import UOMManager from './pages/UOMManager';
 import WarehouseOps from './pages/WarehouseOps';
 import PurchaseOps from './pages/PurchaseOps';
 import SupplierManager from './pages/SupplierManager';
+import ApprovalsInbox from './pages/ApprovalsInbox';
 import __Layout from './Layout.jsx';
 
 
@@ -125,6 +126,7 @@ export const PAGES = {
     "WarehouseOps": WarehouseOps,
     "PurchaseOps": PurchaseOps,
     "SupplierManager": SupplierManager,
+    "ApprovalsInbox": ApprovalsInbox,
 }
 
 export const pagesConfig = {
