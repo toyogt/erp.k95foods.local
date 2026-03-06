@@ -245,29 +245,32 @@ export default function FillingStation() {
   async function handleCreatePallet() {
     if (!palletScan.trim()) return;
     setLoading(true);
-    let palletData;
     try {
-      palletData = {
-      pallet_id: palletScan.trim(),
-      pallet_type: 'WIP',
-      current_location: LOC_FILLING,
-      status: 'OPEN',
-      crate_count: cratesOnCurrentPallet.length,
-      batch_id: activeBatch.batch_id,
-      product_code: activeBatch.product_code,
-      bottle_type: activeBatch.bottle_type,
-    };
-    await savePallet(palletData, user);
-    await linkCratesToPallet(palletScan.trim(), cratesOnCurrentPallet, user);
-    await logMovement({ entityType: 'PALLET', entityId: palletScan.trim(), from: '', to: LOC_FILLING, machineId: machine.machine_id, user });
-    // Increment palletized_crates on active batch
-    if (activeBatch?.id) {
-      const newPalletized = (activeBatch.palletized_crates || 0) + cratesOnCurrentPallet.length;
-      await base44.entities.MachineActiveBatch.update(activeBatch.id, { palletized_crates: newPalletized }).catch(() => {});
-      setActiveBatch(prev => ({ ...prev, palletized_crates: newPalletized }));
+      const palletData = {
+        pallet_id: palletScan.trim(),
+        pallet_type: 'WIP',
+        current_location: LOC_FILLING,
+        status: 'OPEN',
+        crate_count: cratesOnCurrentPallet.length,
+        batch_id: activeBatch.batch_id,
+        product_code: activeBatch.product_code,
+        bottle_type: activeBatch.bottle_type,
+      };
+      await savePallet(palletData, user);
+      await linkCratesToPallet(palletScan.trim(), cratesOnCurrentPallet, user);
+      await logMovement({ entityType: 'PALLET', entityId: palletScan.trim(), from: '', to: LOC_FILLING, machineId: machine.machine_id, user });
+      if (activeBatch?.id) {
+        const newPalletized = (activeBatch.palletized_crates || 0) + cratesOnCurrentPallet.length;
+        await base44.entities.MachineActiveBatch.update(activeBatch.id, { palletized_crates: newPalletized }).catch(() => {});
+        setActiveBatch(prev => ({ ...prev, palletized_crates: newPalletized }));
+      }
+      setLoading(false);
+      setStep('pallet_ready');
+    } catch (err) {
+      setLoading(false);
+      setMsg(`⛔ ${err.message} — please scan a different pallet.`);
+      setPalletScan('');
     }
-    setLoading(false);
-    setStep('pallet_ready');
   }
 
   function continueAfterPallet() {
