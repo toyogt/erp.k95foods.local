@@ -27,7 +27,7 @@ export default function ProductionControl() {
   const loadData = async () => {
     setLoading(true);
     const [macs, pls, bats] = await Promise.all([
-      base44.entities.Machine.filter({ station_type: 'FILLING' }, '-created_date', 100),
+      base44.entities.Machine.filter({ machine_type: 'FILLER' }, '-created_date', 100),
       base44.entities.LiquidBatchPlan.filter({ status: 'RELEASED' }, '-created_date', 100),
       base44.entities.MachineActiveBatch.filter({ status: 'ACTIVE' }, '-created_date', 100),
     ]);
