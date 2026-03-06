@@ -101,10 +101,8 @@ function AllocRow({ alloc, products, boxTypes, onRemove, onChange }) {
 }
 
 // ── Add-SKU picker (filtered by recipe_group) ───────────────
-function AddAllocPicker({ products, boxTypes, recipeGroupId, existingSkus, onAdd }) {
-  const [sku, setSku] = useState('');
-  const [type, setType] = useState('FIXED');
-  const [bottles, setBottles] = useState('');
+function AddAllocPicker({ products, boxTypes, recipeGroupId, existingSkus, onAdd,
+  sku, setSku, type, setType, bottles, setBottles }) {
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
