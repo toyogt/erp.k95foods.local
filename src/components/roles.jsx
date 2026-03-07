@@ -32,6 +32,7 @@ export const ROLES = {
 // Pages each role can access
 const PURCHASE_PAGES = ['PurchaseOps', 'SupplierManager'];
 const APPROVAL_PAGES = ['ApprovalsInbox'];
+const GRN_HUB_PAGES = ['PurchaseGRNHub'];
 
 const ACCESS_MAP = {
   admin: [
