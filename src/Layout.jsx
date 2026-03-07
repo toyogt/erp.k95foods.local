@@ -34,6 +34,7 @@ const ALL_NAV_ITEMS = [
   { label: 'Alerts',             page: 'AlertsPage',         icon: Bell            },
   { label: 'Shift KPIs',         page: 'ShiftKPIDashboard',  icon: BarChart3       },
   { label: 'Feeder Kiosk',       page: 'FeederKiosk',        icon: Tag             },
+  { label: 'Purchase & GRN',     page: 'PurchaseGRNHub',      icon: ShoppingCart    },
   { label: 'Purchase',           page: 'PurchaseOps',         icon: ShoppingCart    },
   { label: 'Approvals Inbox',    page: 'ApprovalsInbox',      icon: Inbox           },
   { label: 'Gate Entry',         page: 'GateEntry',           icon: ShieldCheck     },
@@ -73,6 +74,7 @@ export default function Layout({ children, currentPageName }) {
 
   const isDashboard = currentPageName === 'Dashboard';
   const isAdmin = user?.role === 'admin';
+  const fromPage = new URLSearchParams(window.location.search).get('from');
   // Only filter nav once user is loaded to avoid flashing admin items
   const NAV_ITEMS = user
     ? ALL_NAV_ITEMS.filter(n => isEnabled(n.page) && (!n.adminOnly || isAdmin))
@@ -97,7 +99,7 @@ export default function Layout({ children, currentPageName }) {
           <div className="max-w-screen-2xl mx-auto flex items-center justify-between px-3 h-14">
             <div className="flex items-center gap-2">
               {!isDashboard && (
-                <Link to={createPageUrl('Dashboard')} className="w-12 h-12 -ml-1 rounded-xl hover:bg-slate-100 active:bg-slate-200 transition-colors flex items-center justify-center">
+                <Link to={createPageUrl(fromPage || 'Dashboard')} className="w-12 h-12 -ml-1 rounded-xl hover:bg-slate-100 active:bg-slate-200 transition-colors flex items-center justify-center">
                   <ChevronLeft className="w-7 h-7 text-slate-700" />
                 </Link>
               )}
