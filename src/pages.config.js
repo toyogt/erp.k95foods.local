@@ -94,6 +94,7 @@ import TransferReceiving from './pages/TransferReceiving';
 import UOMManager from './pages/UOMManager';
 import WarehouseBins from './pages/WarehouseBins';
 import WarehouseOps from './pages/WarehouseOps';
+import PurchaseGRNHub from './pages/PurchaseGRNHub';
 import __Layout from './Layout.jsx';
 
 
@@ -145,6 +146,7 @@ export const PAGES = {
     "UOMManager": UOMManager,
     "WarehouseBins": WarehouseBins,
     "WarehouseOps": WarehouseOps,
+    "PurchaseGRNHub": PurchaseGRNHub,
 }
 
 export const pagesConfig = {
