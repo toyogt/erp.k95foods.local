@@ -68,20 +68,24 @@ const ACCESS_MAP = {
   pallet_builder:       ['Dashboard','BoxPalletBuild','BoxStockDashboard'],
   warehouse_ops:        ['Dashboard','WarehouseOps','BoxStockDashboard','OpeningStockImport'],
   // Purchase roles
-  purchase_user:        ['Dashboard', 'PurchaseOps'],
-  purchase_manager:     ['Dashboard', 'PurchaseOps', 'SupplierManager', ...APPROVAL_PAGES],
+  purchase_user:        ['Dashboard', 'PurchaseOps', ...GRN_HUB_PAGES],
+  purchase_manager:     ['Dashboard', 'PurchaseOps', 'SupplierManager', ...APPROVAL_PAGES, ...GRN_HUB_PAGES,
+                         'GateEntry', 'GateInbox', 'GRNReceive', 'QCInbox', 'Putaway',
+                         'InvoiceCapture', 'ThreeWayMatch', 'PaymentRequests'],
   // Receiving / QC / Accounts
-  security_guard:       ['Dashboard', 'GateEntry'],
-  store_receiver:       ['Dashboard', 'GateInbox', 'GRNReceive', 'Putaway'],
-  qc_inspector:         ['Dashboard', 'QCInbox'],
-  accounts_user:        ['Dashboard'],
-  accounts_manager:     ['Dashboard', ...APPROVAL_PAGES],
+  security_guard:       ['Dashboard', 'GateEntry', ...GRN_HUB_PAGES],
+  store_receiver:       ['Dashboard', 'GateInbox', 'GRNReceive', 'Putaway', ...GRN_HUB_PAGES],
+  qc_inspector:         ['Dashboard', 'QCInbox', ...GRN_HUB_PAGES],
+  accounts_user:        ['Dashboard', 'InvoiceCapture', 'ThreeWayMatch', ...GRN_HUB_PAGES],
+  accounts_manager:     ['Dashboard', ...APPROVAL_PAGES, 'InvoiceCapture', 'ThreeWayMatch', 'PaymentRequests', ...GRN_HUB_PAGES],
   // Default platform role – broad access (non-admin)
   user: [
     'Dashboard','FillingStation','ChamberStation',
     'TransferReceiving','LabellingLine','AuditLogPage','MasterData','AlertsPage','PullLists','CustomizeDashboard',
     'BoxLabelPrint','BoxLabelApprovals','BoxPalletBuild','WarehouseOps','BoxStockDashboard','OpeningStockImport',
-    'PurchaseOps',
+    'PurchaseOps', ...GRN_HUB_PAGES,
+    'GateEntry', 'GateInbox', 'GRNReceive', 'QCInbox', 'Putaway',
+    'InvoiceCapture', 'ThreeWayMatch', 'PaymentRequests',
   ],
 };
 
