@@ -20,6 +20,7 @@ export const ROLES = {
   PurchaseUser:       'purchase_user',
   PurchaseManager:    'purchase_manager',
   // Receiving / QC / Accounts (for future pages)
+  DispatchOfficer:    'dispatch_officer',
   SecurityGuard:      'security_guard',
   StoreReceiver:      'store_receiver',
   QCInspector:        'qc_inspector',
