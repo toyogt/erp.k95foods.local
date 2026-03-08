@@ -706,7 +706,6 @@ export default function TransferReceiving() {
 
   const isSupervisor = user?.role === 'admin' || user?.role === 'labelling_supervisor' || user?.role === 'production_manager';
 
-  if (mode === 'dispatch') return <DispatchMode user={user} onBack={() => setMode(null)} />;
   if (mode === 'receive_dock') return <ReceiveDockMode user={user} onBack={() => setMode(null)} />;
   if (mode === 'load_empties') return <LoadEmptiesMode user={user} onBack={() => setMode(null)} />;
   if (mode === 'putaway') return <PutawayMode user={user} onBack={() => setMode(null)} />;
@@ -716,13 +715,6 @@ export default function TransferReceiving() {
     <div className="space-y-4">
       <h2 className="text-xl font-bold text-slate-900">Transfer / Receiving</h2>
       <div className="space-y-3">
-        <button onClick={() => setMode('dispatch')} className="w-full bg-teal-600 text-white rounded-2xl p-5 flex items-center gap-4 active:scale-95 transition-transform">
-          <Truck className="w-10 h-10 flex-shrink-0" />
-          <div className="text-left">
-            <p className="text-lg font-bold">Dispatch Crates</p>
-            <p className="text-sm opacity-80">Scan crates onto vehicle to labelling</p>
-          </div>
-        </button>
         <button onClick={() => setMode('receive_dock')} className="w-full bg-slate-800 text-white rounded-2xl p-5 flex items-center gap-4 active:scale-95 transition-transform">
           <PackageOpen className="w-10 h-10 flex-shrink-0" />
           <div className="text-left">
