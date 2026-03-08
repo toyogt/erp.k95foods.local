@@ -42,6 +42,7 @@ const ACCESS_MAP = {
     'AlertsPage','PullLists','CustomizeDashboard',
     'BoxLabelPrint','BoxLabelApprovals','BoxPalletBuild','WarehouseOps','BoxStockDashboard','OpeningStockImport',
     'ProductionControl','LabelRollManager','TemplateMappingManager','FeederKiosk','TraceInvestigation',
+    'DispatchCrates',
     ...PURCHASE_PAGES, ...APPROVAL_PAGES, ...GRN_HUB_PAGES,
     'GateEntry', 'GateInbox', 'GRNReceive', 'QCInbox', 'Putaway', 'WarehouseBins',
     'InvoiceCapture', 'ThreeWayMatch', 'PaymentRequests',
