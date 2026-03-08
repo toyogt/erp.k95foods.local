@@ -77,6 +77,7 @@ import PaymentRequests from './pages/PaymentRequests';
 import ProductionControl from './pages/ProductionControl';
 import ProductionOrders from './pages/ProductionOrders';
 import PullLists from './pages/PullLists';
+import PurchaseGRNHub from './pages/PurchaseGRNHub';
 import PurchaseOps from './pages/PurchaseOps';
 import Putaway from './pages/Putaway';
 import QCInbox from './pages/QCInbox';
@@ -94,7 +95,7 @@ import TransferReceiving from './pages/TransferReceiving';
 import UOMManager from './pages/UOMManager';
 import WarehouseBins from './pages/WarehouseBins';
 import WarehouseOps from './pages/WarehouseOps';
-import PurchaseGRNHub from './pages/PurchaseGRNHub';
+import DispatchCrates from './pages/DispatchCrates';
 import __Layout from './Layout.jsx';
 
 
@@ -129,6 +130,7 @@ export const PAGES = {
     "ProductionControl": ProductionControl,
     "ProductionOrders": ProductionOrders,
     "PullLists": PullLists,
+    "PurchaseGRNHub": PurchaseGRNHub,
     "PurchaseOps": PurchaseOps,
     "Putaway": Putaway,
     "QCInbox": QCInbox,
@@ -146,7 +148,7 @@ export const PAGES = {
     "UOMManager": UOMManager,
     "WarehouseBins": WarehouseBins,
     "WarehouseOps": WarehouseOps,
-    "PurchaseGRNHub": PurchaseGRNHub,
+    "DispatchCrates": DispatchCrates,
 }
 
 export const pagesConfig = {
