@@ -74,6 +74,7 @@ const ACCESS_MAP = {
                          'GateEntry', 'GateInbox', 'GRNReceive', 'QCInbox', 'Putaway',
                          'InvoiceCapture', 'ThreeWayMatch', 'PaymentRequests'],
   // Receiving / QC / Accounts
+  dispatch_officer:     ['Dashboard', 'DispatchCrates'],
   security_guard:       ['Dashboard', 'GateEntry', ...GRN_HUB_PAGES],
   store_receiver:       ['Dashboard', 'GateInbox', 'GRNReceive', 'Putaway', ...GRN_HUB_PAGES],
   qc_inspector:         ['Dashboard', 'QCInbox', ...GRN_HUB_PAGES],
