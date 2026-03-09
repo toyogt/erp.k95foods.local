@@ -76,6 +76,14 @@ export default function Layout({ children, currentPageName }) {
 
   const isDashboard = currentPageName === 'Dashboard';
   const isAdmin = user?.role === 'admin';
+  const isFGOnly = user?.role === 'warehouse';
+
+  // Redirect FG-only users to FGWarehouse
+  useEffect(() => {
+    if (isFGOnly && currentPageName !== 'FGWarehouse') {
+      window.location.href = createPageUrl('FGWarehouse');
+    }
+  }, [isFGOnly, currentPageName]);
   const fromPage = new URLSearchParams(window.location.search).get('from');
   // Only filter nav once user is loaded to avoid flashing admin items
   const NAV_ITEMS = user
@@ -120,13 +128,15 @@ export default function Layout({ children, currentPageName }) {
                 <h1 className="font-semibold text-slate-900 text-base">{pageTitle}</h1>
               )}
             </div>
-            <button
-              type="button"
-              onClick={() => setMenuOpen(!menuOpen)}
-              className="w-12 h-12 rounded-xl hover:bg-slate-100 active:bg-slate-200 transition-colors flex items-center justify-center"
-            >
-              {menuOpen ? <X className="w-7 h-7 text-slate-700" /> : <Menu className="w-7 h-7 text-slate-700" />}
-            </button>
+            {!isFGOnly && (
+              <button
+                type="button"
+                onClick={() => setMenuOpen(!menuOpen)}
+                className="w-12 h-12 rounded-xl hover:bg-slate-100 active:bg-slate-200 transition-colors flex items-center justify-center"
+              >
+                {menuOpen ? <X className="w-7 h-7 text-slate-700" /> : <Menu className="w-7 h-7 text-slate-700" />}
+              </button>
+            )}
           </div>
           {menuOpen && (
             <div className="absolute top-14 left-0 right-0 bg-white border-b border-slate-200 shadow-lg z-50">

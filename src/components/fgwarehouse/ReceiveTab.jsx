@@ -3,7 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Camera, CheckCircle2, ChevronLeft, X, ZoomIn, MapPin, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { Loader2, Camera, CheckCircle2, ChevronLeft, X, ZoomIn, MapPin, ScanLine } from 'lucide-react';
 import QRScanInput from './QRScanInput';
 import SKUSearchInput from './SKUSearchInput';
 import BatchSearchInput from './BatchSearchInput';
@@ -35,15 +35,13 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
   // Product step
   const [sku_code, setSku_code] = useState('');
   const [batch_code, setBatch_code] = useState('');
-  const [batchLocked, setBatchLocked] = useState(false);
+  const [batchLocked, setBatchLocked] = useState(false); // true = existing batch
   const [mfg_date, setMfg_date] = useState('');
   const [exp_date, setExp_date] = useState('');
-  const [batchVerified, setBatchVerified] = useState(false);
-  const [batchVerifyError, setBatchVerifyError] = useState('');
 
-  // Qty step
-  const [boxes_received, setBoxes_received] = useState('');
-  const [loose_bottles_received, setLoose_bottles_received] = useState('');
+  // For existing batch: the verified target lot to ADD stock into
+  const [targetLot, setTargetLot] = useState(null);
+  const [lotScanError, setLotScanError] = useState('');
 
   const sku = skus.find(s => s.item_code === sku_code);
 
@@ -59,6 +57,11 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
         return acc;
       }, {})
   );
+
+  // Suggested lots for existing batch (same sku + batch_code, ACTIVE)
+  const suggestedLots = batchLocked && batch_code
+    ? lots.filter(l => l.sku_code === sku_code && l.batch_code === batch_code && l.status === 'ACTIVE')
+    : [];
 
   const handlePhotoCapture = async (e) => {
     const file = e.target.files[0];
@@ -76,14 +79,14 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
     setBatchLocked(false);
     setMfg_date('');
     setExp_date('');
-    setBatchVerified(false);
-    setBatchVerifyError('');
+    setTargetLot(null);
+    setLotScanError('');
   };
 
   const handleBatchSelect = (code, mfg, exp) => {
     setBatch_code(code);
-    setBatchVerified(false);
-    setBatchVerifyError('');
+    setTargetLot(null);
+    setLotScanError('');
     if (mfg && exp) {
       setMfg_date(mfg);
       setExp_date(exp);
@@ -95,24 +98,27 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
     }
   };
 
-  const handleBatchVerifyScan = (scannedId) => {
+  // Worker scans the QR of the lot they're standing at to confirm placement
+  const handleLotPlacementScan = (scannedId) => {
     const lot = lots.find(l => l.lot_id === scannedId);
     if (!lot) {
-      setBatchVerifyError('❌ Lot not found. Try scanning again.');
+      setLotScanError('Lot not found. Try scanning again.');
       return;
     }
     if (lot.sku_code !== sku_code) {
-      setBatchVerifyError(`❌ WRONG PRODUCT! Scanned: "${lot.product_name || lot.sku_code}" — Expected: "${sku?.product_name || sku_code}"`);
+      setLotScanError(`Wrong product! This lot has: "${lot.product_name || lot.sku_code}". Expected: "${sku?.product_name || sku_code}"`);
       return;
     }
     if (lot.batch_code !== batch_code) {
-      setBatchVerifyError(`❌ WRONG BATCH! Scanned lot has batch: "${lot.batch_code}" — Selected: "${batch_code}"`);
+      setLotScanError(`Wrong batch! This lot has batch: "${lot.batch_code}" but you selected: "${batch_code}"`);
       return;
     }
-    setBatchVerified(true);
-    setBatchVerifyError('');
+    setTargetLot(lot);
+    setLotScanError('');
   };
 
+  // NEW BATCH: creates a new lot → location → print
+  // EXISTING BATCH: adds stock to the scanned targetLot → done (no location/print)
   const handleSubmit = async () => {
     setSaving(true);
     const today = todayStr();
@@ -131,46 +137,70 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
       status: 'CONFIRMED',
     });
 
-    const seq = await getNextLotSeq(today);
-    const lot_id = formatLotId(today, seq);
-    const created = await base44.entities.WarehouseLot.create({
-      lot_id,
-      lot_date: today,
-      lot_seq: seq,
-      sku_code: sku.item_code,
-      product_name: sku.product_name,
-      brand_name: sku.brand_name || '',
-      product_family: sku.product_family || '',
-      flavour: sku.flavour || '',
-      batch_code,
-      mfg_date,
-      exp_date,
-      bottles_per_box: ppb,
-      boxes_in: boxes,
-      loose_bottles_in: loose,
-      boxes_balance: boxes,
-      loose_bottles_balance: loose,
-      status: 'ACTIVE',
-      is_trial_pack: sku.is_trial_pack || false,
-      location: '',
-    });
-
-    await base44.entities.WarehouseReceiptLine.create({
-      receipt_id,
-      lot_id,
-      sku_code: sku.item_code,
-      product_name: sku.product_name,
-      boxes_received: boxes,
-      loose_bottles_received: loose,
-      bottles_per_box: ppb,
-      total_bottles: totalBottles(boxes, loose, ppb),
-    });
-
-    setSaving(false);
-    setLastReceipt({ receipt_id });
-    setNewLot(created);
-    setStep('location');
-    onRefresh(); // silent — won't show loading spinner
+    if (batchLocked && targetLot) {
+      // ── EXISTING BATCH: add stock to existing lot ──
+      await base44.entities.WarehouseLot.update(targetLot.id, {
+        boxes_in: (targetLot.boxes_in || 0) + boxes,
+        loose_bottles_in: (targetLot.loose_bottles_in || 0) + loose,
+        boxes_balance: (targetLot.boxes_balance || 0) + boxes,
+        loose_bottles_balance: (targetLot.loose_bottles_balance || 0) + loose,
+        status: 'ACTIVE',
+      });
+      await base44.entities.WarehouseReceiptLine.create({
+        receipt_id,
+        lot_id: targetLot.lot_id,
+        sku_code: sku.item_code,
+        product_name: sku.product_name,
+        boxes_received: boxes,
+        loose_bottles_received: loose,
+        bottles_per_box: ppb,
+        total_bottles: totalBottles(boxes, loose, ppb),
+      });
+      setSaving(false);
+      setLastReceipt({ receipt_id });
+      setNewLot(null); // no new lot
+      setStep('done');
+    } else {
+      // ── NEW BATCH: create new lot ──
+      const seq = await getNextLotSeq(today);
+      const lot_id = formatLotId(today, seq);
+      const created = await base44.entities.WarehouseLot.create({
+        lot_id,
+        lot_date: today,
+        lot_seq: seq,
+        sku_code: sku.item_code,
+        product_name: sku.product_name,
+        brand_name: sku.brand_name || '',
+        product_family: sku.product_family || '',
+        flavour: sku.flavour || '',
+        batch_code,
+        mfg_date,
+        exp_date,
+        bottles_per_box: ppb,
+        boxes_in: boxes,
+        loose_bottles_in: loose,
+        boxes_balance: boxes,
+        loose_bottles_balance: loose,
+        status: 'ACTIVE',
+        is_trial_pack: sku.is_trial_pack || false,
+        location: '',
+      });
+      await base44.entities.WarehouseReceiptLine.create({
+        receipt_id,
+        lot_id,
+        sku_code: sku.item_code,
+        product_name: sku.product_name,
+        boxes_received: boxes,
+        loose_bottles_received: loose,
+        bottles_per_box: ppb,
+        total_bottles: totalBottles(boxes, loose, ppb),
+      });
+      setSaving(false);
+      setLastReceipt({ receipt_id });
+      setNewLot(created);
+      setStep('location'); // only for new batch
+    }
+    onRefresh();
   };
 
   const handleSaveLocation = async () => {
@@ -185,7 +215,7 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
 
   const reset = () => {
     setSku_code(''); setBatch_code(''); setBatchLocked(false); setMfg_date(''); setExp_date('');
-    setBatchVerified(false); setBatchVerifyError('');
+    setTargetLot(null); setLotScanError('');
     setBoxes_received(''); setLoose_bottles_received('');
     setDocPhotos([]);
     setHeader({ doc_number: '', notes: '' });
@@ -202,10 +232,15 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
   };
 
   const canGoToProduct = !!header.doc_number.trim() && docPhotos.length > 0;
-  const canGoToQty = !!(sku_code && batch_code && mfg_date && exp_date && (!batchLocked || batchVerified));
+  // For existing batch: must have scanned a target lot. For new batch: just need mfg+exp dates.
+  const canGoToQty = !!(sku_code && batch_code && mfg_date && exp_date && (!batchLocked || targetLot));
   const canSubmit = Number(boxes_received) > 0 || Number(loose_bottles_received) > 0;
 
-  // ── Location step ──────────────────────────────────────────────────────────
+  // Qty step state
+  const [boxes_received, setBoxes_received] = useState('');
+  const [loose_bottles_received, setLoose_bottles_received] = useState('');
+
+  // ── Location step (new batch only) ────────────────────────────────────────
   if (step === 'location') {
     return (
       <div className="space-y-5 pb-8">
@@ -214,7 +249,7 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
             <CheckCircle2 className="w-5 h-5 text-green-600" />
           </div>
           <div>
-            <p className="font-bold text-slate-900">Lot Created!</p>
+            <p className="font-bold text-slate-900">New Lot Created!</p>
             <p className="text-xs text-slate-400 font-mono">{newLot?.lot_id}</p>
           </div>
         </div>
@@ -244,6 +279,7 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
 
   // ── Done step ──────────────────────────────────────────────────────────────
   if (step === 'done') {
+    const isExistingBatch = batchLocked && !newLot;
     const lotForPrint = newLot ? { ...newLot, location } : null;
     return (
       <div className="space-y-5 pb-8">
@@ -254,11 +290,18 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
           <div>
             <p className="text-lg font-bold text-slate-900">Receipt Confirmed!</p>
             <p className="text-sm text-slate-500">{lastReceipt?.receipt_id}</p>
+            {isExistingBatch && targetLot && (
+              <p className="text-sm text-slate-500 mt-1">
+                Stock added to <strong>{targetLot.lot_id}</strong>
+                {targetLot.location ? ` — 📍 ${targetLot.location}` : ''}
+              </p>
+            )}
           </div>
         </div>
+        {/* Only show print for NEW lots */}
         {lotForPrint && (
           <div className="border border-slate-200 rounded-xl p-4 bg-white">
-            <p className="text-sm font-semibold text-slate-700 mb-3">Lot Card — Print & Attach to Stock</p>
+            <p className="text-sm font-semibold text-slate-700 mb-3">🖨️ Print & attach new lot card to stock</p>
             <LotCardPrint lot={lotForPrint} />
           </div>
         )}
@@ -343,7 +386,7 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
             Next: Select Product →
           </Button>
           {!canGoToProduct && (
-            <p className="text-xs text-center text-red-500">Enter DC number and take at least one photo to continue</p>
+            <p className="text-xs text-center text-slate-400">Enter DC number and take at least one photo to continue</p>
           )}
         </div>
       )}
@@ -353,13 +396,8 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
         <div className="space-y-4">
           <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3">
             <p className="text-sm font-bold text-slate-700">📦 Select Product (SKU)</p>
+            {/* SKUSearchInput already shows selected product details inside it — no extra info box needed */}
             <SKUSearchInput skus={skus} value={sku_code} onChange={handleSkuChange} />
-            {sku && (
-              <div className="bg-blue-50 rounded-lg px-3 py-2.5 text-xs text-blue-700 space-y-0.5">
-                <p className="font-bold text-sm">{sku.product_name}{sku.flavour ? ` — ${sku.flavour}` : ''}</p>
-                <p>{sku.brand_name ? `${sku.brand_name} · ` : ''}{sku.bottles_per_box} bottles/box{sku.is_trial_pack ? ' · 🧪 Trial Pack' : ''}</p>
-              </div>
-            )}
           </div>
 
           {sku && (
@@ -374,7 +412,7 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
                   placeholder="Type new or select recent batch…"
                 />
                 {!batchLocked && batch_code && (
-                  <p className="text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-1.5">✏️ New batch: <strong>{batch_code}</strong> — enter dates below</p>
+                  <p className="text-xs text-blue-700 bg-blue-50 rounded-lg px-3 py-1.5">✏️ New batch: <strong>{batch_code}</strong> — enter dates below</p>
                 )}
               </div>
               <div className="space-y-1.5">
@@ -402,31 +440,57 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
                 )}
               </div>
 
-              {/* QR Batch Verification for existing batch */}
-              {batchLocked && !batchVerified && (
-                <div className="bg-amber-50 border-2 border-amber-400 rounded-xl p-4 space-y-3">
-                  <div className="flex items-start gap-2">
-                    <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-bold text-amber-800">⚠️ Verify Correct Stock</p>
-                      <p className="text-xs text-amber-700 mt-0.5">
-                        Existing batch selected. Scan QR of any existing lot with batch <strong>{batch_code}</strong> to confirm you have the correct product before receiving.
-                      </p>
-                    </div>
+              {/* ── Existing batch: suggest lot & scan to confirm placement ── */}
+              {batchLocked && !targetLot && (
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <ScanLine className="w-5 h-5 text-slate-600 shrink-0" />
+                    <p className="text-sm font-bold text-slate-800">📍 Confirm Lot Location</p>
                   </div>
-                  <QRScanInput onScan={handleBatchVerifyScan} placeholder="Scan lot QR to verify…" />
-                  {batchVerifyError && (
-                    <div className="bg-red-50 border border-red-300 rounded-lg px-3 py-2.5">
-                      <p className="text-xs font-bold text-red-700">{batchVerifyError}</p>
+                  <p className="text-xs text-slate-500">
+                    Scan the QR card of the lot <strong>where you are placing this stock</strong> to confirm you're at the right location.
+                  </p>
+
+                  {/* Suggested lots for this batch */}
+                  {suggestedLots.length > 0 && (
+                    <div className="space-y-1.5">
+                      <p className="text-xs font-semibold text-slate-600">Existing lots for this batch:</p>
+                      {suggestedLots.map(l => (
+                        <div key={l.id} className="flex items-center justify-between bg-white border border-slate-200 rounded-lg px-3 py-2.5">
+                          <div>
+                            <p className="text-xs font-bold text-slate-800 font-mono">{l.lot_id}</p>
+                            {l.location && <p className="text-xs text-slate-500">📍 {l.location}</p>}
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-bold text-slate-700">{l.boxes_balance} boxes</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <QRScanInput onScan={handleLotPlacementScan} placeholder="Scan lot QR card…" />
+                  {lotScanError && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2.5">
+                      <p className="text-xs font-bold text-red-700">{lotScanError}</p>
                     </div>
                   )}
                 </div>
               )}
 
-              {batchVerified && (
-                <div className="flex items-center gap-2 bg-green-50 border border-green-300 rounded-xl px-3 py-3">
-                  <ShieldCheck className="w-5 h-5 text-green-600 shrink-0" />
-                  <p className="text-sm font-bold text-green-700">✅ Verified — Correct product & batch confirmed!</p>
+              {/* Confirmed target lot */}
+              {batchLocked && targetLot && (
+                <div className="flex items-start gap-3 bg-green-50 border border-green-300 rounded-xl px-4 py-3">
+                  <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-bold text-green-800">Lot Confirmed ✓</p>
+                    <p className="text-xs text-green-700 font-mono mt-0.5">{targetLot.lot_id}</p>
+                    {targetLot.location && <p className="text-xs text-green-700">📍 {targetLot.location}</p>}
+                    <p className="text-xs text-green-700 mt-0.5">Current balance: {targetLot.boxes_balance} boxes</p>
+                    <button onClick={() => { setTargetLot(null); setLotScanError(''); }} className="text-xs text-green-600 underline mt-1">
+                      Scan a different lot
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -435,8 +499,8 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
           <Button className="w-full h-12 text-base font-bold" onClick={() => setStep('qty')} disabled={!canGoToQty}>
             Next: Enter Quantity →
           </Button>
-          {sku && batchLocked && !batchVerified && (
-            <p className="text-xs text-center text-amber-600 font-semibold">⚠️ Scan existing lot QR to verify before continuing</p>
+          {sku && batchLocked && !targetLot && (
+            <p className="text-xs text-center text-slate-400">Scan the lot QR card to confirm placement location</p>
           )}
         </div>
       )}
@@ -444,13 +508,17 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
       {/* ── STEP 3: Quantity ── */}
       {step === 'qty' && (
         <div className="space-y-4">
-          {/* Summary */}
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-1">
             <p className="text-xs text-blue-500 font-bold uppercase tracking-wide">Receiving for:</p>
             <p className="font-bold text-blue-900 text-base">{sku?.product_name}{sku?.flavour ? ` — ${sku.flavour}` : ''}</p>
             {sku?.brand_name && <p className="text-xs text-blue-700">{sku.brand_name}</p>}
             <p className="text-xs text-blue-700 mt-1">Batch: <strong>{batch_code}</strong></p>
             <p className="text-xs text-blue-700">Mfg: {fmtDate(mfg_date)} &nbsp;·&nbsp; Exp: {fmtDate(exp_date)}</p>
+            {targetLot && (
+              <p className="text-xs text-blue-700 mt-1">
+                📍 Adding to lot: <strong>{targetLot.lot_id}</strong>{targetLot.location ? ` — ${targetLot.location}` : ''}
+              </p>
+            )}
           </div>
 
           <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-4">

@@ -62,8 +62,8 @@ const ACCESS_MAP = {
   labelling_receiver:   ['Dashboard','TransferReceiving','PullLists'],
   line_operator:        ['Dashboard','LabellingLine','FeederKiosk'],
   labelling_supervisor: ['Dashboard','LabellingLine','TransferReceiving','AlertsPage','PullLists','LabelRollManager','FeederKiosk','TraceInvestigation'],
-  // Legacy
-  warehouse:            ['Dashboard'],
+  // Legacy / FG Warehouse operator — FGWarehouse only, no nav
+  warehouse:            ['FGWarehouse'],
   // FG roles
   label_operator:       ['Dashboard','BoxLabelPrint','BoxLabelApprovals','BoxPalletBuild'],
   label_supervisor:     ['Dashboard','BoxLabelApprovals','AlertsPage'],
