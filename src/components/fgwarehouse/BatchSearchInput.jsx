@@ -1,6 +1,11 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 
+function fmtDate(iso) {
+  if (!iso) return '—';
+  try { const [y, m, d] = iso.split('-'); return `${d}/${m}/${y}`; } catch { return iso; }
+}
+
 export default function BatchSearchInput({ batches, value, onSelect, placeholder = 'Type or select batch code…' }) {
   // batches: [{batch_code, mfg_date, exp_date}]
   // onSelect(batch_code, mfg_date, exp_date)
@@ -21,7 +26,7 @@ export default function BatchSearchInput({ batches, value, onSelect, placeholder
           <div className="flex-1 min-w-0">
             <p className="text-sm font-bold text-slate-900 uppercase tracking-wider">{selected.batch_code}</p>
             <p className="text-xs text-slate-400 mt-0.5">
-              Mfg: {selected.mfg_date || '—'} · Exp: {selected.exp_date || '—'}
+              Mfg: {fmtDate(selected.mfg_date)} · Exp: {fmtDate(selected.exp_date)}
             </p>
           </div>
           <button
@@ -68,7 +73,7 @@ export default function BatchSearchInput({ batches, value, onSelect, placeholder
                   className="w-full text-left px-4 py-3 hover:bg-slate-50 active:bg-slate-100 border-b border-slate-100 last:border-0"
                 >
                   <p className="text-sm font-bold text-slate-900 uppercase tracking-wider">{b.batch_code}</p>
-                  <p className="text-xs text-slate-400 mt-0.5">Mfg: {b.mfg_date || '—'} · Exp: {b.exp_date || '—'}</p>
+                  <p className="text-xs text-slate-400 mt-0.5">Mfg: {fmtDate(b.mfg_date)} · Exp: {fmtDate(b.exp_date)}</p>
                 </button>
               ))}
             </>

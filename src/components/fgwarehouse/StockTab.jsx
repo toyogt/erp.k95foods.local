@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Search, ChevronLeft, SlidersHorizontal } from 'lucide-react';
+import { fmtDate } from './whHelpers';
 
 export default function StockTab({ skus, lots, onBack }) {
   const [search, setSearch] = useState('');
@@ -190,7 +191,7 @@ export default function StockTab({ skus, lots, onBack }) {
                       <p className="font-semibold text-slate-900 text-sm leading-snug">{lot.product_name || lot.sku_code}</p>
                       {lot.flavour && <p className="text-xs text-slate-400">{lot.flavour}</p>}
                       {lot.batch_code && <p className="text-xs text-slate-400">Batch: {lot.batch_code}</p>}
-                      {(lot.mfg_date || lot.exp_date) && <p className="text-xs text-slate-400">Mfg: {lot.mfg_date || '—'} · Exp: {lot.exp_date || '—'}</p>}
+                      {(lot.mfg_date || lot.exp_date) && <p className="text-xs text-slate-400">Mfg: {fmtDate(lot.mfg_date)} · Exp: {fmtDate(lot.exp_date)}</p>}
                       {lot.location && <p className="text-xs text-slate-400">📍 {lot.location}</p>}
                     </div>
                     <div className="text-right shrink-0">

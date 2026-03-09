@@ -27,3 +27,11 @@ export async function getNextLotSeq(dateStr) {
 export function totalBottles(boxes, looseBottles, bottlesPerBox) {
   return (Number(boxes) || 0) * (Number(bottlesPerBox) || 1) + (Number(looseBottles) || 0);
 }
+
+export function fmtDate(iso) {
+  if (!iso) return '—';
+  try {
+    const [y, m, d] = iso.split('-');
+    return `${d}/${m}/${y}`;
+  } catch { return iso; }
+}

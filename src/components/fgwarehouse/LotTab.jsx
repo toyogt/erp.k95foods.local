@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import LotCardPrint from './LotCardPrint';
 import QRScanInput from './QRScanInput';
 import SKUSearchInput from './SKUSearchInput';
-import { todayStr, formatLotId, getNextLotSeq, totalBottles } from './whHelpers';
+import { todayStr, formatLotId, getNextLotSeq, totalBottles, fmtDate } from './whHelpers';
 import DateMaskInput, { focusNext } from './DateMaskInput';
 
 export default function LotTab({ skus, lots, onRefresh, user, onBack }) {
@@ -163,7 +163,7 @@ export default function LotTab({ skus, lots, onRefresh, user, onBack }) {
                     {[lot.brand_name, lot.flavour, lot.batch_code ? `Batch: ${lot.batch_code}` : ''].filter(Boolean).join(' · ')}
                   </p>
                   {(lot.mfg_date || lot.exp_date) && (
-                    <p className="text-xs text-slate-400">Mfg: {lot.mfg_date || '—'} · Exp: {lot.exp_date || '—'}</p>
+                    <p className="text-xs text-slate-400">Mfg: {fmtDate(lot.mfg_date)} · Exp: {fmtDate(lot.exp_date)}</p>
                   )}
                 </div>
                 <div className="flex flex-col items-end gap-1 shrink-0">

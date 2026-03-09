@@ -3,16 +3,23 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Camera, CheckCircle2, ChevronLeft, X, ZoomIn, MapPin } from 'lucide-react';
+import { Loader2, Camera, CheckCircle2, ChevronLeft, X, ZoomIn, MapPin, ShieldCheck, AlertTriangle } from 'lucide-react';
 import QRScanInput from './QRScanInput';
 import SKUSearchInput from './SKUSearchInput';
 import BatchSearchInput from './BatchSearchInput';
 import DateMaskInput, { focusNext } from './DateMaskInput';
 import LotCardPrint from './LotCardPrint';
-import { genId, todayStr, formatLotId, getNextLotSeq, totalBottles } from './whHelpers';
+import StepBar from './StepBar';
+import { genId, todayStr, formatLotId, getNextLotSeq, totalBottles, fmtDate } from './whHelpers';
+
+const STEPS = [
+  { id: 'doc', label: 'Document' },
+  { id: 'product', label: 'Product' },
+  { id: 'qty', label: 'Quantity' },
+];
 
 export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
-  const [step, setStep] = useState('form'); // 'form' | 'location' | 'done'
+  const [step, setStep] = useState('doc');
   const [saving, setSaving] = useState(false);
   const [savingLoc, setSavingLoc] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -21,19 +28,26 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
   const [location, setLocation] = useState('');
   const [viewPhoto, setViewPhoto] = useState(null);
 
-  const [sku_code, setSku_code] = useState('');
-  const [batch_code, setBatch_code] = useState('');
-  const [batchLocked, setBatchLocked] = useState(false); // true when selected from dropdown
-  const [mfg_date, setMfg_date] = useState('');
-  const [exp_date, setExp_date] = useState('');
-  const [boxes_received, setBoxes_received] = useState('');
-  const [loose_bottles_received, setLoose_bottles_received] = useState('');
+  // Doc step
   const [docPhotos, setDocPhotos] = useState([]);
   const [header, setHeader] = useState({ doc_number: '', notes: '' });
 
+  // Product step
+  const [sku_code, setSku_code] = useState('');
+  const [batch_code, setBatch_code] = useState('');
+  const [batchLocked, setBatchLocked] = useState(false);
+  const [mfg_date, setMfg_date] = useState('');
+  const [exp_date, setExp_date] = useState('');
+  const [batchVerified, setBatchVerified] = useState(false);
+  const [batchVerifyError, setBatchVerifyError] = useState('');
+
+  // Qty step
+  const [boxes_received, setBoxes_received] = useState('');
+  const [loose_bottles_received, setLoose_bottles_received] = useState('');
+
   const sku = skus.find(s => s.item_code === sku_code);
 
-  // Recent batch codes for this SKU (last 2 days only)
+  // Recent batches for this SKU (last 2 days)
   const twoDaysAgo = new Date();
   twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
   const twoDaysAgoStr = twoDaysAgo.toISOString().split('T')[0];
@@ -62,10 +76,14 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
     setBatchLocked(false);
     setMfg_date('');
     setExp_date('');
+    setBatchVerified(false);
+    setBatchVerifyError('');
   };
 
   const handleBatchSelect = (code, mfg, exp) => {
     setBatch_code(code);
+    setBatchVerified(false);
+    setBatchVerifyError('');
     if (mfg && exp) {
       setMfg_date(mfg);
       setExp_date(exp);
@@ -77,16 +95,25 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
     }
   };
 
-  const handleSubmit = async () => {
-    if (!header.doc_number.trim()) { alert('DC / Challan Number is required'); return; }
-    if (docPhotos.length === 0) { alert('At least one document photo is required'); return; }
-    if (!sku_code) { alert('Select a SKU'); return; }
-    if (!batch_code) { alert('Enter batch code'); return; }
-    if (!mfg_date) { alert('Enter a valid manufacturing date (DD/MM/YYYY)'); return; }
-    if (!exp_date) { alert('Enter a valid expiry date (DD/MM/YYYY)'); return; }
-    if (exp_date <= mfg_date) { alert('Expiry date must be after manufacturing date'); return; }
-    if (!boxes_received && !loose_bottles_received) { alert('Enter boxes or loose bottles received'); return; }
+  const handleBatchVerifyScan = (scannedId) => {
+    const lot = lots.find(l => l.lot_id === scannedId);
+    if (!lot) {
+      setBatchVerifyError('❌ Lot not found. Try scanning again.');
+      return;
+    }
+    if (lot.sku_code !== sku_code) {
+      setBatchVerifyError(`❌ WRONG PRODUCT! Scanned: "${lot.product_name || lot.sku_code}" — Expected: "${sku?.product_name || sku_code}"`);
+      return;
+    }
+    if (lot.batch_code !== batch_code) {
+      setBatchVerifyError(`❌ WRONG BATCH! Scanned lot has batch: "${lot.batch_code}" — Selected: "${batch_code}"`);
+      return;
+    }
+    setBatchVerified(true);
+    setBatchVerifyError('');
+  };
 
+  const handleSubmit = async () => {
     setSaving(true);
     const today = todayStr();
     const receipt_id = genId('RCV');
@@ -143,7 +170,7 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
     setLastReceipt({ receipt_id });
     setNewLot(created);
     setStep('location');
-    onRefresh();
+    onRefresh(); // silent — won't show loading spinner
   };
 
   const handleSaveLocation = async () => {
@@ -158,20 +185,31 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
 
   const reset = () => {
     setSku_code(''); setBatch_code(''); setBatchLocked(false); setMfg_date(''); setExp_date('');
+    setBatchVerified(false); setBatchVerifyError('');
     setBoxes_received(''); setLoose_bottles_received('');
     setDocPhotos([]);
     setHeader({ doc_number: '', notes: '' });
     setLocation('');
     setNewLot(null);
     setLastReceipt(null);
-    setStep('form');
+    setStep('doc');
   };
+
+  const goBack = () => {
+    if (step === 'doc') { onBack(); return; }
+    if (step === 'product') { setStep('doc'); return; }
+    if (step === 'qty') { setStep('product'); return; }
+  };
+
+  const canGoToProduct = !!header.doc_number.trim() && docPhotos.length > 0;
+  const canGoToQty = !!(sku_code && batch_code && mfg_date && exp_date && (!batchLocked || batchVerified));
+  const canSubmit = Number(boxes_received) > 0 || Number(loose_bottles_received) > 0;
 
   // ── Location step ──────────────────────────────────────────────────────────
   if (step === 'location') {
     return (
       <div className="space-y-5 pb-8">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center shrink-0">
             <CheckCircle2 className="w-5 h-5 text-green-600" />
           </div>
@@ -180,33 +218,22 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
             <p className="text-xs text-slate-400 font-mono">{newLot?.lot_id}</p>
           </div>
         </div>
-
-        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-1.5 text-sm">
+        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-1">
           <p className="font-semibold text-slate-700">{newLot?.product_name}</p>
+          {newLot?.flavour && <p className="text-xs text-slate-500">{newLot.flavour}</p>}
           <p className="text-xs text-slate-500">Batch: {newLot?.batch_code} · {newLot?.boxes_in} boxes</p>
-          <p className="text-xs text-slate-500">Mfg: {newLot?.mfg_date} · Exp: {newLot?.exp_date}</p>
+          <p className="text-xs text-slate-500">Mfg: {fmtDate(newLot?.mfg_date)} · Exp: {fmtDate(newLot?.exp_date)}</p>
         </div>
-
         <div className="border border-slate-200 rounded-xl p-4 space-y-3 bg-white">
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-2">
             <MapPin className="w-4 h-4 text-slate-500" />
             <p className="text-sm font-semibold text-slate-700">Set Warehouse Location</p>
           </div>
-          <Input
-            value={location}
-            onChange={e => setLocation(e.target.value)}
-            onKeyDown={focusNext}
-            placeholder="e.g. Rack A-3, Bay 2"
-            className="h-11"
-            autoFocus
-          />
-          <p className="text-xs text-slate-400">Optional — you can skip and set later</p>
+          <Input value={location} onChange={e => setLocation(e.target.value)} onKeyDown={focusNext} placeholder="e.g. Rack A-3, Bay 2" className="h-11" autoFocus />
+          <p className="text-xs text-slate-400">Optional — skip and set later</p>
         </div>
-
         <div className="flex gap-3">
-          <Button variant="outline" className="flex-1 h-12 text-base" onClick={() => setStep('done')}>
-            Skip & Print
-          </Button>
+          <Button variant="outline" className="flex-1 h-12 text-base" onClick={() => setStep('done')}>Skip & Print</Button>
           <Button className="flex-1 h-12 text-base" onClick={handleSaveLocation} disabled={savingLoc}>
             {savingLoc ? <Loader2 className="w-5 h-5 animate-spin" /> : '💾 Save & Print'}
           </Button>
@@ -215,7 +242,7 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
     );
   }
 
-  // ── Done step (show lot card for printing) ─────────────────────────────────
+  // ── Done step ──────────────────────────────────────────────────────────────
   if (step === 'done') {
     const lotForPrint = newLot ? { ...newLot, location } : null;
     return (
@@ -229,23 +256,21 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
             <p className="text-sm text-slate-500">{lastReceipt?.receipt_id}</p>
           </div>
         </div>
-
         {lotForPrint && (
           <div className="border border-slate-200 rounded-xl p-4 bg-white">
             <p className="text-sm font-semibold text-slate-700 mb-3">Lot Card — Print & Attach to Stock</p>
             <LotCardPrint lot={lotForPrint} />
           </div>
         )}
-
         <Button onClick={reset} className="w-full h-12 text-base">📥 Record Another Receipt</Button>
       </div>
     );
   }
 
-  // ── Main form ──────────────────────────────────────────────────────────────
+  // ── Form steps ─────────────────────────────────────────────────────────────
   return (
     <div className="space-y-5 pb-8">
-      {/* Full-screen photo viewer */}
+      {/* Photo viewer */}
       {viewPhoto && (
         <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4" onClick={() => setViewPhoto(null)}>
           <button className="absolute top-4 right-4 text-white bg-black/50 rounded-full w-12 h-12 flex items-center justify-center">
@@ -257,142 +282,217 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
 
       {/* Header */}
       <div className="flex items-center gap-2">
-        <button onClick={onBack} className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl hover:bg-slate-100 active:bg-slate-200 transition-colors">
+        <button onClick={goBack} className="min-w-[48px] min-h-[48px] flex items-center justify-center rounded-xl hover:bg-slate-100 active:bg-slate-200 transition-colors">
           <ChevronLeft className="w-6 h-6 text-slate-700" />
         </button>
         <h2 className="text-lg font-bold text-slate-900">Receive Stock</h2>
       </div>
 
-      {/* Document Details */}
-      <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-4">
-        <p className="text-sm font-semibold text-slate-700">Document Details <span className="text-red-500">*</span></p>
-        <div className="space-y-1.5">
-          <Label className="text-xs text-slate-500">DC / Challan Number <span className="text-red-500">*</span></Label>
-          <Input
-            value={header.doc_number}
-            onChange={e => setHeader(h => ({ ...h, doc_number: e.target.value }))}
-            onKeyDown={focusNext}
-            placeholder="e.g. DC-12345"
-            className="h-11"
-          />
-        </div>
+      <StepBar steps={STEPS} current={step} />
 
-        <div className="space-y-2">
-          <Label className="text-xs text-slate-500">Document Photos <span className="text-red-500">*</span> ({docPhotos.length} added)</Label>
-          {docPhotos.length > 0 && (
-            <div className="flex gap-2 flex-wrap">
-              {docPhotos.map((url, idx) => (
-                <div key={idx} className="relative">
-                  <img src={url} onClick={() => setViewPhoto(url)} className="w-16 h-16 object-cover rounded-lg border border-slate-200 cursor-pointer active:opacity-80" alt={`doc ${idx + 1}`} />
-                  <button onClick={() => setDocPhotos(p => p.filter((_, i) => i !== idx))} className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center shadow">
-                    <X className="w-3 h-3" />
-                  </button>
-                  <div className="absolute bottom-0.5 right-0.5 bg-black/40 rounded-full p-0.5">
-                    <ZoomIn className="w-2.5 h-2.5 text-white" />
-                  </div>
+      {/* ── STEP 1: Document ── */}
+      {step === 'doc' && (
+        <div className="space-y-4">
+          <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-4">
+            <p className="text-sm font-bold text-slate-700">📄 Document Details</p>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-slate-500">DC / Challan Number <span className="text-red-500">*</span></Label>
+              <Input
+                value={header.doc_number}
+                onChange={e => setHeader(h => ({ ...h, doc_number: e.target.value }))}
+                onKeyDown={focusNext}
+                placeholder="e.g. DC-12345"
+                className="h-12"
+                autoFocus
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs text-slate-500">
+                Document Photos <span className="text-red-500">*</span>
+                <span className="ml-1 text-slate-400">({docPhotos.length} added)</span>
+              </Label>
+              {docPhotos.length > 0 && (
+                <div className="flex gap-2 flex-wrap">
+                  {docPhotos.map((url, idx) => (
+                    <div key={idx} className="relative">
+                      <img src={url} onClick={() => setViewPhoto(url)} className="w-16 h-16 object-cover rounded-lg border border-slate-200 cursor-pointer active:opacity-80" alt={`doc ${idx + 1}`} />
+                      <button onClick={() => setDocPhotos(p => p.filter((_, i) => i !== idx))} className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center shadow">
+                        <X className="w-3 h-3" />
+                      </button>
+                      <div className="absolute bottom-0.5 right-0.5 bg-black/40 rounded-full p-0.5">
+                        <ZoomIn className="w-2.5 h-2.5 text-white" />
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
+              <label className="flex items-center gap-2 cursor-pointer border border-dashed border-slate-300 rounded-xl px-4 py-4 hover:bg-slate-50 w-full justify-center min-h-[56px]">
+                {uploading ? <Loader2 className="w-5 h-5 animate-spin text-slate-400" /> : <Camera className="w-5 h-5 text-slate-400" />}
+                <span className="text-sm text-slate-500 font-medium">
+                  {uploading ? 'Uploading…' : docPhotos.length > 0 ? '+ Add Another Photo' : '📷 Take / Upload Photo'}
+                </span>
+                <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhotoCapture} disabled={uploading} />
+              </label>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-slate-500">Notes (optional)</Label>
+              <Input value={header.notes} onChange={e => setHeader(h => ({ ...h, notes: e.target.value }))} onKeyDown={focusNext} className="h-11" />
+            </div>
+          </div>
+          <Button className="w-full h-12 text-base font-bold" onClick={() => setStep('product')} disabled={!canGoToProduct}>
+            Next: Select Product →
+          </Button>
+          {!canGoToProduct && (
+            <p className="text-xs text-center text-red-500">Enter DC number and take at least one photo to continue</p>
+          )}
+        </div>
+      )}
+
+      {/* ── STEP 2: Product & Batch ── */}
+      {step === 'product' && (
+        <div className="space-y-4">
+          <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3">
+            <p className="text-sm font-bold text-slate-700">📦 Select Product (SKU)</p>
+            <SKUSearchInput skus={skus} value={sku_code} onChange={handleSkuChange} />
+            {sku && (
+              <div className="bg-blue-50 rounded-lg px-3 py-2.5 text-xs text-blue-700 space-y-0.5">
+                <p className="font-bold text-sm">{sku.product_name}{sku.flavour ? ` — ${sku.flavour}` : ''}</p>
+                <p>{sku.brand_name ? `${sku.brand_name} · ` : ''}{sku.bottles_per_box} bottles/box{sku.is_trial_pack ? ' · 🧪 Trial Pack' : ''}</p>
+              </div>
+            )}
+          </div>
+
+          {sku && (
+            <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-4">
+              <p className="text-sm font-bold text-slate-700">🏭 Batch Information</p>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-slate-500">Batch Code *</Label>
+                <BatchSearchInput
+                  batches={recentBatches}
+                  value={batchLocked ? batch_code : ''}
+                  onSelect={handleBatchSelect}
+                  placeholder="Type new or select recent batch…"
+                />
+                {!batchLocked && batch_code && (
+                  <p className="text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-1.5">✏️ New batch: <strong>{batch_code}</strong> — enter dates below</p>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-slate-500">
+                  Mfg. Date * {batchLocked && <span className="text-green-600 ml-1">🔒 auto-filled</span>}
+                </Label>
+                {batchLocked ? (
+                  <div className="flex h-11 w-full rounded-xl border border-slate-100 bg-slate-50 px-3 items-center text-base font-bold text-slate-700">
+                    {fmtDate(mfg_date)}
+                  </div>
+                ) : (
+                  <DateMaskInput key={sku_code + '_mfg'} value={mfg_date} onChange={setMfg_date} maxToday={true} />
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-slate-500">
+                  Expiry Date * {batchLocked && <span className="text-green-600 ml-1">🔒 auto-filled</span>}
+                </Label>
+                {batchLocked ? (
+                  <div className="flex h-11 w-full rounded-xl border border-slate-100 bg-slate-50 px-3 items-center text-base font-bold text-slate-700">
+                    {fmtDate(exp_date)}
+                  </div>
+                ) : (
+                  <DateMaskInput key={sku_code + '_exp'} value={exp_date} onChange={setExp_date} minDate={mfg_date} />
+                )}
+              </div>
+
+              {/* QR Batch Verification for existing batch */}
+              {batchLocked && !batchVerified && (
+                <div className="bg-amber-50 border-2 border-amber-400 rounded-xl p-4 space-y-3">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-bold text-amber-800">⚠️ Verify Correct Stock</p>
+                      <p className="text-xs text-amber-700 mt-0.5">
+                        Existing batch selected. Scan QR of any existing lot with batch <strong>{batch_code}</strong> to confirm you have the correct product before receiving.
+                      </p>
+                    </div>
+                  </div>
+                  <QRScanInput onScan={handleBatchVerifyScan} placeholder="Scan lot QR to verify…" />
+                  {batchVerifyError && (
+                    <div className="bg-red-50 border border-red-300 rounded-lg px-3 py-2.5">
+                      <p className="text-xs font-bold text-red-700">{batchVerifyError}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {batchVerified && (
+                <div className="flex items-center gap-2 bg-green-50 border border-green-300 rounded-xl px-3 py-3">
+                  <ShieldCheck className="w-5 h-5 text-green-600 shrink-0" />
+                  <p className="text-sm font-bold text-green-700">✅ Verified — Correct product & batch confirmed!</p>
+                </div>
+              )}
             </div>
           )}
-          <label className="flex items-center gap-2 cursor-pointer border border-dashed border-slate-300 rounded-xl px-4 py-4 hover:bg-slate-100 w-full justify-center min-h-[56px]">
-            {uploading ? <Loader2 className="w-5 h-5 animate-spin text-slate-400" /> : <Camera className="w-5 h-5 text-slate-400" />}
-            <span className="text-sm text-slate-500">{uploading ? 'Uploading…' : docPhotos.length > 0 ? 'Add Another Photo' : 'Take Photo'}</span>
-            <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhotoCapture} disabled={uploading} />
-          </label>
-        </div>
 
-        <div className="space-y-1.5">
-          <Label className="text-xs text-slate-500">Notes</Label>
-          <Input value={header.notes} onChange={e => setHeader(h => ({ ...h, notes: e.target.value }))} onKeyDown={focusNext} className="h-11" />
-        </div>
-      </div>
-
-      {/* SKU */}
-      <div className="border border-slate-200 rounded-xl p-4 space-y-3 bg-white">
-        <p className="text-sm font-semibold text-slate-700">Product</p>
-        <div className="space-y-1.5">
-          <Label className="text-xs text-slate-500">SKU *</Label>
-          <SKUSearchInput skus={skus} value={sku_code} onChange={handleSkuChange} />
-        </div>
-        {sku && (
-          <p className="text-xs text-blue-700 bg-blue-50 rounded-lg px-3 py-2">
-            📦 {sku.bottles_per_box} bottles/box{sku.is_trial_pack ? ' · 🧪 Trial Pack' : ''}
-            {sku.product_family ? ` · ${sku.product_family}` : ''}
-          </p>
-        )}
-      </div>
-
-      {/* Batch Information */}
-      {sku && (
-        <div className="border border-slate-200 rounded-xl p-4 space-y-4 bg-white">
-          <p className="text-sm font-semibold text-slate-700">Batch Information</p>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs text-slate-500">Batch Code *</Label>
-            <BatchSearchInput
-              batches={recentBatches}
-              value={batchLocked ? batch_code : ''}
-              onSelect={handleBatchSelect}
-              placeholder="Type new or select recent batch…"
-            />
-            {!batchLocked && batch_code && (
-              <p className="text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-1.5">✏️ New batch: <strong>{batch_code}</strong> — enter dates below</p>
-            )}
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs text-slate-500">
-              Mfg. Date * (DD/MM/YYYY)
-              {batchLocked && <span className="ml-1 text-green-600">🔒 auto-filled</span>}
-            </Label>
-            {batchLocked ? (
-              <div className="flex h-11 w-full rounded-xl border border-slate-100 bg-slate-50 px-3 items-center text-base text-slate-700">
-                {mfg_date}
-              </div>
-            ) : (
-              <DateMaskInput key={sku_code + '_mfg'} value={mfg_date} onChange={setMfg_date} maxToday={true} />
-            )}
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs text-slate-500">
-              Expiry Date * (DD/MM/YYYY)
-              {batchLocked && <span className="ml-1 text-green-600">🔒 auto-filled</span>}
-            </Label>
-            {batchLocked ? (
-              <div className="flex h-11 w-full rounded-xl border border-slate-100 bg-slate-50 px-3 items-center text-base text-slate-700">
-                {exp_date}
-              </div>
-            ) : (
-              <DateMaskInput key={sku_code + '_exp'} value={exp_date} onChange={setExp_date} minDate={mfg_date} />
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Quantity */}
-      {sku && (
-        <div className="border border-slate-200 rounded-xl p-4 space-y-4 bg-white">
-          <p className="text-sm font-semibold text-slate-700">Quantity Received</p>
-          <div className="space-y-1.5">
-            <Label className="text-xs text-slate-500">Boxes</Label>
-            <Input type="text" inputMode="numeric" pattern="[0-9]*" value={boxes_received} onChange={e => setBoxes_received(e.target.value.replace(/\D/g, ''))} onKeyDown={focusNext} placeholder="0" className="h-11" />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs text-slate-500">Loose Bottles</Label>
-            <Input type="text" inputMode="numeric" pattern="[0-9]*" value={loose_bottles_received} onChange={e => setLoose_bottles_received(e.target.value.replace(/\D/g, ''))} onKeyDown={focusNext} placeholder="0" className="h-11" />
-          </div>
-          {(boxes_received || loose_bottles_received) && (
-            <p className="text-xs text-right text-slate-500">
-              Total: <strong>{totalBottles(boxes_received, loose_bottles_received, sku.bottles_per_box)}</strong> bottles
-            </p>
+          <Button className="w-full h-12 text-base font-bold" onClick={() => setStep('qty')} disabled={!canGoToQty}>
+            Next: Enter Quantity →
+          </Button>
+          {sku && batchLocked && !batchVerified && (
+            <p className="text-xs text-center text-amber-600 font-semibold">⚠️ Scan existing lot QR to verify before continuing</p>
           )}
         </div>
       )}
 
-      <Button className="w-full h-12 text-base" onClick={handleSubmit} disabled={saving || !sku_code}>
-        {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : '✅ Confirm Receipt'}
-      </Button>
+      {/* ── STEP 3: Quantity ── */}
+      {step === 'qty' && (
+        <div className="space-y-4">
+          {/* Summary */}
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-1">
+            <p className="text-xs text-blue-500 font-bold uppercase tracking-wide">Receiving for:</p>
+            <p className="font-bold text-blue-900 text-base">{sku?.product_name}{sku?.flavour ? ` — ${sku.flavour}` : ''}</p>
+            {sku?.brand_name && <p className="text-xs text-blue-700">{sku.brand_name}</p>}
+            <p className="text-xs text-blue-700 mt-1">Batch: <strong>{batch_code}</strong></p>
+            <p className="text-xs text-blue-700">Mfg: {fmtDate(mfg_date)} &nbsp;·&nbsp; Exp: {fmtDate(exp_date)}</p>
+          </div>
+
+          <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-4">
+            <p className="text-sm font-bold text-slate-700">📦 Quantity Received</p>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-slate-500">Number of Boxes</Label>
+              <Input
+                type="text" inputMode="numeric" pattern="[0-9]*"
+                value={boxes_received}
+                onChange={e => setBoxes_received(e.target.value.replace(/\D/g, ''))}
+                onKeyDown={focusNext}
+                placeholder="0"
+                className="h-14 text-2xl font-bold text-center"
+                autoFocus
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-slate-500">Loose Bottles</Label>
+              <Input
+                type="text" inputMode="numeric" pattern="[0-9]*"
+                value={loose_bottles_received}
+                onChange={e => setLoose_bottles_received(e.target.value.replace(/\D/g, ''))}
+                onKeyDown={focusNext}
+                placeholder="0"
+                className="h-14 text-2xl font-bold text-center"
+              />
+            </div>
+            {(boxes_received || loose_bottles_received) && sku && (
+              <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-center">
+                <p className="text-3xl font-black text-green-700">
+                  {totalBottles(boxes_received, loose_bottles_received, sku.bottles_per_box).toLocaleString()}
+                </p>
+                <p className="text-sm text-green-600">total bottles</p>
+              </div>
+            )}
+          </div>
+
+          <Button className="w-full h-14 text-base font-bold" onClick={handleSubmit} disabled={saving || !canSubmit}>
+            {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : '✅ Confirm Receipt'}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
