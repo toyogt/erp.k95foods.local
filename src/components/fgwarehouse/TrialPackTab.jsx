@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Loader2, Plus, Trash2, CheckCircle2, ChevronLeft } from 'lucide-react';
 import { formatLotId, getNextLotSeq, todayStr } from './whHelpers';
 
-export default function TrialPackTab({ skus, lots, onRefresh, user }) {
+export default function TrialPackTab({ skus, lots, onRefresh, user, onBack }) {
   const [step, setStep] = useState('form');
   const [saving, setSaving] = useState(false);
   const [lastResult, setLastResult] = useState(null);
