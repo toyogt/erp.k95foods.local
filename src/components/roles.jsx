@@ -68,7 +68,7 @@ const ACCESS_MAP = {
   label_operator:       ['Dashboard','BoxLabelPrint','BoxLabelApprovals','BoxPalletBuild'],
   label_supervisor:     ['Dashboard','BoxLabelApprovals','AlertsPage'],
   pallet_builder:       ['Dashboard','BoxPalletBuild','BoxStockDashboard'],
-  warehouse_ops:        ['Dashboard','WarehouseOps','BoxStockDashboard','OpeningStockImport'],
+  warehouse_ops:        ['Dashboard','WarehouseOps','BoxStockDashboard','OpeningStockImport','FGWarehouse'],
   // Purchase roles
   purchase_user:        ['Dashboard', 'PurchaseOps', ...GRN_HUB_PAGES],
   purchase_manager:     ['Dashboard', 'PurchaseOps', 'SupplierManager', ...APPROVAL_PAGES, ...GRN_HUB_PAGES,
