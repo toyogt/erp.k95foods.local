@@ -95,6 +95,7 @@ export default function LotCardPrint({ lot }) {
               <p className="text-lg font-bold text-slate-900">{lot.loose_bottles_in || 0}</p>
             </div>
           </div>
+          {lot.batch_code && <p className="text-xs text-slate-500 mt-1">Batch: <strong>{lot.batch_code}</strong> | Mfg: {lot.mfg_date || '—'} | Exp: {lot.exp_date || '—'}</p>}
           {lot.location && <p className="text-xs text-slate-400">📍 {lot.location}</p>}
         </div>
         <QRCode value={lot.lot_id} size={90} />
