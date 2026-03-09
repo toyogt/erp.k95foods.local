@@ -44,7 +44,8 @@ export default function FGWarehouse() {
   const totalBoxes = activeLots.reduce((s, l) => s + (l.boxes_balance || 0), 0);
   const totalLoose = activeLots.reduce((s, l) => s + (l.loose_bottles_balance || 0), 0);
 
-  const tabProps = { skus, lots, onRefresh: loadData, user };
+  const goHome = () => setActiveTab('home');
+  const tabProps = { skus, lots, onRefresh: loadData, user, onBack: goHome };
 
   const renderContent = () => {
     if (loading) {
@@ -59,7 +60,7 @@ export default function FGWarehouse() {
       case 'lots':     return <LotTab {...tabProps} />;
       case 'receive':  return <ReceiveTab {...tabProps} />;
       case 'dispatch': return <DispatchTab {...tabProps} />;
-      case 'stock':    return <StockTab skus={skus} lots={lots} />;
+      case 'stock':    return <StockTab skus={skus} lots={lots} onBack={goHome} />;
       case 'trial':    return <TrialPackTab {...tabProps} />;
       default:         return null;
     }
