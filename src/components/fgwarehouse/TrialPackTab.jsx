@@ -127,6 +127,12 @@ export default function TrialPackTab({ skus, lots, onRefresh, user, onBack }) {
 
   return (
     <div className="space-y-5">
+      <div className="flex items-center gap-2">
+        <button onClick={onBack} className="p-2 rounded-xl hover:bg-slate-100 active:bg-slate-200 transition-colors">
+          <ChevronLeft className="w-6 h-6 text-slate-700" />
+        </button>
+        <h2 className="text-lg font-bold text-slate-900">Trial Pack Builder</h2>
+      </div>
       <div className="bg-purple-50 border border-purple-200 rounded-xl p-3 text-xs text-purple-700">
         🧪 Trial Pack builder deducts individual component bottles from source lots and creates a new trial pack lot.
       </div>
