@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,6 +20,9 @@ const STEPS = [
 
 export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
   const [step, setStep] = useState('doc');
+
+  // Scroll to top on every step change
+  useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }); }, [step]);
   const [saving, setSaving] = useState(false);
   const [savingLoc, setSavingLoc] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -346,7 +349,6 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
                 onKeyDown={focusNext}
                 placeholder="e.g. DC-12345"
                 className="h-12"
-                autoFocus
               />
             </div>
             <div className="space-y-2">
