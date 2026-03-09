@@ -23,8 +23,8 @@ export default function FGWarehouse() {
   const [lots, setLots] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
+  const loadData = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     const [u, s, l] = await Promise.all([
       base44.auth.me().catch(() => null),
       base44.entities.ProductMaster.list('-created_date', 500),
@@ -33,14 +33,14 @@ export default function FGWarehouse() {
     setUser(u);
     setSkus(s || []);
     setLots(l || []);
-    setLoading(false);
+    if (!silent) setLoading(false);
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  // Auto-refresh every 5 minutes when idle
+  // Auto-refresh every 5 minutes silently
   useEffect(() => {
-    const interval = setInterval(() => loadData(), 5 * 60 * 1000);
+    const interval = setInterval(() => loadData(true), 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, [loadData]);
 
@@ -51,7 +51,7 @@ export default function FGWarehouse() {
   const totalLoose = activeLots.reduce((s, l) => s + (l.loose_bottles_balance || 0), 0);
 
   const goHome = () => setActiveTab('home');
-  const tabProps = { skus, lots, onRefresh: loadData, user, onBack: goHome };
+  const tabProps = { skus, lots, onRefresh: () => loadData(true), user, onBack: goHome };
 
   const renderContent = () => {
     if (loading) {
@@ -111,9 +111,16 @@ function HomeTab({ lots, activeLots, totalSkusInStock, totalBoxes, totalLoose, s
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-xl font-bold text-slate-900">FG Warehouse</h1>
-        <p className="text-sm text-slate-400">Finished Goods Management</p>
+      {/* K95 Branding Header */}
+      <div className="bg-slate-900 rounded-2xl px-5 py-4 flex items-center justify-between">
+        <div>
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">K95 Foods Pvt. Ltd.</p>
+          <p className="text-lg font-black text-white leading-tight">FG Warehouse</p>
+          <p className="text-xs text-slate-400 mt-0.5">Finished Goods Management</p>
+        </div>
+        <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center text-2xl shrink-0">
+          🏭
+        </div>
       </div>
 
       {/* Summary Cards */}
