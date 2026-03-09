@@ -7,10 +7,18 @@ const toDisplay = (iso) => {
   return `${d}/${m}/${y}`;
 };
 
-export default function DateMaskInput({ value, onChange, placeholder = 'DD/MM/YYYY', className = '' }) {
+export default function DateMaskInput({
+  value,
+  onChange,
+  onComplete,
+  placeholder = 'DD/MM/YYYY',
+  className = '',
+  readOnly = false,
+  id,
+  nextFieldId,
+}) {
   const [display, setDisplay] = useState(() => toDisplay(value));
 
-  // Sync display when value is externally reset (e.g. form reset)
   useEffect(() => {
     if (!value) setDisplay('');
     else {
@@ -20,6 +28,7 @@ export default function DateMaskInput({ value, onChange, placeholder = 'DD/MM/YY
   }, [value]);
 
   const handleChange = (e) => {
+    if (readOnly) return;
     const digits = e.target.value.replace(/\D/g, '').slice(0, 8);
     let formatted = '';
     if (digits.length <= 2) {
@@ -33,21 +42,40 @@ export default function DateMaskInput({ value, onChange, placeholder = 'DD/MM/YY
     if (digits.length === 8) {
       const iso = `${digits.slice(4)}-${digits.slice(2, 4)}-${digits.slice(0, 2)}`;
       const date = new Date(iso);
-      if (!isNaN(date.getTime())) onChange(iso);
-      else onChange('');
+      if (!isNaN(date.getTime())) {
+        onChange(iso);
+        if (onComplete) onComplete(iso);
+        if (nextFieldId) {
+          setTimeout(() => {
+            const el = document.getElementById(nextFieldId);
+            if (el) { el.focus(); if (el.select) el.select(); }
+          }, 50);
+        }
+      } else onChange('');
     } else {
       onChange('');
     }
   };
 
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && nextFieldId) {
+      e.preventDefault();
+      const el = document.getElementById(nextFieldId);
+      if (el) { el.focus(); if (el.select) el.select(); }
+    }
+  };
+
   return (
     <input
+      id={id}
       type="text"
       inputMode="numeric"
       value={display}
       onChange={handleChange}
+      onKeyDown={handleKeyDown}
       placeholder={placeholder}
-      className={`flex h-11 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-base shadow-sm placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${className}`}
+      readOnly={readOnly}
+      className={`flex h-11 w-full rounded-xl border bg-white px-3 py-2 text-base shadow-sm placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${readOnly ? 'border-slate-100 bg-slate-50 text-slate-500 cursor-not-allowed' : 'border-slate-200'} ${className}`}
     />
   );
 }
