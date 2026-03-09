@@ -48,6 +48,7 @@ export default function LotCardPrint({ lot }) {
                   <div class="stat-value">${lot.loose_bottles_in || 0}</div>
                 </div>
               </div>
+              ${lot.batch_code ? `<div class="sub" style="margin-top:8px">Batch: ${lot.batch_code} | Mfg: ${lot.mfg_date || '—'} | Exp: ${lot.exp_date || '—'}</div>` : ''}
             </div>
             <div>
               ${lot.location ? `<div class="sub">📍 ${lot.location}</div>` : ''}
