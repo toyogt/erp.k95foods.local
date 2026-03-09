@@ -127,6 +127,23 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
 
   const activeLots = lots.filter(l => l.status === 'ACTIVE');
 
+  const getFifoWarning = (lot_id) => {
+    const lot = lots.find(l => l.lot_id === lot_id);
+    if (!lot || !lot.lot_date) return null;
+    const lotKey = (l) => (l.lot_date || '') + String(l.lot_seq || 0).padStart(4, '0');
+    const older = lots.filter(l =>
+      l.sku_code === lot.sku_code &&
+      l.status === 'ACTIVE' &&
+      l.lot_id !== lot.lot_id &&
+      (l.boxes_balance || 0) > 0 &&
+      l.lot_date &&
+      lotKey(l) < lotKey(lot)
+    );
+    if (!older.length) return null;
+    const oldest = [...older].sort((a, b) => (a.lot_date || '').localeCompare(b.lot_date || ''))[0];
+    return `⚠️ FIFO: Older stock in lot ${oldest.lot_id} (${oldest.lot_date}) — ${oldest.boxes_balance} boxes. Dispatch older lot first!`;
+  };
+
   return (
     <div className="space-y-5">
       {/* Header bar */}
@@ -140,7 +157,7 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
       {/* Dispatch details */}
       <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
         <p className="text-sm font-semibold text-slate-700">Dispatch Details</p>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-3">
           <div className="space-y-1">
             <Label className="text-xs">Channel *</Label>
             <select
@@ -223,13 +240,20 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
                     {lot.batch_code && <p>Batch: {lot.batch_code} | Exp: {lot.exp_date || '—'}</p>}
                     <p>Balance: {lot.boxes_balance} boxes · {lot.bottles_per_box} btls/box</p>
                   </div>
+                  {getFifoWarning(line.lot_id) && (
+                    <div className="bg-amber-50 border border-amber-300 rounded-lg px-3 py-2 text-xs text-amber-800 font-medium">
+                      {getFifoWarning(line.lot_id)}
+                    </div>
+                  )}
                   <div className="space-y-1">
                     <Label className="text-xs">Boxes to Dispatch *</Label>
                     <Input
-                      type="number" min="0" max={lot.boxes_balance}
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       value={line.boxes_dispatched}
-                      onChange={e => updateLine(i, { boxes_dispatched: e.target.value })}
-                      className="text-sm"
+                      onChange={e => updateLine(i, { boxes_dispatched: e.target.value.replace(/\D/g, '') })}
+                      className="text-sm h-11"
                       placeholder={`Max: ${lot.boxes_balance}`}
                     />
                     {line.boxes_dispatched && (

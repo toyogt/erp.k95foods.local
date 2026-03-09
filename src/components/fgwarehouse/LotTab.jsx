@@ -8,13 +8,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import LotCardPrint from './LotCardPrint';
 import QRScanInput from './QRScanInput';
 import { todayStr, formatLotId, getNextLotSeq, totalBottles } from './whHelpers';
+import DateMaskInput from './DateMaskInput';
 
 export default function LotTab({ skus, lots, onRefresh, user, onBack }) {
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [selectedLot, setSelectedLot] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [scanMode, setScanMode] = useState(false);
 
   const [form, setForm] = useState({
     sku_code: '', batch_code: '', mfg_date: '', exp_date: '',
@@ -41,7 +41,6 @@ export default function LotTab({ skus, lots, onRefresh, user, onBack }) {
     const lot = lots.find(l => l.lot_id === scannedValue);
     if (lot) {
       setSelectedLot(lot);
-      setScanMode(false);
     } else {
       alert(`Lot "${scannedValue}" not found.`);
     }
@@ -105,27 +104,22 @@ export default function LotTab({ skus, lots, onRefresh, user, onBack }) {
         <h2 className="text-lg font-bold text-slate-900">Manage Lots</h2>
       </div>
 
-      {/* Search + Scan + New */}
+      {/* Search + New */}
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-slate-400" />
           <Input className="pl-8 text-sm" placeholder="Search lots…" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
-        <Button size="sm" variant="outline" onClick={() => setScanMode(v => !v)} className="gap-1.5 min-h-[44px] px-3">
-          📷
-        </Button>
-        <Button size="sm" onClick={openNew} className="gap-1.5 min-h-[44px]">
+        <Button size="sm" onClick={openNew} className="gap-1.5 min-h-[44px] px-4">
           <Plus className="w-4 h-4" /> New
         </Button>
       </div>
 
-      {/* QR Scan panel */}
-      {scanMode && (
-        <div className="border border-slate-200 rounded-xl p-3 bg-slate-50">
-          <p className="text-xs text-slate-500 mb-2 font-semibold">Scan a Lot QR code to view its stock:</p>
-          <QRScanInput onScan={handleQRScan} placeholder="Scan lot QR or type lot ID…" />
-        </div>
-      )}
+      {/* QR Scan - always visible */}
+      <div className="border border-slate-200 rounded-xl p-3 bg-slate-50">
+        <p className="text-xs text-slate-500 mb-2 font-semibold">Scan Lot QR to view:</p>
+        <QRScanInput onScan={handleQRScan} placeholder="Scan lot QR or type lot ID…" />
+      </div>
 
       {filtered.length === 0 ? (
         <div className="text-center py-12 text-slate-400 text-sm">No lots found.</div>
@@ -196,24 +190,24 @@ export default function LotTab({ skus, lots, onRefresh, user, onBack }) {
               <Label className="text-xs">Batch Code *</Label>
               <Input value={form.batch_code} onChange={e => setForm(f => ({ ...f, batch_code: e.target.value }))} placeholder="e.g. B2603001" className="text-sm" />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label className="text-xs">Mfg. Date *</Label>
-                <Input type="date" value={form.mfg_date} onChange={e => setForm(f => ({ ...f, mfg_date: e.target.value }))} className="text-sm" />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Expiry Date *</Label>
-                <Input type="date" value={form.exp_date} onChange={e => setForm(f => ({ ...f, exp_date: e.target.value }))} className="text-sm" />
-              </div>
+            <div className="space-y-3">
+            <div className="space-y-1">
+              <Label className="text-xs">Mfg. Date * (DD/MM/YYYY)</Label>
+              <DateMaskInput key={form.sku_code + '_mfg'} value={form.mfg_date} onChange={v => setForm(f => ({ ...f, mfg_date: v }))} />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Expiry Date * (DD/MM/YYYY)</Label>
+              <DateMaskInput key={form.sku_code + '_exp'} value={form.exp_date} onChange={v => setForm(f => ({ ...f, exp_date: v }))} />
+            </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs">Boxes In</Label>
-                <Input type="number" min="0" value={form.boxes_in} onChange={e => setForm(f => ({ ...f, boxes_in: e.target.value }))} className="text-sm" />
+                <Input type="text" inputMode="numeric" pattern="[0-9]*" value={form.boxes_in} onChange={e => setForm(f => ({ ...f, boxes_in: e.target.value.replace(/\D/g, '') }))} className="text-sm" />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Loose Bottles</Label>
-                <Input type="number" min="0" value={form.loose_bottles_in} onChange={e => setForm(f => ({ ...f, loose_bottles_in: e.target.value }))} className="text-sm" />
+                <Input type="text" inputMode="numeric" pattern="[0-9]*" value={form.loose_bottles_in} onChange={e => setForm(f => ({ ...f, loose_bottles_in: e.target.value.replace(/\D/g, '') }))} className="text-sm" />
               </div>
             </div>
             {activeSku && (form.boxes_in || form.loose_bottles_in) && (
