@@ -17,7 +17,7 @@ const TABS = [
 ];
 
 export default function FGWarehouse() {
-  const [activeTab, setActiveTab] = useState('home');
+  const [activeTab, setActiveTab] = useState(() => sessionStorage.getItem('fgw_tab') || 'home');
   const [user, setUser] = useState(null);
   const [skus, setSkus] = useState([]);
   const [lots, setLots] = useState([]);
@@ -50,7 +50,14 @@ export default function FGWarehouse() {
   const totalBoxes = activeLots.reduce((s, l) => s + (l.boxes_balance || 0), 0);
   const totalLoose = activeLots.reduce((s, l) => s + (l.loose_bottles_balance || 0), 0);
 
-  const goHome = () => setActiveTab('home');
+  // Persist active tab & scroll to top on tab change
+  const switchTab = (tab) => {
+    sessionStorage.setItem('fgw_tab', tab);
+    setActiveTab(tab);
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  };
+
+  const goHome = () => switchTab('home');
   const tabProps = { skus, lots, onRefresh: () => loadData(true), user, onBack: goHome };
 
   const renderContent = () => {
@@ -62,7 +69,7 @@ export default function FGWarehouse() {
       );
     }
     switch (activeTab) {
-      case 'home':     return <HomeTab lots={lots} activeLots={activeLots} totalSkusInStock={totalSkusInStock} totalBoxes={totalBoxes} totalLoose={totalLoose} setActiveTab={setActiveTab} />;
+      case 'home':     return <HomeTab lots={lots} activeLots={activeLots} totalSkusInStock={totalSkusInStock} totalBoxes={totalBoxes} totalLoose={totalLoose} setActiveTab={switchTab} />;
       case 'lots':     return <LotTab {...tabProps} />;
       case 'receive':  return <ReceiveTab {...tabProps} />;
       case 'dispatch': return <DispatchTab {...tabProps} />;
@@ -88,7 +95,7 @@ export default function FGWarehouse() {
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => switchTab(tab.id)}
                 className={`flex-1 flex flex-col items-center justify-center py-3 gap-0.5 min-h-[64px] transition-colors ${
                   active ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600'
                 }`}
