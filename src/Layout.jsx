@@ -87,6 +87,8 @@ export default function Layout({ children, currentPageName }) {
       window.location.href = createPageUrl('FGWarehouse');
     }
   }, [isFGOnly, currentPageName]);
+  if (userLoading) return null;
+
   const fromPage = new URLSearchParams(window.location.search).get('from');
   // Only filter nav once user is loaded to avoid flashing admin items
   const NAV_ITEMS = user
