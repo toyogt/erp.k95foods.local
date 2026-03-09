@@ -46,6 +46,10 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
   const [targetLot, setTargetLot] = useState(null);
   const [lotScanError, setLotScanError] = useState('');
 
+  // Qty step
+  const [boxes_received, setBoxes_received] = useState('');
+  const [loose_bottles_received, setLoose_bottles_received] = useState('');
+
   const sku = skus.find(s => s.item_code === sku_code);
 
   // Recent batches for this SKU (last 2 days)
@@ -239,9 +243,7 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
   const canGoToQty = !!(sku_code && batch_code && mfg_date && exp_date && (!batchLocked || targetLot));
   const canSubmit = Number(boxes_received) > 0 || Number(loose_bottles_received) > 0;
 
-  // Qty step state
-  const [boxes_received, setBoxes_received] = useState('');
-  const [loose_bottles_received, setLoose_bottles_received] = useState('');
+
 
   // ── Location step (new batch only) ────────────────────────────────────────
   if (step === 'location') {
