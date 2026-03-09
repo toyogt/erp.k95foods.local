@@ -40,7 +40,7 @@ const ACCESS_MAP = {
     'Dashboard','FillingStation','ChamberStation',
     'TransferReceiving','LabellingLine','FGPalletizing','AuditLogPage','MasterData',
     'AlertsPage','PullLists','CustomizeDashboard',
-    'BoxLabelPrint','BoxLabelApprovals','BoxPalletBuild','WarehouseOps','BoxStockDashboard','OpeningStockImport',
+    'BoxLabelPrint','BoxLabelApprovals','BoxPalletBuild','WarehouseOps','BoxStockDashboard','OpeningStockImport','FGWarehouse',
     'ProductionControl','LabelRollManager','TemplateMappingManager','FeederKiosk','TraceInvestigation',
     'DispatchCrates',
     ...PURCHASE_PAGES, ...APPROVAL_PAGES, ...GRN_HUB_PAGES,
