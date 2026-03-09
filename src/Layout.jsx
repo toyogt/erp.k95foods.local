@@ -107,10 +107,13 @@ export default function Layout({ children, currentPageName }) {
               )}
               {isDashboard && (
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center shrink-0">
                     <Factory className="w-4 h-4 text-white" />
                   </div>
-                  <span className="font-bold text-slate-900 text-sm tracking-tight">Factory Exec</span>
+                  <div>
+                    <p className="font-bold text-slate-900 text-sm leading-tight tracking-tight">K95 Foods Pvt. Ltd.</p>
+                    <p className="text-xs text-slate-400 leading-tight">Factory Exec</p>
+                  </div>
                 </div>
               )}
               {!isDashboard && (

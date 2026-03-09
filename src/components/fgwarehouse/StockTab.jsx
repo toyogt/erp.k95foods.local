@@ -189,7 +189,8 @@ export default function StockTab({ skus, lots, onBack }) {
                       {lot.brand_name && <p className="text-xs font-semibold text-blue-600">{lot.brand_name}</p>}
                       <p className="font-semibold text-slate-900 text-sm leading-snug">{lot.product_name || lot.sku_code}</p>
                       {lot.flavour && <p className="text-xs text-slate-400">{lot.flavour}</p>}
-                      {lot.batch_code && <p className="text-xs text-slate-400">Batch: {lot.batch_code} | Exp: {lot.exp_date || '—'}</p>}
+                      {lot.batch_code && <p className="text-xs text-slate-400">Batch: {lot.batch_code}</p>}
+                      {(lot.mfg_date || lot.exp_date) && <p className="text-xs text-slate-400">Mfg: {lot.mfg_date || '—'} · Exp: {lot.exp_date || '—'}</p>}
                       {lot.location && <p className="text-xs text-slate-400">📍 {lot.location}</p>}
                     </div>
                     <div className="text-right shrink-0">

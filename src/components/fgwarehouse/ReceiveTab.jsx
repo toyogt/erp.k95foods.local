@@ -3,10 +3,10 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Camera, CheckCircle2, ChevronLeft } from 'lucide-react';
+import { Loader2, Camera, CheckCircle2, ChevronLeft, X, ZoomIn } from 'lucide-react';
 import QRScanInput from './QRScanInput';
 import SKUSearchInput from './SKUSearchInput';
-import DateMaskInput from './DateMaskInput';
+import DateMaskInput, { focusNext } from './DateMaskInput';
 import { genId, todayStr, formatLotId, getNextLotSeq, totalBottles } from './whHelpers';
 
 export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
@@ -14,6 +14,7 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [lastReceipt, setLastReceipt] = useState(null);
+  const [viewPhoto, setViewPhoto] = useState(null);
 
   const [sku_code, setSku_code] = useState('');
   const [batch_code, setBatch_code] = useState('');
@@ -23,7 +24,8 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
   const [loose_bottles_received, setLoose_bottles_received] = useState('');
   const [create_new_lot, setCreate_new_lot] = useState(true);
   const [lot_id_selected, setLot_id_selected] = useState('');
-  const [header, setHeader] = useState({ doc_number: '', doc_photo: '', notes: '' });
+  const [docPhotos, setDocPhotos] = useState([]);
+  const [header, setHeader] = useState({ doc_number: '', notes: '' });
 
   const sku = skus.find(s => s.item_code === sku_code);
 
@@ -37,7 +39,6 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
       .map(l => l.batch_code)
   )];
 
-  // Existing active lots: same SKU + same batch
   const existingLots = lots.filter(l =>
     l.sku_code === sku_code &&
     l.status === 'ACTIVE' &&
@@ -47,9 +48,10 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
   const handlePhotoCapture = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    e.target.value = '';
     setUploading(true);
     const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    setHeader(h => ({ ...h, doc_photo: file_url }));
+    setDocPhotos(p => [...p, file_url]);
     setUploading(false);
   };
 
@@ -66,7 +68,7 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
     const found = lots.find(l => l.lot_id === scannedValue);
     if (!found) { alert(`Lot "${scannedValue}" not found.`); return; }
     if (found.sku_code !== sku_code) {
-      alert(`Lot "${scannedValue}" belongs to a different product (${found.sku_code}). Cannot mix products in one lot.`);
+      alert(`Lot "${scannedValue}" belongs to a different product (${found.sku_code}). Cannot mix products.`);
       return;
     }
     if (batch_code && found.batch_code !== batch_code) {
@@ -80,8 +82,9 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
   const handleSubmit = async () => {
     if (!sku_code) { alert('Select a SKU'); return; }
     if (!batch_code) { alert('Enter batch code'); return; }
-    if (!mfg_date) { alert('Enter manufacturing date in DD/MM/YYYY'); return; }
-    if (!exp_date) { alert('Enter expiry date in DD/MM/YYYY'); return; }
+    if (!mfg_date) { alert('Enter a valid manufacturing date (DD/MM/YYYY)'); return; }
+    if (!exp_date) { alert('Enter a valid expiry date (DD/MM/YYYY)'); return; }
+    if (exp_date <= mfg_date) { alert('Expiry date must be after manufacturing date'); return; }
     if (!boxes_received && !loose_bottles_received) { alert('Enter boxes or loose bottles received'); return; }
 
     setSaving(true);
@@ -96,7 +99,7 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
       receipt_date: today,
       received_by: user?.full_name || user?.email || '',
       doc_number: header.doc_number || '',
-      doc_photo: header.doc_photo || '',
+      doc_photo: docPhotos.join(','),
       notes: header.notes || '',
       status: 'CONFIRMED',
     });
@@ -159,7 +162,8 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
     setSku_code(''); setBatch_code(''); setMfg_date(''); setExp_date('');
     setBoxes_received(''); setLoose_bottles_received('');
     setCreate_new_lot(true); setLot_id_selected('');
-    setHeader({ doc_number: '', doc_photo: '', notes: '' });
+    setDocPhotos([]);
+    setHeader({ doc_number: '', notes: '' });
     setStep('form');
     setLastReceipt(null);
   };
@@ -182,6 +186,19 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
 
   return (
     <div className="space-y-5 pb-8">
+      {/* Full-screen photo viewer */}
+      {viewPhoto && (
+        <div
+          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
+          onClick={() => setViewPhoto(null)}
+        >
+          <button className="absolute top-4 right-4 text-white bg-black/50 rounded-full w-10 h-10 flex items-center justify-center">
+            <X className="w-6 h-6" />
+          </button>
+          <img src={viewPhoto} className="max-w-full max-h-full rounded-lg object-contain" alt="Document" />
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center gap-2">
         <button onClick={onBack} className="p-2 rounded-xl hover:bg-slate-100 active:bg-slate-200 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center">
@@ -195,26 +212,53 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
         <p className="text-sm font-semibold text-slate-700">Document Details</p>
         <div className="space-y-1.5">
           <Label className="text-xs text-slate-500">DC / Challan Number</Label>
-          <Input value={header.doc_number} onChange={e => setHeader(h => ({ ...h, doc_number: e.target.value }))} placeholder="e.g. DC-12345" className="h-11" />
+          <Input
+            value={header.doc_number}
+            onChange={e => setHeader(h => ({ ...h, doc_number: e.target.value }))}
+            onKeyDown={focusNext}
+            placeholder="e.g. DC-12345"
+            className="h-11"
+          />
         </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs text-slate-500">Document Photo (Camera only)</Label>
-          {header.doc_photo ? (
-            <div className="flex items-center gap-3">
-              <img src={header.doc_photo} className="w-16 h-16 object-cover rounded-lg border border-slate-200" alt="doc" />
-              <button onClick={() => setHeader(h => ({ ...h, doc_photo: '' }))} className="text-xs text-red-500 underline">Remove</button>
+
+        {/* Multi-photo */}
+        <div className="space-y-2">
+          <Label className="text-xs text-slate-500">Document Photos ({docPhotos.length} added)</Label>
+          {docPhotos.length > 0 && (
+            <div className="flex gap-2 flex-wrap">
+              {docPhotos.map((url, idx) => (
+                <div key={idx} className="relative group">
+                  <img
+                    src={url}
+                    onClick={() => setViewPhoto(url)}
+                    className="w-16 h-16 object-cover rounded-lg border border-slate-200 cursor-pointer active:opacity-80"
+                    alt={`doc ${idx + 1}`}
+                  />
+                  <button
+                    onClick={() => setDocPhotos(p => p.filter((_, i) => i !== idx))}
+                    className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs shadow"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                  <div className="absolute bottom-0.5 right-0.5 bg-black/40 rounded-full p-0.5">
+                    <ZoomIn className="w-2.5 h-2.5 text-white" />
+                  </div>
+                </div>
+              ))}
             </div>
-          ) : (
-            <label className="flex items-center gap-2 cursor-pointer border border-dashed border-slate-300 rounded-xl px-4 py-4 hover:bg-slate-100 w-full justify-center min-h-[56px]">
-              {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Camera className="w-5 h-5 text-slate-400" />}
-              <span className="text-sm text-slate-500">{uploading ? 'Uploading…' : 'Take Photo'}</span>
-              <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhotoCapture} disabled={uploading} />
-            </label>
           )}
+          <label className="flex items-center gap-2 cursor-pointer border border-dashed border-slate-300 rounded-xl px-4 py-4 hover:bg-slate-100 w-full justify-center min-h-[56px]">
+            {uploading ? <Loader2 className="w-5 h-5 animate-spin text-slate-400" /> : <Camera className="w-5 h-5 text-slate-400" />}
+            <span className="text-sm text-slate-500">
+              {uploading ? 'Uploading…' : docPhotos.length > 0 ? 'Add Another Photo' : 'Take Photo'}
+            </span>
+            <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhotoCapture} disabled={uploading} />
+          </label>
         </div>
+
         <div className="space-y-1.5">
           <Label className="text-xs text-slate-500">Notes</Label>
-          <Input value={header.notes} onChange={e => setHeader(h => ({ ...h, notes: e.target.value }))} className="h-11" />
+          <Input value={header.notes} onChange={e => setHeader(h => ({ ...h, notes: e.target.value }))} onKeyDown={focusNext} className="h-11" />
         </div>
       </div>
 
@@ -227,7 +271,7 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
         </div>
         {sku && (
           <p className="text-xs text-blue-700 bg-blue-50 rounded-lg px-3 py-2">
-            📦 {sku.bottles_per_box} btls/box{sku.is_trial_pack ? ' · 🧪 Trial Pack' : ''}
+            📦 {sku.bottles_per_box} bottles/box{sku.is_trial_pack ? ' · 🧪 Trial Pack' : ''}
             {sku.product_family ? ` · ${sku.product_family}` : ''}
           </p>
         )}
@@ -243,25 +287,26 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
             <input
               list="rcv-batch-suggestions"
               value={batch_code}
-              onChange={e => { setBatch_code(e.target.value); setLot_id_selected(''); setCreate_new_lot(true); }}
+              onChange={e => { setBatch_code(e.target.value.toUpperCase()); setLot_id_selected(''); setCreate_new_lot(true); }}
+              onKeyDown={focusNext}
               placeholder="e.g. B2603001"
-              className="flex h-11 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-base shadow-sm placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="flex h-11 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-base uppercase shadow-sm placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 tracking-wider"
             />
             <datalist id="rcv-batch-suggestions">
               {recentBatchCodes.map(b => <option key={b} value={b} />)}
             </datalist>
             {recentBatchCodes.length > 0 && (
-              <p className="text-xs text-slate-400">💡 {recentBatchCodes.length} recent batch(es) available — tap field to see suggestions</p>
+              <p className="text-xs text-slate-400">💡 {recentBatchCodes.length} recent batch(es) — tap to see suggestions</p>
             )}
           </div>
 
           <div className="space-y-1.5">
             <Label className="text-xs text-slate-500">Mfg. Date * (DD/MM/YYYY)</Label>
-            <DateMaskInput key={sku_code + '_mfg'} value={mfg_date} onChange={setMfg_date} />
+            <DateMaskInput key={sku_code + '_mfg'} value={mfg_date} onChange={setMfg_date} maxToday={true} />
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs text-slate-500">Expiry Date * (DD/MM/YYYY)</Label>
-            <DateMaskInput key={sku_code + '_exp'} value={exp_date} onChange={setExp_date} />
+            <DateMaskInput key={sku_code + '_exp'} value={exp_date} onChange={setExp_date} minDate={mfg_date} />
           </div>
         </div>
       )}
@@ -278,6 +323,7 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
               pattern="[0-9]*"
               value={boxes_received}
               onChange={e => setBoxes_received(e.target.value.replace(/\D/g, ''))}
+              onKeyDown={focusNext}
               placeholder="0"
               className="h-11"
             />
@@ -290,6 +336,7 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
               pattern="[0-9]*"
               value={loose_bottles_received}
               onChange={e => setLoose_bottles_received(e.target.value.replace(/\D/g, ''))}
+              onKeyDown={focusNext}
               placeholder="0"
               className="h-11"
             />

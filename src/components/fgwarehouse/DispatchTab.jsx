@@ -238,7 +238,7 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
                   <div className="bg-green-50 border border-green-200 rounded-lg px-3 py-2 text-xs text-green-800 space-y-0.5">
                     <p className="font-semibold">{lot.product_name}</p>
                     {lot.batch_code && <p>Batch: {lot.batch_code} | Exp: {lot.exp_date || '—'}</p>}
-                    <p>Balance: {lot.boxes_balance} boxes · {lot.bottles_per_box} btls/box</p>
+                    <p>Balance: {lot.boxes_balance} boxes · {lot.bottles_per_box} bottles/box</p>
                   </div>
                   {getFifoWarning(line.lot_id) && (
                     <div className="bg-amber-50 border border-amber-300 rounded-lg px-3 py-2 text-xs text-amber-800 font-medium">

@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import LotCardPrint from './LotCardPrint';
 import QRScanInput from './QRScanInput';
 import { todayStr, formatLotId, getNextLotSeq, totalBottles } from './whHelpers';
-import DateMaskInput from './DateMaskInput';
+import DateMaskInput, { focusNext } from './DateMaskInput';
 
 export default function LotTab({ skus, lots, onRefresh, user, onBack }) {
   const [search, setSearch] = useState('');
@@ -51,6 +51,7 @@ export default function LotTab({ skus, lots, onRefresh, user, onBack }) {
     if (!form.batch_code) { alert('Enter batch code'); return; }
     if (!form.mfg_date) { alert('Enter manufacturing date'); return; }
     if (!form.exp_date) { alert('Enter expiry date'); return; }
+    if (form.exp_date <= form.mfg_date) { alert('Expiry date must be after manufacturing date'); return; }
     setSaving(true);
     const sku = skus.find(s => s.item_code === form.sku_code);
     const today = todayStr();
@@ -138,6 +139,11 @@ export default function LotTab({ skus, lots, onRefresh, user, onBack }) {
                   <p className="text-xs text-slate-400">
                     {[lot.brand_name, lot.flavour, lot.batch_code ? `Batch: ${lot.batch_code}` : ''].filter(Boolean).join(' · ')}
                   </p>
+                  {(lot.mfg_date || lot.exp_date) && (
+                    <p className="text-xs text-slate-400">
+                      Mfg: {lot.mfg_date || '—'} · Exp: {lot.exp_date || '—'}
+                    </p>
+                  )}
                 </div>
                 <div className="flex flex-col items-end gap-1 shrink-0">
                   <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${statusColor[lot.status] || 'bg-slate-100 text-slate-500'}`}>
@@ -188,27 +194,27 @@ export default function LotTab({ skus, lots, onRefresh, user, onBack }) {
             )}
             <div className="space-y-1">
               <Label className="text-xs">Batch Code *</Label>
-              <Input value={form.batch_code} onChange={e => setForm(f => ({ ...f, batch_code: e.target.value }))} placeholder="e.g. B2603001" className="text-sm" />
+              <Input value={form.batch_code} onChange={e => setForm(f => ({ ...f, batch_code: e.target.value.toUpperCase() }))} onKeyDown={focusNext} placeholder="e.g. B2603001" className="text-sm uppercase tracking-wider" />
             </div>
             <div className="space-y-3">
             <div className="space-y-1">
               <Label className="text-xs">Mfg. Date * (DD/MM/YYYY)</Label>
-              <DateMaskInput key={form.sku_code + '_mfg'} value={form.mfg_date} onChange={v => setForm(f => ({ ...f, mfg_date: v }))} />
+              <DateMaskInput key={form.sku_code + '_mfg'} value={form.mfg_date} onChange={v => setForm(f => ({ ...f, mfg_date: v }))} maxToday={true} />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Expiry Date * (DD/MM/YYYY)</Label>
-              <DateMaskInput key={form.sku_code + '_exp'} value={form.exp_date} onChange={v => setForm(f => ({ ...f, exp_date: v }))} />
+              <DateMaskInput key={form.sku_code + '_exp'} value={form.exp_date} onChange={v => setForm(f => ({ ...f, exp_date: v }))} minDate={form.mfg_date} />
             </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label className="text-xs">Boxes In</Label>
-                <Input type="text" inputMode="numeric" pattern="[0-9]*" value={form.boxes_in} onChange={e => setForm(f => ({ ...f, boxes_in: e.target.value.replace(/\D/g, '') }))} className="text-sm" />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Loose Bottles</Label>
-                <Input type="text" inputMode="numeric" pattern="[0-9]*" value={form.loose_bottles_in} onChange={e => setForm(f => ({ ...f, loose_bottles_in: e.target.value.replace(/\D/g, '') }))} className="text-sm" />
-              </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Boxes In</Label>
+              <Input type="text" inputMode="numeric" pattern="[0-9]*" value={form.boxes_in} onChange={e => setForm(f => ({ ...f, boxes_in: e.target.value.replace(/\D/g, '') }))} onKeyDown={focusNext} className="text-sm" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Loose Bottles</Label>
+              <Input type="text" inputMode="numeric" pattern="[0-9]*" value={form.loose_bottles_in} onChange={e => setForm(f => ({ ...f, loose_bottles_in: e.target.value.replace(/\D/g, '') }))} onKeyDown={focusNext} className="text-sm" />
+            </div>
             </div>
             {activeSku && (form.boxes_in || form.loose_bottles_in) && (
               <p className="text-xs text-slate-500 text-right">
@@ -217,7 +223,7 @@ export default function LotTab({ skus, lots, onRefresh, user, onBack }) {
             )}
             <div className="space-y-1">
               <Label className="text-xs">Location (optional)</Label>
-              <Input value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} placeholder="e.g. Rack A-3" className="text-sm" />
+              <Input value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} onKeyDown={focusNext} placeholder="e.g. Rack A-3" className="text-sm" />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Notes</Label>

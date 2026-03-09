@@ -60,6 +60,7 @@ import CustomizeDashboard from './pages/CustomizeDashboard';
 import Dashboard from './pages/Dashboard';
 import DispatchCrates from './pages/DispatchCrates';
 import FGPalletizing from './pages/FGPalletizing';
+import FGWarehouse from './pages/FGWarehouse';
 import FeederKiosk from './pages/FeederKiosk';
 import FillingStation from './pages/FillingStation';
 import GRNReceive from './pages/GRNReceive';
@@ -96,7 +97,6 @@ import TransferReceiving from './pages/TransferReceiving';
 import UOMManager from './pages/UOMManager';
 import WarehouseBins from './pages/WarehouseBins';
 import WarehouseOps from './pages/WarehouseOps';
-import FGWarehouse from './pages/FGWarehouse';
 import __Layout from './Layout.jsx';
 
 
@@ -114,6 +114,7 @@ export const PAGES = {
     "Dashboard": Dashboard,
     "DispatchCrates": DispatchCrates,
     "FGPalletizing": FGPalletizing,
+    "FGWarehouse": FGWarehouse,
     "FeederKiosk": FeederKiosk,
     "FillingStation": FillingStation,
     "GRNReceive": GRNReceive,
@@ -150,7 +151,6 @@ export const PAGES = {
     "UOMManager": UOMManager,
     "WarehouseBins": WarehouseBins,
     "WarehouseOps": WarehouseOps,
-    "FGWarehouse": FGWarehouse,
 }
 
 export const pagesConfig = {
