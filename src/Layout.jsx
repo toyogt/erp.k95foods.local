@@ -65,11 +65,14 @@ const ALL_NAV_ITEMS = [
 
 export default function Layout({ children, currentPageName }) {
   const [user, setUser] = useState(null);
+  const [userLoading, setUserLoading] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
   const { isEnabled } = useModuleAccess(user);
 
   useEffect(() => {
-    base44.auth.me().then(setUser).catch(() => {});
+    base44.auth.me()
+      .then(u => { setUser(u); setUserLoading(false); })
+      .catch(() => setUserLoading(false));
   }, []);
 
   useEffect(() => { window.scrollTo(0, 0); }, [currentPageName]);
