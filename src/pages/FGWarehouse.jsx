@@ -38,6 +38,12 @@ export default function FGWarehouse() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  // Auto-refresh every 5 minutes when idle
+  useEffect(() => {
+    const interval = setInterval(() => loadData(), 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [loadData]);
+
   // Home stats
   const activeLots = lots.filter(l => l.status === 'ACTIVE');
   const totalSkusInStock = new Set(activeLots.map(l => l.sku_code)).size;
