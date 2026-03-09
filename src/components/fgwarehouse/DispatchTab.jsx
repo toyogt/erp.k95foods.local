@@ -1,8 +1,8 @@
-import { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useState, useEffect } from 'react';
 import { Loader2, Camera, Trash2, CheckCircle2, ChevronLeft, Plus, X, ZoomIn } from 'lucide-react';
 import QRScanInput from './QRScanInput';
 import StepBar from './StepBar';
@@ -20,6 +20,8 @@ function emptyLine() {
 
 export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
   const [step, setStep] = useState('details');
+
+  useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }); }, [step]);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [lastDispatch, setLastDispatch] = useState(null);
