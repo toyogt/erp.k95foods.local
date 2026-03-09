@@ -172,30 +172,7 @@ function HomeTab({ lots, activeLots, totalSkusInStock, totalBoxes, totalLoose, s
         </div>
       </div>
 
-      {/* Recent lots */}
-      {activeLots.length > 0 && (
-        <div className="space-y-2">
-          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Recent Active Lots</p>
-          <div className="space-y-2">
-            {activeLots.slice(0, 5).map(lot => {
-              const ppb = lot.bottles_per_box || 1;
-              const total = (lot.boxes_balance || 0) * ppb + (lot.loose_bottles_balance || 0);
-              return (
-                <div key={lot.id} className="flex items-center justify-between bg-white border border-slate-200 rounded-xl px-4 py-3">
-                  <div>
-                    <p className="text-xs font-mono font-bold text-slate-400">{lot.lot_id}</p>
-                    <p className="text-sm font-semibold text-slate-900">{lot.product_name || lot.sku_code}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-base font-bold text-slate-900">{total.toLocaleString()}</p>
-                    <p className="text-xs text-slate-400">bottles</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+
     </div>
   );
 }
