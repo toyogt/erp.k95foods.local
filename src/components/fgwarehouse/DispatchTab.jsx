@@ -163,14 +163,14 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
             <select
               value={header.channel}
               onChange={e => setHeader(h => ({ ...h, channel: e.target.value }))}
-              className="w-full border border-slate-200 rounded-xl px-3 py-3 text-sm bg-white"
+              className="w-full border border-slate-200 rounded-xl px-3 py-3 text-base bg-white min-h-[48px]"
             >
               {CHANNELS.map(c => <option key={c} value={c}>{c.replace('_', ' ')}</option>)}
             </select>
           </div>
           <div className="space-y-1">
             <Label className="text-xs">Order / Ref No.</Label>
-            <Input value={header.order_reference} onChange={e => setHeader(h => ({ ...h, order_reference: e.target.value }))} placeholder="SO-1234" className="text-sm" />
+            <Input value={header.order_reference} onChange={e => setHeader(h => ({ ...h, order_reference: e.target.value }))} placeholder="SO-1234" className="h-11" />
           </div>
         </div>
 
