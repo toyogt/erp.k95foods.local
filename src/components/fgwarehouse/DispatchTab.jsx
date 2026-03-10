@@ -66,6 +66,11 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
 
   useEffect(() => {
     if (step === 'done') return;
+    const hasMeaningfulData = step !== 'details' || header.order_reference || header.notes || docPhotos.length > 0 || products.length > 0;
+    if (!hasMeaningfulData) {
+      localStorage.removeItem(DISPATCH_DRAFT_KEY);
+      return;
+    }
     localStorage.setItem(DISPATCH_DRAFT_KEY, JSON.stringify({
       step, header,
       docPhotos: docPhotos.filter(p => p.serverUrl).map(p => ({ localUrl: p.serverUrl, serverUrl: p.serverUrl, uploading: false })),
