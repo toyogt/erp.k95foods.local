@@ -29,6 +29,7 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
   const [hasDraft, setHasDraft] = useState(false);
   const [saving, setSaving] = useState(false);
   const [viewPhoto, setViewPhoto] = useState(null);
+  const readyToSaveRef = useRef(false);
 
   // Photos — background upload (no blocking spinner)
   const [docPhotos, setDocPhotos] = useState([]); // [{localUrl, serverUrl, uploading, error}]
