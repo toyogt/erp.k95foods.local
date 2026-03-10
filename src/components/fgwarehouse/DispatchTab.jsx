@@ -91,6 +91,9 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
     try {
       const d = JSON.parse(raw);
       
+      // Prevent auto-save during restoration
+      isRestoringRef.current = true;
+      
       // Batch all state updates together
       const newStep = d.step || 'details';
       const newHeader = d.header || { channel: 'OTHER', order_reference: '', notes: '' };
@@ -106,9 +109,13 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
       setDocPhotos(newDocPhotos);
       setProducts(newProducts);
       setHasDraft(false);
-      setStep(newStep); // Set step last so UI updates with all data in place
+      setStep(newStep);
+      
+      // Re-enable auto-save after state updates complete
+      setTimeout(() => { isRestoringRef.current = false; }, 100);
     } catch (e) {
       setHasDraft(false);
+      isRestoringRef.current = false;
     }
   };
 
