@@ -20,8 +20,7 @@ const STEPS = [
 ];
 const RECEIVE_DRAFT_KEY = 'fgwh_receive_draft';
 
-let _entryId = 0;
-const newEntry = () => ({ id: ++_entryId, boxes: '', loose: '', location: '', targetLot: null, scanError: '' });
+const newEntry = () => ({ boxes: '', loose: '', location: '', targetLot: null, scanError: '' });
 
 export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
   const { isOnline } = useOffline();
@@ -42,8 +41,8 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
   const [mfg_date, setMfg_date] = useState('');
   const [exp_date, setExp_date] = useState('');
 
-  // Multi-lot entries
-  const [lotEntries, setLotEntries] = useState([newEntry()]);
+  // Single lot entry
+  const [lotEntry, setLotEntry] = useState(newEntry());
   const [lastReceipt, setLastReceipt] = useState(null);
   const [newLots, setNewLots] = useState([]);
 
@@ -86,9 +85,9 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
       step, header,
       docPhotos: docPhotos.filter(p => p.serverUrl).map(p => ({ localUrl: p.serverUrl, serverUrl: p.serverUrl, uploading: false })),
       sku_code, batch_code, batchLocked, mfg_date, exp_date,
-      lotEntries: lotEntries.map(e => ({ id: e.id, boxes: e.boxes, loose: e.loose, location: e.location, targetLotId: e.targetLot?.lot_id || null })),
+      lotEntry: { boxes: lotEntry.boxes, loose: lotEntry.loose, location: lotEntry.location, targetLotId: lotEntry.targetLot?.lot_id || null },
     }));
-  }, [step, header, docPhotos, sku_code, batch_code, batchLocked, mfg_date, exp_date, lotEntries]);
+  }, [step, header, docPhotos, sku_code, batch_code, batchLocked, mfg_date, exp_date, lotEntry]);
 
   const loadDraft = () => {
     const raw = localStorage.getItem(RECEIVE_DRAFT_KEY);
@@ -103,13 +102,13 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
       setBatchLocked(d.batchLocked || false);
       setMfg_date(d.mfg_date || '');
       setExp_date(d.exp_date || '');
-      setLotEntries(
-        (d.lotEntries || []).map(e => ({
-          ...e,
-          targetLot: e.targetLotId ? lots.find(l => l.lot_id === e.targetLotId) || null : null,
+      if (d.lotEntry) {
+        setLotEntry({
+          ...d.lotEntry,
+          targetLot: d.lotEntry.targetLotId ? lots.find(l => l.lot_id === d.lotEntry.targetLotId) || null : null,
           scanError: '',
-        }))
-      );
+        });
+      }
       setHasDraft(false);
       readyToSaveRef.current = true;
     } catch {
@@ -172,7 +171,7 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
     setBatchLocked(false);
     setMfg_date('');
     setExp_date('');
-    setLotEntries([newEntry()]);
+    setLotEntry(newEntry());
   };
 
   const handleBatchSelect = (code, mfg, exp) => {
@@ -186,30 +185,33 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
       setMfg_date('');
       setExp_date('');
     }
-    setLotEntries([newEntry()]);
+    setLotEntry(newEntry());
   };
 
-  // ── Lot Entries ────────────────────────────────────────────────────────────
-  const updateEntry = (id, patch) => setLotEntries(prev => prev.map(e => e.id === id ? { ...e, ...patch } : e));
-  const removeEntry = (id) => setLotEntries(prev => prev.filter(e => e.id !== id));
-  const addEntry = () => setLotEntries(prev => [...prev, newEntry()]);
-
-  const handleLotScan = (entryId, scannedId) => {
+  // ── Lot Entry ──────────────────────────────────────────────────────────────
+  const handleLotScan = (scannedId) => {
     const lot = lots.find(l => l.lot_id === scannedId);
-    if (!lot) { updateEntry(entryId, { scanError: 'Lot not found. Try again.' }); return; }
-    if (lot.sku_code !== sku_code) { updateEntry(entryId, { scanError: `Wrong product: "${lot.product_name || lot.sku_code}"` }); return; }
-    if (lot.batch_code !== batch_code) { updateEntry(entryId, { scanError: `Wrong batch: "${lot.batch_code}". Expected: "${batch_code}"` }); return; }
-    if (lotEntries.some(e => e.id !== entryId && e.targetLot?.lot_id === scannedId)) {
-      updateEntry(entryId, { scanError: 'This lot is already in another entry.' }); return;
+    if (!lot) { 
+      setLotEntry(prev => ({ ...prev, scanError: 'Lot not found. Please scan a valid lot QR code.' })); 
+      return; 
     }
-    updateEntry(entryId, { targetLot: lot, scanError: '' });
+    if (lot.sku_code !== sku_code) { 
+      setLotEntry(prev => ({ ...prev, scanError: `Wrong product: "${lot.product_name || lot.sku_code}". Please scan the correct lot.` })); 
+      return; 
+    }
+    if (lot.batch_code !== batch_code) { 
+      setLotEntry(prev => ({ ...prev, scanError: `Wrong batch: "${lot.batch_code}". Expected: "${batch_code}". Please scan the correct lot.` })); 
+      return; 
+    }
+    setLotEntry(prev => ({ ...prev, targetLot: lot, scanError: '' }));
   };
 
   // ── Guards ─────────────────────────────────────────────────────────────────
   const canGoToProduct = !!header.doc_number.trim() && docPhotos.length > 0;
   const canGoToQty = !!(sku_code && batch_code && mfg_date && exp_date);
-  const canSubmit = isOnline && !anyPhotoUploading && !saving && lotEntries.length > 0 &&
-    lotEntries.every(e => (Number(e.boxes) > 0 || Number(e.loose) > 0) && (!batchLocked || e.targetLot));
+  const canSubmit = isOnline && !anyPhotoUploading && !saving && 
+    (Number(lotEntry.boxes) > 0 || Number(lotEntry.loose) > 0) && 
+    (!batchLocked || lotEntry.targetLot);
 
   // ── Submit ─────────────────────────────────────────────────────────────────
   const handleSubmit = async () => {
@@ -227,45 +229,42 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
     });
 
     const createdLots = [];
-    for (const entry of lotEntries) {
-      const boxes = Number(entry.boxes) || 0;
-      const loose = Number(entry.loose) || 0;
-      if (boxes === 0 && loose === 0) continue;
+    const boxes = Number(lotEntry.boxes) || 0;
+    const loose = Number(lotEntry.loose) || 0;
 
-      if (batchLocked && entry.targetLot) {
-        const lot = entry.targetLot;
-        await base44.entities.WarehouseLot.update(lot.id, {
-          boxes_in: (lot.boxes_in || 0) + boxes,
-          loose_bottles_in: (lot.loose_bottles_in || 0) + loose,
-          boxes_balance: (lot.boxes_balance || 0) + boxes,
-          loose_bottles_balance: (lot.loose_bottles_balance || 0) + loose,
-          status: 'ACTIVE',
-        });
-        await base44.entities.WarehouseReceiptLine.create({
-          receipt_id, lot_id: lot.lot_id, sku_code: sku.item_code, product_name: sku.product_name,
-          boxes_received: boxes, loose_bottles_received: loose, bottles_per_box: ppb,
-          total_bottles: totalBottles(boxes, loose, ppb),
-        });
-      } else {
-        const seq = await getNextLotSeq(today);
-        const lot_id = formatLotId(today, seq);
-        const created = await base44.entities.WarehouseLot.create({
-          lot_id, lot_date: today, lot_seq: seq,
-          sku_code: sku.item_code, product_name: sku.product_name,
-          brand_name: sku.brand_name || '', product_family: sku.product_family || '',
-          flavour: sku.flavour || '', batch_code, mfg_date, exp_date,
-          bottles_per_box: ppb, boxes_in: boxes, loose_bottles_in: loose,
-          boxes_balance: boxes, loose_bottles_balance: loose,
-          status: 'ACTIVE', is_trial_pack: sku.is_trial_pack || false,
-          location: entry.location || '',
-        });
-        await base44.entities.WarehouseReceiptLine.create({
-          receipt_id, lot_id, sku_code: sku.item_code, product_name: sku.product_name,
-          boxes_received: boxes, loose_bottles_received: loose, bottles_per_box: ppb,
-          total_bottles: totalBottles(boxes, loose, ppb),
-        });
-        createdLots.push(created);
-      }
+    if (batchLocked && lotEntry.targetLot) {
+      const lot = lotEntry.targetLot;
+      await base44.entities.WarehouseLot.update(lot.id, {
+        boxes_in: (lot.boxes_in || 0) + boxes,
+        loose_bottles_in: (lot.loose_bottles_in || 0) + loose,
+        boxes_balance: (lot.boxes_balance || 0) + boxes,
+        loose_bottles_balance: (lot.loose_bottles_balance || 0) + loose,
+        status: 'ACTIVE',
+      });
+      await base44.entities.WarehouseReceiptLine.create({
+        receipt_id, lot_id: lot.lot_id, sku_code: sku.item_code, product_name: sku.product_name,
+        boxes_received: boxes, loose_bottles_received: loose, bottles_per_box: ppb,
+        total_bottles: totalBottles(boxes, loose, ppb),
+      });
+    } else {
+      const seq = await getNextLotSeq(today);
+      const lot_id = formatLotId(today, seq);
+      const created = await base44.entities.WarehouseLot.create({
+        lot_id, lot_date: today, lot_seq: seq,
+        sku_code: sku.item_code, product_name: sku.product_name,
+        brand_name: sku.brand_name || '', product_family: sku.product_family || '',
+        flavour: sku.flavour || '', batch_code, mfg_date, exp_date,
+        bottles_per_box: ppb, boxes_in: boxes, loose_bottles_in: loose,
+        boxes_balance: boxes, loose_bottles_balance: loose,
+        status: 'ACTIVE', is_trial_pack: sku.is_trial_pack || false,
+        location: lotEntry.location || '',
+      });
+      await base44.entities.WarehouseReceiptLine.create({
+        receipt_id, lot_id, sku_code: sku.item_code, product_name: sku.product_name,
+        boxes_received: boxes, loose_bottles_received: loose, bottles_per_box: ppb,
+        total_bottles: totalBottles(boxes, loose, ppb),
+      });
+      createdLots.push(created);
     }
     localStorage.removeItem(RECEIVE_DRAFT_KEY);
     setSaving(false);
@@ -277,7 +276,7 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
 
   const reset = () => {
     setSku_code(''); setBatch_code(''); setBatchLocked(false); setMfg_date(''); setExp_date('');
-    setLotEntries([newEntry()]);
+    setLotEntry(newEntry());
     setDocPhotos([]); uploadQueueRef.current = {};
     setHeader({ doc_number: '', notes: '' });
     setNewLots([]); setLastReceipt(null);
@@ -304,7 +303,7 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
           <div>
             <p className="text-lg font-bold text-slate-900">Receipt Confirmed!</p>
             <p className="text-sm text-slate-500">{lastReceipt?.receipt_id}</p>
-            <p className="text-sm text-slate-500 mt-1">{lotEntries.length} lot entr{lotEntries.length === 1 ? 'y' : 'ies'} recorded.</p>
+            <p className="text-sm text-slate-500 mt-1">Stock added successfully.</p>
           </div>
         </div>
         {newLots.length > 0 && (
@@ -498,7 +497,7 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
         </div>
       )}
 
-      {/* ── STEP 3: Quantity (multi-lot) ─────────────────────────────────── */}
+      {/* ── STEP 3: Quantity (single lot) ───────────────────────────────── */}
       {step === 'qty' && (
         <div className="space-y-4">
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-1">
@@ -509,106 +508,102 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
             <p className="text-xs text-blue-700">Mfg: {fmtDate(mfg_date)} &nbsp;·&nbsp; Exp: {fmtDate(exp_date)}</p>
           </div>
 
-          {lotEntries.map((entry, idx) => (
-            <div key={entry.id} className="bg-white border border-slate-200 rounded-xl p-4 space-y-4">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-bold text-slate-700">
-                  Lot Entry {idx + 1}
-                  {batchLocked && entry.targetLot && (
-                    <span className="ml-2 text-xs font-mono text-green-700">→ {entry.targetLot.lot_id}</span>
-                  )}
-                </p>
-                {lotEntries.length > 1 && (
-                  <button onClick={() => removeEntry(entry.id)} className="text-red-400 hover:text-red-600 min-w-[44px] min-h-[44px] flex items-center justify-center">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+          <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-4">
+            {batchLocked && lotEntry.targetLot && (
+              <p className="text-sm font-bold text-slate-700">
+                Lot Entry → <span className="text-xs font-mono text-green-700">{lotEntry.targetLot.lot_id}</span>
+              </p>
+            )}
+
+            {/* Existing batch: ONLY QR scan (no click selection) */}
+            {batchLocked && !lotEntry.targetLot && (
+              <div className="space-y-3">
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                  <p className="text-sm font-bold text-amber-900 mb-2">📱 Instructions:</p>
+                  <p className="text-sm text-amber-800">Please scan the lot QR card using the scanner below. You cannot select by clicking — only QR scan is allowed.</p>
+                </div>
+                
+                <p className="text-xs text-slate-600 font-semibold">Available lots for batch <strong>{batch_code}</strong>:</p>
+                {suggestedLots.map(l => (
+                  <div key={l.id} className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 pointer-events-none opacity-75">
+                    <div>
+                      <p className="text-xs font-bold font-mono text-slate-800">{l.lot_id}</p>
+                      {l.location && <p className="text-xs text-slate-500">📍 {l.location}</p>}
+                      <p className={`text-xs ${l.status === 'ACTIVE' ? 'text-green-600' : 'text-slate-400'}`}>{l.status}</p>
+                    </div>
+                    <p className="text-sm font-bold text-slate-700">{l.boxes_balance} boxes</p>
+                  </div>
+                ))}
+                
+                <div className="space-y-2">
+                  <Label className="text-sm font-bold text-slate-700">Scan Lot QR Code *</Label>
+                  <QRScanInput onScan={handleLotScan} placeholder="Scan lot QR card to continue…" />
+                </div>
+                
+                {lotEntry.scanError && (
+                  <div className="bg-red-50 border-2 border-red-300 rounded-lg px-4 py-3">
+                    <p className="text-sm font-bold text-red-800">{lotEntry.scanError}</p>
+                  </div>
                 )}
               </div>
+            )}
 
-              {/* Existing batch: scan or tap to select target lot */}
-              {batchLocked && !entry.targetLot && (
-                <div className="space-y-2">
-                  <p className="text-xs text-slate-500">Select or scan the lot to add stock to:</p>
-                  {suggestedLots.filter(l => !lotEntries.some(e => e.id !== entry.id && e.targetLot?.lot_id === l.lot_id)).map(l => (
-                    <button key={l.id} onClick={() => updateEntry(entry.id, { targetLot: l, scanError: '' })}
-                      className="w-full text-left flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 hover:bg-slate-100 active:bg-slate-200 min-h-[52px]">
-                      <div>
-                        <p className="text-xs font-bold font-mono text-slate-800">{l.lot_id}</p>
-                        {l.location && <p className="text-xs text-slate-500">📍 {l.location}</p>}
-                        <p className={`text-xs ${l.status === 'ACTIVE' ? 'text-green-600' : 'text-slate-400'}`}>{l.status}</p>
-                      </div>
-                      <p className="text-sm font-bold text-slate-700">{l.boxes_balance} boxes</p>
-                    </button>
-                  ))}
-                  <QRScanInput onScan={(val) => handleLotScan(entry.id, val)} placeholder="Scan lot QR card…" />
-                  {entry.scanError && (
-                    <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2.5">
-                      <p className="text-xs font-bold text-red-700">{entry.scanError}</p>
-                    </div>
-                  )}
+            {batchLocked && lotEntry.targetLot && (
+              <div className="flex items-start gap-3 bg-green-50 border border-green-300 rounded-xl px-4 py-3">
+                <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-bold text-green-800">Lot Confirmed ✓</p>
+                  <p className="text-xs font-mono text-green-700 mt-0.5">{lotEntry.targetLot.lot_id}</p>
+                  {lotEntry.targetLot.location && <p className="text-xs text-green-700">📍 {lotEntry.targetLot.location}</p>}
+                  <p className="text-xs text-green-600 mt-0.5">Current balance: {lotEntry.targetLot.boxes_balance} boxes + {lotEntry.targetLot.loose_bottles_balance} loose bottles</p>
+                  <button onClick={() => setLotEntry(prev => ({ ...prev, targetLot: null, scanError: '' }))} className="text-xs text-green-600 underline mt-1 min-h-[36px] block">
+                    Change lot (scan again)
+                  </button>
                 </div>
-              )}
+              </div>
+            )}
 
-              {batchLocked && entry.targetLot && (
-                <div className="flex items-start gap-3 bg-green-50 border border-green-300 rounded-xl px-4 py-3">
-                  <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-bold text-green-800">Lot Confirmed ✓</p>
-                    <p className="text-xs font-mono text-green-700 mt-0.5">{entry.targetLot.lot_id}</p>
-                    {entry.targetLot.location && <p className="text-xs text-green-700">📍 {entry.targetLot.location}</p>}
-                    <p className="text-xs text-green-600 mt-0.5">Current balance: {entry.targetLot.boxes_balance} boxes</p>
-                    <button onClick={() => updateEntry(entry.id, { targetLot: null, scanError: '' })} className="text-xs text-green-600 underline mt-1 min-h-[36px] block">Change lot</button>
+            {/* Qty inputs — show always for new batch, or after lot confirmed for existing batch */}
+            {(!batchLocked || lotEntry.targetLot) && (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-slate-500">Boxes</Label>
+                    <Input type="text" inputMode="numeric" pattern="[0-9]*"
+                      value={lotEntry.boxes}
+                      onChange={e => setLotEntry(prev => ({ ...prev, boxes: e.target.value.replace(/\D/g, '') }))}
+                      onKeyDown={focusNext} placeholder="0"
+                      className="h-14 text-2xl font-bold text-center" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-slate-500">Loose Bottles</Label>
+                    <Input type="text" inputMode="numeric" pattern="[0-9]*"
+                      value={lotEntry.loose}
+                      onChange={e => setLotEntry(prev => ({ ...prev, loose: e.target.value.replace(/\D/g, '') }))}
+                      onKeyDown={focusNext} placeholder="0"
+                      className="h-14 text-2xl font-bold text-center" />
                   </div>
                 </div>
-              )}
 
-              {/* Qty inputs — show always for new batch, or after lot confirmed for existing batch */}
-              {(!batchLocked || entry.targetLot) && (
-                <>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1.5">
-                      <Label className="text-xs text-slate-500">Boxes</Label>
-                      <Input type="text" inputMode="numeric" pattern="[0-9]*"
-                        value={entry.boxes}
-                        onChange={e => updateEntry(entry.id, { boxes: e.target.value.replace(/\D/g, '') })}
-                        onKeyDown={focusNext} placeholder="0"
-                        className="h-14 text-2xl font-bold text-center" />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs text-slate-500">Loose Bottles</Label>
-                      <Input type="text" inputMode="numeric" pattern="[0-9]*"
-                        value={entry.loose}
-                        onChange={e => updateEntry(entry.id, { loose: e.target.value.replace(/\D/g, '') })}
-                        onKeyDown={focusNext} placeholder="0"
-                        className="h-14 text-2xl font-bold text-center" />
-                    </div>
+                {/* Location — only for new lots */}
+                {!batchLocked && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-slate-500">📍 Location (optional)</Label>
+                    <Input value={lotEntry.location} onChange={e => setLotEntry(prev => ({ ...prev, location: e.target.value }))} onKeyDown={focusNext} placeholder="e.g. Rack A-3, Bay 2" className="h-11" />
                   </div>
+                )}
 
-                  {/* Location — only for new lots */}
-                  {!batchLocked && (
-                    <div className="space-y-1.5">
-                      <Label className="text-xs text-slate-500">📍 Location (optional)</Label>
-                      <Input value={entry.location} onChange={e => updateEntry(entry.id, { location: e.target.value })} onKeyDown={focusNext} placeholder="e.g. Rack A-3, Bay 2" className="h-11" />
-                    </div>
-                  )}
-
-                  {(entry.boxes || entry.loose) && sku && (
-                    <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-center">
-                      <p className="text-3xl font-black text-green-700">
-                        {totalBottles(entry.boxes, entry.loose, sku.bottles_per_box).toLocaleString()}
-                      </p>
-                      <p className="text-sm text-green-600">total bottles</p>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          ))}
-
-          <button onClick={addEntry}
-            className="w-full border border-dashed border-slate-300 rounded-xl py-4 text-sm text-slate-500 hover:bg-slate-50 flex items-center justify-center gap-2 min-h-[56px]">
-            <Plus className="w-4 h-4" /> Add Another Lot Entry
-          </button>
+                {(lotEntry.boxes || lotEntry.loose) && sku && (
+                  <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-center">
+                    <p className="text-3xl font-black text-green-700">
+                      {totalBottles(lotEntry.boxes, lotEntry.loose, sku.bottles_per_box).toLocaleString()}
+                    </p>
+                    <p className="text-sm text-green-600">total bottles</p>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
 
           {anyPhotoUploading && (
             <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 flex items-center gap-2">
