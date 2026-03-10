@@ -47,7 +47,7 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
   const [lastDispatch, setLastDispatch] = useState(null);
   const [viewPhoto, setViewPhoto] = useState(null);
   const [hasDraft, setHasDraft] = useState(false);
-  const isRestoringRef = useRef(false);
+  const [draftDismissed, setDraftDismissed] = useState(false);
   const uploadQueueRef = useRef({});
 
   const [header, setHeader] = useState({ channel: 'OTHER', order_reference: '', notes: '' });
@@ -55,30 +55,35 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
   const [products, setProducts] = useState([]); // multi-SKU
   const [addingProduct, setAddingProduct] = useState(false);
 
+  // Check for draft on mount only
   useEffect(() => {
     const raw = localStorage.getItem(DISPATCH_DRAFT_KEY);
     if (raw) {
       try {
         const d = JSON.parse(raw);
-        if (d.step && d.step !== 'done') setHasDraft(true);
+        if (d.step && d.step !== 'done' && (d.products?.length > 0 || d.header?.order_reference || d.header?.notes)) {
+          setHasDraft(true);
+        }
       } catch (e) {}
     }
   }, []);
 
+  // Auto-save draft (only when banner is not showing)
   useEffect(() => {
-    if (step === 'done' || isRestoringRef.current) return;
-    // Save draft if: we've progressed past 'details' step, OR user entered any data on details step, OR products exist
-    const hasMeaningfulData = step !== 'details' || products.length > 0 || header.order_reference || header.notes || docPhotos.length > 0;
+    if (step === 'done' || hasDraft) return;
+    
+    const hasMeaningfulData = products.length > 0 || header.order_reference || header.notes || docPhotos.length > 0;
     if (!hasMeaningfulData) {
       localStorage.removeItem(DISPATCH_DRAFT_KEY);
       return;
     }
+    
     localStorage.setItem(DISPATCH_DRAFT_KEY, JSON.stringify({
       step, header,
       docPhotos: docPhotos.filter(p => p.serverUrl).map(p => ({ localUrl: p.serverUrl, serverUrl: p.serverUrl, uploading: false })),
       products: products.map(p => ({ ...p, scanErrors: {}, addingLot: false })),
     }));
-  }, [step, header, docPhotos, products]);
+  }, [step, header, docPhotos, products, hasDraft]);
 
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }); }, [step]);
 
