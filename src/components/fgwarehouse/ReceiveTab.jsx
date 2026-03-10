@@ -233,6 +233,36 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
     onRefresh();
   };
 
+  const loadDraft = () => {
+    const raw = localStorage.getItem(RECEIVE_DRAFT_KEY);
+    if (!raw) return;
+    try {
+      const d = JSON.parse(raw);
+      setStep(d.step || 'doc');
+      setHeader(d.header || { doc_number: '', notes: '' });
+      setDocPhotos(d.docPhotos || []);
+      setSku_code(d.sku_code || '');
+      setBatch_code(d.batch_code || '');
+      setBatchLocked(d.batchLocked || false);
+      setMfg_date(d.mfg_date || '');
+      setExp_date(d.exp_date || '');
+      setBoxes_received(d.boxes_received || '');
+      setLoose_bottles_received(d.loose_bottles_received || '');
+      setTargetLot(null);
+      setLotScanError('');
+      setHasDraft(false);
+    } catch (e) {}
+  };
+
+  // Auto-save draft on state changes
+  useEffect(() => {
+    if (['done', 'location'].includes(step)) return;
+    localStorage.setItem(RECEIVE_DRAFT_KEY, JSON.stringify({
+      step, header, docPhotos, sku_code, batch_code, batchLocked, mfg_date, exp_date,
+      boxes_received, loose_bottles_received,
+    }));
+  }, [step, header, docPhotos, sku_code, batch_code, batchLocked, mfg_date, exp_date, boxes_received, loose_bottles_received]);
+
   const reset = () => {
     setSku_code(''); setBatch_code(''); setBatchLocked(false); setMfg_date(''); setExp_date('');
     setTargetLot(null); setLotScanError('');
@@ -242,6 +272,8 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
     setLocation('');
     setNewLot(null);
     setLastReceipt(null);
+    localStorage.removeItem(RECEIVE_DRAFT_KEY);
+    setHasDraft(false);
     setStep('doc');
   };
 
