@@ -97,6 +97,8 @@ import TransferReceiving from './pages/TransferReceiving';
 import UOMManager from './pages/UOMManager';
 import WarehouseBins from './pages/WarehouseBins';
 import WarehouseOps from './pages/WarehouseOps';
+import TrialPackProduction from './pages/TrialPackProduction';
+import MasterCartonPacking from './pages/MasterCartonPacking';
 import __Layout from './Layout.jsx';
 
 
@@ -151,6 +153,8 @@ export const PAGES = {
     "UOMManager": UOMManager,
     "WarehouseBins": WarehouseBins,
     "WarehouseOps": WarehouseOps,
+    "TrialPackProduction": TrialPackProduction,
+    "MasterCartonPacking": MasterCartonPacking,
 }
 
 export const pagesConfig = {
