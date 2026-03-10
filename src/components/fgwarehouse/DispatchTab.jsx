@@ -47,8 +47,9 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
   const [lastDispatch, setLastDispatch] = useState(null);
   const [viewPhoto, setViewPhoto] = useState(null);
   const [hasDraft, setHasDraft] = useState(false);
-  const [draftDismissed, setDraftDismissed] = useState(false);
   const uploadQueueRef = useRef({});
+  // readyToSave: only true after mount check is done AND user is actively editing (not viewing resume banner)
+  const readyToSaveRef = useRef(false);
 
   const [header, setHeader] = useState({ channel: 'OTHER', order_reference: '', notes: '' });
   const [docPhotos, setDocPhotos] = useState([]); // [{localUrl, serverUrl, uploading}]
@@ -58,24 +59,24 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
   // Check for draft on mount only
   useEffect(() => {
     const raw = localStorage.getItem(DISPATCH_DRAFT_KEY);
-    console.log('🟢 Mount check - draft exists:', !!raw);
     if (raw) {
       try {
         const d = JSON.parse(raw);
-        console.log('🟢 Draft data on mount:', d);
         if (d.step && d.step !== 'done' && (d.products?.length > 0 || d.header?.order_reference || d.header?.notes)) {
-          console.log('🟢 Setting hasDraft = true');
           setHasDraft(true);
+          return; // don't set readyToSave — user must choose Resume or Discard first
         }
       } catch (e) {
-        console.error('🔴 Error parsing draft on mount:', e);
+        localStorage.removeItem(DISPATCH_DRAFT_KEY);
       }
     }
+    // No draft found — safe to start auto-saving immediately
+    readyToSaveRef.current = true;
   }, []);
 
-  // Auto-save draft (skip if done or banner showing or recently dismissed)
+  // Auto-save draft — only runs when readyToSave is true
   useEffect(() => {
-    if (step === 'done' || hasDraft || draftDismissed) return;
+    if (!readyToSaveRef.current || step === 'done') return;
     
     const hasMeaningfulData = products.length > 0 || header.order_reference || header.notes || docPhotos.length > 0;
     if (!hasMeaningfulData) {
@@ -88,7 +89,7 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
       docPhotos: docPhotos.filter(p => p.serverUrl).map(p => ({ localUrl: p.serverUrl, serverUrl: p.serverUrl, uploading: false })),
       products: products.map(p => ({ ...p, scanErrors: {}, addingLot: false })),
     }));
-  }, [step, header, docPhotos, products, hasDraft, draftDismissed]);
+  }, [step, header, docPhotos, products]);
 
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }); }, [step]);
 
