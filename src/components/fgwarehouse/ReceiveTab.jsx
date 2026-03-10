@@ -381,6 +381,20 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
         <h2 className="text-lg font-bold text-slate-900">Receive Stock</h2>
       </div>
 
+      {/* Draft resume banner */}
+      {hasDraft && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-bold text-amber-800">📝 Resume Draft Receipt?</p>
+            <p className="text-xs text-amber-600 mt-0.5">You have an unsaved receipt in progress.</p>
+          </div>
+          <div className="flex gap-2 shrink-0">
+            <Button size="sm" variant="outline" onClick={() => { localStorage.removeItem(RECEIVE_DRAFT_KEY); setHasDraft(false); }} className="h-10 text-sm">Discard</Button>
+            <Button size="sm" onClick={loadDraft} className="h-10 text-sm bg-amber-600 hover:bg-amber-700">Resume</Button>
+          </div>
+        </div>
+      )}
+
       <StepBar steps={STEPS} current={step} />
 
       {/* ── STEP 1: Document ── */}
