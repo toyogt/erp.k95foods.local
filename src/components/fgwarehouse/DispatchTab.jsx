@@ -271,11 +271,13 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
                       className="w-full border border-slate-200 rounded-xl px-3 py-3 text-sm bg-white min-h-[48px]"
                     >
                       <option value="">— Select Lot —</option>
-                      {activeLots.map(l => (
-                        <option key={l.id} value={l.lot_id}>
-                          {l.lot_id} · {l.product_name}{l.flavour ? ` (${l.flavour})` : ''} — {l.boxes_balance} boxes
-                        </option>
-                      ))}
+                      {activeLots
+                        .filter(l => !lines.some((ln, idx) => idx !== i && ln.lot_id === l.lot_id))
+                        .map(l => (
+                          <option key={l.id} value={l.lot_id}>
+                            {l.lot_id} · {l.product_name}{l.flavour ? ` (${l.flavour})` : ''} — {l.boxes_balance} boxes
+                          </option>
+                        ))}
                     </select>
                   </div>
 
