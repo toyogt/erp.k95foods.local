@@ -17,9 +17,22 @@ const STEPS = [
   { id: 'product', label: 'Product' },
   { id: 'qty', label: 'Quantity' },
 ];
+const RECEIVE_DRAFT_KEY = 'fgwh_receive_draft';
 
 export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
   const [step, setStep] = useState('doc');
+  const [hasDraft, setHasDraft] = useState(false);
+
+  // Check for draft on mount
+  useEffect(() => {
+    const raw = localStorage.getItem(RECEIVE_DRAFT_KEY);
+    if (raw) {
+      try {
+        const d = JSON.parse(raw);
+        if (d.step && !['done', 'location'].includes(d.step)) setHasDraft(true);
+      } catch (e) {}
+    }
+  }, []);
 
   // Scroll to top on every step change
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }); }, [step]);
