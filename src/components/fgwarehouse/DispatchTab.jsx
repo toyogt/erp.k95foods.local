@@ -68,9 +68,9 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
     }
   }, []);
 
-  // Auto-save draft (only when banner is not showing)
+  // Auto-save draft (skip if done or banner showing or recently dismissed)
   useEffect(() => {
-    if (step === 'done' || hasDraft) return;
+    if (step === 'done' || hasDraft || draftDismissed) return;
     
     const hasMeaningfulData = products.length > 0 || header.order_reference || header.notes || docPhotos.length > 0;
     if (!hasMeaningfulData) {
@@ -83,7 +83,7 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
       docPhotos: docPhotos.filter(p => p.serverUrl).map(p => ({ localUrl: p.serverUrl, serverUrl: p.serverUrl, uploading: false })),
       products: products.map(p => ({ ...p, scanErrors: {}, addingLot: false })),
     }));
-  }, [step, header, docPhotos, products, hasDraft]);
+  }, [step, header, docPhotos, products, hasDraft, draftDismissed]);
 
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }); }, [step]);
 
