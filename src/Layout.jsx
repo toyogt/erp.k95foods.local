@@ -110,7 +110,7 @@ export default function Layout({ children, currentPageName }) {
         `}</style>
         <OfflineBanner />
         {/* Header - hidden for warehouse-only users */}
-        {!isFGOnly && <header className="sticky top-0 z-50 bg-white border-b border-slate-200">
+        {!isFGOnly && (<header className="sticky top-0 z-50 bg-white border-b border-slate-200">
           <div className="max-w-screen-2xl mx-auto flex items-center justify-between px-3 h-14">
             <div className="flex items-center gap-2">
               {!isDashboard && (
