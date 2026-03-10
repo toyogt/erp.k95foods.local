@@ -338,14 +338,14 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
       </div>
 
       {/* Draft resume banner */}
-      {hasDraft && (
+      {hasDraft && !draftDismissed && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center justify-between gap-3">
           <div>
             <p className="text-sm font-bold text-amber-800">📝 Resume Draft Dispatch?</p>
             <p className="text-xs text-amber-600 mt-0.5">You have an unsaved dispatch in progress.</p>
           </div>
           <div className="flex gap-2 shrink-0">
-            <Button variant="outline" onClick={() => { localStorage.removeItem(DISPATCH_DRAFT_KEY); setHasDraft(false); }} className="h-14 text-base px-6 min-w-[120px]">Discard</Button>
+            <Button variant="outline" onClick={discardDraft} className="h-14 text-base px-6 min-w-[120px]">Discard</Button>
             <Button onClick={loadDraft} className="h-14 text-base px-6 bg-amber-600 hover:bg-amber-700 min-w-[120px]">Resume</Button>
           </div>
         </div>
