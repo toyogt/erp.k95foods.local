@@ -32,7 +32,8 @@ export default function LotTab({ skus, lots, onRefresh, user, onBack }) {
   };
 
   const filtered = lots.filter(l => {
-    if (filterStatus && effectiveStatus(l) !== filterStatus) return false;
+    const status = effectiveStatus(l);
+    if (filterStatus && status !== filterStatus) return false;
     if (!search) return true;
     const q = search.toLowerCase();
     return (
