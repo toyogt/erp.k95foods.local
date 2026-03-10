@@ -211,6 +211,7 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
   const reset = () => {
     setHeader({ channel: 'OTHER', order_reference: '', notes: '' });
     setDocPhotos([]);
+    uploadQueueRef.current = {};
     setSkuCode('');
     setTotalBoxes('');
     setLotEntries([]);
