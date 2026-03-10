@@ -12,8 +12,12 @@ export default function StockTab({ skus, lots, onBack }) {
   const [filterFlavour, setFilterFlavour] = useState('');
   const [filterSku, setFilterSku] = useState('');
 
-  // Always show only ACTIVE lots
-  const activeLots = lots.filter(l => l.status === 'ACTIVE');
+  // A lot is "effectively EMPTY" if both balances are 0, regardless of stored status
+  const effectiveStatus = (l) =>
+    l.status === 'ACTIVE' && (l.boxes_balance || 0) <= 0 && (l.loose_bottles_balance || 0) <= 0 ? 'EMPTY' : l.status;
+
+  // Always show only ACTIVE lots (by effective status)
+  const activeLots = lots.filter(l => effectiveStatus(l) === 'ACTIVE');
 
   const brands = [...new Set(activeLots.map(l => l.brand_name).filter(Boolean))].sort();
   const families = [...new Set(activeLots.map(l => l.product_family).filter(Boolean))].sort();
