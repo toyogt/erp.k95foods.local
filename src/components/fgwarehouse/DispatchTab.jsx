@@ -284,6 +284,7 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
     setLastDispatch(null);
     localStorage.removeItem(DISPATCH_DRAFT_KEY);
     setHasDraft(false);
+    readyToSaveRef.current = true;
     setStep('details');
   };
 
