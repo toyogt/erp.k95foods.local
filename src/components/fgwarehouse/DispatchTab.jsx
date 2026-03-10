@@ -327,8 +327,8 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
             <p className="text-xs text-amber-600 mt-0.5">You have an unsaved dispatch in progress.</p>
           </div>
           <div className="flex gap-2 shrink-0">
-            <Button size="sm" variant="outline" onClick={() => { localStorage.removeItem(DISPATCH_DRAFT_KEY); setHasDraft(false); }} className="h-11 text-sm px-4">Discard</Button>
-            <Button size="sm" onClick={loadDraft} className="h-11 text-sm px-4 bg-amber-600 hover:bg-amber-700">Resume</Button>
+            <Button variant="outline" onClick={() => { localStorage.removeItem(DISPATCH_DRAFT_KEY); setHasDraft(false); }} className="h-14 text-base px-6 min-w-[120px]">Discard</Button>
+            <Button onClick={loadDraft} className="h-14 text-base px-6 bg-amber-600 hover:bg-amber-700 min-w-[120px]">Resume</Button>
           </div>
         </div>
       )}
