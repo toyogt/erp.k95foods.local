@@ -57,6 +57,11 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
     }
   }, []);
 
+  // Clear draft when navigating away (tab switch). Draft only persists across page refresh/browser close.
+  useEffect(() => {
+    return () => { localStorage.removeItem(RECEIVE_DRAFT_KEY); };
+  }, []);
+
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }); }, [step]);
 
   useEffect(() => {
