@@ -133,14 +133,31 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
     }
   };
 
+  const anyPhotoUploading = docPhotos.some(p => p.uploading);
+
   const handlePhotoCapture = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     e.target.value = '';
-    setUploading(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    setDocPhotos(p => [...p, file_url]);
-    setUploading(false);
+    const localUrl = URL.createObjectURL(file);
+    setDocPhotos(p => [...p, { localUrl, serverUrl: null, uploading: true }]);
+    const promise = base44.integrations.Core.UploadFile({ file })
+      .then(({ file_url }) => {
+        setDocPhotos(p => p.map(ph => ph.localUrl === localUrl ? { ...ph, serverUrl: file_url, uploading: false } : ph));
+        return file_url;
+      })
+      .catch(() => {
+        setDocPhotos(p => p.map(ph => ph.localUrl === localUrl ? { ...ph, uploading: false, error: true } : ph));
+        return null;
+      });
+    uploadQueueRef.current[localUrl] = promise;
+  };
+
+  const resolvePhotoUrls = async () => {
+    const urls = await Promise.all(
+      docPhotos.map(p => uploadQueueRef.current[p.localUrl] || Promise.resolve(p.serverUrl))
+    );
+    return urls.filter(Boolean).join(',');
   };
 
   const handleSubmit = async () => {
