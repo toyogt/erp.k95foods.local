@@ -66,7 +66,7 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
   }, []);
 
   useEffect(() => {
-    if (step === 'done') return;
+    if (step === 'done' || isRestoringRef.current) return;
     // Save draft if: we've progressed past 'details' step, OR user entered any data on details step, OR products exist
     const hasMeaningfulData = step !== 'details' || products.length > 0 || header.order_reference || header.notes || docPhotos.length > 0;
     if (!hasMeaningfulData) {
