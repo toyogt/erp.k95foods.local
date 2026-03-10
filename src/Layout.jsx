@@ -84,7 +84,7 @@ export default function Layout({ children, currentPageName }) {
   // Redirect FG-only users to FGWarehouse
   useEffect(() => {
     if (isFGOnly && currentPageName !== 'FGWarehouse') {
-      window.location.href = createPageUrl('FGWarehouse');
+      window.location.replace(createPageUrl('FGWarehouse'));
     }
   }, [isFGOnly, currentPageName]);
   if (userLoading) return null;
