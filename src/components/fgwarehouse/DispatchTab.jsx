@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useState, useEffect } from 'react';
-import { Loader2, Camera, Trash2, CheckCircle2, ChevronLeft, Plus, X, ZoomIn } from 'lucide-react';
+import { Loader2, Camera, CheckCircle2, ChevronLeft, X, AlertTriangle } from 'lucide-react';
 import QRScanInput from './QRScanInput';
 import StepBar from './StepBar';
 import { genId, todayStr, fmtDate } from './whHelpers';
@@ -11,29 +11,70 @@ import { genId, todayStr, fmtDate } from './whHelpers';
 const CHANNELS = ['SHOPIFY', 'AMAZON', 'PICKLIST', 'SALES_ORDER', 'OTHER'];
 const STEPS = [
   { id: 'details', label: 'Details' },
-  { id: 'lots', label: 'Lots' },
+  { id: 'products', label: 'Products' },
+  { id: 'review', label: 'Review' },
 ];
 
-function emptyLine() {
-  return { lot_id: '', boxes_dispatched: '' };
+let _lineId = 0;
+function newProductLine() {
+  return { id: ++_lineId, sku_code: '', total_boxes: '', suggestions: [], shortage: 0 };
+}
+
+function computeSuggestions(sku_code, total_boxes, lots) {
+  if (!sku_code || !total_boxes || Number(total_boxes) <= 0) return { suggestions: [], shortage: 0 };
+  const skuLots = lots
+    .filter(l => l.sku_code === sku_code && l.status === 'ACTIVE' && (l.boxes_balance || 0) > 0)
+    .sort((a, b) => {
+      const key = l => (l.lot_date || '') + String(l.lot_seq || 0).padStart(4, '0');
+      return key(a).localeCompare(key(b));
+    });
+  const suggestions = [];
+  let remaining = Number(total_boxes);
+  for (const lot of skuLots) {
+    if (remaining <= 0) break;
+    const take = Math.min(remaining, lot.boxes_balance || 0);
+    suggestions.push({ lot_id: lot.lot_id, lot, boxes: take, verified: false });
+    remaining -= take;
+  }
+  return { suggestions, shortage: remaining };
 }
 
 export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
   const [step, setStep] = useState('details');
-
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }); }, [step]);
+
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [lastDispatch, setLastDispatch] = useState(null);
   const [viewPhoto, setViewPhoto] = useState(null);
-
   const [docPhotos, setDocPhotos] = useState([]);
   const [header, setHeader] = useState({ channel: 'OTHER', order_reference: '', notes: '' });
-  const [lines, setLines] = useState([emptyLine()]);
+  const [productLines, setProductLines] = useState([newProductLine()]);
 
-  const addLine = () => setLines(l => [...l, emptyLine()]);
-  const removeLine = (i) => setLines(l => l.filter((_, idx) => idx !== i));
-  const updateLine = (i, patch) => setLines(l => l.map((r, idx) => idx === i ? { ...r, ...patch } : r));
+  const updateLine = (id, patch) => {
+    setProductLines(prev => prev.map(pl => {
+      if (pl.id !== id) return pl;
+      const updated = { ...pl, ...patch };
+      if ('sku_code' in patch || 'total_boxes' in patch) {
+        const { suggestions, shortage } = computeSuggestions(updated.sku_code, updated.total_boxes, lots);
+        // Preserve verified state only if lot_id AND boxes match
+        const prevSugs = pl.suggestions;
+        const merged = suggestions.map(s => {
+          const prev = prevSugs.find(p => p.lot_id === s.lot_id && p.boxes === s.boxes);
+          return prev?.verified ? { ...s, verified: true } : s;
+        });
+        return { ...updated, suggestions: merged, shortage };
+      }
+      return updated;
+    }));
+  };
+
+  const verifyScan = (lineId, lot_id) => {
+    setProductLines(prev => prev.map(pl => {
+      if (pl.id !== lineId) return pl;
+      return { ...pl, suggestions: pl.suggestions.map(s => s.lot_id === lot_id ? { ...s, verified: true } : s) };
+    }));
+  };
 
   const handlePhotoCapture = async (e) => {
     const file = e.target.files[0];
@@ -45,28 +86,12 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
     setUploading(false);
   };
 
-  const handleLotScan = (i, scannedValue) => {
-    const lot = lots.find(l => l.lot_id === scannedValue && l.status === 'ACTIVE');
-    if (lot) {
-      updateLine(i, { lot_id: scannedValue, boxes_dispatched: '' });
-    } else {
-      alert(`Lot "${scannedValue}" not found or not active.`);
-    }
-  };
+  const allVerified = productLines.length > 0 && productLines.every(pl =>
+    pl.sku_code && Number(pl.total_boxes) > 0 &&
+    pl.suggestions.length > 0 && pl.suggestions.every(s => s.verified)
+  );
 
   const handleSubmit = async () => {
-    const validLines = lines.filter(l => l.lot_id && Number(l.boxes_dispatched) > 0);
-    if (!validLines.length) { alert('Add at least one dispatch line with boxes.'); return; }
-
-    for (const line of validLines) {
-      const lot = lots.find(l => l.lot_id === line.lot_id);
-      if (!lot) continue;
-      if (Number(line.boxes_dispatched) > (lot.boxes_balance || 0)) {
-        alert(`Not enough boxes in lot ${lot.lot_id}. Balance: ${lot.boxes_balance}`);
-        return;
-      }
-    }
-
     setSaving(true);
     const today = todayStr();
     const dispatch_id = genId('DSP');
@@ -82,32 +107,30 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
       status: 'CONFIRMED',
     });
 
-    for (const line of validLines) {
-      const lot = lots.find(l => l.lot_id === line.lot_id);
-      if (!lot) continue;
-      const boxes = Number(line.boxes_dispatched);
-      const ppb = lot.bottles_per_box || 1;
-      const newBoxBal = (lot.boxes_balance || 0) - boxes;
-
-      await base44.entities.WarehouseLot.update(lot.id, {
-        boxes_balance: newBoxBal,
-        status: newBoxBal <= 0 && (lot.loose_bottles_balance || 0) <= 0 ? 'EMPTY' : 'ACTIVE',
-      });
-
-      await base44.entities.WarehouseDispatchLine.create({
-        dispatch_id,
-        lot_id: line.lot_id,
-        sku_code: lot.sku_code,
-        product_name: lot.product_name,
-        boxes_dispatched: boxes,
-        loose_bottles_dispatched: 0,
-        bottles_per_box: ppb,
-        total_bottles: boxes * ppb,
-      });
+    for (const pl of productLines) {
+      for (const s of pl.suggestions) {
+        const { lot, boxes } = s;
+        const ppb = lot.bottles_per_box || 1;
+        const newBoxBal = (lot.boxes_balance || 0) - boxes;
+        await base44.entities.WarehouseLot.update(lot.id, {
+          boxes_balance: newBoxBal,
+          status: newBoxBal <= 0 && (lot.loose_bottles_balance || 0) <= 0 ? 'EMPTY' : 'ACTIVE',
+        });
+        await base44.entities.WarehouseDispatchLine.create({
+          dispatch_id,
+          lot_id: lot.lot_id,
+          sku_code: lot.sku_code,
+          product_name: lot.product_name,
+          boxes_dispatched: boxes,
+          loose_bottles_dispatched: 0,
+          bottles_per_box: ppb,
+          total_bottles: boxes * ppb,
+        });
+      }
     }
 
     setSaving(false);
-    setLastDispatch({ dispatch_id, lines: validLines });
+    setLastDispatch({ dispatch_id, count: productLines.length });
     setStep('done');
     onRefresh();
   };
@@ -115,36 +138,18 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
   const reset = () => {
     setHeader({ channel: 'OTHER', order_reference: '', notes: '' });
     setDocPhotos([]);
-    setLines([emptyLine()]);
+    setProductLines([newProductLine()]);
     setStep('details');
     setLastDispatch(null);
   };
 
   const goBack = () => {
     if (step === 'details') { onBack(); return; }
-    if (step === 'lots') { setStep('details'); return; }
+    if (step === 'products') { setStep('details'); return; }
+    if (step === 'review') { setStep('products'); return; }
   };
 
-  const activeLots = lots.filter(l => l.status === 'ACTIVE');
-
-  const getFifoWarning = (lot_id) => {
-    const lot = lots.find(l => l.lot_id === lot_id);
-    if (!lot || !lot.lot_date) return null;
-    const lotKey = (l) => (l.lot_date || '') + String(l.lot_seq || 0).padStart(4, '0');
-    const older = lots.filter(l =>
-      l.sku_code === lot.sku_code &&
-      l.status === 'ACTIVE' &&
-      l.lot_id !== lot.lot_id &&
-      (l.boxes_balance || 0) > 0 &&
-      l.lot_date &&
-      lotKey(l) < lotKey(lot)
-    );
-    if (!older.length) return null;
-    const oldest = [...older].sort((a, b) => lotKey(a).localeCompare(lotKey(b)))[0];
-    return `⚠️ FIFO: Older stock in lot ${oldest.lot_id} (${fmtDate(oldest.lot_date)}) — ${oldest.boxes_balance} boxes. Dispatch older lot first!`;
-  };
-
-  // ── Done ──────────────────────────────────────────────────────────────────
+  // ── Done ─────────────────────────────────────────────────────────────────
   if (step === 'done') {
     return (
       <div className="flex flex-col items-center gap-4 py-10 text-center">
@@ -154,7 +159,7 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
         <div>
           <p className="text-lg font-bold text-slate-900">Dispatch Confirmed!</p>
           <p className="text-sm text-slate-500">{lastDispatch?.dispatch_id}</p>
-          <p className="text-sm text-slate-500 mt-1">{lastDispatch?.lines?.length} lot(s) dispatched.</p>
+          <p className="text-sm text-slate-500 mt-1">{lastDispatch?.count} product(s) dispatched.</p>
         </div>
         <Button onClick={reset} className="mt-2 h-12 px-8 text-base">🚚 Record Another</Button>
       </div>
@@ -183,18 +188,15 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
 
       <StepBar steps={STEPS} current={step} />
 
-      {/* ── STEP 1: Dispatch Details ── */}
+      {/* ── STEP 1: Dispatch Details ─────────────────────────────────────────── */}
       {step === 'details' && (
         <div className="space-y-4">
           <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-4">
             <p className="text-sm font-bold text-slate-700">🚚 Dispatch Details</p>
             <div className="space-y-1.5">
               <Label className="text-xs text-slate-500">Channel *</Label>
-              <select
-                value={header.channel}
-                onChange={e => setHeader(h => ({ ...h, channel: e.target.value }))}
-                className="w-full border border-slate-200 rounded-xl px-3 py-3 text-base bg-white min-h-[48px]"
-              >
+              <select value={header.channel} onChange={e => setHeader(h => ({ ...h, channel: e.target.value }))}
+                className="w-full border border-slate-200 rounded-xl px-3 py-3 text-base bg-white min-h-[48px]">
                 {CHANNELS.map(c => <option key={c} value={c}>{c.replace('_', ' ')}</option>)}
               </select>
             </div>
@@ -204,20 +206,16 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
             </div>
             <div className="space-y-2">
               <Label className="text-xs text-slate-500">
-                Document Photos
-                <span className="ml-1 text-slate-400">({docPhotos.length} added)</span>
+                Document Photos <span className="text-slate-400">({docPhotos.length} added)</span>
               </Label>
               {docPhotos.length > 0 && (
                 <div className="flex gap-2 flex-wrap">
                   {docPhotos.map((url, idx) => (
                     <div key={idx} className="relative">
-                      <img src={url} onClick={() => setViewPhoto(url)} className="w-16 h-16 object-cover rounded-lg border border-slate-200 cursor-pointer active:opacity-80" alt={`doc ${idx + 1}`} />
+                      <img src={url} onClick={() => setViewPhoto(url)} className="w-16 h-16 object-cover rounded-lg border border-slate-200 cursor-pointer" alt="" />
                       <button onClick={() => setDocPhotos(p => p.filter((_, i) => i !== idx))} className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center shadow">
                         <X className="w-3 h-3" />
                       </button>
-                      <div className="absolute bottom-0.5 right-0.5 bg-black/40 rounded-full p-0.5">
-                        <ZoomIn className="w-2.5 h-2.5 text-white" />
-                      </div>
                     </div>
                   ))}
                 </div>
@@ -235,97 +233,260 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
               <Input value={header.notes} onChange={e => setHeader(h => ({ ...h, notes: e.target.value }))} className="h-11" />
             </div>
           </div>
-          <Button className="w-full h-12 text-base font-bold" onClick={() => setStep('lots')}>
-            Next: Select Lots →
+          <Button className="w-full h-12 text-base font-bold" onClick={() => setStep('products')}>
+            Next: Add Products →
           </Button>
         </div>
       )}
 
-      {/* ── STEP 2: Select Lots ── */}
-      {step === 'lots' && (
+      {/* ── STEP 2: Products ─────────────────────────────────────────────────── */}
+      {step === 'products' && (
         <div className="space-y-4">
-          <div className="space-y-3">
-            {lines.map((line, i) => {
-              const lot = lots.find(l => l.lot_id === line.lot_id);
-              return (
-                <div key={i} className="border border-slate-200 rounded-xl p-4 space-y-3 bg-white">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-bold text-slate-500 uppercase">Line {i + 1}</p>
-                    {lines.length > 1 && (
-                      <button onClick={() => removeLine(i)} className="text-red-400 hover:text-red-600 min-w-[44px] min-h-[44px] flex items-center justify-center">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
+          {productLines.map((pl, idx) => (
+            <ProductLineCard
+              key={pl.id}
+              pl={pl}
+              idx={idx}
+              skus={skus}
+              lots={lots}
+              onUpdate={(patch) => updateLine(pl.id, patch)}
+              onVerify={(lot_id) => verifyScan(pl.id, lot_id)}
+              onRemove={productLines.length > 1 ? () => setProductLines(prev => prev.filter(p => p.id !== pl.id)) : null}
+            />
+          ))}
+          <button
+            onClick={() => setProductLines(prev => [...prev, newProductLine()])}
+            className="w-full border border-dashed border-slate-300 rounded-xl py-4 text-sm text-slate-500 hover:bg-slate-50 flex items-center justify-center gap-2 min-h-[56px]"
+          >
+            + Add Another Product
+          </button>
+          <Button className="w-full h-12 text-base font-bold" onClick={() => setStep('review')} disabled={!allVerified}>
+            Next: Review Dispatch →
+          </Button>
+          {!allVerified && (
+            <p className="text-xs text-center text-slate-400">Select products, enter quantities, and scan all lots to continue</p>
+          )}
+        </div>
+      )}
 
-                  <div className="space-y-1">
-                    <Label className="text-xs">Scan Lot QR *</Label>
-                    <QRScanInput onScan={(val) => handleLotScan(i, val)} placeholder="Scan lot QR or type lot ID…" />
-                  </div>
+      {/* ── STEP 3: Review ───────────────────────────────────────────────────── */}
+      {step === 'review' && (
+        <div className="space-y-4">
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+            <p className="text-sm font-bold text-blue-800">📋 Review Dispatch</p>
+            <p className="text-xs text-blue-600 mt-0.5">
+              {header.channel.replace('_', ' ')}{header.order_reference ? ` · Ref: ${header.order_reference}` : ''}
+            </p>
+          </div>
 
-                  <div className="space-y-1">
-                    <Label className="text-xs">Or select from list</Label>
-                    <select
-                      value={line.lot_id}
-                      onChange={e => updateLine(i, { lot_id: e.target.value, boxes_dispatched: '' })}
-                      className="w-full border border-slate-200 rounded-xl px-3 py-3 text-sm bg-white min-h-[48px]"
-                    >
-                      <option value="">— Select Lot —</option>
-                      {activeLots
-                        .filter(l => !lines.some((ln, idx) => idx !== i && ln.lot_id === l.lot_id))
-                        .map(l => (
-                          <option key={l.id} value={l.lot_id}>
-                            {l.lot_id} · {l.product_name}{l.flavour ? ` (${l.flavour})` : ''} — {l.boxes_balance} boxes
-                          </option>
-                        ))}
-                    </select>
+          {productLines.map((pl) => {
+            const sku = skus.find(s => s.item_code === pl.sku_code);
+            const actualBoxes = pl.suggestions.reduce((sum, s) => sum + s.boxes, 0);
+            const totalBottles = pl.suggestions.reduce((sum, s) => sum + s.boxes * (s.lot.bottles_per_box || 1), 0);
+            return (
+              <div key={pl.id} className="border border-slate-200 rounded-xl bg-white overflow-hidden">
+                <div className="p-4 flex items-center justify-between border-b border-slate-100">
+                  <div>
+                    {sku?.brand_name && <p className="text-xs font-semibold text-blue-600">{sku.brand_name}</p>}
+                    <p className="font-bold text-slate-900">{sku?.product_name || pl.sku_code}</p>
+                    {sku?.flavour && <p className="text-xs text-slate-400">{sku.flavour}</p>}
                   </div>
-
-                  {lot && (
-                    <>
-                      <div className="bg-green-50 border border-green-200 rounded-lg px-3 py-2.5 text-xs text-green-800 space-y-0.5">
-                        <p className="font-bold text-sm">{lot.product_name}{lot.flavour ? ` — ${lot.flavour}` : ''}</p>
-                        {lot.brand_name && <p className="text-green-700 font-semibold">{lot.brand_name}</p>}
-                        {lot.batch_code && <p>Batch: {lot.batch_code} &nbsp;|&nbsp; Exp: {fmtDate(lot.exp_date)}</p>}
-                        <p>Balance: <strong>{lot.boxes_balance}</strong> boxes · {lot.bottles_per_box} bottles/box</p>
+                  <div className="text-right">
+                    <p className="text-3xl font-black text-slate-900">{actualBoxes}</p>
+                    <p className="text-xs text-slate-400">boxes</p>
+                    <p className="text-xs text-slate-500">{totalBottles.toLocaleString()} bottles</p>
+                  </div>
+                </div>
+                <div className="p-3 space-y-2">
+                  {pl.suggestions.map(s => (
+                    <div key={s.lot_id} className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg px-3 py-2.5">
+                      <div>
+                        <p className="text-xs font-bold font-mono text-slate-800">{s.lot_id}</p>
+                        {s.lot.location && <p className="text-xs text-slate-500">📍 {s.lot.location}</p>}
+                        {s.lot.batch_code && <p className="text-xs text-slate-400">Batch: {s.lot.batch_code}</p>}
                       </div>
-                      {getFifoWarning(line.lot_id) && (
-                        <div className="bg-amber-50 border border-amber-300 rounded-lg px-3 py-2 text-xs text-amber-800 font-medium">
-                          {getFifoWarning(line.lot_id)}
+                      <div className="flex items-center gap-2">
+                        <div className="text-right">
+                          <p className="text-sm font-bold text-slate-800">{s.boxes} boxes</p>
+                          <p className="text-xs text-slate-500">{s.boxes * (s.lot.bottles_per_box || 1)} btl</p>
                         </div>
-                      )}
-                      <div className="space-y-1">
-                        <Label className="text-xs">Boxes to Dispatch *</Label>
-                        <Input
-                          type="text" inputMode="numeric" pattern="[0-9]*"
-                          value={line.boxes_dispatched}
-                          onChange={e => updateLine(i, { boxes_dispatched: e.target.value.replace(/\D/g, '') })}
-                          className={`h-12 text-xl font-bold text-center ${Number(line.boxes_dispatched) > (lot.boxes_balance || 0) ? 'border-red-400 bg-red-50' : ''}`}
-                          placeholder={`Max: ${lot.boxes_balance}`}
-                        />
-                        {line.boxes_dispatched && Number(line.boxes_dispatched) > (lot.boxes_balance || 0) && (
-                          <p className="text-xs text-red-600 font-semibold">⚠️ Exceeds balance! Max: {lot.boxes_balance} boxes</p>
-                        )}
-                        {line.boxes_dispatched && Number(line.boxes_dispatched) <= (lot.boxes_balance || 0) && (
-                          <p className="text-xs text-right text-slate-500">
-                            = <strong>{Number(line.boxes_dispatched) * (lot.bottles_per_box || 1)}</strong> bottles
-                          </p>
-                        )}
+                        <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0" />
                       </div>
-                    </>
+                    </div>
+                  ))}
+                  {pl.shortage > 0 && (
+                    <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                      <p className="text-xs text-amber-700 font-semibold">
+                        {pl.shortage} boxes short — dispatching {actualBoxes} of {pl.total_boxes} requested
+                      </p>
+                    </div>
                   )}
                 </div>
-              );
-            })}
+              </div>
+            );
+          })}
 
-            <button onClick={addLine} className="w-full border border-dashed border-slate-300 rounded-xl py-4 text-sm text-slate-500 hover:bg-slate-50 flex items-center justify-center gap-2 min-h-[56px]">
-              <Plus className="w-4 h-4" /> Add Another Lot
-            </button>
+          {/* Grand Total */}
+          <div className="bg-slate-900 rounded-xl p-4 text-white">
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Grand Total</p>
+            <div className="flex justify-between items-center">
+              <p className="text-sm text-slate-300">{productLines.length} Product(s)</p>
+              <div className="text-right">
+                <p className="text-3xl font-black">
+                  {productLines.reduce((sum, pl) => sum + pl.suggestions.reduce((s2, s) => s2 + s.boxes, 0), 0)} boxes
+                </p>
+                <p className="text-sm text-slate-400">
+                  {productLines.reduce((sum, pl) => sum + pl.suggestions.reduce((s2, s) => s2 + s.boxes * (s.lot.bottles_per_box || 1), 0), 0).toLocaleString()} bottles
+                </p>
+              </div>
+            </div>
           </div>
 
           <Button className="w-full h-14 text-base font-bold" onClick={handleSubmit} disabled={saving}>
-            {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : '🚚 Confirm Dispatch'}
+            {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : '✅ Confirm Dispatch'}
           </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Product Line Card ─────────────────────────────────────────────────────────
+function ProductLineCard({ pl, idx, skus, lots, onUpdate, onVerify, onRemove }) {
+  const [scanErrors, setScanErrors] = useState({});
+
+  const activeSku = skus.find(s => s.item_code === pl.sku_code);
+  const totalAvailable = lots
+    .filter(l => l.sku_code === pl.sku_code && l.status === 'ACTIVE')
+    .reduce((sum, l) => sum + (l.boxes_balance || 0), 0);
+
+  const handleScan = (lot_id, scannedId) => {
+    if (scannedId === lot_id) {
+      setScanErrors(e => ({ ...e, [lot_id]: '' }));
+      onVerify(lot_id);
+    } else {
+      setScanErrors(e => ({ ...e, [lot_id]: `Wrong lot scanned! Expected: ${lot_id}` }));
+    }
+  };
+
+  const activeSkus = skus.filter(s => s.is_active !== false);
+  const boxesOver = pl.total_boxes && Number(pl.total_boxes) > totalAvailable;
+
+  return (
+    <div className="border border-slate-200 rounded-xl bg-white overflow-hidden">
+      <div className="p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">Product {idx + 1}</p>
+          {onRemove && (
+            <button onClick={onRemove} className="text-red-400 hover:text-red-600 min-w-[48px] min-h-[48px] flex items-center justify-center">
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
+        {/* SKU Selector */}
+        {!pl.sku_code ? (
+          <div className="space-y-1.5">
+            <Label className="text-xs text-slate-500">Select Product *</Label>
+            <select
+              value=""
+              onChange={e => onUpdate({ sku_code: e.target.value, total_boxes: '' })}
+              className="w-full border border-slate-200 rounded-xl px-3 py-3 text-sm bg-white min-h-[52px]"
+            >
+              <option value="">— Choose a product —</option>
+              {activeSkus.map(s => (
+                <option key={s.id} value={s.item_code}>
+                  {s.product_name}{s.flavour ? ` (${s.flavour})` : ''}{s.brand_name ? ` · ${s.brand_name}` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <div className="flex items-start justify-between bg-slate-50 rounded-xl px-4 py-3">
+            <div>
+              <p className="font-bold text-slate-900 text-sm">{activeSku?.product_name || pl.sku_code}</p>
+              {activeSku?.flavour && <p className="text-xs text-slate-400">{activeSku.flavour}</p>}
+              {activeSku?.brand_name && <p className="text-xs text-blue-600 font-semibold">{activeSku.brand_name}</p>}
+              <p className="text-xs text-slate-500 mt-0.5">In stock: <strong>{totalAvailable}</strong> boxes</p>
+            </div>
+            <button onClick={() => onUpdate({ sku_code: '', total_boxes: '' })} className="text-xs text-blue-600 underline min-h-[44px] px-2 shrink-0">Change</button>
+          </div>
+        )}
+
+        {/* Boxes Input */}
+        {pl.sku_code && (
+          <div className="space-y-1.5">
+            <Label className="text-xs text-slate-500">Boxes to Dispatch *</Label>
+            <Input
+              type="text" inputMode="numeric" pattern="[0-9]*"
+              value={pl.total_boxes}
+              onChange={e => onUpdate({ total_boxes: e.target.value.replace(/\D/g, '') })}
+              placeholder={`Enter boxes (${totalAvailable} available)`}
+              className={`h-14 text-2xl font-bold text-center ${boxesOver ? 'border-red-400 bg-red-50' : ''}`}
+              autoFocus
+            />
+            {boxesOver && (
+              <p className="text-xs text-amber-700 font-semibold bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5">
+                ⚠️ Only {totalAvailable} boxes available — will dispatch what's in stock
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* FIFO Lot Plan */}
+      {pl.suggestions.length > 0 && (
+        <div className="border-t border-slate-100 bg-blue-50/40 p-4 space-y-3">
+          <p className="text-xs font-bold text-slate-700">📦 FIFO Lot Plan — Scan each lot to verify</p>
+          {pl.suggestions.map(s => (
+            <div key={s.lot_id} className={`rounded-xl border p-4 space-y-3 transition-colors ${s.verified ? 'bg-green-50 border-green-300' : 'bg-white border-slate-200'}`}>
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="text-sm font-bold font-mono text-slate-900">{s.lot_id}</p>
+                  {s.lot.location && <p className="text-xs text-slate-600 mt-0.5">📍 {s.lot.location}</p>}
+                  {s.lot.batch_code && <p className="text-xs text-slate-400">Batch: {s.lot.batch_code} · Exp: {fmtDate(s.lot.exp_date)}</p>}
+                  <p className="text-xs text-slate-400">Lot balance: {s.lot.boxes_balance} boxes</p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <div className="text-right">
+                    <p className="text-2xl font-black text-slate-900">{s.boxes}</p>
+                    <p className="text-xs text-slate-400">boxes</p>
+                  </div>
+                  {s.verified && <CheckCircle2 className="w-6 h-6 text-green-600" />}
+                </div>
+              </div>
+              {!s.verified ? (
+                <div className="space-y-1.5">
+                  <p className="text-xs text-slate-500">Scan the QR card on this lot to confirm:</p>
+                  <QRScanInput onScan={(val) => handleScan(s.lot_id, val)} placeholder={`Scan QR for ${s.lot_id}…`} />
+                  {scanErrors[s.lot_id] && (
+                    <p className="text-xs text-red-600 font-semibold bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                      ⚠️ {scanErrors[s.lot_id]}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-xs text-green-700 font-semibold">✅ Verified — ready to dispatch</p>
+              )}
+            </div>
+          ))}
+          {pl.shortage > 0 && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+              <p className="text-xs text-amber-700 font-semibold">
+                {pl.shortage} boxes short — only {Number(pl.total_boxes) - pl.shortage} boxes available in stock
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* No stock warning */}
+      {pl.sku_code && pl.total_boxes && Number(pl.total_boxes) > 0 && pl.suggestions.length === 0 && (
+        <div className="border-t border-slate-100 bg-amber-50 px-4 py-3 flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+          <p className="text-xs text-amber-700 font-semibold">No active stock available for this product</p>
         </div>
       )}
     </div>
