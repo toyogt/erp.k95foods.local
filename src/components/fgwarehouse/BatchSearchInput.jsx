@@ -45,7 +45,15 @@ export default function BatchSearchInput({ batches, value, onSelect, placeholder
             const v = e.target.value.toUpperCase();
             setQuery(v);
             setOpen(true);
-            onSelect(v, '', '');
+            // Check for exact match with a known batch — auto-lock it
+            const exact = batches.find(b => b.batch_code === v);
+            if (exact) {
+              onSelect(exact.batch_code, exact.mfg_date, exact.exp_date);
+              setQuery('');
+              setOpen(false);
+            } else {
+              onSelect(v, '', '');
+            }
           }}
           onFocus={() => setOpen(true)}
           onBlur={() => setTimeout(() => setOpen(false), 200)}
