@@ -83,24 +83,35 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
 
   const loadDraft = () => {
     const raw = localStorage.getItem(DISPATCH_DRAFT_KEY);
-    if (!raw) return;
+    if (!raw) {
+      setHasDraft(false);
+      return;
+    }
     try {
       const d = JSON.parse(raw);
       console.log('Loading draft:', d);
-      setStep(d.step || 'details');
-      setHeader(d.header || { channel: 'OTHER', order_reference: '', notes: '' });
-      setDocPhotos(d.docPhotos || []);
-      // Reconstruct product structure with all required fields
-      setProducts((d.products || []).map(p => ({
+      
+      // Batch all state updates together
+      const newStep = d.step || 'details';
+      const newHeader = d.header || { channel: 'OTHER', order_reference: '', notes: '' };
+      const newDocPhotos = d.docPhotos || [];
+      const newProducts = (d.products || []).map(p => ({
         ...p,
         lotEntries: p.lotEntries || [],
         scanErrors: p.scanErrors || {},
         addingLot: false,
-      })));
+      }));
+      
+      setHeader(newHeader);
+      setDocPhotos(newDocPhotos);
+      setProducts(newProducts);
       setHasDraft(false);
-      console.log('Draft loaded successfully');
+      setStep(newStep); // Set step last so UI updates with all data in place
+      
+      console.log('Draft loaded successfully:', { step: newStep, products: newProducts.length });
     } catch (e) {
       console.error('Failed to load draft:', e);
+      setHasDraft(false);
     }
   };
 
