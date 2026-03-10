@@ -140,7 +140,7 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
       lotKey(l) < lotKey(lot)
     );
     if (!older.length) return null;
-    const oldest = [...older].sort((a, b) => (a.lot_date || '').localeCompare(b.lot_date || ''))[0];
+    const oldest = [...older].sort((a, b) => lotKey(a).localeCompare(lotKey(b)))[0];
     return `⚠️ FIFO: Older stock in lot ${oldest.lot_id} (${fmtDate(oldest.lot_date)}) — ${oldest.boxes_balance} boxes. Dispatch older lot first!`;
   };
 
