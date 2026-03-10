@@ -88,13 +88,17 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }); }, [step]);
 
   const loadDraft = () => {
+    console.log('🔵 loadDraft called');
     const raw = localStorage.getItem(DISPATCH_DRAFT_KEY);
+    console.log('🔵 Draft data:', raw);
     if (!raw) {
+      console.log('🔵 No draft found');
       setHasDraft(false);
       return;
     }
     try {
       const d = JSON.parse(raw);
+      console.log('🔵 Parsed draft:', d);
       
       const newStep = d.step || 'details';
       const newHeader = d.header || { channel: 'OTHER', order_reference: '', notes: '' };
@@ -106,12 +110,15 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
         addingLot: false,
       }));
       
+      console.log('🔵 Restoring - step:', newStep, 'products:', newProducts.length);
       setHeader(newHeader);
       setDocPhotos(newDocPhotos);
       setProducts(newProducts);
       setStep(newStep);
       setHasDraft(false);
+      console.log('🔵 Draft loaded successfully');
     } catch (e) {
+      console.error('🔴 Error loading draft:', e);
       setHasDraft(false);
     }
   };
