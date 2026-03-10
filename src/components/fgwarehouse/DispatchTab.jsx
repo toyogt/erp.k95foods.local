@@ -4,6 +4,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useState, useEffect } from 'react';
 import { Loader2, Camera, CheckCircle2, ChevronLeft, X, AlertTriangle, Plus, Trash2 } from 'lucide-react';
+import { useRef } from 'react';
+import { useOffline } from '@/components/OfflineProvider';
 import QRScanInput from './QRScanInput';
 import StepBar from './StepBar';
 import { genId, todayStr, fmtDate } from './whHelpers';
