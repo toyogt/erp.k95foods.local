@@ -670,7 +670,7 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
                         <div className="flex items-center gap-2">
                           <div className="text-right">
                             <p className="text-sm font-bold text-slate-800">{entry.boxes} boxes</p>
-                            <p className="text-xs text-slate-500">{Number(entry.boxes) * (lot?.bottles_per_box || 1)} btl</p>
+                            <p className="text-xs text-slate-500">{Number(entry.boxes) * (lot?.bottles_per_box || 1)} bottles</p>
                           </div>
                           <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0" />
                         </div>
