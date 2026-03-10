@@ -164,6 +164,7 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
     setSaving(true);
     const today = todayStr();
     const dispatch_id = genId('DSP');
+    const doc_photo = await resolvePhotoUrls();
 
     await base44.entities.WarehouseDispatch.create({
       dispatch_id,
@@ -171,7 +172,7 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
       dispatched_by: user?.full_name || user?.email || '',
       channel: header.channel,
       order_reference: header.order_reference || '',
-      doc_photo: docPhotos.join(','),
+      doc_photo,
       notes: header.notes || '',
       status: 'CONFIRMED',
     });
