@@ -300,10 +300,15 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
               </Label>
               {docPhotos.length > 0 && (
                 <div className="flex gap-2 flex-wrap">
-                  {docPhotos.map((url, idx) => (
+                  {docPhotos.map((p, idx) => (
                     <div key={idx} className="relative">
-                      <img src={url} onClick={() => setViewPhoto(url)} className="w-16 h-16 object-cover rounded-lg border border-slate-200 cursor-pointer" alt="" />
-                      <button onClick={() => setDocPhotos(p => p.filter((_, i) => i !== idx))} className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center shadow">
+                      <img src={p.localUrl} onClick={() => !p.uploading && setViewPhoto(p.localUrl)} className="w-16 h-16 object-cover rounded-lg border border-slate-200 cursor-pointer" alt="" />
+                      {p.uploading && (
+                        <div className="absolute inset-0 bg-black/40 rounded-lg flex items-center justify-center">
+                          <Loader2 className="w-4 h-4 text-white animate-spin" />
+                        </div>
+                      )}
+                      <button onClick={() => setDocPhotos(prev => prev.filter((_, i) => i !== idx))} className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center shadow">
                         <X className="w-3 h-3" />
                       </button>
                     </div>
@@ -311,12 +316,17 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
                 </div>
               )}
               <label className="flex items-center gap-2 cursor-pointer border border-dashed border-slate-300 rounded-xl px-4 py-4 hover:bg-slate-50 w-full justify-center min-h-[56px]">
-                {uploading ? <Loader2 className="w-5 h-5 animate-spin text-slate-400" /> : <Camera className="w-5 h-5 text-slate-400" />}
+                <Camera className="w-5 h-5 text-slate-400" />
                 <span className="text-sm text-slate-500 font-medium">
-                  {uploading ? 'Uploading…' : docPhotos.length > 0 ? '+ Add Another Photo' : '📷 Take / Upload Photo'}
+                  {docPhotos.length > 0 ? '+ Add Another Photo' : '📷 Take / Upload Photo'}
                 </span>
-                <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhotoCapture} disabled={uploading} />
+                <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhotoCapture} />
               </label>
+              {anyPhotoUploading && (
+                <p className="text-xs text-blue-600 flex items-center gap-1.5">
+                  <Loader2 className="w-3 h-3 animate-spin" /> Uploading in background — you can continue
+                </p>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs text-slate-500">Notes (optional)</Label>
