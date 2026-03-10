@@ -219,7 +219,8 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
       setSaving(false);
       setLastReceipt({ receipt_id });
       setNewLot(created);
-      setStep('location'); // only for new batch
+      localStorage.removeItem(RECEIVE_DRAFT_KEY);
+      setStep('location');
     }
     onRefresh();
   };
