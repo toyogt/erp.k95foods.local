@@ -96,10 +96,6 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
     try {
       const d = JSON.parse(raw);
       
-      // Prevent auto-save during restoration
-      isRestoringRef.current = true;
-      
-      // Batch all state updates together
       const newStep = d.step || 'details';
       const newHeader = d.header || { channel: 'OTHER', order_reference: '', notes: '' };
       const newDocPhotos = d.docPhotos || [];
@@ -113,15 +109,17 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
       setHeader(newHeader);
       setDocPhotos(newDocPhotos);
       setProducts(newProducts);
-      setHasDraft(false);
       setStep(newStep);
-      
-      // Re-enable auto-save after state updates complete
-      setTimeout(() => { isRestoringRef.current = false; }, 100);
+      setHasDraft(false);
     } catch (e) {
       setHasDraft(false);
-      isRestoringRef.current = false;
     }
+  };
+
+  const discardDraft = () => {
+    localStorage.removeItem(DISPATCH_DRAFT_KEY);
+    setHasDraft(false);
+    setDraftDismissed(true);
   };
 
   // ── Grand total across all products ──────────────────────────────────────
