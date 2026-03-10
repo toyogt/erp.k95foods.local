@@ -279,6 +279,7 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
     setNewLots([]); setLastReceipt(null);
     localStorage.removeItem(RECEIVE_DRAFT_KEY);
     setHasDraft(false);
+    readyToSaveRef.current = true;
     setStep('doc');
   };
 
