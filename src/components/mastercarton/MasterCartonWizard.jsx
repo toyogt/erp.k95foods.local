@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ArrowLeft, Package, Printer } from 'lucide-react';
-import { toast } from 'sonner';
+import toast from 'react-hot-toast';
 import StepBar from '@/components/fgwarehouse/StepBar';
 import QRScanInput from '@/components/fgwarehouse/QRScanInput';
 import { format } from 'date-fns';
