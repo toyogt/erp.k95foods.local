@@ -106,10 +106,7 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
       setProducts(newProducts);
       setHasDraft(false);
       setStep(newStep); // Set step last so UI updates with all data in place
-      
-      console.log('Draft loaded successfully:', { step: newStep, products: newProducts.length });
     } catch (e) {
-      console.error('Failed to load draft:', e);
       setHasDraft(false);
     }
   };
