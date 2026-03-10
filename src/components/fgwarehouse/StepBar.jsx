@@ -7,7 +7,7 @@ export default function StepBar({ steps, current }) {
   return (
     <div className="flex items-center mb-1">
       {steps.map((s, i) => (
-        <React.Fragment key={s.id}>
+        <div key={s.id} className="flex items-center">
           {i > 0 && (
             <div className={`flex-1 h-1 mx-1.5 rounded-full transition-colors ${i <= idx ? 'bg-slate-700' : 'bg-slate-200'}`} />
           )}
@@ -23,7 +23,7 @@ export default function StepBar({ steps, current }) {
               {s.label}
             </span>
           </div>
-        </React.Fragment>
+        </div>
       ))}
     </div>
   );
