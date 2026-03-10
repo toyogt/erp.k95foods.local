@@ -88,7 +88,7 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
 
   const loadDraft = () => {
     const raw = localStorage.getItem(RECEIVE_DRAFT_KEY);
-    if (!raw) return;
+    if (!raw) { setHasDraft(false); readyToSaveRef.current = true; return; }
     try {
       const d = JSON.parse(raw);
       setStep(d.step || 'doc');
@@ -107,7 +107,12 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
         }))
       );
       setHasDraft(false);
-    } catch {}
+      readyToSaveRef.current = true;
+    } catch {
+      localStorage.removeItem(RECEIVE_DRAFT_KEY);
+      setHasDraft(false);
+      readyToSaveRef.current = true;
+    }
   };
 
   // ── Derived ────────────────────────────────────────────────────────────────
