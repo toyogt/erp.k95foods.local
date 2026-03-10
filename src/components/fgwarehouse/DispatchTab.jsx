@@ -333,7 +333,7 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
       </div>
 
       {/* Draft resume banner */}
-      {hasDraft && !draftDismissed && (
+      {hasDraft && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center justify-between gap-3">
           <div>
             <p className="text-sm font-bold text-amber-800">📝 Resume Draft Dispatch?</p>
