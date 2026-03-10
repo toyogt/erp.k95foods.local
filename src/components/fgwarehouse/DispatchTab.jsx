@@ -160,7 +160,7 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
     setProducts(prev => prev.map(p => {
       if (p.sku_code !== sku_code) return p;
       if (p.lotEntries.some(e => e.lot_id === lot_id)) return p;
-      return { ...p, lotEntries: [...p.lotEntries, { lot_id, boxes: 1, verified: false }], addingLot: false };
+      return { ...p, lotEntries: [...p.lotEntries, { lot_id, boxes: '', verified: false }], addingLot: false };
     }));
   };
 
