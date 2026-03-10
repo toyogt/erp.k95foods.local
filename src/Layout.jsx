@@ -109,8 +109,8 @@ export default function Layout({ children, currentPageName }) {
           .touch-target { min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; }
         `}</style>
         <OfflineBanner />
-        {/* Header */}
-        <header className="sticky top-0 z-50 bg-white border-b border-slate-200">
+        {/* Header - hidden for warehouse-only users */}
+        {!isFGOnly && <header className="sticky top-0 z-50 bg-white border-b border-slate-200">
           <div className="max-w-screen-2xl mx-auto flex items-center justify-between px-3 h-14">
             <div className="flex items-center gap-2">
               {!isDashboard && (
@@ -133,15 +133,13 @@ export default function Layout({ children, currentPageName }) {
                 <h1 className="font-semibold text-slate-900 text-base">{pageTitle}</h1>
               )}
             </div>
-            {!isFGOnly && (
-              <button
-                type="button"
-                onClick={() => setMenuOpen(!menuOpen)}
-                className="w-12 h-12 rounded-xl hover:bg-slate-100 active:bg-slate-200 transition-colors flex items-center justify-center"
-              >
-                {menuOpen ? <X className="w-7 h-7 text-slate-700" /> : <Menu className="w-7 h-7 text-slate-700" />}
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="w-12 h-12 rounded-xl hover:bg-slate-100 active:bg-slate-200 transition-colors flex items-center justify-center"
+            >
+              {menuOpen ? <X className="w-7 h-7 text-slate-700" /> : <Menu className="w-7 h-7 text-slate-700" />}
+            </button>
           </div>
           {menuOpen && (
             <div className="absolute top-14 left-0 right-0 bg-white border-b border-slate-200 shadow-lg z-50">
