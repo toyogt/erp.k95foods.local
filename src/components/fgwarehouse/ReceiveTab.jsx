@@ -53,9 +53,15 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
     if (raw) {
       try {
         const d = JSON.parse(raw);
-        if (d.step && d.step !== 'done') setHasDraft(true);
-      } catch {}
+        if (d.step && d.step !== 'done' && (d.sku_code || d.header?.doc_number || d.header?.notes)) {
+          setHasDraft(true);
+          return; // don't enable auto-save until user chooses Resume or Discard
+        }
+      } catch {
+        localStorage.removeItem(RECEIVE_DRAFT_KEY);
+      }
     }
+    readyToSaveRef.current = true;
   }, []);
 
   // Clear draft when navigating away (tab switch). Draft only persists across page refresh/browser close.
@@ -66,7 +72,7 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }); }, [step]);
 
   useEffect(() => {
-    if (step === 'done') return;
+    if (!readyToSaveRef.current || step === 'done') return;
     const hasMeaningfulData = step !== 'doc' || header.doc_number || header.notes || docPhotos.length > 0;
     if (!hasMeaningfulData) {
       localStorage.removeItem(RECEIVE_DRAFT_KEY);
@@ -74,7 +80,6 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
     }
     localStorage.setItem(RECEIVE_DRAFT_KEY, JSON.stringify({
       step, header,
-      // Only persist photos that finished uploading
       docPhotos: docPhotos.filter(p => p.serverUrl).map(p => ({ localUrl: p.serverUrl, serverUrl: p.serverUrl, uploading: false })),
       sku_code, batch_code, batchLocked, mfg_date, exp_date,
       lotEntries: lotEntries.map(e => ({ id: e.id, boxes: e.boxes, loose: e.loose, location: e.location, targetLotId: e.targetLot?.lot_id || null })),
