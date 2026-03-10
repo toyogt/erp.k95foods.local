@@ -177,7 +177,10 @@ export default function LotTab({ skus, lots, onRefresh, user, onBack }) {
                   <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${statusColor[effectiveStatus(lot)] || 'bg-slate-100 text-slate-500'}`}>
                     {effectiveStatus(lot)}
                   </span>
-                  <span className="text-xs text-slate-500">{lot.boxes_balance ?? lot.boxes_in} boxes</span>
+                  <span className="text-sm font-bold text-slate-900">
+                    {((lot.boxes_balance || 0) * (lot.bottles_per_box || 1) + (lot.loose_bottles_balance || 0)).toLocaleString()} btl
+                  </span>
+                  <span className="text-xs text-slate-500">{lot.boxes_balance || 0} box + {lot.loose_bottles_balance || 0} loose</span>
                 </div>
               </div>
             </button>
