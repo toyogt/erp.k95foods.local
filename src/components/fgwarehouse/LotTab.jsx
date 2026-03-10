@@ -173,8 +173,8 @@ export default function LotTab({ skus, lots, onRefresh, user, onBack }) {
                   )}
                 </div>
                 <div className="flex flex-col items-end gap-1 shrink-0">
-                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${statusColor[lot.status] || 'bg-slate-100 text-slate-500'}`}>
-                    {lot.status}
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${statusColor[effectiveStatus(lot)] || 'bg-slate-100 text-slate-500'}`}>
+                    {effectiveStatus(lot)}
                   </span>
                   <span className="text-xs text-slate-500">{lot.boxes_balance ?? lot.boxes_in} boxes</span>
                 </div>
