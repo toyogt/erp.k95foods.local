@@ -61,6 +61,11 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
 
   useEffect(() => {
     if (step === 'done') return;
+    const hasMeaningfulData = step !== 'doc' || header.doc_number || header.notes || docPhotos.length > 0;
+    if (!hasMeaningfulData) {
+      localStorage.removeItem(RECEIVE_DRAFT_KEY);
+      return;
+    }
     localStorage.setItem(RECEIVE_DRAFT_KEY, JSON.stringify({
       step, header,
       // Only persist photos that finished uploading
