@@ -58,13 +58,18 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
   // Check for draft on mount only
   useEffect(() => {
     const raw = localStorage.getItem(DISPATCH_DRAFT_KEY);
+    console.log('🟢 Mount check - draft exists:', !!raw);
     if (raw) {
       try {
         const d = JSON.parse(raw);
+        console.log('🟢 Draft data on mount:', d);
         if (d.step && d.step !== 'done' && (d.products?.length > 0 || d.header?.order_reference || d.header?.notes)) {
+          console.log('🟢 Setting hasDraft = true');
           setHasDraft(true);
         }
-      } catch (e) {}
+      } catch (e) {
+        console.error('🔴 Error parsing draft on mount:', e);
+      }
     }
   }, []);
 
