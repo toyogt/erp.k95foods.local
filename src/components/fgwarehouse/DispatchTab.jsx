@@ -82,14 +82,18 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }); }, [step]);
 
   const loadDraft = () => {
+    alert('Resume button clicked!');
     const raw = localStorage.getItem(DISPATCH_DRAFT_KEY);
+    console.log('Draft raw data:', raw);
     if (!raw) {
+      alert('No draft found in localStorage');
       setHasDraft(false);
       return;
     }
     try {
       const d = JSON.parse(raw);
       console.log('Loading draft:', d);
+      alert(`Loading draft with ${d.products?.length || 0} products at step: ${d.step}`);
       
       // Batch all state updates together
       const newStep = d.step || 'details';
