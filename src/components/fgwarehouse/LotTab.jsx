@@ -178,7 +178,7 @@ export default function LotTab({ skus, lots, onRefresh, user, onBack }) {
                     {effectiveStatus(lot)}
                   </span>
                   <span className="text-sm font-bold text-slate-900">
-                    {((lot.boxes_balance || 0) * (lot.bottles_per_box || 1) + (lot.loose_bottles_balance || 0)).toLocaleString()} btl
+                    {((lot.boxes_balance || 0) * (lot.bottles_per_box || 1) + (lot.loose_bottles_balance || 0)).toLocaleString()} bottles
                   </span>
                   <span className="text-xs text-slate-500">{lot.boxes_balance || 0} box + {lot.loose_bottles_balance || 0} loose</span>
                 </div>
