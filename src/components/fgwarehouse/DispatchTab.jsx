@@ -300,10 +300,13 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
                           type="text" inputMode="numeric" pattern="[0-9]*"
                           value={line.boxes_dispatched}
                           onChange={e => updateLine(i, { boxes_dispatched: e.target.value.replace(/\D/g, '') })}
-                          className="h-12 text-xl font-bold text-center"
+                          className={`h-12 text-xl font-bold text-center ${Number(line.boxes_dispatched) > (lot.boxes_balance || 0) ? 'border-red-400 bg-red-50' : ''}`}
                           placeholder={`Max: ${lot.boxes_balance}`}
                         />
-                        {line.boxes_dispatched && (
+                        {line.boxes_dispatched && Number(line.boxes_dispatched) > (lot.boxes_balance || 0) && (
+                          <p className="text-xs text-red-600 font-semibold">⚠️ Exceeds balance! Max: {lot.boxes_balance} boxes</p>
+                        )}
+                        {line.boxes_dispatched && Number(line.boxes_dispatched) <= (lot.boxes_balance || 0) && (
                           <p className="text-xs text-right text-slate-500">
                             = <strong>{Number(line.boxes_dispatched) * (lot.bottles_per_box || 1)}</strong> bottles
                           </p>
