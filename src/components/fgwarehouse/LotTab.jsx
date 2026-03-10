@@ -25,8 +25,14 @@ export default function LotTab({ skus, lots, onRefresh, user, onBack }) {
 
   const activeSku = skus.find(s => s.item_code === form.sku_code);
 
+  // A lot is "effectively EMPTY" if both balances are 0, regardless of the stored status field
+  const effectiveStatus = (l) => {
+    if (l.status === 'ACTIVE' && (l.boxes_balance || 0) <= 0 && (l.loose_bottles_balance || 0) <= 0) return 'EMPTY';
+    return l.status;
+  };
+
   const filtered = lots.filter(l => {
-    if (filterStatus && l.status !== filterStatus) return false;
+    if (filterStatus && effectiveStatus(l) !== filterStatus) return false;
     if (!search) return true;
     const q = search.toLowerCase();
     return (
