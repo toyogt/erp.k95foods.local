@@ -88,7 +88,12 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
       setStep(d.step || 'details');
       setHeader(d.header || { channel: 'OTHER', order_reference: '', notes: '' });
       setDocPhotos(d.docPhotos || []);
-      setProducts(d.products || []);
+      // Reconstruct product structure with all required fields
+      setProducts((d.products || []).map(p => ({
+        ...p,
+        scanErrors: p.scanErrors || {},
+        addingLot: false,
+      })));
       setHasDraft(false);
     } catch (e) {}
   };
