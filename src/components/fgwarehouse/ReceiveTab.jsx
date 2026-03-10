@@ -178,7 +178,8 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
       });
       setSaving(false);
       setLastReceipt({ receipt_id });
-      setNewLot(null); // no new lot
+      setNewLot(null);
+      localStorage.removeItem(RECEIVE_DRAFT_KEY);
       setStep('done');
     } else {
       // ── NEW BATCH: create new lot ──
