@@ -78,6 +78,11 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
     }));
   }, [step, header, docPhotos, products]);
 
+  // Clear draft when navigating away (tab switch). Draft only persists across page refresh/browser close.
+  useEffect(() => {
+    return () => { localStorage.removeItem(DISPATCH_DRAFT_KEY); };
+  }, []);
+
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }); }, [step]);
 
   const loadDraft = () => {
