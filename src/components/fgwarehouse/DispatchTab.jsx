@@ -66,7 +66,8 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
 
   useEffect(() => {
     if (step === 'done') return;
-    const hasMeaningfulData = step !== 'details' || header.order_reference || header.notes || docPhotos.length > 0 || products.length > 0;
+    // Save draft if: we've progressed past 'details' step, OR user entered any data on details step
+    const hasMeaningfulData = step !== 'details' || header.order_reference || header.notes || docPhotos.length > 0;
     if (!hasMeaningfulData) {
       localStorage.removeItem(DISPATCH_DRAFT_KEY);
       return;
