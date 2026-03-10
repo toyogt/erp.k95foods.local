@@ -70,7 +70,9 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
   useEffect(() => {
     if (step === 'done') return;
     localStorage.setItem(DISPATCH_DRAFT_KEY, JSON.stringify({
-      step, header, docPhotos, sku_code, total_boxes, lotEntries,
+      step, header,
+      docPhotos: docPhotos.filter(p => p.serverUrl).map(p => ({ localUrl: p.serverUrl, serverUrl: p.serverUrl, uploading: false })),
+      sku_code, total_boxes, lotEntries,
     }));
   }, [step, header, docPhotos, sku_code, total_boxes, lotEntries]);
 
