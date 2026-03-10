@@ -341,14 +341,18 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
       )}
 
       {hasDraft && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center justify-between gap-3">
+        <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-4 space-y-3">
           <div>
-            <p className="text-sm font-bold text-amber-800">📝 Resume Draft Receipt?</p>
-            <p className="text-xs text-amber-600 mt-0.5">You have an unsaved receipt in progress.</p>
+            <p className="text-base font-bold text-amber-900">📝 Resume Draft Receipt?</p>
+            <p className="text-sm text-amber-700 mt-1">You have an unsaved receipt in progress.</p>
           </div>
-          <div className="flex gap-2 shrink-0">
-            <Button variant="outline" onClick={() => { localStorage.removeItem(RECEIVE_DRAFT_KEY); setHasDraft(false); readyToSaveRef.current = true; }} className="h-14 text-base px-6 min-w-[120px]">Discard</Button>
-            <Button onClick={loadDraft} className="h-14 text-base px-6 bg-amber-600 hover:bg-amber-700 min-w-[120px]">Resume</Button>
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={() => { localStorage.removeItem(RECEIVE_DRAFT_KEY); setHasDraft(false); readyToSaveRef.current = true; }} className="flex-1 h-14 text-base font-semibold min-h-[56px] border-2">
+              Discard
+            </Button>
+            <Button onClick={loadDraft} className="flex-1 h-14 text-base font-bold min-h-[56px] bg-amber-600 hover:bg-amber-700">
+              Resume
+            </Button>
           </div>
         </div>
       )}
