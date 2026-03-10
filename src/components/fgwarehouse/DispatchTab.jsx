@@ -47,6 +47,7 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
   const [lastDispatch, setLastDispatch] = useState(null);
   const [viewPhoto, setViewPhoto] = useState(null);
   const [hasDraft, setHasDraft] = useState(false);
+  const isRestoringRef = useRef(false);
   const uploadQueueRef = useRef({});
 
   const [header, setHeader] = useState({ channel: 'OTHER', order_reference: '', notes: '' });
