@@ -39,15 +39,16 @@ function computeFifo(sku_code, total_boxes, lots) {
 }
 
 export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
+  const { isOnline } = useOffline();
   const [step, setStep] = useState('details');
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [lastDispatch, setLastDispatch] = useState(null);
   const [viewPhoto, setViewPhoto] = useState(null);
   const [hasDraft, setHasDraft] = useState(false);
+  const uploadQueueRef = useRef({});
 
   const [header, setHeader] = useState({ channel: 'OTHER', order_reference: '', notes: '' });
-  const [docPhotos, setDocPhotos] = useState([]);
+  const [docPhotos, setDocPhotos] = useState([]); // [{localUrl, serverUrl, uploading}]
   const [sku_code, setSkuCode] = useState('');
   const [total_boxes, setTotalBoxes] = useState('');
   const [lotEntries, setLotEntries] = useState([]); // [{ lot_id, boxes, verified }]
