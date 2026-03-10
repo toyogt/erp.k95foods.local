@@ -94,45 +94,27 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }); }, [step]);
 
   const loadDraft = () => {
-    console.log('🔵 loadDraft called');
     const raw = localStorage.getItem(DISPATCH_DRAFT_KEY);
-    console.log('🔵 Draft data:', raw);
-    if (!raw) {
-      console.log('🔵 No draft found');
-      setHasDraft(false);
-      return;
-    }
+    if (!raw) { setHasDraft(false); readyToSaveRef.current = true; return; }
     try {
       const d = JSON.parse(raw);
-      console.log('🔵 Parsed draft:', d);
-      
-      const newStep = d.step || 'details';
-      const newHeader = d.header || { channel: 'OTHER', order_reference: '', notes: '' };
-      const newDocPhotos = d.docPhotos || [];
-      const newProducts = (d.products || []).map(p => ({
-        ...p,
-        lotEntries: p.lotEntries || [],
-        scanErrors: p.scanErrors || {},
-        addingLot: false,
-      }));
-      
-      console.log('🔵 Restoring - step:', newStep, 'products:', newProducts.length);
-      setHeader(newHeader);
-      setDocPhotos(newDocPhotos);
-      setProducts(newProducts);
-      setStep(newStep);
+      setHeader(d.header || { channel: 'OTHER', order_reference: '', notes: '' });
+      setDocPhotos(d.docPhotos || []);
+      setProducts((d.products || []).map(p => ({ ...p, lotEntries: p.lotEntries || [], scanErrors: {}, addingLot: false })));
+      setStep(d.step || 'details');
       setHasDraft(false);
-      console.log('🔵 Draft loaded successfully');
+      readyToSaveRef.current = true;
     } catch (e) {
-      console.error('🔴 Error loading draft:', e);
+      localStorage.removeItem(DISPATCH_DRAFT_KEY);
       setHasDraft(false);
+      readyToSaveRef.current = true;
     }
   };
 
   const discardDraft = () => {
     localStorage.removeItem(DISPATCH_DRAFT_KEY);
     setHasDraft(false);
-    setDraftDismissed(true);
+    readyToSaveRef.current = true;
   };
 
   // ── Grand total across all products ──────────────────────────────────────
