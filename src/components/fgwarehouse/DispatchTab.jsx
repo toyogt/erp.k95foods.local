@@ -86,17 +86,22 @@ export default function DispatchTab({ skus, lots, onRefresh, user, onBack }) {
     if (!raw) return;
     try {
       const d = JSON.parse(raw);
+      console.log('Loading draft:', d);
       setStep(d.step || 'details');
       setHeader(d.header || { channel: 'OTHER', order_reference: '', notes: '' });
       setDocPhotos(d.docPhotos || []);
       // Reconstruct product structure with all required fields
       setProducts((d.products || []).map(p => ({
         ...p,
+        lotEntries: p.lotEntries || [],
         scanErrors: p.scanErrors || {},
         addingLot: false,
       })));
       setHasDraft(false);
-    } catch (e) {}
+      console.log('Draft loaded successfully');
+    } catch (e) {
+      console.error('Failed to load draft:', e);
+    }
   };
 
   // ── Grand total across all products ──────────────────────────────────────
