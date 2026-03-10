@@ -170,7 +170,7 @@ export default function Layout({ children, currentPageName }) {
               </div>
             </div>
           )}
-        </header>}
+        </header>)}
         <main className="max-w-screen-2xl mx-auto px-4 py-5 pb-24">{children}</main>
       </div>
     </OfflineProvider>
