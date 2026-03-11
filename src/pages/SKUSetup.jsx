@@ -634,6 +634,29 @@ export default function SKUSetup() {
 
             {/* ─── Tab 3: Printing & Batch ──────────────────── */}
             <TabsContent value="printing" className="mt-4 space-y-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
+                <p className="text-sm font-bold text-blue-900 mb-2">📋 How Printing & Batch Works</p>
+                <p className="text-xs text-blue-800 leading-relaxed">
+                  This tab configures how labels are printed and batch codes are generated for this SKU. 
+                  <strong> Ryan Template</strong> defines the label design and placeholders (e.g., BATCH, MFG, EXP). 
+                  <strong> Batch Format Rule</strong> determines how batch IDs are structured (e.g., date formats, sequences, prefixes). 
+                  <strong> Batch Prefix</strong> (optional) prepends a custom code to every batch. 
+                  <strong> Payload Mapping</strong> links SKU data to template placeholders for dynamic label printing.
+                </p>
+              </div>
+
+              <div className="bg-white border border-slate-200 rounded-xl p-4 mb-4">
+                <Field label="Batch Prefix (optional)">
+                  <Input 
+                    value={skuForm.batch_prefix} 
+                    onChange={e => setSkuForm(f => ({ ...f, batch_prefix: e.target.value.toUpperCase() }))} 
+                    placeholder="e.g. TYK" 
+                    className="h-12 text-base font-mono tracking-wider" 
+                  />
+                  <p className="text-xs text-slate-500 mt-1">Prepended to batch codes for this SKU (e.g. TYK-250311-001)</p>
+                </Field>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Field label="Ryan Template *" className="sm:col-span-2">
                   <RyanTemplateField
