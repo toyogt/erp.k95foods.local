@@ -428,10 +428,25 @@ export default function SKUSetup() {
                 </div>
               </div>
 
-              {/* Pricing & Specs */}
+              {/* Packaging */}
               <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-4">
-                <p className="text-sm font-bold text-slate-700">💰 Pricing & Specifications</p>
-                <div className="grid grid-cols-2 gap-4">
+                <p className="text-sm font-bold text-slate-700">📦 Packaging Configuration</p>
+                <div className="grid grid-cols-1 gap-4">
+                  <Field label="Bottle Type *">
+                    {bottleTypes.length > 0 ? (
+                      <select
+                        value={skuForm.bottle_type}
+                        onChange={e => handleBottleTypeChange(e.target.value)}
+                        className="w-full border border-slate-200 rounded-lg px-4 py-3 text-base h-12 bg-white"
+                      >
+                        <option value="">— Select Bottle Type —</option>
+                        {bottleTypes.map(b => <option key={b.id} value={b.name}>{b.name}</option>)}
+                      </select>
+                    ) : (
+                      <Input value={skuForm.bottle_type} onChange={e => handleBottleTypeChange(e.target.value)} placeholder="e.g. PET 200ml" className="h-11 text-base" />
+                    )}
+                  </Field>
+
                   <Field label="Bottle Type & ML *">
                     <Input 
                       type="text" 
@@ -440,8 +455,69 @@ export default function SKUSetup() {
                       placeholder="Select bottle type first" 
                       className="h-12 text-base bg-slate-50" 
                     />
-                    <p className="text-xs text-slate-400 mt-1">ML auto-filled from bottle type selected in Recipe & Packaging tab</p>
+                    <p className="text-xs text-slate-400 mt-1">ML auto-filled from bottle type</p>
                   </Field>
+
+                  <Field label="Box Type *">
+                    <select
+                      value={skuForm.box_type_id}
+                      onChange={e => handleBoxTypeChange(e.target.value)}
+                      className="w-full border border-slate-200 rounded-lg px-4 py-3 text-base h-12 bg-white"
+                    >
+                      <option value="">— Select Box Type —</option>
+                      {boxTypes.map(b => (
+                        <option key={b.box_type_id} value={b.box_type_id}>
+                          {b.box_name} — {b.bottles_per_box} bottles/box
+                        </option>
+                      ))}
+                    </select>
+                    {boxTypes.length === 0 && (
+                      <p className="text-xs text-amber-600 mt-1 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                        No box types — add in Box Types page first
+                      </p>
+                    )}
+                  </Field>
+
+                  {selectedBoxType && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
+                      <div className="flex flex-wrap gap-4 text-sm text-blue-900">
+                        <span>📦 <strong>{selectedBoxType.bottles_per_box}</strong> bottles/box</span>
+                        {selectedBoxType.length_mm && (
+                          <span>📐 {selectedBoxType.length_mm} × {selectedBoxType.width_mm} × {selectedBoxType.height_mm} mm</span>
+                        )}
+                        {selectedBoxType.empty_weight_kg && <span>⚖️ {selectedBoxType.empty_weight_kg} kg</span>}
+                      </div>
+                    </div>
+                  )}
+
+                  <Field label="Shelf Life *">
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input 
+                        type="text" 
+                        inputMode="numeric" 
+                        value={skuForm.shelf_life_days} 
+                        onChange={e => setSkuForm(f => ({ ...f, shelf_life_days: e.target.value.replace(/[^0-9]/g, '') }))} 
+                        placeholder="12" 
+                        className="h-12 text-base" 
+                      />
+                      <select
+                        value={skuForm.shelf_life_unit || 'days'}
+                        onChange={e => setSkuForm(f => ({ ...f, shelf_life_unit: e.target.value }))}
+                        className="h-12 border border-slate-200 rounded-lg px-3 text-base bg-white"
+                      >
+                        <option value="days">Days</option>
+                        <option value="months">Months</option>
+                        <option value="years">Years</option>
+                      </select>
+                    </div>
+                  </Field>
+                </div>
+              </div>
+
+              {/* Pricing & Specs */}
+              <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-4">
+                <p className="text-sm font-bold text-slate-700">💰 Pricing & Specifications</p>
+                <div className="grid grid-cols-2 gap-4">
                   <Field label="Product Barcode">
                     <Input value={skuForm.product_barcode} onChange={e => setSkuForm(f => ({ ...f, product_barcode: e.target.value }))} placeholder="8901234567890" className="h-12 text-base font-mono" />
                   </Field>
@@ -576,80 +652,7 @@ export default function SKUSetup() {
                 </div>
               )}
 
-              {/* Packaging */}
-              <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-4">
-                <p className="text-sm font-bold text-slate-700">📦 Packaging Configuration</p>
-                <div className="grid grid-cols-1 gap-4">
-                  <Field label="Bottle Type *">
-                    {bottleTypes.length > 0 ? (
-                      <select
-                        value={skuForm.bottle_type}
-                        onChange={e => handleBottleTypeChange(e.target.value)}
-                        className="w-full border border-slate-200 rounded-lg px-4 py-3 text-base h-12 bg-white"
-                      >
-                        <option value="">— Select Bottle Type —</option>
-                        {bottleTypes.map(b => <option key={b.id} value={b.name}>{b.name}</option>)}
-                      </select>
-                    ) : (
-                      <Input value={skuForm.bottle_type} onChange={e => handleBottleTypeChange(e.target.value)} placeholder="e.g. PET 200ml" className="h-11 text-base" />
-                    )}
-                  </Field>
 
-                  <Field label="Box Type *">
-                    <select
-                      value={skuForm.box_type_id}
-                      onChange={e => handleBoxTypeChange(e.target.value)}
-                      className="w-full border border-slate-200 rounded-lg px-4 py-3 text-base h-12 bg-white"
-                    >
-                      <option value="">— Select Box Type —</option>
-                      {boxTypes.map(b => (
-                        <option key={b.box_type_id} value={b.box_type_id}>
-                          {b.box_name} — {b.bottles_per_box} bottles/box
-                        </option>
-                      ))}
-                    </select>
-                    {boxTypes.length === 0 && (
-                      <p className="text-xs text-amber-600 mt-1 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                        No box types — add in Box Types page first
-                      </p>
-                    )}
-                  </Field>
-
-                  {selectedBoxType && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
-                      <div className="flex flex-wrap gap-4 text-sm text-blue-900">
-                        <span>📦 <strong>{selectedBoxType.bottles_per_box}</strong> bottles/box</span>
-                        {selectedBoxType.length_mm && (
-                          <span>📐 {selectedBoxType.length_mm} × {selectedBoxType.width_mm} × {selectedBoxType.height_mm} mm</span>
-                        )}
-                        {selectedBoxType.empty_weight_kg && <span>⚖️ {selectedBoxType.empty_weight_kg} kg</span>}
-                      </div>
-                    </div>
-                  )}
-
-                  <Field label="Shelf Life *">
-                    <div className="grid grid-cols-2 gap-2">
-                      <Input 
-                        type="text" 
-                        inputMode="numeric" 
-                        value={skuForm.shelf_life_days} 
-                        onChange={e => setSkuForm(f => ({ ...f, shelf_life_days: e.target.value.replace(/[^0-9]/g, '') }))} 
-                        placeholder="12" 
-                        className="h-12 text-base" 
-                      />
-                      <select
-                        value={skuForm.shelf_life_unit || 'days'}
-                        onChange={e => setSkuForm(f => ({ ...f, shelf_life_unit: e.target.value }))}
-                        className="h-12 border border-slate-200 rounded-lg px-3 text-base bg-white"
-                      >
-                        <option value="days">Days</option>
-                        <option value="months">Months</option>
-                        <option value="years">Years</option>
-                      </select>
-                    </div>
-                  </Field>
-                </div>
-              </div>
             </TabsContent>
 
             {/* ─── Tab 3: Printing & Batch ──────────────────── */}
