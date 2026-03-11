@@ -1,12 +1,11 @@
 import { useState } from 'react';
-import { ChevronLeft, Package, Layers } from 'lucide-react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
-import TrialPackProductionWizard from '@/components/trialpack/TrialPackProductionWizard';
-import MasterCartonWizard from '@/components/mastercarton/MasterCartonWizard';
+import { ChevronLeft, Settings } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import TrialPackTab from '@/components/fgwarehouse/TrialPackTab';
+import MasterCartonTab from '@/components/fgwarehouse/MasterCartonTab';
 
 export default function MoreTab({ onBack }) {
-  const [showTrialWizard, setShowTrialWizard] = useState(false);
-  const [showCartonWizard, setShowCartonWizard] = useState(false);
+  const [activeTab, setActiveTab] = useState('trial');
 
   return (
     <div className="space-y-5">
@@ -17,37 +16,24 @@ export default function MoreTab({ onBack }) {
         <h2 className="text-lg font-bold text-slate-900">More Tools</h2>
       </div>
 
-      <div className="space-y-2">
-        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Warehouse Tools</p>
-        <div className="grid grid-cols-1 gap-2">
-          <ToolCard
-            icon="🧪"
-            title="Trial Pack Production"
-            sub="Build trial packs from component boxes"
-            color="bg-purple-700"
-            onClick={() => setShowTrialWizard(true)}
-          />
-          <ToolCard
-            icon="📦"
-            title="Master Carton Packing"
-            sub="Pack boxes into master cartons"
-            color="bg-indigo-700"
-            onClick={() => setShowCartonWizard(true)}
-          />
-        </div>
-      </div>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="trial" className="text-sm">
+            🧪 Trial Packs
+          </TabsTrigger>
+          <TabsTrigger value="carton" className="text-sm">
+            📦 Master Cartons
+          </TabsTrigger>
+        </TabsList>
 
-      <Dialog open={showTrialWizard} onOpenChange={setShowTrialWizard}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-auto">
-          <TrialPackProductionWizard onClose={() => setShowTrialWizard(false)} />
-        </DialogContent>
-      </Dialog>
+        <TabsContent value="trial" className="mt-4">
+          <TrialPackTab />
+        </TabsContent>
 
-      <Dialog open={showCartonWizard} onOpenChange={setShowCartonWizard}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-auto">
-          <MasterCartonWizard onClose={() => setShowCartonWizard(false)} />
-        </DialogContent>
-      </Dialog>
+        <TabsContent value="carton" className="mt-4">
+          <MasterCartonTab />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
