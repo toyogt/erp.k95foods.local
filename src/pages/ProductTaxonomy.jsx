@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Plus, Trash2, Save, X, Upload, FileUp } from 'lucide-react';
+import { Plus, Trash2, Save, X, Upload, FileUp, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function ProductTaxonomy() {
@@ -93,6 +93,21 @@ export default function ProductTaxonomy() {
 
   const familiesForBrand = (brand) => families.filter(f => f.brand_name === brand);
   const flavoursForFamily = (brand, family) => flavours.filter(f => f.brand_name === brand && f.family_name === family);
+
+  const downloadTemplate = () => {
+    const csvContent = `brand_name,family_name,flavour_name
+Toyo Kombucha,Low Sugar,Exotic Peach
+Toyo Kombucha,Low Sugar,Tangy Lemon
+Toyo Kombucha,Regular,Classic Ginger`;
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'taxonomy_template.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('Template downloaded');
+  };
 
   const handleImport = async () => {
     if (!importFile) return;
@@ -352,7 +367,12 @@ export default function ProductTaxonomy() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-900">
-              <p className="font-semibold mb-2">Supported file formats:</p>
+              <div className="flex items-start justify-between mb-2">
+                <p className="font-semibold">Supported file formats:</p>
+                <Button variant="ghost" size="sm" onClick={downloadTemplate} className="h-8 -mt-1 text-blue-700 hover:text-blue-900 hover:bg-blue-100">
+                  <Download className="w-4 h-4 mr-1" />Template
+                </Button>
+              </div>
               <ul className="list-disc list-inside space-y-1 text-xs">
                 <li>CSV, Excel (.xlsx), or JSON</li>
                 <li>Required columns: <code className="bg-blue-100 px-1 rounded">brand_name</code></li>
