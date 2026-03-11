@@ -76,6 +76,7 @@ import LiquidPlans from './pages/LiquidPlans';
 import MasterData from './pages/MasterData';
 import OpeningStockImport from './pages/OpeningStockImport';
 import PaymentRequests from './pages/PaymentRequests';
+import ProductTaxonomy from './pages/ProductTaxonomy';
 import ProductionControl from './pages/ProductionControl';
 import ProductionOrders from './pages/ProductionOrders';
 import PullLists from './pages/PullLists';
@@ -97,7 +98,6 @@ import TransferReceiving from './pages/TransferReceiving';
 import UOMManager from './pages/UOMManager';
 import WarehouseBins from './pages/WarehouseBins';
 import WarehouseOps from './pages/WarehouseOps';
-import ProductTaxonomy from './pages/ProductTaxonomy';
 import __Layout from './Layout.jsx';
 
 
@@ -131,6 +131,7 @@ export const PAGES = {
     "MasterData": MasterData,
     "OpeningStockImport": OpeningStockImport,
     "PaymentRequests": PaymentRequests,
+    "ProductTaxonomy": ProductTaxonomy,
     "ProductionControl": ProductionControl,
     "ProductionOrders": ProductionOrders,
     "PullLists": PullLists,
@@ -152,7 +153,6 @@ export const PAGES = {
     "UOMManager": UOMManager,
     "WarehouseBins": WarehouseBins,
     "WarehouseOps": WarehouseOps,
-    "ProductTaxonomy": ProductTaxonomy,
 }
 
 export const pagesConfig = {

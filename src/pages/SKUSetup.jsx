@@ -127,6 +127,24 @@ export default function SKUSetup() {
     setSkuForm(f => ({ ...f, box_type_id, bottles_per_box: bt ? bt.bottles_per_box : '' }));
   };
 
+  // Auto-fill ML when bottle type changes
+  const handleBottleTypeChange = (bottle_type) => {
+    // Extract ML from bottle type name (e.g. "PET 200ml" -> 200)
+    const mlMatch = bottle_type.match(/(\d+)\s*ml/i);
+    const ml = mlMatch ? mlMatch[1] : '';
+    setSkuForm(f => ({ ...f, bottle_type, ml_per_bottle: ml || f.ml_per_bottle }));
+  };
+
+  // Auto-calculate MRP per box when MRP or bottles change
+  useEffect(() => {
+    const mrp = parseFloat(skuForm.mrp);
+    const bottles = parseInt(skuForm.bottles_per_box);
+    if (!isNaN(mrp) && !isNaN(bottles) && bottles > 0) {
+      const mrpBox = (mrp * bottles).toFixed(2);
+      setSkuForm(f => ({ ...f, mrp_box: mrpBox }));
+    }
+  }, [skuForm.mrp, skuForm.bottles_per_box]);
+
   // Filtered recipe options for selected group
   const filteredOptions = recipeOptions.filter(o => o.recipe_group_id === skuForm.recipe_group_id);
 
@@ -407,16 +425,40 @@ export default function SKUSetup() {
                 <p className="text-sm font-bold text-slate-700">💰 Pricing & Specifications</p>
                 <div className="grid grid-cols-2 gap-4">
                   <Field label="ML per Bottle">
-                    <Input type="number" value={skuForm.ml_per_bottle} onChange={e => setSkuForm(f => ({ ...f, ml_per_bottle: e.target.value }))} placeholder="200" className="h-11 text-base" />
+                    <Input 
+                      type="text" 
+                      inputMode="numeric" 
+                      pattern="[0-9]*" 
+                      value={skuForm.ml_per_bottle} 
+                      onChange={e => setSkuForm(f => ({ ...f, ml_per_bottle: e.target.value.replace(/[^0-9]/g, '') }))} 
+                      placeholder="200" 
+                      className="h-12 text-base" 
+                    />
+                    <p className="text-xs text-slate-400 mt-1">Auto-filled from bottle type</p>
                   </Field>
                   <Field label="Product Barcode">
-                    <Input value={skuForm.product_barcode} onChange={e => setSkuForm(f => ({ ...f, product_barcode: e.target.value }))} placeholder="8901234567890" className="h-11 text-base font-mono" />
+                    <Input value={skuForm.product_barcode} onChange={e => setSkuForm(f => ({ ...f, product_barcode: e.target.value }))} placeholder="8901234567890" className="h-12 text-base font-mono" />
                   </Field>
                   <Field label="MRP per Bottle (₹)">
-                    <Input type="number" value={skuForm.mrp} onChange={e => setSkuForm(f => ({ ...f, mrp: e.target.value }))} placeholder="25" className="h-11 text-base" />
+                    <Input 
+                      type="text" 
+                      inputMode="decimal" 
+                      value={skuForm.mrp} 
+                      onChange={e => setSkuForm(f => ({ ...f, mrp: e.target.value.replace(/[^0-9.]/g, '') }))} 
+                      placeholder="25" 
+                      className="h-12 text-base" 
+                    />
                   </Field>
                   <Field label="MRP per Box (₹)">
-                    <Input type="number" value={skuForm.mrp_box} onChange={e => setSkuForm(f => ({ ...f, mrp_box: e.target.value }))} placeholder="150" className="h-11 text-base" />
+                    <Input 
+                      type="text" 
+                      inputMode="decimal" 
+                      value={skuForm.mrp_box} 
+                      readOnly 
+                      placeholder="Auto-calculated" 
+                      className="h-12 text-base bg-slate-50" 
+                    />
+                    <p className="text-xs text-slate-400 mt-1">Auto-calculated from MRP × bottles</p>
                   </Field>
                 </div>
               </div>
@@ -529,14 +571,14 @@ export default function SKUSetup() {
                     {bottleTypes.length > 0 ? (
                       <select
                         value={skuForm.bottle_type}
-                        onChange={e => setSkuForm(f => ({ ...f, bottle_type: e.target.value }))}
+                        onChange={e => handleBottleTypeChange(e.target.value)}
                         className="w-full border border-slate-200 rounded-lg px-4 py-3 text-base h-12 bg-white"
                       >
                         <option value="">— Select Bottle Type —</option>
                         {bottleTypes.map(b => <option key={b.id} value={b.name}>{b.name}</option>)}
                       </select>
                     ) : (
-                      <Input value={skuForm.bottle_type} onChange={e => setSkuForm(f => ({ ...f, bottle_type: e.target.value }))} placeholder="e.g. PET 200ml" className="h-11 text-base" />
+                      <Input value={skuForm.bottle_type} onChange={e => handleBottleTypeChange(e.target.value)} placeholder="e.g. PET 200ml" className="h-11 text-base" />
                     )}
                   </Field>
 
