@@ -60,6 +60,7 @@ const ALL_NAV_ITEMS = [
   { label: 'Box Types',             page: 'BoxTypeManager',          icon: Layers,         adminOnly: true },
   { label: 'Label Artworks',        page: 'LabelArtworkManager',     icon: Printer,        adminOnly: true },
   { label: 'Ryan Templates',        page: 'RyanTemplateManager',     icon: Printer,        adminOnly: true },
+  { label: 'Product Taxonomy',      page: 'ProductTaxonomy',         icon: Layers,         adminOnly: true },
   { label: 'Master Data',           page: 'MasterData',              icon: Settings,       adminOnly: true },
 ];
 
