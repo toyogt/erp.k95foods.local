@@ -4,8 +4,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Save, CheckCircle2, AlertTriangle, Plus, Pencil, Copy, X, ExternalLink } from 'lucide-react';
+import { Loader2, Save, CheckCircle2, AlertTriangle, Plus, Pencil, Copy, X, ExternalLink, Info } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import SKUList from '@/components/sku/SKUList';
 import SetupChecklist, { isSetupComplete } from '@/components/sku/SetupChecklist';
 import PayloadMapBuilder from '@/components/sku/PayloadMapBuilder';
@@ -21,7 +22,7 @@ const EMPTY_SKU = {
   recipe_group_id: '', default_recipe_option_id: '', box_type_id: '', bottles_per_box: '',
   batch_prefix: '', default_artwork_id: '', is_active: false, is_trial_pack: false,
   fssai_no: '', manufacturer_name: '', address_1: '', address_2: '',
-  customer_care_email: '', customer_care_phone: '', product_barcode: '',
+  customer_care_email: '', customer_care_phone: '', product_barcode: '', box_barcode: '',
 };
 
 const EMPTY_MAPPING = {
