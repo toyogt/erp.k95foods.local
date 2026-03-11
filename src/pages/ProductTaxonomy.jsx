@@ -21,6 +21,7 @@ export default function ProductTaxonomy() {
   const [importDialog, setImportDialog] = useState(false);
   const [importFile, setImportFile] = useState(null);
   const [importing, setImporting] = useState(false);
+  const [importSummary, setImportSummary] = useState(null);
 
   const loadAll = async () => {
     setLoading(true);
@@ -109,9 +110,50 @@ Toyo Kombucha,Regular,Classic Ginger`;
     toast.success('Template downloaded');
   };
 
+  const exportTaxonomy = () => {
+    const rows = [['brand_name', 'family_name', 'flavour_name']];
+    
+    // Export all combinations
+    brands.forEach(brand => {
+      const fams = familiesForBrand(brand.brand_name);
+      if (fams.length === 0) {
+        rows.push([brand.brand_name, '', '']);
+      } else {
+        fams.forEach(fam => {
+          const flavs = flavoursForFamily(brand.brand_name, fam.family_name);
+          if (flavs.length === 0) {
+            rows.push([brand.brand_name, fam.family_name, '']);
+          } else {
+            flavs.forEach(flav => {
+              rows.push([brand.brand_name, fam.family_name, flav.flavour_name]);
+            });
+          }
+        });
+      }
+    });
+
+    const csvContent = rows.map(r => r.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `taxonomy_export_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('Taxonomy exported');
+  };
+
   const handleImport = async () => {
     if (!importFile) return;
     setImporting(true);
+    
+    const summary = {
+      total: 0,
+      success: { brands: 0, families: 0, flavours: 0 },
+      skipped: { brands: [], families: [], flavours: [] },
+      errors: []
+    };
+
     try {
       // Upload file
       const uploadRes = await base44.integrations.Core.UploadFile({ file: importFile });
@@ -139,77 +181,98 @@ Toyo Kombucha,Regular,Classic Ginger`;
         return;
       }
 
-      let imported = 0;
       const processedBrands = new Set();
       const processedFamilies = new Set();
       const processedFlavours = new Set();
 
       // Process each row
       for (let i = 1; i < lines.length; i++) {
-        const cols = lines[i].split(',').map(c => c.trim());
-        const brandName = cols[brandIdx];
-        const familyName = familyIdx !== -1 ? cols[familyIdx] : '';
-        const flavourName = flavourIdx !== -1 ? cols[flavourIdx] : '';
+        try {
+          summary.total++;
+          const cols = lines[i].split(',').map(c => c.trim());
+          const brandName = cols[brandIdx];
+          const familyName = familyIdx !== -1 ? cols[familyIdx] : '';
+          const flavourName = flavourIdx !== -1 ? cols[flavourIdx] : '';
 
-        if (!brandName) continue;
-
-        // Import brand
-        if (!processedBrands.has(brandName)) {
-          const exists = brands.find(b => b.brand_name === brandName);
-          if (!exists) {
-            await base44.entities.BrandMaster.create({ brand_name: brandName, is_active: true });
-            imported++;
+          if (!brandName) {
+            summary.errors.push(`Row ${i + 1}: Missing brand name`);
+            continue;
           }
-          processedBrands.add(brandName);
-        }
 
-        // Import family
-        if (familyName) {
-          const famKey = `${brandName}|${familyName}`;
-          if (!processedFamilies.has(famKey)) {
-            const exists = families.find(f => f.brand_name === brandName && f.family_name === familyName);
+          // Import brand
+          if (!processedBrands.has(brandName)) {
+            const exists = brands.find(b => b.brand_name === brandName);
             if (!exists) {
-              await base44.entities.ProductFamilyMaster.create({ 
-                brand_name: brandName, 
-                family_name: familyName, 
-                is_active: true 
-              });
-              imported++;
+              await base44.entities.BrandMaster.create({ brand_name: brandName, is_active: true });
+              summary.success.brands++;
+            } else {
+              summary.skipped.brands.push(brandName);
             }
-            processedFamilies.add(famKey);
+            processedBrands.add(brandName);
           }
-        }
 
-        // Import flavour
-        if (familyName && flavourName) {
-          const flavKey = `${brandName}|${familyName}|${flavourName}`;
-          if (!processedFlavours.has(flavKey)) {
-            const exists = flavours.find(f => 
-              f.brand_name === brandName && 
-              f.family_name === familyName && 
-              f.flavour_name === flavourName
-            );
-            if (!exists) {
-              await base44.entities.FlavourMaster.create({ 
-                brand_name: brandName, 
-                family_name: familyName, 
-                flavour_name: flavourName, 
-                is_active: true 
-              });
-              imported++;
+          // Import family
+          if (familyName) {
+            const famKey = `${brandName}|${familyName}`;
+            if (!processedFamilies.has(famKey)) {
+              const exists = families.find(f => f.brand_name === brandName && f.family_name === familyName);
+              if (!exists) {
+                await base44.entities.ProductFamilyMaster.create({ 
+                  brand_name: brandName, 
+                  family_name: familyName, 
+                  is_active: true 
+                });
+                summary.success.families++;
+              } else {
+                summary.skipped.families.push(`${brandName} › ${familyName}`);
+              }
+              processedFamilies.add(famKey);
             }
-            processedFlavours.add(flavKey);
           }
+
+          // Import flavour
+          if (familyName && flavourName) {
+            const flavKey = `${brandName}|${familyName}|${flavourName}`;
+            if (!processedFlavours.has(flavKey)) {
+              const exists = flavours.find(f => 
+                f.brand_name === brandName && 
+                f.family_name === familyName && 
+                f.flavour_name === flavourName
+              );
+              if (!exists) {
+                await base44.entities.FlavourMaster.create({ 
+                  brand_name: brandName, 
+                  family_name: familyName, 
+                  flavour_name: flavourName, 
+                  is_active: true 
+                });
+                summary.success.flavours++;
+              } else {
+                summary.skipped.flavours.push(`${brandName} › ${familyName} › ${flavourName}`);
+              }
+              processedFlavours.add(flavKey);
+            }
+          }
+        } catch (rowErr) {
+          summary.errors.push(`Row ${i + 1}: ${rowErr.message}`);
         }
       }
 
-      toast.success(`Imported ${imported} items successfully`);
-      setImportDialog(false);
+      setImportSummary(summary);
       setImportFile(null);
-      loadAll();
+      await loadAll();
+      
+      const totalImported = summary.success.brands + summary.success.families + summary.success.flavours;
+      if (totalImported > 0) {
+        toast.success(`Imported ${totalImported} items`);
+      } else {
+        toast.error('No new items imported');
+      }
     } catch (err) {
       console.error('Import error:', err);
       toast.error('Import failed: ' + err.message);
+      summary.errors.push(err.message);
+      setImportSummary(summary);
     } finally {
       setImporting(false);
     }
@@ -224,9 +287,14 @@ Toyo Kombucha,Regular,Classic Ginger`;
           <h1 className="text-2xl font-bold text-slate-900">Product Taxonomy</h1>
           <p className="text-sm text-slate-500">Manage brands, families, and flavours hierarchy</p>
         </div>
-        <Button onClick={() => setImportDialog(true)} className="h-11 gap-2">
-          <Upload className="w-5 h-5" />Import
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={exportTaxonomy} className="h-11 gap-2">
+            <Download className="w-5 h-5" />Export
+          </Button>
+          <Button onClick={() => { setImportDialog(true); setImportSummary(null); }} className="h-11 gap-2">
+            <Upload className="w-5 h-5" />Import
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="brands" className="w-full">
@@ -379,11 +447,63 @@ Toyo Kombucha,Regular,Classic Ginger`;
 
       {/* Import Dialog */}
       <Dialog open={importDialog} onOpenChange={setImportDialog}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Import Taxonomy Data</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            {/* Import Summary */}
+            {importSummary && (
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-3">
+                <p className="font-bold text-slate-900">Import Summary</p>
+                
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Total rows processed:</span>
+                    <span className="font-semibold">{importSummary.total}</span>
+                  </div>
+                  
+                  <div className="border-t pt-2 space-y-1">
+                    <p className="text-green-700 font-semibold">✓ Successfully Imported:</p>
+                    <div className="ml-4 text-xs space-y-0.5">
+                      <div>Brands: <strong>{importSummary.success.brands}</strong></div>
+                      <div>Families: <strong>{importSummary.success.families}</strong></div>
+                      <div>Flavours: <strong>{importSummary.success.flavours}</strong></div>
+                    </div>
+                  </div>
+
+                  {(importSummary.skipped.brands.length > 0 || importSummary.skipped.families.length > 0 || importSummary.skipped.flavours.length > 0) && (
+                    <div className="border-t pt-2 space-y-1">
+                      <p className="text-amber-700 font-semibold">⊘ Skipped (already exists):</p>
+                      <div className="ml-4 text-xs space-y-0.5 max-h-32 overflow-y-auto">
+                        {importSummary.skipped.brands.slice(0, 3).map((b, i) => <div key={i}>Brand: {b}</div>)}
+                        {importSummary.skipped.brands.length > 3 && <div className="text-slate-400">... and {importSummary.skipped.brands.length - 3} more brands</div>}
+                        {importSummary.skipped.families.slice(0, 3).map((f, i) => <div key={i}>Family: {f}</div>)}
+                        {importSummary.skipped.families.length > 3 && <div className="text-slate-400">... and {importSummary.skipped.families.length - 3} more families</div>}
+                        {importSummary.skipped.flavours.slice(0, 3).map((f, i) => <div key={i}>Flavour: {f}</div>)}
+                        {importSummary.skipped.flavours.length > 3 && <div className="text-slate-400">... and {importSummary.skipped.flavours.length - 3} more flavours</div>}
+                      </div>
+                    </div>
+                  )}
+
+                  {importSummary.errors.length > 0 && (
+                    <div className="border-t pt-2 space-y-1">
+                      <p className="text-red-700 font-semibold">✕ Errors:</p>
+                      <div className="ml-4 text-xs space-y-0.5 max-h-32 overflow-y-auto text-red-600">
+                        {importSummary.errors.map((err, i) => <div key={i}>{err}</div>)}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <Button onClick={() => { setImportDialog(false); setImportSummary(null); }} className="w-full h-11">
+                  Done
+                </Button>
+              </div>
+            )}
+
+            {!importSummary && (
+              <>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-900">
               <div className="flex items-start justify-between mb-2">
                 <p className="font-semibold">Supported file formats:</p>
@@ -424,10 +544,12 @@ Toyo Kombucha,Regular,Classic Ginger`;
               <Button onClick={handleImport} disabled={!importFile || importing} className="flex-1 h-12">
                 {importing ? 'Importing...' : 'Import Data'}
               </Button>
-              <Button variant="outline" onClick={() => { setImportDialog(false); setImportFile(null); }} className="h-12">
+              <Button variant="outline" onClick={() => { setImportDialog(false); setImportFile(null); }} disabled={importing} className="h-12">
                 Cancel
               </Button>
             </div>
+            </>
+            )}
           </div>
         </DialogContent>
       </Dialog>
