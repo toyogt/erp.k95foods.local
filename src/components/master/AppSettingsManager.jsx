@@ -9,6 +9,8 @@ const DEFAULT_SETTINGS = [
   { key: 'ERP_API_BASE_URL',                label: 'ERP API Base URL',                  description: 'ERPNext base URL for sync e.g. https://erp.company.com',  type: 'text'   },
   { key: 'OFFLINE_SYNC_ENABLED',            label: 'Offline Sync Enabled',              description: 'true / false — enable background sync of offline queue',  type: 'text'   },
   { key: 'BOTTLE_TYPE_MISMATCH_HARDSTOP',   label: 'Bottle Type Mismatch → HARD STOP',  description: 'true = hard stop on bottle type mismatch (default: soft)', type: 'text'   },
+  { key: 'CUSTOMER_CARE_EMAIL',             label: 'Customer Care Email',               description: 'Email for all product labels (used globally)',            type: 'email'  },
+  { key: 'CUSTOMER_CARE_PHONE',             label: 'Customer Care Phone',               description: 'Phone for all product labels (used globally)',            type: 'text'   },
 ];
 
 function SettingRow({ def, existing, onSave }) {

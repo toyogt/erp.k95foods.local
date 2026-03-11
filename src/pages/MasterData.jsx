@@ -13,6 +13,7 @@ import ModuleAccessManager from '@/components/master/ModuleAccessManager';
 import ErrorMessagesManager from '@/components/master/ErrorMessagesManager';
 import DowntimeReasonManager from '@/components/master/DowntimeReasonManager';
 import ProductTaxonomy from '@/pages/ProductTaxonomy';
+import ManufacturerManager from '@/components/master/ManufacturerManager';
 import { Loader2 } from 'lucide-react';
 
 export default function MasterData() {
@@ -44,7 +45,8 @@ export default function MasterData() {
       <Tabs defaultValue="bottles" className="w-full">
         <div className="overflow-x-auto">
           <TabsList className="inline-flex h-10 rounded-xl bg-slate-100 p-1 min-w-full">
-            {isAdmin   && <TabsTrigger value="taxonomy"   className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Taxonomy</TabsTrigger>}
+            {isAdmin   && <TabsTrigger value="taxonomy"      className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Taxonomy</TabsTrigger>}
+            {isAdmin   && <TabsTrigger value="manufacturers" className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Manufacturers</TabsTrigger>}
             <TabsTrigger value="bottles"    className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Bottles</TabsTrigger>
             <TabsTrigger value="locations"  className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Locations</TabsTrigger>
             <TabsTrigger value="machines"   className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Machines</TabsTrigger>
@@ -57,7 +59,8 @@ export default function MasterData() {
             {isAdmin   && <TabsTrigger value="settings"   className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Settings</TabsTrigger>}
           </TabsList>
         </div>
-        {isAdmin   && <TabsContent value="taxonomy"   className="mt-4"><ProductTaxonomy /></TabsContent>}
+        {isAdmin   && <TabsContent value="taxonomy"      className="mt-4"><ProductTaxonomy /></TabsContent>}
+        {isAdmin   && <TabsContent value="manufacturers" className="mt-4"><ManufacturerManager /></TabsContent>}
         <TabsContent value="bottles"    className="mt-4"><BottleTypeManager user={user} /></TabsContent>
         <TabsContent value="locations"  className="mt-4"><LocationManager user={user} /></TabsContent>
         <TabsContent value="machines"   className="mt-4"><MachineManager user={user} /></TabsContent>
