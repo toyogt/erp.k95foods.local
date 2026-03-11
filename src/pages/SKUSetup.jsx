@@ -523,6 +523,10 @@ export default function SKUSetup() {
                   <Field label="Product Barcode">
                     <Input value={skuForm.product_barcode} onChange={e => setSkuForm(f => ({ ...f, product_barcode: e.target.value }))} placeholder="8901234567890" className="h-12 text-base font-mono" />
                   </Field>
+                  <Field label="Box Barcode">
+                    <Input value={skuForm.box_barcode} onChange={e => setSkuForm(f => ({ ...f, box_barcode: e.target.value }))} placeholder="8901234567890" className="h-12 text-base font-mono" />
+                    <p className="text-xs text-slate-400 mt-1">Used for box-level printing and tracking</p>
+                  </Field>
                   <Field label="MRP per Bottle (₹) *">
                     <Input 
                       type="text" 
@@ -653,22 +657,18 @@ export default function SKUSetup() {
                     placeholder="e.g. TYK" 
                     className="h-12 text-base font-mono tracking-wider" 
                   />
-                  <p className="text-xs text-slate-500 mt-1">Prepended to batch codes for this SKU (e.g. TYK-250311-001)</p>
+                  <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 mt-2">
+                    <p className="text-xs text-slate-600 leading-relaxed">
+                      <strong>What it does:</strong> This prefix is added at the start of every batch code for this SKU. 
+                      For example, if prefix is "TYK" and batch format generates "250311-001", the final batch code becomes "TYK-250311-001". 
+                      Useful for brand identification or product categorization in batch codes.
+                    </p>
+                  </div>
                 </Field>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="Ryan Template *" className="sm:col-span-2">
-                  <RyanTemplateField
-                    value={mappingForm.ryan_template_id}
-                    onChange={v => setMappingForm(f => ({ ...f, ryan_template_id: v }))}
-                    templates={ryanTemplates}
-                    templatePlaceholders={templatePlaceholders}
-                    activeTpl={activeTpl}
-                    isAdmin={isAdmin}
-                    onTemplateUpdated={loadAll}
-                  />
-                </Field>
+
 
                 <Field label="Batch Format Rule *" className="sm:col-span-2">
                   <div className="flex gap-2 items-start">
@@ -729,6 +729,12 @@ export default function SKUSetup() {
                       { value: 'LABEL_START', label: 'Label Start (labelling date)' },
                     ]}
                   />
+                  <div className="bg-slate-50 border border-slate-200 rounded-lg p-2 mt-2">
+                    <p className="text-xs text-slate-600">
+                      <strong>What it does:</strong> Determines which date is used in batch code generation. 
+                      "MFG Start" uses the manufacturing/filling date, "Label Start" uses the labelling line date.
+                    </p>
+                  </div>
                 </Field>
 
                 <Field label="Sequence Reset Scope">
@@ -742,6 +748,12 @@ export default function SKUSetup() {
                       { value: 'NEVER', label: 'Never (continuous)' },
                     ]}
                   />
+                  <div className="bg-slate-50 border border-slate-200 rounded-lg p-2 mt-2">
+                    <p className="text-xs text-slate-600">
+                      <strong>What it does:</strong> Controls when batch sequence numbers reset. 
+                      "Daily" resets to 001 each day, "Monthly" resets each month, "Yearly" resets each year, "Never" keeps incrementing continuously.
+                    </p>
+                  </div>
                 </Field>
 
                 <Field label="Use Batch Prefix from SKU" className="sm:col-span-2">
@@ -757,6 +769,12 @@ export default function SKUSetup() {
                       Prepend <span className="font-mono font-semibold text-blue-700">{skuForm.batch_prefix || '—'}</span> to batch ID
                     </span>
                   </label>
+                  <div className="bg-slate-50 border border-slate-200 rounded-lg p-2 mt-2">
+                    <p className="text-xs text-slate-600">
+                      <strong>What toggle does:</strong> When ON, the batch prefix entered above will automatically be added to all batch codes. 
+                      When OFF, batch codes will be generated without the prefix (just the format rule output).
+                    </p>
+                  </div>
                 </Field>
               </div>
 
