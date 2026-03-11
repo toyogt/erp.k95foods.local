@@ -17,7 +17,7 @@ function genId(prefix) { return prefix + '-' + Date.now().toString(36).toUpperCa
 
 const EMPTY_SKU = {
   item_code: '', product_name: '', brand_name: '', product_family: '', flavour: '',
-  ml_per_bottle: '', mrp: '', mrp_box: '', shelf_life_days: '', bottle_type: '',
+  ml_per_bottle: '', mrp: '', mrp_box: '', shelf_life_days: '', shelf_life_unit: 'days', bottle_type: '',
   recipe_group_id: '', default_recipe_option_id: '', box_type_id: '', bottles_per_box: '',
   batch_prefix: '', default_artwork_id: '', is_active: false, is_trial_pack: false,
   fssai_no: '', manufacturer_name: '', address_1: '', address_2: '',
@@ -144,6 +144,25 @@ export default function SKUSetup() {
       setSkuForm(f => ({ ...f, mrp_box: mrpBox }));
     }
   }, [skuForm.mrp, skuForm.bottles_per_box]);
+
+  // Auto-generate SKU code and name when all required fields are filled
+  useEffect(() => {
+    if (!selected && skuForm.brand_name && skuForm.product_family && skuForm.flavour && 
+        skuForm.ml_per_bottle && skuForm.bottles_per_box && skuForm.mrp) {
+      const brand = brands.find(b => b.brand_name === skuForm.brand_name);
+      const family = families.find(f => f.family_name === skuForm.product_family);
+      const flavour = flavours.find(f => f.flavour_name === skuForm.flavour);
+      const brandCode = brand?.short_code || skuForm.brand_name.substring(0, 3).toUpperCase();
+      const familyCode = family?.short_code || skuForm.product_family.substring(0, 3).toUpperCase();
+      const flavourCode = flavour?.short_code || skuForm.flavour.substring(0, 3).toUpperCase();
+      const ml = skuForm.ml_per_bottle;
+      const bottles = skuForm.bottles_per_box;
+      const mrp = Math.round(skuForm.mrp);
+      const autoCode = `${brandCode}-${familyCode}-${flavourCode}-${ml}ML-${bottles}X${mrp}`;
+      const autoName = `${skuForm.brand_name} ${skuForm.product_family} ${skuForm.flavour} ${ml}ml - Pack of ${bottles}`;
+      setSkuForm(f => ({ ...f, item_code: autoCode, product_name: autoName }));
+    }
+  }, [skuForm.brand_name, skuForm.product_family, skuForm.flavour, skuForm.ml_per_bottle, skuForm.bottles_per_box, skuForm.mrp, selected, brands, families, flavours]);
 
   // Filtered recipe options for selected group
   const filteredOptions = recipeOptions.filter(o => o.recipe_group_id === skuForm.recipe_group_id);
@@ -334,36 +353,25 @@ export default function SKUSetup() {
 
               {/* Basic Info */}
               <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-bold text-slate-700">📋 Basic Information</p>
-                  {skuForm.brand_name && skuForm.product_family && skuForm.flavour && skuForm.ml_per_bottle && skuForm.mrp && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const brand = brands.find(b => b.brand_name === skuForm.brand_name);
-                        const family = families.find(f => f.family_name === skuForm.product_family);
-                        const flavour = flavours.find(f => f.flavour_name === skuForm.flavour);
-                        const brandCode = brand?.short_code || skuForm.brand_name.substring(0, 3).toUpperCase();
-                        const familyCode = family?.short_code || skuForm.product_family.substring(0, 2).toUpperCase();
-                        const flavourCode = flavour?.short_code || skuForm.flavour.substring(0, 3).toUpperCase();
-                        const bottles = skuForm.bottles_per_box || '06';
-                        const mrp = Math.round(skuForm.mrp);
-                        const autoCode = `${brandCode}-${familyCode}-${flavourCode}-${bottles}X${mrp}`;
-                        const autoName = `${skuForm.brand_name} ${skuForm.product_family} ${skuForm.flavour} ${skuForm.ml_per_bottle}ml`;
-                        setSkuForm(f => ({ ...f, item_code: autoCode, product_name: autoName }));
-                      }}
-                      className="h-8 px-3 text-xs font-semibold bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
-                    >
-                      Auto-Generate
-                    </button>
-                  )}
-                </div>
+                <p className="text-sm font-bold text-slate-700">📋 Basic Information</p>
                 <div className="grid grid-cols-1 gap-4">
                   <Field label="SKU Code *" className="col-span-1">
-                    <Input value={skuForm.item_code} onChange={e => setSkuForm(f => ({ ...f, item_code: e.target.value }))} placeholder="e.g. TYK-LS-PEACH-06X25" className="h-11 text-base font-mono" />
+                    <Input 
+                      value={skuForm.item_code} 
+                      readOnly 
+                      placeholder="Auto-generated after filling all fields" 
+                      className="h-12 text-base font-mono bg-slate-50" 
+                    />
+                    <p className="text-xs text-slate-400 mt-1">Auto-generated from brand, family, flavour, ML, pack size & MRP</p>
                   </Field>
                   <Field label="SKU Name *" className="col-span-1">
-                    <Input value={skuForm.product_name} onChange={e => setSkuForm(f => ({ ...f, product_name: e.target.value }))} placeholder="e.g. Toyo Kombucha Low Sugar Exotic Peach 200ml" className="h-11 text-base" />
+                    <Input 
+                      value={skuForm.product_name} 
+                      readOnly 
+                      placeholder="Auto-generated after filling all fields" 
+                      className="h-12 text-base bg-slate-50" 
+                    />
+                    <p className="text-xs text-slate-400 mt-1">Auto-generated including pack size</p>
                   </Field>
                 </div>
               </div>
@@ -424,22 +432,20 @@ export default function SKUSetup() {
               <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-4">
                 <p className="text-sm font-bold text-slate-700">💰 Pricing & Specifications</p>
                 <div className="grid grid-cols-2 gap-4">
-                  <Field label="ML per Bottle">
+                  <Field label="Bottle Type & ML *">
                     <Input 
                       type="text" 
-                      inputMode="numeric" 
-                      pattern="[0-9]*" 
-                      value={skuForm.ml_per_bottle} 
-                      onChange={e => setSkuForm(f => ({ ...f, ml_per_bottle: e.target.value.replace(/[^0-9]/g, '') }))} 
-                      placeholder="200" 
-                      className="h-12 text-base" 
+                      value={skuForm.bottle_type ? `${skuForm.bottle_type} (${skuForm.ml_per_bottle}ml)` : ''} 
+                      readOnly 
+                      placeholder="Select bottle type first" 
+                      className="h-12 text-base bg-slate-50" 
                     />
-                    <p className="text-xs text-slate-400 mt-1">Auto-filled from bottle type</p>
+                    <p className="text-xs text-slate-400 mt-1">ML auto-filled from bottle type selected in Recipe & Packaging tab</p>
                   </Field>
                   <Field label="Product Barcode">
                     <Input value={skuForm.product_barcode} onChange={e => setSkuForm(f => ({ ...f, product_barcode: e.target.value }))} placeholder="8901234567890" className="h-12 text-base font-mono" />
                   </Field>
-                  <Field label="MRP per Bottle (₹)">
+                  <Field label="MRP per Bottle (₹) *">
                     <Input 
                       type="text" 
                       inputMode="decimal" 
@@ -525,43 +531,50 @@ export default function SKUSetup() {
 
             {/* ─── Tab 2: Recipe & Packaging ────────────────── */}
             <TabsContent value="recipe" className="mt-4 space-y-5">
-              {/* Recipe */}
-              <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-4">
-                <p className="text-sm font-bold text-slate-700">🧪 Recipe Configuration</p>
-                <div className="grid grid-cols-1 gap-4">
-                  <Field label="Recipe Group *">
-                    <select
-                      value={skuForm.recipe_group_id}
-                      onChange={e => setSkuForm(f => ({ ...f, recipe_group_id: e.target.value, default_recipe_option_id: '' }))}
-                      className="w-full border border-slate-200 rounded-lg px-4 py-3 text-base h-12 bg-white"
-                    >
-                      <option value="">— Select Recipe Group —</option>
-                      {recipeGroups.map(g => <option key={g.recipe_group_id} value={g.recipe_group_id}>{g.recipe_name}</option>)}
-                    </select>
-                    {recipeGroups.length === 0 && (
-                      <p className="text-xs text-amber-600 mt-1 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                        No recipe groups — add in Recipe Builder first
-                      </p>
-                    )}
-                  </Field>
+              {/* Recipe - Hide for trial packs */}
+              {!skuForm.is_trial_pack && (
+                <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-4">
+                  <p className="text-sm font-bold text-slate-700">🧪 Recipe Configuration</p>
+                  <div className="grid grid-cols-1 gap-4">
+                    <Field label="Recipe Group *">
+                      <select
+                        value={skuForm.recipe_group_id}
+                        onChange={e => setSkuForm(f => ({ ...f, recipe_group_id: e.target.value, default_recipe_option_id: '' }))}
+                        className="w-full border border-slate-200 rounded-lg px-4 py-3 text-base h-12 bg-white"
+                      >
+                        <option value="">— Select Recipe Group —</option>
+                        {recipeGroups.map(g => <option key={g.recipe_group_id} value={g.recipe_group_id}>{g.recipe_name}</option>)}
+                      </select>
+                      {recipeGroups.length === 0 && (
+                        <p className="text-xs text-amber-600 mt-1 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                          No recipe groups — add in Recipe Builder first
+                        </p>
+                      )}
+                    </Field>
 
-                  <Field label="Default Recipe Option *">
-                    <select
-                      value={skuForm.default_recipe_option_id}
-                      onChange={e => setSkuForm(f => ({ ...f, default_recipe_option_id: e.target.value }))}
-                      className="w-full border border-slate-200 rounded-lg px-4 py-3 text-base h-12 bg-white disabled:bg-slate-50"
-                      disabled={!skuForm.recipe_group_id}
-                    >
-                      <option value="">— Select Option —</option>
-                      {filteredOptions.map(o => (
-                        <option key={o.option_id} value={o.option_id}>
-                          {o.option_name}{o.is_default ? ' (default)' : ''}
-                        </option>
-                      ))}
-                    </select>
-                  </Field>
+                    <Field label="Default Recipe Option *">
+                      <select
+                        value={skuForm.default_recipe_option_id}
+                        onChange={e => setSkuForm(f => ({ ...f, default_recipe_option_id: e.target.value }))}
+                        className="w-full border border-slate-200 rounded-lg px-4 py-3 text-base h-12 bg-white disabled:bg-slate-50"
+                        disabled={!skuForm.recipe_group_id}
+                      >
+                        <option value="">— Select Option —</option>
+                        {filteredOptions.map(o => (
+                          <option key={o.option_id} value={o.option_id}>
+                            {o.option_name}{o.is_default ? ' (default)' : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                  </div>
                 </div>
-              </div>
+              )}
+              {skuForm.is_trial_pack && (
+                <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
+                  <p className="text-sm text-purple-700">Recipe not required for trial packs</p>
+                </div>
+              )}
 
               {/* Packaging */}
               <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-4">
@@ -614,8 +627,26 @@ export default function SKUSetup() {
                     </div>
                   )}
 
-                  <Field label="Shelf Life (days) *">
-                    <Input type="number" value={skuForm.shelf_life_days} onChange={e => setSkuForm(f => ({ ...f, shelf_life_days: e.target.value }))} placeholder="365" className="h-11 text-base" />
+                  <Field label="Shelf Life *">
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input 
+                        type="text" 
+                        inputMode="numeric" 
+                        value={skuForm.shelf_life_days} 
+                        onChange={e => setSkuForm(f => ({ ...f, shelf_life_days: e.target.value.replace(/[^0-9]/g, '') }))} 
+                        placeholder="12" 
+                        className="h-12 text-base" 
+                      />
+                      <select
+                        value={skuForm.shelf_life_unit || 'days'}
+                        onChange={e => setSkuForm(f => ({ ...f, shelf_life_unit: e.target.value }))}
+                        className="h-12 border border-slate-200 rounded-lg px-3 text-base bg-white"
+                      >
+                        <option value="days">Days</option>
+                        <option value="months">Months</option>
+                        <option value="years">Years</option>
+                      </select>
+                    </div>
                   </Field>
                 </div>
               </div>
