@@ -171,7 +171,7 @@ export default function StockTab({ skus, lots, onBack }) {
                   <div className="text-right shrink-0">
                     <p className="text-xl font-bold text-slate-900">{sku.totalBottles.toLocaleString()}</p>
                     <p className="text-xs text-slate-400">bottles</p>
-                    <p className="text-xs text-slate-500">{sku.totalBoxes} boxes + {sku.totalLoose} loose</p>
+                    <p className="text-xs text-slate-500">{sku.totalBoxes} boxes + {sku.totalLoose} loose bottles</p>
                   </div>
                 </div>
               </div>

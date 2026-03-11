@@ -400,7 +400,7 @@ export default function SKUSetup() {
                     value={skuForm.box_type_id}
                     onChange={handleBoxTypeChange}
                     placeholder="— Select box type —"
-                    options={boxTypes.map(b => ({ value: b.box_type_id, label: `${b.box_name}${b.box_code ? ' (' + b.box_code + ')' : ''} — ${b.bottles_per_box} btls` }))}
+                    options={boxTypes.map(b => ({ value: b.box_type_id, label: `${b.box_name}${b.box_code ? ' (' + b.box_code + ')' : ''} — ${b.bottles_per_box} bottles` }))}
                     empty="No box types. Add in Master Data → Box Types first."
                   />
                 </Field>
