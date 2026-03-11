@@ -12,6 +12,7 @@ export default function ProductTaxonomy() {
   const [brands, setBrands] = useState([]);
   const [families, setFamilies] = useState([]);
   const [flavours, setFlavours] = useState([]);
+  const [editingShortCode, setEditingShortCode] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const [newBrand, setNewBrand] = useState('');

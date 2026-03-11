@@ -263,23 +263,37 @@ export default function SKUSetup() {
 
             {/* ─── Tab 1: Basics ─────────────────────────────── */}
             <TabsContent value="basics" className="mt-4 space-y-5">
-              {/* SKU Type toggle first */}
+              {/* SKU Type selector */}
               <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-xl p-4">
                 <p className="text-xs font-bold text-slate-700 mb-3">SKU Type</p>
-                <div className="flex items-center gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
-                    onClick={() => setSkuForm(f => ({ ...f, is_trial_pack: !f.is_trial_pack }))}
-                    className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors ${skuForm.is_trial_pack ? 'bg-purple-600' : 'bg-slate-400'}`}
+                    onClick={() => setSkuForm(f => ({ ...f, is_trial_pack: false }))}
+                    className={`h-14 rounded-xl border-2 font-bold text-sm transition-all flex items-center justify-center gap-2 ${
+                      !skuForm.is_trial_pack 
+                        ? 'border-slate-700 bg-slate-700 text-white shadow-md' 
+                        : 'border-slate-300 bg-white text-slate-600 hover:border-slate-400'
+                    }`}
                   >
-                    <span className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${skuForm.is_trial_pack ? 'translate-x-8' : 'translate-x-1'}`} />
+                    <span className="text-xl">📦</span>
+                    <span>Regular SKU</span>
                   </button>
-                  <span className={`text-base font-bold ${skuForm.is_trial_pack ? 'text-purple-700' : 'text-slate-700'}`}>
-                    {skuForm.is_trial_pack ? '🧪 Trial Pack SKU' : '📦 Regular SKU'}
-                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setSkuForm(f => ({ ...f, is_trial_pack: true }))}
+                    className={`h-14 rounded-xl border-2 font-bold text-sm transition-all flex items-center justify-center gap-2 ${
+                      skuForm.is_trial_pack 
+                        ? 'border-purple-600 bg-purple-600 text-white shadow-md' 
+                        : 'border-slate-300 bg-white text-slate-600 hover:border-slate-400'
+                    }`}
+                  >
+                    <span className="text-xl">🧪</span>
+                    <span>Trial Pack</span>
+                  </button>
                 </div>
                 {skuForm.is_trial_pack && (
-                  <p className="text-xs text-purple-700 mt-2 bg-white/50 rounded-lg px-3 py-2">
+                  <p className="text-xs text-purple-700 mt-3 bg-white/50 rounded-lg px-3 py-2">
                     Trial packs consume other SKUs as components. Recipe, bottle type, and artwork not required.
                   </p>
                 )}
@@ -287,10 +301,33 @@ export default function SKUSetup() {
 
               {/* Basic Info */}
               <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-4">
-                <p className="text-sm font-bold text-slate-700">📋 Basic Information</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-bold text-slate-700">📋 Basic Information</p>
+                  {skuForm.brand_name && skuForm.product_family && skuForm.flavour && skuForm.ml_per_bottle && skuForm.mrp && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const brand = brands.find(b => b.brand_name === skuForm.brand_name);
+                        const family = families.find(f => f.family_name === skuForm.product_family);
+                        const flavour = flavours.find(f => f.flavour_name === skuForm.flavour);
+                        const brandCode = brand?.short_code || skuForm.brand_name.substring(0, 3).toUpperCase();
+                        const familyCode = family?.short_code || skuForm.product_family.substring(0, 2).toUpperCase();
+                        const flavourCode = flavour?.short_code || skuForm.flavour.substring(0, 3).toUpperCase();
+                        const bottles = skuForm.bottles_per_box || '06';
+                        const mrp = Math.round(skuForm.mrp);
+                        const autoCode = `${brandCode}-${familyCode}-${flavourCode}-${bottles}X${mrp}`;
+                        const autoName = `${skuForm.brand_name} ${skuForm.product_family} ${skuForm.flavour} ${skuForm.ml_per_bottle}ml`;
+                        setSkuForm(f => ({ ...f, item_code: autoCode, product_name: autoName }));
+                      }}
+                      className="h-8 px-3 text-xs font-semibold bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+                    >
+                      Auto-Generate
+                    </button>
+                  )}
+                </div>
                 <div className="grid grid-cols-1 gap-4">
                   <Field label="SKU Code *" className="col-span-1">
-                    <Input value={skuForm.item_code} onChange={e => setSkuForm(f => ({ ...f, item_code: e.target.value }))} placeholder="e.g. TYK-LS-PEACH-200" className="h-11 text-base font-mono" />
+                    <Input value={skuForm.item_code} onChange={e => setSkuForm(f => ({ ...f, item_code: e.target.value }))} placeholder="e.g. TYK-LS-PEACH-06X25" className="h-11 text-base font-mono" />
                   </Field>
                   <Field label="SKU Name *" className="col-span-1">
                     <Input value={skuForm.product_name} onChange={e => setSkuForm(f => ({ ...f, product_name: e.target.value }))} placeholder="e.g. Toyo Kombucha Low Sugar Exotic Peach 200ml" className="h-11 text-base" />
