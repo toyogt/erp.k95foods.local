@@ -41,6 +41,9 @@ export default function SKUSetup() {
   const [ryanTemplates, setRyanTemplates] = useState([]);
   const [batchRules, setBatchRules] = useState([]);
   const [artworks, setArtworks] = useState([]);
+  const [brands, setBrands] = useState([]);
+  const [families, setFamilies] = useState([]);
+  const [flavours, setFlavours] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const [selected, setSelected] = useState(null); // full SKU record
@@ -59,7 +62,7 @@ export default function SKUSetup() {
 
   const loadAll = useCallback(async () => {
     setLoading(true);
-    const [u, s, m, rg, bt, bx, bo, rt, br, art] = await Promise.all([
+    const [u, s, m, rg, bt, bx, bo, rt, br, art, brnd, fam, flav] = await Promise.all([
       base44.auth.me().catch(() => null),
       base44.entities.ProductMaster.list('-created_date', 500),
       base44.entities.SKUPrintMapping.list('-created_date', 500).catch(() => []),
@@ -70,6 +73,9 @@ export default function SKUSetup() {
       base44.entities.RyanTemplate.filter({ is_active: true }, '-created_date', 200).catch(() => []),
       base44.entities.BatchFormatRule.filter({ is_active: true }, '-created_date', 200).catch(() => []),
       base44.entities.LabelArtwork.filter({ is_active: true }, '-created_date', 500).catch(() => []),
+      base44.entities.BrandMaster.filter({ is_active: true }).catch(() => []),
+      base44.entities.ProductFamilyMaster.filter({ is_active: true }).catch(() => []),
+      base44.entities.FlavourMaster.filter({ is_active: true }).catch(() => []),
     ]);
     setUser(u);
     setSkus(s);
@@ -81,6 +87,9 @@ export default function SKUSetup() {
     setRyanTemplates(rt);
     setBatchRules(br);
     setArtworks(art);
+    setBrands(brnd);
+    setFamilies(fam);
+    setFlavours(flav);
     setLoading(false);
   }, []);
 
@@ -127,10 +136,13 @@ export default function SKUSetup() {
     ? (() => { try { return JSON.parse(activeTpl.placeholders_json); } catch { return []; } })()
     : [];
 
-  // Unique brand/family/flavour suggestions from existing SKUs
-  const brands = [...new Set(skus.map(s => s.brand_name).filter(Boolean))];
-  const families = [...new Set(skus.map(s => s.product_family).filter(Boolean))];
-  const flavours = [...new Set(skus.map(s => s.flavour).filter(Boolean))];
+  // Cascading filters
+  const availableFamilies = skuForm.brand_name 
+    ? families.filter(f => f.brand_name === skuForm.brand_name)
+    : [];
+  const availableFlavours = skuForm.brand_name && skuForm.product_family
+    ? flavours.filter(f => f.brand_name === skuForm.brand_name && f.family_name === skuForm.product_family)
+    : [];
 
   const currentMapping = mappings.find(m => (m.sku_code || m.product_code) === (selected?.item_code));
   const complete = isSetupComplete(skuForm, { ...mappingForm });
@@ -260,16 +272,42 @@ export default function SKUSetup() {
                 </Field>
 
                 <Field label="Brand Name">
-                  <datalist id="brands-list">{brands.map(b => <option key={b} value={b} />)}</datalist>
-                  <Input value={skuForm.brand_name} onChange={e => setSkuForm(f => ({ ...f, brand_name: e.target.value }))} list="brands-list" placeholder="Brand…" className="text-sm h-9" />
+                  <select 
+                    value={skuForm.brand_name} 
+                    onChange={e => setSkuForm(f => ({ ...f, brand_name: e.target.value, product_family: '', flavour: '' }))}
+                    className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm h-9"
+                  >
+                    <option value="">— Select Brand —</option>
+                    {brands.map(b => <option key={b.id} value={b.brand_name}>{b.brand_name}</option>)}
+                  </select>
                 </Field>
                 <Field label="Product Family">
-                  <datalist id="family-list">{families.map(b => <option key={b} value={b} />)}</datalist>
-                  <Input value={skuForm.product_family} onChange={e => setSkuForm(f => ({ ...f, product_family: e.target.value }))} list="family-list" placeholder="e.g. Juice" className="text-sm h-9" />
+                  <select 
+                    value={skuForm.product_family} 
+                    onChange={e => setSkuForm(f => ({ ...f, product_family: e.target.value, flavour: '' }))}
+                    className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm h-9"
+                    disabled={!skuForm.brand_name}
+                  >
+                    <option value="">— Select Family —</option>
+                    {availableFamilies.map(f => <option key={f.id} value={f.family_name}>{f.family_name}</option>)}
+                  </select>
+                  {skuForm.brand_name && availableFamilies.length === 0 && (
+                    <p className="text-xs text-amber-600 mt-1">No families defined for this brand</p>
+                  )}
                 </Field>
                 <Field label="Flavour">
-                  <datalist id="flavour-list">{flavours.map(b => <option key={b} value={b} />)}</datalist>
-                  <Input value={skuForm.flavour} onChange={e => setSkuForm(f => ({ ...f, flavour: e.target.value }))} list="flavour-list" placeholder="e.g. Mango" className="text-sm h-9" />
+                  <select 
+                    value={skuForm.flavour} 
+                    onChange={e => setSkuForm(f => ({ ...f, flavour: e.target.value }))}
+                    className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm h-9"
+                    disabled={!skuForm.product_family}
+                  >
+                    <option value="">— Select Flavour —</option>
+                    {availableFlavours.map(f => <option key={f.id} value={f.flavour_name}>{f.flavour_name}</option>)}
+                  </select>
+                  {skuForm.product_family && availableFlavours.length === 0 && (
+                    <p className="text-xs text-amber-600 mt-1">No flavours defined for this family</p>
+                  )}
                 </Field>
                 <Field label="Product Barcode">
                   <Input value={skuForm.product_barcode} onChange={e => setSkuForm(f => ({ ...f, product_barcode: e.target.value }))} className="text-sm h-9" />
