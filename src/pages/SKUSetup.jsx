@@ -19,7 +19,7 @@ const EMPTY_SKU = {
   item_code: '', product_name: '', brand_name: '', product_family: '', flavour: '',
   ml_per_bottle: '', mrp: '', mrp_box: '', shelf_life_days: '', bottle_type: '',
   recipe_group_id: '', default_recipe_option_id: '', box_type_id: '', bottles_per_box: '',
-  batch_prefix: '', default_artwork_id: '', is_active: false,
+  batch_prefix: '', default_artwork_id: '', is_active: false, is_trial_pack: false,
   fssai_no: '', manufacturer_name: '', address_1: '', address_2: '',
   customer_care_email: '', customer_care_phone: '', product_barcode: '',
 };
@@ -287,13 +287,34 @@ export default function SKUSetup() {
                   <Input value={skuForm.batch_prefix} onChange={e => setSkuForm(f => ({ ...f, batch_prefix: e.target.value }))} placeholder="e.g. MNG" className="text-sm h-9 font-mono" />
                 </Field>
 
+                {/* Trial Pack toggle */}
+                <Field label="SKU Type" className="sm:col-span-2">
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setSkuForm(f => ({ ...f, is_trial_pack: !f.is_trial_pack }))}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${skuForm.is_trial_pack ? 'bg-purple-500' : 'bg-slate-300'}`}
+                    >
+                      <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${skuForm.is_trial_pack ? 'translate-x-6' : 'translate-x-1'}`} />
+                    </button>
+                    <span className={`text-sm font-semibold ${skuForm.is_trial_pack ? 'text-purple-700' : 'text-slate-500'}`}>
+                      {skuForm.is_trial_pack ? '🧪 Trial Pack SKU' : '📦 Regular SKU'}
+                    </span>
+                  </div>
+                  {skuForm.is_trial_pack && (
+                    <p className="text-xs text-purple-600 mt-1">
+                      Trial packs consume other SKUs as components. Recipe, bottle type, and artwork not required.
+                    </p>
+                  )}
+                </Field>
+
                 {/* Active toggle */}
                 <Field label="Status" className="sm:col-span-2">
                   <div className="flex items-center gap-3">
                     <button
                       type="button"
                       onClick={() => {
-                        if (!skuForm.is_active && !complete) {
+                        if (!skuForm.is_active && !complete && !skuForm.is_trial_pack) {
                           alert('Cannot activate: setup is incomplete. Fill all required fields first.');
                           return;
                         }
@@ -306,7 +327,7 @@ export default function SKUSetup() {
                     <span className={`text-sm font-semibold ${skuForm.is_active ? 'text-green-700' : 'text-slate-500'}`}>
                       {skuForm.is_active ? 'Active' : 'Inactive'}
                     </span>
-                    {!complete && <span className="text-xs text-amber-600 flex items-center gap-1"><AlertTriangle className="w-3 h-3" />Setup incomplete</span>}
+                    {!skuForm.is_trial_pack && !complete && <span className="text-xs text-amber-600 flex items-center gap-1"><AlertTriangle className="w-3 h-3" />Setup incomplete</span>}
                   </div>
                 </Field>
               </div>
