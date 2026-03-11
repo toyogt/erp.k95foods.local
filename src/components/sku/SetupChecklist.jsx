@@ -1,9 +1,9 @@
 import { CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
 
 const checks = [
-  { key: 'recipe_group_id', label: 'Recipe Group' },
-  { key: 'default_recipe_option_id', label: 'Default Recipe Option' },
-  { key: 'bottle_type', label: 'Bottle Type' },
+  { key: 'recipe_group_id', label: 'Recipe Group', skipForTrialPack: true },
+  { key: 'default_recipe_option_id', label: 'Default Recipe Option', skipForTrialPack: true },
+  { key: 'bottle_type', label: 'Bottle Type', skipForTrialPack: true },
   { key: 'box_type_id', label: 'Box Type' },
   { key: 'shelf_life_days', label: 'Shelf Life' },
 ];
@@ -14,14 +14,19 @@ const mappingChecks = [
 ];
 
 export function isSetupComplete(sku, mapping) {
-  const skuOk = checks.every(c => !!sku[c.key]);
+  const isTrialPack = sku?.is_trial_pack;
+  const relevantChecks = isTrialPack ? checks.filter(c => !c.skipForTrialPack) : checks;
+  const skuOk = relevantChecks.every(c => !!sku[c.key]);
   const mapOk = mappingChecks.every(c => !!(mapping || {})[c.key]);
   return skuOk && mapOk;
 }
 
 export default function SetupChecklist({ sku, mapping }) {
+  const isTrialPack = sku?.is_trial_pack;
+  const relevantChecks = isTrialPack ? checks.filter(c => !c.skipForTrialPack) : checks;
+  
   const all = [
-    ...checks.map(c => ({ label: c.label, ok: !!sku?.[c.key] })),
+    ...relevantChecks.map(c => ({ label: c.label, ok: !!sku?.[c.key] })),
     ...mappingChecks.map(c => ({ label: c.label, ok: !!(mapping || {})[c.key] })),
     { label: 'Default Artwork', ok: !!sku?.default_artwork_id, optional: true },
   ];
