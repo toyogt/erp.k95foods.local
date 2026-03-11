@@ -152,6 +152,21 @@ export default function SKUSetup() {
       alert('SKU Code and SKU Name are required.');
       return;
     }
+    
+    // Check for duplicate SKU code
+    const duplicateCode = skus.find(s => s.item_code === skuForm.item_code && s.id !== selected?.id);
+    if (duplicateCode) {
+      alert(`SKU Code "${skuForm.item_code}" already exists. Please use a different code.`);
+      return;
+    }
+    
+    // Check for duplicate SKU name
+    const duplicateName = skus.find(s => s.product_name === skuForm.product_name && s.id !== selected?.id);
+    if (duplicateName) {
+      alert(`SKU Name "${skuForm.product_name}" already exists. Please use a different name.`);
+      return;
+    }
+    
     if (skuForm.is_active && !complete) {
       alert('Cannot activate: setup is incomplete. Please complete all required fields first.');
       return;

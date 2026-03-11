@@ -23,6 +23,7 @@ export default function ProductTaxonomy() {
   const [importFile, setImportFile] = useState(null);
   const [importing, setImporting] = useState(false);
   const [importSummary, setImportSummary] = useState(null);
+  const [activeTab, setActiveTab] = useState('brands');
 
   const loadAll = async () => {
     setLoading(true);
@@ -298,7 +299,7 @@ Toyo Kombucha,Regular,Classic Ginger`;
         </div>
       </div>
 
-      <Tabs defaultValue="brands" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList>
           <TabsTrigger value="brands">Brands</TabsTrigger>
           <TabsTrigger value="families">Families</TabsTrigger>
@@ -344,9 +345,9 @@ Toyo Kombucha,Regular,Classic Ginger`;
                           size="sm"
                           onClick={async () => {
                             await base44.entities.BrandMaster.update(brand.id, { short_code: editingShortCode.value });
-                            await loadAll();
                             setEditingShortCode(null);
                             toast.success('Code saved');
+                            await loadAll();
                           }}
                           className="h-8"
                         >
@@ -429,18 +430,18 @@ Toyo Kombucha,Regular,Classic Ginger`;
                               <Input
                                 value={editingShortCode.value}
                                 onChange={e => setEditingShortCode({ ...editingShortCode, value: e.target.value.toUpperCase() })}
-                                placeholder="2 letters"
-                                maxLength={2}
-                                className="h-8 w-16 text-xs font-mono"
+                                placeholder="3 letters"
+                                maxLength={3}
+                                className="h-8 w-18 text-xs font-mono"
                                 autoFocus
                               />
                               <Button
                                 size="sm"
                                 onClick={async () => {
                                   await base44.entities.ProductFamilyMaster.update(fam.id, { short_code: editingShortCode.value });
-                                  await loadAll();
                                   setEditingShortCode(null);
                                   toast.success('Code saved');
+                                  await loadAll();
                                 }}
                                 className="h-8"
                               >
@@ -551,9 +552,9 @@ Toyo Kombucha,Regular,Classic Ginger`;
                                   size="sm"
                                   onClick={async () => {
                                     await base44.entities.FlavourMaster.update(flav.id, { short_code: editingShortCode.value });
-                                    await loadAll();
                                     setEditingShortCode(null);
                                     toast.success('Code saved');
+                                    await loadAll();
                                   }}
                                   className="h-8"
                                 >
