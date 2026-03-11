@@ -113,85 +113,103 @@ Toyo Kombucha,Regular,Classic Ginger`;
     if (!importFile) return;
     setImporting(true);
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file: importFile });
-      const result = await base44.integrations.Core.ExtractDataFromUploadedFile({
-        file_url,
-        json_schema: {
-          type: "object",
-          properties: {
-            brands: { type: "array", items: { type: "object", properties: { brand_name: { type: "string" } } } },
-            families: { type: "array", items: { type: "object", properties: { brand_name: { type: "string" }, family_name: { type: "string" } } } },
-            flavours: { type: "array", items: { type: "object", properties: { brand_name: { type: "string" }, family_name: { type: "string" }, flavour_name: { type: "string" } } } }
-          }
-        }
-      });
+      // Upload file
+      const uploadRes = await base44.integrations.Core.UploadFile({ file: importFile });
+      const file_url = uploadRes.file_url;
 
-      if (result.status === 'error') {
-        toast.error('Import failed: ' + result.details);
+      // Fetch and parse CSV manually
+      const response = await fetch(file_url);
+      const text = await response.text();
+      const lines = text.split('\n').filter(l => l.trim());
+      
+      if (lines.length < 2) {
+        toast.error('File is empty or has no data rows');
+        setImporting(false);
         return;
       }
 
-      const data = result.output;
-      let imported = 0;
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+      const brandIdx = headers.indexOf('brand_name');
+      const familyIdx = headers.indexOf('family_name');
+      const flavourIdx = headers.indexOf('flavour_name');
 
-      // Import brands
-      if (data.brands?.length) {
-        for (const b of data.brands) {
-          if (b.brand_name?.trim()) {
-            const exists = brands.find(br => br.brand_name === b.brand_name.trim());
-            if (!exists) {
-              await base44.entities.BrandMaster.create({ brand_name: b.brand_name.trim(), is_active: true });
-              imported++;
-            }
-          }
-        }
+      if (brandIdx === -1) {
+        toast.error('Missing required column: brand_name');
+        setImporting(false);
+        return;
       }
 
-      // Import families
-      if (data.families?.length) {
-        for (const f of data.families) {
-          if (f.brand_name?.trim() && f.family_name?.trim()) {
-            const exists = families.find(fam => fam.brand_name === f.brand_name.trim() && fam.family_name === f.family_name.trim());
+      let imported = 0;
+      const processedBrands = new Set();
+      const processedFamilies = new Set();
+      const processedFlavours = new Set();
+
+      // Process each row
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split(',').map(c => c.trim());
+        const brandName = cols[brandIdx];
+        const familyName = familyIdx !== -1 ? cols[familyIdx] : '';
+        const flavourName = flavourIdx !== -1 ? cols[flavourIdx] : '';
+
+        if (!brandName) continue;
+
+        // Import brand
+        if (!processedBrands.has(brandName)) {
+          const exists = brands.find(b => b.brand_name === brandName);
+          if (!exists) {
+            await base44.entities.BrandMaster.create({ brand_name: brandName, is_active: true });
+            imported++;
+          }
+          processedBrands.add(brandName);
+        }
+
+        // Import family
+        if (familyName) {
+          const famKey = `${brandName}|${familyName}`;
+          if (!processedFamilies.has(famKey)) {
+            const exists = families.find(f => f.brand_name === brandName && f.family_name === familyName);
             if (!exists) {
               await base44.entities.ProductFamilyMaster.create({ 
-                brand_name: f.brand_name.trim(), 
-                family_name: f.family_name.trim(), 
+                brand_name: brandName, 
+                family_name: familyName, 
                 is_active: true 
               });
               imported++;
             }
+            processedFamilies.add(famKey);
           }
         }
-      }
 
-      // Import flavours
-      if (data.flavours?.length) {
-        for (const fl of data.flavours) {
-          if (fl.brand_name?.trim() && fl.family_name?.trim() && fl.flavour_name?.trim()) {
-            const exists = flavours.find(flav => 
-              flav.brand_name === fl.brand_name.trim() && 
-              flav.family_name === fl.family_name.trim() && 
-              flav.flavour_name === fl.flavour_name.trim()
+        // Import flavour
+        if (familyName && flavourName) {
+          const flavKey = `${brandName}|${familyName}|${flavourName}`;
+          if (!processedFlavours.has(flavKey)) {
+            const exists = flavours.find(f => 
+              f.brand_name === brandName && 
+              f.family_name === familyName && 
+              f.flavour_name === flavourName
             );
             if (!exists) {
               await base44.entities.FlavourMaster.create({ 
-                brand_name: fl.brand_name.trim(), 
-                family_name: fl.family_name.trim(), 
-                flavour_name: fl.flavour_name.trim(), 
+                brand_name: brandName, 
+                family_name: familyName, 
+                flavour_name: flavourName, 
                 is_active: true 
               });
               imported++;
             }
+            processedFlavours.add(flavKey);
           }
         }
       }
 
-      toast.success(`Imported ${imported} items`);
+      toast.success(`Imported ${imported} items successfully`);
       setImportDialog(false);
       setImportFile(null);
       loadAll();
     } catch (err) {
-      toast.error('Import error: ' + err.message);
+      console.error('Import error:', err);
+      toast.error('Import failed: ' + err.message);
     } finally {
       setImporting(false);
     }
