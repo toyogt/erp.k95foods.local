@@ -262,112 +262,149 @@ export default function SKUSetup() {
             </TabsList>
 
             {/* ─── Tab 1: Basics ─────────────────────────────── */}
-            <TabsContent value="basics" className="mt-4 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="SKU Code *">
-                  <Input value={skuForm.item_code} onChange={e => setSkuForm(f => ({ ...f, item_code: e.target.value }))} placeholder="e.g. MNG-200-PET" className="text-sm h-9" />
-                </Field>
-                <Field label="SKU Name *">
-                  <Input value={skuForm.product_name} onChange={e => setSkuForm(f => ({ ...f, product_name: e.target.value }))} placeholder="e.g. Mango Drink 200ml" className="text-sm h-9" />
-                </Field>
+            <TabsContent value="basics" className="mt-4 space-y-5">
+              {/* SKU Type toggle first */}
+              <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-xl p-4">
+                <p className="text-xs font-bold text-slate-700 mb-3">SKU Type</p>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setSkuForm(f => ({ ...f, is_trial_pack: !f.is_trial_pack }))}
+                    className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors ${skuForm.is_trial_pack ? 'bg-purple-600' : 'bg-slate-400'}`}
+                  >
+                    <span className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${skuForm.is_trial_pack ? 'translate-x-8' : 'translate-x-1'}`} />
+                  </button>
+                  <span className={`text-base font-bold ${skuForm.is_trial_pack ? 'text-purple-700' : 'text-slate-700'}`}>
+                    {skuForm.is_trial_pack ? '🧪 Trial Pack SKU' : '📦 Regular SKU'}
+                  </span>
+                </div>
+                {skuForm.is_trial_pack && (
+                  <p className="text-xs text-purple-700 mt-2 bg-white/50 rounded-lg px-3 py-2">
+                    Trial packs consume other SKUs as components. Recipe, bottle type, and artwork not required.
+                  </p>
+                )}
+              </div>
 
-                <Field label="Brand Name">
-                  <select 
-                    value={skuForm.brand_name} 
-                    onChange={e => setSkuForm(f => ({ ...f, brand_name: e.target.value, product_family: '', flavour: '' }))}
-                    className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm h-9"
-                  >
-                    <option value="">— Select Brand —</option>
-                    {brands.map(b => <option key={b.id} value={b.brand_name}>{b.brand_name}</option>)}
-                  </select>
-                </Field>
-                <Field label="Product Family">
-                  <select 
-                    value={skuForm.product_family} 
-                    onChange={e => setSkuForm(f => ({ ...f, product_family: e.target.value, flavour: '' }))}
-                    className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm h-9"
-                    disabled={!skuForm.brand_name}
-                  >
-                    <option value="">— Select Family —</option>
-                    {availableFamilies.map(f => <option key={f.id} value={f.family_name}>{f.family_name}</option>)}
-                  </select>
-                  {skuForm.brand_name && availableFamilies.length === 0 && (
-                    <p className="text-xs text-amber-600 mt-1">No families defined for this brand</p>
-                  )}
-                </Field>
-                <Field label="Flavour">
-                  <select 
-                    value={skuForm.flavour} 
-                    onChange={e => setSkuForm(f => ({ ...f, flavour: e.target.value }))}
-                    className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm h-9"
-                    disabled={!skuForm.product_family}
-                  >
-                    <option value="">— Select Flavour —</option>
-                    {availableFlavours.map(f => <option key={f.id} value={f.flavour_name}>{f.flavour_name}</option>)}
-                  </select>
-                  {skuForm.product_family && availableFlavours.length === 0 && (
-                    <p className="text-xs text-amber-600 mt-1">No flavours defined for this family</p>
-                  )}
-                </Field>
-                <Field label="Product Barcode">
-                  <Input value={skuForm.product_barcode} onChange={e => setSkuForm(f => ({ ...f, product_barcode: e.target.value }))} className="text-sm h-9" />
-                </Field>
-                <Field label="MRP per Bottle (₹)">
-                  <Input type="number" value={skuForm.mrp} onChange={e => setSkuForm(f => ({ ...f, mrp: e.target.value }))} className="text-sm h-9" />
-                </Field>
-                <Field label="MRP per Box (₹)">
-                  <Input type="number" value={skuForm.mrp_box} onChange={e => setSkuForm(f => ({ ...f, mrp_box: e.target.value }))} className="text-sm h-9" />
-                </Field>
-                <Field label="ML per Bottle">
-                  <Input type="number" value={skuForm.ml_per_bottle} onChange={e => setSkuForm(f => ({ ...f, ml_per_bottle: e.target.value }))} className="text-sm h-9" />
-                </Field>
+              {/* Basic Info */}
+              <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-4">
+                <p className="text-sm font-bold text-slate-700">📋 Basic Information</p>
+                <div className="grid grid-cols-1 gap-4">
+                  <Field label="SKU Code *" className="col-span-1">
+                    <Input value={skuForm.item_code} onChange={e => setSkuForm(f => ({ ...f, item_code: e.target.value }))} placeholder="e.g. TYK-LS-PEACH-200" className="h-11 text-base font-mono" />
+                  </Field>
+                  <Field label="SKU Name *" className="col-span-1">
+                    <Input value={skuForm.product_name} onChange={e => setSkuForm(f => ({ ...f, product_name: e.target.value }))} placeholder="e.g. Toyo Kombucha Low Sugar Exotic Peach 200ml" className="h-11 text-base" />
+                  </Field>
+                </div>
+              </div>
+
+              {/* Product Classification */}
+              <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-4">
+                <p className="text-sm font-bold text-slate-700">🏷️ Product Classification</p>
+                <div className="grid grid-cols-1 gap-4">
+
+                  <Field label="Brand Name *">
+                    <select 
+                      value={skuForm.brand_name} 
+                      onChange={e => setSkuForm(f => ({ ...f, brand_name: e.target.value, product_family: '', flavour: '' }))}
+                      className="w-full border border-slate-200 rounded-lg px-4 py-3 text-base h-12 bg-white"
+                    >
+                      <option value="">— Select Brand —</option>
+                      {brands.map(b => <option key={b.id} value={b.brand_name}>{b.brand_name}</option>)}
+                    </select>
+                  </Field>
+
+                  <Field label="Product Family *">
+                    <select 
+                      value={skuForm.product_family} 
+                      onChange={e => setSkuForm(f => ({ ...f, product_family: e.target.value, flavour: '' }))}
+                      className="w-full border border-slate-200 rounded-lg px-4 py-3 text-base h-12 bg-white disabled:bg-slate-50"
+                      disabled={!skuForm.brand_name}
+                    >
+                      <option value="">— Select Family —</option>
+                      {availableFamilies.map(f => <option key={f.id} value={f.family_name}>{f.family_name}</option>)}
+                    </select>
+                    {skuForm.brand_name && availableFamilies.length === 0 && (
+                      <p className="text-xs text-amber-600 mt-1 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                        ⚠️ No families for "{skuForm.brand_name}" — add in Product Taxonomy
+                      </p>
+                    )}
+                  </Field>
+
+                  <Field label="Flavour *">
+                    <select 
+                      value={skuForm.flavour} 
+                      onChange={e => setSkuForm(f => ({ ...f, flavour: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-4 py-3 text-base h-12 bg-white disabled:bg-slate-50"
+                      disabled={!skuForm.product_family}
+                    >
+                      <option value="">— Select Flavour —</option>
+                      {availableFlavours.map(f => <option key={f.id} value={f.flavour_name}>{f.flavour_name}</option>)}
+                    </select>
+                    {skuForm.product_family && availableFlavours.length === 0 && (
+                      <p className="text-xs text-amber-600 mt-1 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                        ⚠️ No flavours for "{skuForm.product_family}" — add in Product Taxonomy
+                      </p>
+                    )}
+                  </Field>
+                </div>
+              </div>
+
+              {/* Pricing & Specs */}
+              <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-4">
+                <p className="text-sm font-bold text-slate-700">💰 Pricing & Specifications</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <Field label="ML per Bottle">
+                    <Input type="number" value={skuForm.ml_per_bottle} onChange={e => setSkuForm(f => ({ ...f, ml_per_bottle: e.target.value }))} placeholder="200" className="h-11 text-base" />
+                  </Field>
+                  <Field label="Product Barcode">
+                    <Input value={skuForm.product_barcode} onChange={e => setSkuForm(f => ({ ...f, product_barcode: e.target.value }))} placeholder="8901234567890" className="h-11 text-base font-mono" />
+                  </Field>
+                  <Field label="MRP per Bottle (₹)">
+                    <Input type="number" value={skuForm.mrp} onChange={e => setSkuForm(f => ({ ...f, mrp: e.target.value }))} placeholder="25" className="h-11 text-base" />
+                  </Field>
+                  <Field label="MRP per Box (₹)">
+                    <Input type="number" value={skuForm.mrp_box} onChange={e => setSkuForm(f => ({ ...f, mrp_box: e.target.value }))} placeholder="150" className="h-11 text-base" />
+                  </Field>
+                </div>
+              </div>
+
+              {/* Batch Prefix */}
+              <div className="bg-white border border-slate-200 rounded-xl p-4">
                 <Field label="Batch Prefix (optional)">
-                  <Input value={skuForm.batch_prefix} onChange={e => setSkuForm(f => ({ ...f, batch_prefix: e.target.value }))} placeholder="e.g. MNG" className="text-sm h-9 font-mono" />
+                  <Input value={skuForm.batch_prefix} onChange={e => setSkuForm(f => ({ ...f, batch_prefix: e.target.value.toUpperCase() }))} placeholder="e.g. TYK" className="h-11 text-base font-mono tracking-wider" />
+                  <p className="text-xs text-slate-500 mt-1">Used for batch code generation</p>
                 </Field>
+              </div>
 
-                {/* Trial Pack toggle */}
-                <Field label="SKU Type" className="sm:col-span-2">
-                  <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setSkuForm(f => ({ ...f, is_trial_pack: !f.is_trial_pack }))}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${skuForm.is_trial_pack ? 'bg-purple-500' : 'bg-slate-300'}`}
-                    >
-                      <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${skuForm.is_trial_pack ? 'translate-x-6' : 'translate-x-1'}`} />
-                    </button>
-                    <span className={`text-sm font-semibold ${skuForm.is_trial_pack ? 'text-purple-700' : 'text-slate-500'}`}>
-                      {skuForm.is_trial_pack ? '🧪 Trial Pack SKU' : '📦 Regular SKU'}
+              {/* Status toggle */}
+              <div className={`border rounded-xl p-4 ${skuForm.is_active ? 'bg-green-50 border-green-300' : 'bg-slate-50 border-slate-200'}`}>
+                <p className="text-xs font-bold text-slate-700 mb-3">Status</p>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!skuForm.is_active && !complete && !skuForm.is_trial_pack) {
+                        alert('Cannot activate: setup is incomplete. Fill all required fields first.');
+                        return;
+                      }
+                      setSkuForm(f => ({ ...f, is_active: !f.is_active }));
+                    }}
+                    className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors ${skuForm.is_active ? 'bg-green-600' : 'bg-slate-400'}`}
+                  >
+                    <span className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${skuForm.is_active ? 'translate-x-8' : 'translate-x-1'}`} />
+                  </button>
+                  <div>
+                    <span className={`text-base font-bold block ${skuForm.is_active ? 'text-green-700' : 'text-slate-600'}`}>
+                      {skuForm.is_active ? '✓ Active' : 'Inactive'}
                     </span>
+                    {!skuForm.is_trial_pack && !complete && (
+                      <span className="text-xs text-amber-600 flex items-center gap-1 mt-0.5">
+                        <AlertTriangle className="w-3 h-3" />Setup incomplete — complete all required fields
+                      </span>
+                    )}
                   </div>
-                  {skuForm.is_trial_pack && (
-                    <p className="text-xs text-purple-600 mt-1">
-                      Trial packs consume other SKUs as components. Recipe, bottle type, and artwork not required.
-                    </p>
-                  )}
-                </Field>
-
-                {/* Active toggle */}
-                <Field label="Status" className="sm:col-span-2">
-                  <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!skuForm.is_active && !complete && !skuForm.is_trial_pack) {
-                          alert('Cannot activate: setup is incomplete. Fill all required fields first.');
-                          return;
-                        }
-                        setSkuForm(f => ({ ...f, is_active: !f.is_active }));
-                      }}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${skuForm.is_active ? 'bg-green-500' : 'bg-slate-300'}`}
-                    >
-                      <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${skuForm.is_active ? 'translate-x-6' : 'translate-x-1'}`} />
-                    </button>
-                    <span className={`text-sm font-semibold ${skuForm.is_active ? 'text-green-700' : 'text-slate-500'}`}>
-                      {skuForm.is_active ? 'Active' : 'Inactive'}
-                    </span>
-                    {!skuForm.is_trial_pack && !complete && <span className="text-xs text-amber-600 flex items-center gap-1"><AlertTriangle className="w-3 h-3" />Setup incomplete</span>}
-                  </div>
-                </Field>
+                </div>
               </div>
 
               {/* Manufacturer details collapsible */}
@@ -393,73 +430,100 @@ export default function SKUSetup() {
             </TabsContent>
 
             {/* ─── Tab 2: Recipe & Packaging ────────────────── */}
-            <TabsContent value="recipe" className="mt-4 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Recipe Group */}
-                <Field label="Recipe Group *">
-                  <SelectInput
-                    value={skuForm.recipe_group_id}
-                    onChange={v => setSkuForm(f => ({ ...f, recipe_group_id: v, default_recipe_option_id: '' }))}
-                    placeholder="— Select recipe group —"
-                    options={recipeGroups.map(g => ({ value: g.recipe_group_id, label: g.recipe_name }))}
-                    empty="No recipe groups. Add in Recipe Builder first."
-                  />
-                </Field>
+            <TabsContent value="recipe" className="mt-4 space-y-5">
+              {/* Recipe */}
+              <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-4">
+                <p className="text-sm font-bold text-slate-700">🧪 Recipe Configuration</p>
+                <div className="grid grid-cols-1 gap-4">
+                  <Field label="Recipe Group *">
+                    <select
+                      value={skuForm.recipe_group_id}
+                      onChange={e => setSkuForm(f => ({ ...f, recipe_group_id: e.target.value, default_recipe_option_id: '' }))}
+                      className="w-full border border-slate-200 rounded-lg px-4 py-3 text-base h-12 bg-white"
+                    >
+                      <option value="">— Select Recipe Group —</option>
+                      {recipeGroups.map(g => <option key={g.recipe_group_id} value={g.recipe_group_id}>{g.recipe_name}</option>)}
+                    </select>
+                    {recipeGroups.length === 0 && (
+                      <p className="text-xs text-amber-600 mt-1 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                        No recipe groups — add in Recipe Builder first
+                      </p>
+                    )}
+                  </Field>
 
-                {/* Default Option */}
-                <Field label="Default Recipe Option *">
-                  <SelectInput
-                    value={skuForm.default_recipe_option_id}
-                    onChange={v => setSkuForm(f => ({ ...f, default_recipe_option_id: v }))}
-                    placeholder={skuForm.recipe_group_id ? '— Select option —' : '— Select group first —'}
-                    options={filteredOptions.map(o => ({ value: o.option_id, label: o.option_name + (o.is_default ? ' (default)' : '') }))}
-                    disabled={!skuForm.recipe_group_id}
-                    empty="No options for this group."
-                  />
-                </Field>
+                  <Field label="Default Recipe Option *">
+                    <select
+                      value={skuForm.default_recipe_option_id}
+                      onChange={e => setSkuForm(f => ({ ...f, default_recipe_option_id: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-4 py-3 text-base h-12 bg-white disabled:bg-slate-50"
+                      disabled={!skuForm.recipe_group_id}
+                    >
+                      <option value="">— Select Option —</option>
+                      {filteredOptions.map(o => (
+                        <option key={o.option_id} value={o.option_id}>
+                          {o.option_name}{o.is_default ? ' (default)' : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                </div>
+              </div>
 
-                {/* Bottle Type */}
-                <Field label="Bottle Type *">
-                  {bottleTypes.length > 0 ? (
-                    <SelectInput
-                      value={skuForm.bottle_type}
-                      onChange={v => setSkuForm(f => ({ ...f, bottle_type: v }))}
-                      placeholder="— Select bottle type —"
-                      options={bottleTypes.map(b => ({ value: b.name, label: b.name }))}
-                    />
-                  ) : (
-                    <Input value={skuForm.bottle_type} onChange={e => setSkuForm(f => ({ ...f, bottle_type: e.target.value }))} placeholder="e.g. PET 200ml" className="text-sm h-9" />
+              {/* Packaging */}
+              <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-4">
+                <p className="text-sm font-bold text-slate-700">📦 Packaging Configuration</p>
+                <div className="grid grid-cols-1 gap-4">
+                  <Field label="Bottle Type *">
+                    {bottleTypes.length > 0 ? (
+                      <select
+                        value={skuForm.bottle_type}
+                        onChange={e => setSkuForm(f => ({ ...f, bottle_type: e.target.value }))}
+                        className="w-full border border-slate-200 rounded-lg px-4 py-3 text-base h-12 bg-white"
+                      >
+                        <option value="">— Select Bottle Type —</option>
+                        {bottleTypes.map(b => <option key={b.id} value={b.name}>{b.name}</option>)}
+                      </select>
+                    ) : (
+                      <Input value={skuForm.bottle_type} onChange={e => setSkuForm(f => ({ ...f, bottle_type: e.target.value }))} placeholder="e.g. PET 200ml" className="h-11 text-base" />
+                    )}
+                  </Field>
+
+                  <Field label="Box Type *">
+                    <select
+                      value={skuForm.box_type_id}
+                      onChange={e => handleBoxTypeChange(e.target.value)}
+                      className="w-full border border-slate-200 rounded-lg px-4 py-3 text-base h-12 bg-white"
+                    >
+                      <option value="">— Select Box Type —</option>
+                      {boxTypes.map(b => (
+                        <option key={b.box_type_id} value={b.box_type_id}>
+                          {b.box_name} — {b.bottles_per_box} bottles/box
+                        </option>
+                      ))}
+                    </select>
+                    {boxTypes.length === 0 && (
+                      <p className="text-xs text-amber-600 mt-1 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                        No box types — add in Box Types page first
+                      </p>
+                    )}
+                  </Field>
+
+                  {selectedBoxType && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
+                      <div className="flex flex-wrap gap-4 text-sm text-blue-900">
+                        <span>📦 <strong>{selectedBoxType.bottles_per_box}</strong> bottles/box</span>
+                        {selectedBoxType.length_mm && (
+                          <span>📐 {selectedBoxType.length_mm} × {selectedBoxType.width_mm} × {selectedBoxType.height_mm} mm</span>
+                        )}
+                        {selectedBoxType.empty_weight_kg && <span>⚖️ {selectedBoxType.empty_weight_kg} kg</span>}
+                      </div>
+                    </div>
                   )}
-                </Field>
 
-                {/* Box Type */}
-                <Field label="Box Type *">
-                  <SelectInput
-                    value={skuForm.box_type_id}
-                    onChange={handleBoxTypeChange}
-                    placeholder="— Select box type —"
-                    options={boxTypes.map(b => ({ value: b.box_type_id, label: `${b.box_name}${b.box_code ? ' (' + b.box_code + ')' : ''} — ${b.bottles_per_box} bottles` }))}
-                    empty="No box types. Add in Master Data → Box Types first."
-                  />
-                </Field>
-
-                {/* Box type details */}
-                {selectedBoxType && (
-                  <div className="sm:col-span-2 bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-wrap gap-4 text-xs text-slate-600">
-                    <span>📦 <strong>{selectedBoxType.bottles_per_box}</strong> bottles/box</span>
-                    {selectedBoxType.length_mm && selectedBoxType.width_mm && selectedBoxType.height_mm &&
-                      <span>📐 {selectedBoxType.length_mm} × {selectedBoxType.width_mm} × {selectedBoxType.height_mm} mm</span>}
-                    {selectedBoxType.empty_weight_kg && <span>⚖️ {selectedBoxType.empty_weight_kg} kg (empty)</span>}
-                  </div>
-                )}
-
-                <Field label="Bottles per Box (derived)">
-                  <Input value={skuForm.bottles_per_box || ''} readOnly className="text-sm h-9 bg-slate-50 font-bold" placeholder="Set by Box Type" />
-                </Field>
-
-                <Field label="Shelf Life (days) *">
-                  <Input type="number" value={skuForm.shelf_life_days} onChange={e => setSkuForm(f => ({ ...f, shelf_life_days: e.target.value }))} className="text-sm h-9" placeholder="e.g. 365" />
-                </Field>
+                  <Field label="Shelf Life (days) *">
+                    <Input type="number" value={skuForm.shelf_life_days} onChange={e => setSkuForm(f => ({ ...f, shelf_life_days: e.target.value }))} placeholder="365" className="h-11 text-base" />
+                  </Field>
+                </div>
               </div>
             </TabsContent>
 
