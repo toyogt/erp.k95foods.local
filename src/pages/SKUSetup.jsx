@@ -447,7 +447,7 @@ export default function SKUSetup() {
                     )}
                   </Field>
 
-                  <Field label="ML per Bottle *">
+                  <Field label="ML per Bottle *" info="Volume per bottle (auto-filled from bottle type selection, cannot be edited)">
                     <Input 
                       type="text" 
                       value={skuForm.ml_per_bottle || ''} 
@@ -455,7 +455,6 @@ export default function SKUSetup() {
                       placeholder="Auto-filled from bottle type" 
                       className="h-12 text-base bg-slate-50" 
                     />
-                    <p className="text-xs text-slate-400 mt-1">Auto-filled from bottle type selection</p>
                   </Field>
 
 
@@ -520,8 +519,11 @@ export default function SKUSetup() {
               <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-4">
                 <p className="text-sm font-bold text-slate-700">💰 Pricing & Specifications</p>
                 <div className="grid grid-cols-2 gap-4">
-                  <Field label="Product Barcode">
+                  <Field label="Product Barcode" info="Barcode printed on individual bottles/products for retail scanning">
                     <Input value={skuForm.product_barcode} onChange={e => setSkuForm(f => ({ ...f, product_barcode: e.target.value }))} placeholder="8901234567890" className="h-12 text-base font-mono" />
+                  </Field>
+                  <Field label="Box Barcode" info="Barcode printed on shipping boxes/cartons for warehouse and logistics scanning">
+                    <Input value={skuForm.box_barcode} onChange={e => setSkuForm(f => ({ ...f, box_barcode: e.target.value }))} placeholder="8901234567999" className="h-12 text-base font-mono" />
                   </Field>
                   <Field label="MRP per Bottle (₹) *">
                     <Input 
@@ -533,7 +535,7 @@ export default function SKUSetup() {
                       className="h-12 text-base" 
                     />
                   </Field>
-                  <Field label="MRP per Box (₹)">
+                  <Field label="MRP per Box (₹)" info="Automatically calculated by multiplying MRP per bottle × bottles per box (cannot be edited)">
                     <Input 
                       type="text" 
                       inputMode="decimal" 
@@ -542,7 +544,6 @@ export default function SKUSetup() {
                       placeholder="Auto-calculated" 
                       className="h-12 text-base bg-slate-50" 
                     />
-                    <p className="text-xs text-slate-400 mt-1">Auto-calculated from MRP × bottles</p>
                   </Field>
                 </div>
               </div>
@@ -646,14 +647,13 @@ export default function SKUSetup() {
               </div>
 
               <div className="bg-white border border-slate-200 rounded-xl p-4 mb-4">
-                <Field label="Batch Prefix (optional)">
+                <Field label="Batch Prefix (optional)" info="A short code (2-4 letters) that gets prepended to all batch IDs for this SKU. Example: If prefix is 'TYK' and batch rule generates '250311-001', final batch code becomes 'TYK-250311-001'. Used for product identification and traceability.">
                   <Input 
                     value={skuForm.batch_prefix} 
                     onChange={e => setSkuForm(f => ({ ...f, batch_prefix: e.target.value.toUpperCase() }))} 
                     placeholder="e.g. TYK" 
                     className="h-12 text-base font-mono tracking-wider" 
                   />
-                  <p className="text-xs text-slate-500 mt-1">Prepended to batch codes for this SKU (e.g. TYK-250311-001)</p>
                 </Field>
               </div>
 
@@ -720,7 +720,7 @@ export default function SKUSetup() {
                   )}
                 </Field>
 
-                <Field label="Batch Date Source">
+                <Field label="Batch Date Source" info="Which date to use when generating batch codes: MFG Start = when manufacturing begins in recipe room, Label Start = when labelling/packing begins. This date is used in batch format rules for date-based components.">
                   <SelectInput
                     value={mappingForm.batch_date_source}
                     onChange={v => setMappingForm(f => ({ ...f, batch_date_source: v }))}
@@ -731,7 +731,7 @@ export default function SKUSetup() {
                   />
                 </Field>
 
-                <Field label="Sequence Reset Scope">
+                <Field label="Sequence Reset Scope" info="How often the sequence counter resets back to 001: Daily = resets every day (001, 002... then next day starts 001 again), Monthly = resets each month, Yearly = resets each year, Never = continuous counting forever (001, 002, 003... 9999...)">
                   <SelectInput
                     value={mappingForm.sequence_reset_scope}
                     onChange={v => setMappingForm(f => ({ ...f, sequence_reset_scope: v }))}
@@ -744,7 +744,7 @@ export default function SKUSetup() {
                   />
                 </Field>
 
-                <Field label="Use Batch Prefix from SKU" className="sm:col-span-2">
+                <Field label="Use Batch Prefix from SKU" info="Enable this toggle to automatically prepend the Batch Prefix (configured above) to all batch codes. Example: If enabled and prefix is 'TYK', batch '250311-001' becomes 'TYK-250311-001'. If disabled, batch code will be '250311-001' without prefix." className="sm:col-span-2">
                   <label className="flex items-center gap-3 cursor-pointer">
                     <button
                       type="button"
@@ -816,10 +816,24 @@ export default function SKUSetup() {
 }
 
 // Small helper components for cleaner markup
-function Field({ label, children, className = '' }) {
+function Field({ label, children, className = '', info }) {
   return (
     <div className={`space-y-1 ${className}`}>
-      <Label className="text-xs font-medium text-slate-600">{label}</Label>
+      <div className="flex items-center gap-1.5">
+        <Label className="text-xs font-medium text-slate-600">{label}</Label>
+        {info && (
+          <Popover>
+            <PopoverTrigger asChild>
+              <button type="button" className="text-slate-400 hover:text-blue-600 transition-colors">
+                <Info className="w-3.5 h-3.5" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 text-xs text-slate-700 leading-relaxed p-3">
+              {info}
+            </PopoverContent>
+          </Popover>
+        )}
+      </div>
       {children}
     </div>
   );
