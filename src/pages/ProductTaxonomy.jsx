@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Plus, Trash2, Save, X, Upload, FileUp, Download } from 'lucide-react';
+import { Plus, Trash2, Save, X, Upload, FileUp, Download, CheckCircle2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function ProductTaxonomy() {
@@ -323,11 +323,61 @@ Toyo Kombucha,Regular,Classic Ginger`;
 
           <div className="space-y-2">
             {brands.map(brand => (
-              <Card key={brand.id} className="p-4 flex items-center justify-between">
-                <p className="font-semibold text-slate-900">{brand.brand_name}</p>
-                <Button variant="ghost" size="sm" onClick={() => deleteBrand(brand.id)}>
-                  <Trash2 className="w-4 h-4 text-red-500" />
-                </Button>
+              <Card key={brand.id} className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="font-semibold text-slate-900">{brand.brand_name}</p>
+                    {brand.short_code && <p className="text-xs font-mono bg-slate-100 text-slate-600 inline-block px-2 py-0.5 rounded mt-1">Code: {brand.short_code}</p>}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {editingShortCode?.type === 'brand' && editingShortCode?.id === brand.id ? (
+                      <>
+                        <Input
+                          value={editingShortCode.value}
+                          onChange={e => setEditingShortCode({ ...editingShortCode, value: e.target.value.toUpperCase() })}
+                          placeholder="3 letters"
+                          maxLength={3}
+                          className="h-8 w-20 text-xs font-mono"
+                          autoFocus
+                        />
+                        <Button
+                          size="sm"
+                          onClick={async () => {
+                            await base44.entities.BrandMaster.update(brand.id, { short_code: editingShortCode.value });
+                            await loadAll();
+                            setEditingShortCode(null);
+                            toast.success('Code saved');
+                          }}
+                          className="h-8"
+                        >
+                          <CheckCircle2 className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setEditingShortCode(null)}
+                          className="h-8"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setEditingShortCode({ type: 'brand', id: brand.id, value: brand.short_code || '' })}
+                          className="h-8 text-xs"
+                        >
+                          {brand.short_code ? 'Edit Code' : 'Add Code'}
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => deleteBrand(brand.id)} className="h-8">
+                          <Trash2 className="w-4 h-4 text-red-500" />
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </div>
               </Card>
             ))}
             {brands.length === 0 && <p className="text-center text-slate-400 py-8">No brands yet</p>}
@@ -367,11 +417,61 @@ Toyo Kombucha,Regular,Classic Ginger`;
                 <div key={brand.id} className="space-y-2">
                   <p className="text-xs font-bold text-slate-500 uppercase">{brand.brand_name}</p>
                   {fams.map(fam => (
-                    <Card key={fam.id} className="p-4 flex items-center justify-between">
-                      <p className="font-medium text-slate-900">{fam.family_name}</p>
-                      <Button variant="ghost" size="sm" onClick={() => deleteFamily(fam.id)}>
-                        <Trash2 className="w-4 h-4 text-red-500" />
-                      </Button>
+                    <Card key={fam.id} className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <p className="font-medium text-slate-900">{fam.family_name}</p>
+                          {fam.short_code && <p className="text-xs font-mono bg-slate-100 text-slate-600 inline-block px-2 py-0.5 rounded mt-1">Code: {fam.short_code}</p>}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {editingShortCode?.type === 'family' && editingShortCode?.id === fam.id ? (
+                            <>
+                              <Input
+                                value={editingShortCode.value}
+                                onChange={e => setEditingShortCode({ ...editingShortCode, value: e.target.value.toUpperCase() })}
+                                placeholder="2 letters"
+                                maxLength={2}
+                                className="h-8 w-16 text-xs font-mono"
+                                autoFocus
+                              />
+                              <Button
+                                size="sm"
+                                onClick={async () => {
+                                  await base44.entities.ProductFamilyMaster.update(fam.id, { short_code: editingShortCode.value });
+                                  await loadAll();
+                                  setEditingShortCode(null);
+                                  toast.success('Code saved');
+                                }}
+                                className="h-8"
+                              >
+                                <CheckCircle2 className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => setEditingShortCode(null)}
+                                className="h-8"
+                              >
+                                <X className="w-4 h-4" />
+                              </Button>
+                            </>
+                          ) : (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setEditingShortCode({ type: 'family', id: fam.id, value: fam.short_code || '' })}
+                                className="h-8 text-xs"
+                              >
+                                {fam.short_code ? 'Edit' : 'Code'}
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => deleteFamily(fam.id)} className="h-8">
+                                <Trash2 className="w-4 h-4 text-red-500" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </div>
                     </Card>
                   ))}
                 </div>
@@ -430,11 +530,61 @@ Toyo Kombucha,Regular,Classic Ginger`;
                   <div key={`${brand.id}-${fam.id}`} className="space-y-2">
                     <p className="text-xs font-bold text-slate-500 uppercase">{brand.brand_name} › {fam.family_name}</p>
                     {flavs.map(flav => (
-                      <Card key={flav.id} className="p-4 flex items-center justify-between">
-                        <p className="font-medium text-slate-900">{flav.flavour_name}</p>
-                        <Button variant="ghost" size="sm" onClick={() => deleteFlavour(flav.id)}>
-                          <Trash2 className="w-4 h-4 text-red-500" />
-                        </Button>
+                      <Card key={flav.id} className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <p className="font-medium text-slate-900">{flav.flavour_name}</p>
+                            {flav.short_code && <p className="text-xs font-mono bg-slate-100 text-slate-600 inline-block px-2 py-0.5 rounded mt-1">Code: {flav.short_code}</p>}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {editingShortCode?.type === 'flavour' && editingShortCode?.id === flav.id ? (
+                              <>
+                                <Input
+                                  value={editingShortCode.value}
+                                  onChange={e => setEditingShortCode({ ...editingShortCode, value: e.target.value.toUpperCase() })}
+                                  placeholder="3 letters"
+                                  maxLength={3}
+                                  className="h-8 w-18 text-xs font-mono"
+                                  autoFocus
+                                />
+                                <Button
+                                  size="sm"
+                                  onClick={async () => {
+                                    await base44.entities.FlavourMaster.update(flav.id, { short_code: editingShortCode.value });
+                                    await loadAll();
+                                    setEditingShortCode(null);
+                                    toast.success('Code saved');
+                                  }}
+                                  className="h-8"
+                                >
+                                  <CheckCircle2 className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => setEditingShortCode(null)}
+                                  className="h-8"
+                                >
+                                  <X className="w-4 h-4" />
+                                </Button>
+                              </>
+                            ) : (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => setEditingShortCode({ type: 'flavour', id: flav.id, value: flav.short_code || '' })}
+                                  className="h-8 text-xs"
+                                >
+                                  {flav.short_code ? 'Edit' : 'Code'}
+                                </Button>
+                                <Button variant="ghost" size="sm" onClick={() => deleteFlavour(flav.id)} className="h-8">
+                                  <Trash2 className="w-4 h-4 text-red-500" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </div>
                       </Card>
                     ))}
                   </div>
