@@ -5,32 +5,59 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Plus, Package } from 'lucide-react';
+import { Plus, Package, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import TrialPackProductionWizard from '@/components/trialpack/TrialPackProductionWizard';
-import TrialPackBOMManager from '@/components/trialpack/TrialPackBOMManager';
 
 export default function TrialPackTab() {
   const [showWizard, setShowWizard] = useState(false);
-  const [showConfigForm, setShowConfigForm] = useState(false);
-  const [selectedSku, setSelectedSku] = useState(null);
-  const [newConfig, setNewConfig] = useState({ trial_pack_sku: '', display_name: '', total_bottles: 6 });
+  const [showBOMDialog, setShowBOMDialog] = useState(false);
+  const [selectedTrialSku, setSelectedTrialSku] = useState(null);
+  const [bomForm, setBomForm] = useState({ component_sku: '', bottles_required: 1 });
   const queryClient = useQueryClient();
 
-  const { data: configs = [] } = useQuery({
-    queryKey: ['trialPackConfigs'],
-    queryFn: () => base44.entities.TrialPackConfig.list(),
+  const { data: trialPacks = [] } = useQuery({
+    queryKey: ['trialPackSKUs'],
+    queryFn: () => base44.entities.ProductMaster.filter({ is_trial_pack: true, is_active: true }),
   });
 
-  const createConfigMutation = useMutation({
-    mutationFn: (data) => base44.entities.TrialPackConfig.create({ ...data, is_active: true }),
+  const { data: allProducts = [] } = useQuery({
+    queryKey: ['allProducts'],
+    queryFn: () => base44.entities.ProductMaster.filter({ is_active: true }),
+  });
+
+  const { data: bomItems = [] } = useQuery({
+    queryKey: ['trialPackBOM', selectedTrialSku],
+    queryFn: () => selectedTrialSku ? base44.entities.TrialPackBOM.filter({ trial_pack_sku: selectedTrialSku }) : Promise.resolve([]),
+    enabled: !!selectedTrialSku,
+  });
+
+  const addBOMMutation = useMutation({
+    mutationFn: (data) => base44.entities.TrialPackBOM.create({
+      trial_pack_sku: selectedTrialSku,
+      ...data,
+    }),
     onSuccess: () => {
-      queryClient.invalidateQueries(['trialPackConfigs']);
-      toast.success('Trial pack SKU created');
-      setShowConfigForm(false);
-      setNewConfig({ trial_pack_sku: '', display_name: '', total_bottles: 6 });
+      queryClient.invalidateQueries(['trialPackBOM']);
+      toast.success('Component added to BOM');
+      setBomForm({ component_sku: '', bottles_required: 1 });
     },
   });
+
+  const deleteBOMMutation = useMutation({
+    mutationFn: (id) => base44.entities.TrialPackBOM.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['trialPackBOM']);
+      toast.success('Component removed');
+    },
+  });
+
+  const regularProducts = allProducts.filter(p => !p.is_trial_pack);
+
+  const handleManageBOM = (sku) => {
+    setSelectedTrialSku(sku);
+    setShowBOMDialog(true);
+  };
 
   return (
     <div className="space-y-4">
@@ -40,41 +67,42 @@ export default function TrialPackTab() {
       </Button>
 
       <div className="border-t pt-4">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-bold text-slate-900">Configuration</h3>
-          <Button onClick={() => setShowConfigForm(true)} size="sm">
-            <Plus className="w-4 h-4 mr-1" />
-            Add SKU
-          </Button>
-        </div>
+        <h3 className="font-bold text-slate-900 mb-3">Trial Pack SKUs</h3>
 
-        {configs.length === 0 && (
+        {trialPacks.length === 0 && (
           <Card className="p-6 text-center bg-slate-50">
             <Package className="w-12 h-12 mx-auto text-slate-400 mb-2" />
-            <p className="text-sm text-slate-600">No trial pack SKUs configured yet</p>
+            <p className="text-sm text-slate-600">No trial pack SKUs found</p>
+            <p className="text-xs text-slate-400 mt-1">Add SKUs with is_trial_pack=true in SKU Setup</p>
           </Card>
         )}
 
-        {configs.map(config => (
-          <Card key={config.id} className="p-4 mb-3">
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <p className="font-bold text-slate-900">{config.display_name}</p>
-                <p className="text-sm text-slate-500">{config.trial_pack_sku} • {config.total_bottles} bottles</p>
+        {trialPacks.map(pack => {
+          const packBOM = bomItems.filter(b => b.trial_pack_sku === pack.item_code);
+          const totalBottles = packBOM.reduce((sum, b) => sum + b.bottles_required, 0);
+
+          return (
+            <Card key={pack.id} className="p-4 mb-3">
+              <div className="flex justify-between items-start mb-2">
+                <div>
+                  <p className="font-bold text-slate-900">{pack.product_name}</p>
+                  <p className="text-sm text-slate-500">{pack.item_code}</p>
+                  <p className="text-xs text-slate-400">
+                    {pack.bottles_per_box || 0} bottles per pack
+                    {selectedTrialSku === pack.item_code && packBOM.length > 0 && ` • BOM: ${totalBottles} bottles`}
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleManageBOM(pack.item_code)}
+                >
+                  Manage BOM
+                </Button>
               </div>
-              <Button
-                variant={selectedSku === config.trial_pack_sku ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setSelectedSku(selectedSku === config.trial_pack_sku ? null : config.trial_pack_sku)}
-              >
-                {selectedSku === config.trial_pack_sku ? 'Hide BOM' : 'Manage BOM'}
-              </Button>
-            </div>
-            {selectedSku === config.trial_pack_sku && (
-              <TrialPackBOMManager trialPackSku={config.trial_pack_sku} />
-            )}
-          </Card>
-        ))}
+            </Card>
+          );
+        })}
       </div>
 
       <Dialog open={showWizard} onOpenChange={setShowWizard}>
@@ -83,43 +111,79 @@ export default function TrialPackTab() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showConfigForm} onOpenChange={setShowConfigForm}>
-        <DialogContent>
+      <Dialog open={showBOMDialog} onOpenChange={setShowBOMDialog}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-auto">
           <DialogHeader>
-            <DialogTitle>Add Trial Pack SKU</DialogTitle>
+            <DialogTitle>Manage BOM: {trialPacks.find(p => p.item_code === selectedTrialSku)?.product_name}</DialogTitle>
           </DialogHeader>
+
           <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium text-slate-700 block mb-1">Trial Pack SKU Code</label>
-              <Input
-                placeholder="e.g., TRIAL-VARIETY-6PK"
-                value={newConfig.trial_pack_sku}
-                onChange={(e) => setNewConfig({ ...newConfig, trial_pack_sku: e.target.value })}
-              />
+            <div className="border-b pb-4">
+              <h4 className="font-semibold text-slate-900 mb-3">Add Component</h4>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-sm font-medium text-slate-700 block mb-1">Component SKU</label>
+                  <select
+                    className="w-full h-10 px-3 border border-slate-200 rounded-md text-sm"
+                    value={bomForm.component_sku}
+                    onChange={(e) => setBomForm({ ...bomForm, component_sku: e.target.value })}
+                  >
+                    <option value="">Select SKU...</option>
+                    {regularProducts.map(p => (
+                      <option key={p.id} value={p.item_code}>
+                        {p.item_code} - {p.product_name} ({p.bottles_per_box} bottles/box)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-700 block mb-1">Bottles Required</label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={bomForm.bottles_required}
+                    onChange={(e) => setBomForm({ ...bomForm, bottles_required: parseInt(e.target.value) || 1 })}
+                  />
+                </div>
+                <Button
+                  onClick={() => addBOMMutation.mutate(bomForm)}
+                  disabled={!bomForm.component_sku || addBOMMutation.isPending}
+                  className="w-full h-10"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Component
+                </Button>
+              </div>
             </div>
+
             <div>
-              <label className="text-sm font-medium text-slate-700 block mb-1">Display Name</label>
-              <Input
-                placeholder="e.g., Variety Pack of 6"
-                value={newConfig.display_name}
-                onChange={(e) => setNewConfig({ ...newConfig, display_name: e.target.value })}
-              />
+              <h4 className="font-semibold text-slate-900 mb-3">Current BOM</h4>
+              {bomItems.length === 0 && (
+                <p className="text-sm text-slate-500 text-center py-4">No components yet</p>
+              )}
+              <div className="space-y-2">
+                {bomItems.map(item => {
+                  const product = allProducts.find(p => p.item_code === item.component_sku);
+                  return (
+                    <div key={item.id} className="flex items-center justify-between bg-slate-50 p-3 rounded-lg">
+                      <div>
+                        <p className="font-medium text-sm text-slate-900">{item.component_sku}</p>
+                        <p className="text-xs text-slate-500">
+                          {item.bottles_required} bottles needed • {product?.bottles_per_box || '?'} bottles/box
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => deleteBOMMutation.mutate(item.id)}
+                      >
+                        <Trash2 className="w-4 h-4 text-red-600" />
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-            <div>
-              <label className="text-sm font-medium text-slate-700 block mb-1">Total Bottles</label>
-              <Input
-                type="number"
-                value={newConfig.total_bottles}
-                onChange={(e) => setNewConfig({ ...newConfig, total_bottles: parseInt(e.target.value) || 0 })}
-              />
-            </div>
-            <Button
-              onClick={() => createConfigMutation.mutate(newConfig)}
-              disabled={!newConfig.trial_pack_sku || !newConfig.display_name || createConfigMutation.isPending}
-              className="w-full h-12"
-            >
-              Create Trial Pack SKU
-            </Button>
           </div>
         </DialogContent>
       </Dialog>

@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { ArrowLeft, Package, Scan, CheckCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import StepBar from '@/components/fgwarehouse/StepBar';
 import QRScanInput from '@/components/fgwarehouse/QRScanInput';
@@ -29,9 +29,14 @@ export default function TrialPackProductionWizard({ onClose }) {
     base44.auth.me().then(setUser);
   }, []);
 
-  const { data: configs = [] } = useQuery({
-    queryKey: ['trialPackConfigs'],
-    queryFn: () => base44.entities.TrialPackConfig.filter({ is_active: true }),
+  const { data: trialPacks = [] } = useQuery({
+    queryKey: ['trialPackSKUs'],
+    queryFn: () => base44.entities.ProductMaster.filter({ is_trial_pack: true, is_active: true }),
+  });
+
+  const { data: allProducts = [] } = useQuery({
+    queryKey: ['allProducts'],
+    queryFn: () => base44.entities.ProductMaster.filter({ is_active: true }),
   });
 
   const { data: lots = [] } = useQuery({
@@ -45,19 +50,37 @@ export default function TrialPackProductionWizard({ onClose }) {
     return bomItems;
   };
 
+  const calculateMinProduction = (bomData) => {
+    if (!bomData || bomData.length === 0) return 0;
+    
+    const mins = bomData.map(item => {
+      const product = allProducts.find(p => p.item_code === item.component_sku);
+      if (!product || !product.bottles_per_box) return Infinity;
+      return Math.floor(product.bottles_per_box / item.bottles_required);
+    });
+    
+    return Math.min(...mins);
+  };
+
   const getSuggestedLots = (componentSku) => {
     return lots
       .filter(lot => lot.sku_code === componentSku && lot.boxes_balance > 0)
       .sort((a, b) => new Date(a.exp_date) - new Date(b.exp_date));
   };
 
-  const handleSkuSelect = async (config) => {
-    setSelectedSku(config);
-    const bomData = await loadBOM(config.trial_pack_sku);
+  const handleSkuSelect = async (pack) => {
+    setSelectedSku(pack);
+    const bomData = await loadBOM(pack.item_code);
     if (bomData.length === 0) {
       toast.error('No BOM configured for this trial pack');
       return;
     }
+    const minQty = calculateMinProduction(bomData);
+    if (minQty === 0 || minQty === Infinity) {
+      toast.error('Invalid BOM configuration');
+      return;
+    }
+    setQuantity(minQty);
     setStep('scan');
   };
 
@@ -74,23 +97,34 @@ export default function TrialPackProductionWizard({ onClose }) {
       return;
     }
 
+    const product = allProducts.find(p => p.item_code === lot.sku_code);
+    const bottlesPerBox = product?.bottles_per_box || 1;
+    const boxesNeeded = Math.ceil((requiredComponent.bottles_required * quantity) / bottlesPerBox);
     const alreadyScanned = scannedBoxes.filter(b => b.component_sku === lot.sku_code).length;
-    const needed = requiredComponent.quantity_required * quantity;
 
-    if (alreadyScanned >= needed) {
+    if (alreadyScanned >= boxesNeeded) {
       toast.error(`Already scanned enough ${lot.sku_code}`);
       return;
     }
 
-    setScannedBoxes([...scannedBoxes, { lot_id: lotId, sku_code: lot.sku_code, batch_code: lot.batch_code, mfg_date: lot.mfg_date, exp_date: lot.exp_date }]);
+    setScannedBoxes([...scannedBoxes, { 
+      lot_id: lotId, 
+      sku_code: lot.sku_code, 
+      batch_code: lot.batch_code, 
+      mfg_date: lot.mfg_date, 
+      exp_date: lot.exp_date,
+      bottles_per_box: bottlesPerBox
+    }]);
     toast.success(`Scanned ${lot.product_name}`);
   };
 
   const isAllScanned = () => {
     return bom.every(bomItem => {
-      const needed = bomItem.quantity_required * quantity;
+      const product = allProducts.find(p => p.item_code === bomItem.component_sku);
+      const bottlesPerBox = product?.bottles_per_box || 1;
+      const boxesNeeded = Math.ceil((bomItem.bottles_required * quantity) / bottlesPerBox);
       const scanned = scannedBoxes.filter(b => b.component_sku === bomItem.component_sku).length;
-      return scanned >= needed;
+      return scanned >= boxesNeeded;
     });
   };
 
@@ -100,17 +134,15 @@ export default function TrialPackProductionWizard({ onClose }) {
       const allBatches = [...new Set(scannedBoxes.map(b => b.batch_code))];
       const allLots = [...new Set(scannedBoxes.map(b => b.lot_id))];
       
-      // Find oldest mfg/exp
       const oldestMfg = scannedBoxes.reduce((min, b) => new Date(b.mfg_date) < new Date(min) ? b.mfg_date : min, scannedBoxes[0].mfg_date);
       const oldestExp = scannedBoxes.reduce((min, b) => new Date(b.exp_date) < new Date(min) ? b.exp_date : min, scannedBoxes[0].exp_date);
       
-      const batchCode = `${selectedSku.trial_pack_sku}-${format(new Date(), 'ddMMyyyy')}-${Date.now().toString().slice(-3)}`;
+      const batchCode = `${selectedSku.item_code}-${format(new Date(), 'ddMMyyyy')}-${Date.now().toString().slice(-3)}`;
 
-      // Create trial pack production record
-      const production = await base44.entities.TrialPackProduction.create({
+      await base44.entities.TrialPackProduction.create({
         production_id: productionId,
-        trial_pack_sku: selectedSku.trial_pack_sku,
-        trial_pack_name: selectedSku.display_name,
+        trial_pack_sku: selectedSku.item_code,
+        trial_pack_name: selectedSku.product_name,
         quantity_produced: quantity,
         batch_code: batchCode,
         mfg_date: oldestMfg,
@@ -122,7 +154,6 @@ export default function TrialPackProductionWizard({ onClose }) {
         status: 'CONFIRMED',
       });
 
-      // Create warehouse lot for trial packs
       const lotSeq = Date.now();
       const lotId = `LOT-${format(new Date(), 'dd-MM-yyyy')}-${lotSeq}`;
       
@@ -130,8 +161,10 @@ export default function TrialPackProductionWizard({ onClose }) {
         lot_id: lotId,
         lot_date: format(new Date(), 'yyyy-MM-dd'),
         lot_seq: lotSeq,
-        sku_code: selectedSku.trial_pack_sku,
-        product_name: selectedSku.display_name,
+        sku_code: selectedSku.item_code,
+        product_name: selectedSku.product_name,
+        brand_name: selectedSku.brand_name,
+        product_family: selectedSku.product_family,
         batch_code: batchCode,
         mfg_date: oldestMfg,
         exp_date: oldestExp,
@@ -139,12 +172,11 @@ export default function TrialPackProductionWizard({ onClose }) {
         boxes_balance: quantity,
         loose_bottles_in: 0,
         loose_bottles_balance: 0,
-        bottles_per_box: selectedSku.total_bottles,
+        bottles_per_box: selectedSku.bottles_per_box || 6,
         status: 'ACTIVE',
         is_trial_pack: true,
       });
 
-      // Deduct from source lots
       for (const box of scannedBoxes) {
         const lot = lots.find(l => l.lot_id === box.lot_id);
         await base44.entities.WarehouseLot.update(lot.id, {
@@ -152,7 +184,7 @@ export default function TrialPackProductionWizard({ onClose }) {
         });
       }
 
-      return production;
+      return { lotId, batchCode };
     },
     onSuccess: () => {
       queryClient.invalidateQueries(['warehouseLots']);
@@ -169,10 +201,13 @@ export default function TrialPackProductionWizard({ onClose }) {
       {step === 'select' && (
         <div className="space-y-4">
           <h2 className="text-xl font-bold text-slate-900">Select Trial Pack</h2>
-          {configs.map(config => (
-            <Card key={config.id} className="p-4 hover:bg-slate-50 cursor-pointer" onClick={() => handleSkuSelect(config)}>
-              <p className="font-bold text-slate-900">{config.display_name}</p>
-              <p className="text-sm text-slate-500">{config.trial_pack_sku} • {config.total_bottles} bottles</p>
+          {trialPacks.length === 0 && (
+            <p className="text-sm text-slate-500">No trial pack SKUs found</p>
+          )}
+          {trialPacks.map(pack => (
+            <Card key={pack.id} className="p-4 hover:bg-slate-50 cursor-pointer" onClick={() => handleSkuSelect(pack)}>
+              <p className="font-bold text-slate-900">{pack.product_name}</p>
+              <p className="text-sm text-slate-500">{pack.item_code} • {pack.bottles_per_box || 0} bottles</p>
             </Card>
           ))}
         </div>
@@ -180,28 +215,43 @@ export default function TrialPackProductionWizard({ onClose }) {
 
       {step === 'scan' && (
         <div className="space-y-4">
-          <Button variant="outline" onClick={() => setStep('select')}>
+          <Button variant="outline" onClick={() => setStep('select')} className="h-12">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
 
           <Card className="p-4">
             <h3 className="font-bold text-slate-900 mb-2">Quantity to Produce</h3>
-            <Input type="number" value={quantity} onChange={(e) => setQuantity(parseInt(e.target.value) || 1)} min={1} />
+            <Input 
+              type="number" 
+              value={quantity} 
+              onChange={(e) => setQuantity(parseInt(e.target.value) || 1)} 
+              min={calculateMinProduction(bom)} 
+            />
+            <p className="text-xs text-slate-500 mt-1">
+              Minimum: {calculateMinProduction(bom)} pack(s) based on BOM
+            </p>
           </Card>
 
           <Card className="p-4">
             <h3 className="font-bold text-slate-900 mb-4">Required Components</h3>
             {bom.map(item => {
-              const needed = item.quantity_required * quantity;
+              const product = allProducts.find(p => p.item_code === item.component_sku);
+              const bottlesPerBox = product?.bottles_per_box || 1;
+              const boxesNeeded = Math.ceil((item.bottles_required * quantity) / bottlesPerBox);
               const scanned = scannedBoxes.filter(b => b.component_sku === item.component_sku).length;
               const suggested = getSuggestedLots(item.component_sku);
 
               return (
                 <div key={item.id} className="mb-4 pb-4 border-b last:border-0">
                   <div className="flex justify-between items-center mb-2">
-                    <p className="font-medium text-slate-900">{item.component_sku}</p>
-                    <p className="text-sm font-bold text-slate-700">{scanned}/{needed} scanned</p>
+                    <div>
+                      <p className="font-medium text-slate-900">{item.component_sku}</p>
+                      <p className="text-xs text-slate-500">
+                        {item.bottles_required * quantity} bottles needed = {boxesNeeded} box(es)
+                      </p>
+                    </div>
+                    <p className="text-sm font-bold text-slate-700">{scanned}/{boxesNeeded} scanned</p>
                   </div>
                   {suggested.length > 0 && (
                     <div className="text-xs text-slate-500 mb-2">
@@ -238,7 +288,7 @@ export default function TrialPackProductionWizard({ onClose }) {
 
       {step === 'confirm' && (
         <div className="space-y-4">
-          <Button variant="outline" onClick={() => setStep('scan')}>
+          <Button variant="outline" onClick={() => setStep('scan')} className="h-12">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
@@ -248,7 +298,7 @@ export default function TrialPackProductionWizard({ onClose }) {
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-green-700">Trial Pack:</span>
-                <span className="font-bold text-green-900">{selectedSku?.display_name}</span>
+                <span className="font-bold text-green-900">{selectedSku?.product_name}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-green-700">Quantity:</span>
@@ -262,7 +312,6 @@ export default function TrialPackProductionWizard({ onClose }) {
           </Card>
 
           <Button onClick={() => createMutation.mutate()} disabled={createMutation.isPending} className="w-full h-14 text-base bg-green-600 hover:bg-green-700">
-            <Package className="w-5 h-5 mr-2" />
             Confirm Production
           </Button>
         </div>
