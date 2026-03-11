@@ -447,6 +447,17 @@ export default function SKUSetup() {
                     )}
                   </Field>
 
+                  <Field label="ML per Bottle *">
+                    <Input 
+                      type="text" 
+                      value={skuForm.ml_per_bottle || ''} 
+                      readOnly 
+                      placeholder="Auto-filled from bottle type" 
+                      className="h-12 text-base bg-slate-50" 
+                    />
+                    <p className="text-xs text-slate-400 mt-1">Auto-filled from bottle type selection</p>
+                  </Field>
+
 
 
                   <Field label="Box Type *">
@@ -536,13 +547,7 @@ export default function SKUSetup() {
                 </div>
               </div>
 
-              {/* Batch Prefix */}
-              <div className="bg-white border border-slate-200 rounded-xl p-4">
-                <Field label="Batch Prefix (optional)">
-                  <Input value={skuForm.batch_prefix} onChange={e => setSkuForm(f => ({ ...f, batch_prefix: e.target.value.toUpperCase() }))} placeholder="e.g. TYK" className="h-11 text-base font-mono tracking-wider" />
-                  <p className="text-xs text-slate-500 mt-1">Used for batch code generation</p>
-                </Field>
-              </div>
+
 
               {/* Status toggle */}
               <div className={`border rounded-xl p-4 ${skuForm.is_active ? 'bg-green-50 border-green-300' : 'bg-slate-50 border-slate-200'}`}>
