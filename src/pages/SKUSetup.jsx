@@ -447,16 +447,7 @@ export default function SKUSetup() {
                     )}
                   </Field>
 
-                  <Field label="Bottle Type & ML *">
-                    <Input 
-                      type="text" 
-                      value={skuForm.bottle_type ? `${skuForm.bottle_type} (${skuForm.ml_per_bottle}ml)` : ''} 
-                      readOnly 
-                      placeholder="Select bottle type first" 
-                      className="h-12 text-base bg-slate-50" 
-                    />
-                    <p className="text-xs text-slate-400 mt-1">ML auto-filled from bottle type</p>
-                  </Field>
+
 
                   <Field label="Box Type *">
                     <select
@@ -583,26 +574,7 @@ export default function SKUSetup() {
                 </div>
               </div>
 
-              {/* Manufacturer details collapsible */}
-              <details className="group">
-                <summary className="cursor-pointer text-xs text-slate-500 font-semibold select-none hover:text-slate-700">
-                  Manufacturer / Label Details ▸
-                </summary>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3">
-                  {[
-                    { k: 'fssai_no', l: 'FSSAI No' },
-                    { k: 'manufacturer_name', l: 'Manufacturer Name' },
-                    { k: 'address_1', l: 'Address Line 1' },
-                    { k: 'address_2', l: 'Address Line 2' },
-                    { k: 'customer_care_email', l: 'Care Email' },
-                    { k: 'customer_care_phone', l: 'Care Phone' },
-                  ].map(({ k, l }) => (
-                    <Field key={k} label={l} className={k.includes('address') ? 'sm:col-span-2' : ''}>
-                      <Input value={skuForm[k]} onChange={e => setSkuForm(f => ({ ...f, [k]: e.target.value }))} className="text-sm h-9" />
-                    </Field>
-                  ))}
-                </div>
-              </details>
+
             </TabsContent>
 
             {/* ─── Tab 2: Recipe & Packaging ────────────────── */}
