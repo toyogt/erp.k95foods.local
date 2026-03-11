@@ -73,6 +73,7 @@ import LabelArtworkManager from './pages/LabelArtworkManager';
 import LabelRollManager from './pages/LabelRollManager';
 import LabellingLine from './pages/LabellingLine';
 import LiquidPlans from './pages/LiquidPlans';
+import MasterCartonPacking from './pages/MasterCartonPacking';
 import MasterData from './pages/MasterData';
 import OpeningStockImport from './pages/OpeningStockImport';
 import PaymentRequests from './pages/PaymentRequests';
@@ -94,11 +95,10 @@ import TemplateMappingManager from './pages/TemplateMappingManager';
 import ThreeWayMatch from './pages/ThreeWayMatch';
 import TraceInvestigation from './pages/TraceInvestigation';
 import TransferReceiving from './pages/TransferReceiving';
+import TrialPackProduction from './pages/TrialPackProduction';
 import UOMManager from './pages/UOMManager';
 import WarehouseBins from './pages/WarehouseBins';
 import WarehouseOps from './pages/WarehouseOps';
-import TrialPackProduction from './pages/TrialPackProduction';
-import MasterCartonPacking from './pages/MasterCartonPacking';
 import __Layout from './Layout.jsx';
 
 
@@ -129,6 +129,7 @@ export const PAGES = {
     "LabelRollManager": LabelRollManager,
     "LabellingLine": LabellingLine,
     "LiquidPlans": LiquidPlans,
+    "MasterCartonPacking": MasterCartonPacking,
     "MasterData": MasterData,
     "OpeningStockImport": OpeningStockImport,
     "PaymentRequests": PaymentRequests,
@@ -150,11 +151,10 @@ export const PAGES = {
     "ThreeWayMatch": ThreeWayMatch,
     "TraceInvestigation": TraceInvestigation,
     "TransferReceiving": TransferReceiving,
+    "TrialPackProduction": TrialPackProduction,
     "UOMManager": UOMManager,
     "WarehouseBins": WarehouseBins,
     "WarehouseOps": WarehouseOps,
-    "TrialPackProduction": TrialPackProduction,
-    "MasterCartonPacking": MasterCartonPacking,
 }
 
 export const pagesConfig = {

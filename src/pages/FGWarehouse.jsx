@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Loader2, Package, ArrowDownToLine, ArrowUpFromLine, BarChart3, FlaskConical, Home } from 'lucide-react';
+import { Loader2, Package, ArrowDownToLine, ArrowUpFromLine, BarChart3, MoreHorizontal, Home } from 'lucide-react';
 import LotTab from '@/components/fgwarehouse/LotTab';
 import ReceiveTab from '@/components/fgwarehouse/ReceiveTab';
 import DispatchTab from '@/components/fgwarehouse/DispatchTab';
 import StockTab from '@/components/fgwarehouse/StockTab';
-import TrialPackTab from '@/components/fgwarehouse/TrialPackTab';
+import MoreTab from '@/components/fgwarehouse/MoreTab';
 
 const TABS = [
   { id: 'home',     label: 'Home',     icon: Home            },
@@ -13,7 +13,7 @@ const TABS = [
   { id: 'receive',  label: 'Receive',  icon: ArrowDownToLine },
   { id: 'dispatch', label: 'Dispatch', icon: ArrowUpFromLine },
   { id: 'stock',    label: 'Stock',    icon: BarChart3       },
-  { id: 'trial',    label: 'Trial',    icon: FlaskConical    },
+  { id: 'more',     label: 'More',     icon: MoreHorizontal  },
 ];
 
 export default function FGWarehouse() {
@@ -74,7 +74,7 @@ export default function FGWarehouse() {
       case 'receive':  return <ReceiveTab {...tabProps} />;
       case 'dispatch': return <DispatchTab {...tabProps} />;
       case 'stock':    return <StockTab skus={skus} lots={lots} onBack={goHome} />;
-      case 'trial':    return <TrialPackTab {...tabProps} />;
+      case 'more':     return <MoreTab {...tabProps} />;
       default:         return null;
     }
   };
@@ -114,7 +114,6 @@ export default function FGWarehouse() {
 
 function HomeTab({ lots, activeLots, totalSkusInStock, totalBoxes, totalLoose, setActiveTab }) {
   const trialLots = activeLots.filter(l => l.is_trial_pack);
-  const regularLots = activeLots.filter(l => !l.is_trial_pack);
 
   return (
     <div className="space-y-5">
@@ -176,17 +175,8 @@ function HomeTab({ lots, activeLots, totalSkusInStock, totalBoxes, totalLoose, s
             color="bg-orange-600"
             onClick={() => setActiveTab('stock')}
           />
-          <QuickAction
-            icon="🧪"
-            title="Trial Pack Builder"
-            sub="Assemble trial packs from regular stock"
-            color="bg-purple-700"
-            onClick={() => setActiveTab('trial')}
-          />
         </div>
       </div>
-
-
     </div>
   );
 }
