@@ -22,7 +22,7 @@ const ALL_NAV_ITEMS = [
   { label: 'Filling Station',    page: 'FillingStation',     icon: Droplets        },
   { label: 'Chamber Station',    page: 'ChamberStation',     icon: Thermometer     },
   { label: 'Transfer/Receiving', page: 'TransferReceiving',  icon: Truck           },
-  { label: 'Dispatch Crates',   page: 'DispatchCrates',     icon: Truck           },
+  { label: 'Dispatch Crates',    page: 'DispatchCrates',     icon: Truck           },
   { label: 'Labelling Line',     page: 'LabellingLine',      icon: Tag             },
   { label: 'Label Roll Mgr',     page: 'LabelRollManager',   icon: Printer         },
   { label: 'Box Label Print',    page: 'BoxLabelPrint',      icon: Printer         },
