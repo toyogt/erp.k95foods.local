@@ -20,7 +20,7 @@ const EMPTY_SKU = {
   item_code: '', product_name: '', brand_name: '', product_family: '', flavour: '',
   ml_per_bottle: '', mrp: '', mrp_box: '', shelf_life_days: '', shelf_life_unit: 'days', bottle_type: '',
   recipe_group_id: '', default_recipe_option_id: '', box_type_id: '', bottles_per_box: '',
-  batch_prefix: '', default_artwork_id: '', is_active: false, is_trial_pack: false,
+  default_artwork_id: '', is_active: false, is_trial_pack: false,
   fssai_no: '', manufacturer_name: '', address_1: '', address_2: '',
   customer_care_email: '', customer_care_phone: '', product_barcode: '', box_barcode: '',
 };
@@ -28,7 +28,7 @@ const EMPTY_SKU = {
 const EMPTY_MAPPING = {
   ryan_template_id: '', batch_format_rule_id: '',
   batch_date_source: 'MFG_START', sequence_reset_scope: 'DAILY',
-  use_batch_prefix_from_sku: false, payload_map_json: '[]',
+  payload_map_json: '[]',
 };
 
 export default function SKUSetup() {
