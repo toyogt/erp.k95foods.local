@@ -93,10 +93,13 @@ export default function TrialPackTab() {
 
     if (totalBottles !== requiredBottles) {
       toast.error(`BOM incomplete: has ${totalBottles} bottles but needs ${requiredBottles}. Click "Don't Save" to close without saving.`);
+      setShowCloseConfirm(false);
       return;
     }
 
     toast.success('BOM saved');
+    setSelectedTrialSku(null);
+    setBomForm({ component_sku: '', bottles_required: 1 });
     setShowBOMDialog(false);
     setShowCloseConfirm(false);
   };
@@ -285,9 +288,10 @@ export default function TrialPackTab() {
             </Button>
             <Button
               onClick={handleSaveAndClose}
-              className="flex-1 h-12 text-base bg-green-600 hover:bg-green-700"
+              disabled
+              className="flex-1 h-12 text-base bg-gray-400 cursor-not-allowed"
             >
-              Save & Close
+              Save & Close (Incomplete)
             </Button>
           </div>
         </DialogContent>
