@@ -170,7 +170,7 @@ export default function SKUSetup() {
         // Trial pack: no ML or MRP needed
         const bottles = skuForm.bottles_per_box;
         const autoCode = `${brandCode}-${familyCode}-${flavourCode}-${bottles}PC`;
-        const autoName = `${skuForm.brand_name} ${skuForm.product_family} ${skuForm.flavour} Trial Pack - Pack of ${bottles}`;
+        const autoName = `${skuForm.brand_name} ${skuForm.product_family} ${skuForm.flavour} - Pack of ${bottles}`;
         setSkuForm(f => ({ ...f, item_code: autoCode, product_name: autoName }));
       } else if (skuForm.ml_per_bottle && skuForm.mrp) {
         // Regular SKU: needs ML and MRP
