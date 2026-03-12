@@ -37,7 +37,7 @@ export default function SKUSetup() {
   const [recipeGroups, setRecipeGroups] = useState([]);
   const [recipeOptions, setRecipeOptions] = useState([]);
   const [boxTypes, setBoxTypes] = useState([]);
-  const [bottleTypes, setBottleTypes] = useState([]);
+  const [containerTypes, setContainerTypes] = useState([]);
   const [ryanTemplates, setRyanTemplates] = useState([]);
   const [batchRules, setBatchRules] = useState([]);
   const [artworks, setArtworks] = useState([]);
@@ -62,12 +62,12 @@ export default function SKUSetup() {
 
   const loadAll = useCallback(async () => {
     setLoading(true);
-    const [u, s, m, rg, bt, bx, bo, rt, br, art, brnd, fam, flav] = await Promise.all([
+    const [u, s, m, rg, ct, bx, bo, rt, br, art, brnd, fam, flav] = await Promise.all([
       base44.auth.me().catch(() => null),
       base44.entities.ProductMaster.list('-created_date', 500),
       base44.entities.SKUPrintMapping.list('-created_date', 500).catch(() => []),
       base44.entities.RecipeGroup.filter({ is_active: true }, '-created_date', 200).catch(() => []),
-      base44.entities.BottleType.list('-created_date', 100).catch(() => []),
+      base44.entities.ContainerType.list('-created_date', 100).catch(() => []),
       base44.entities.BoxType.filter({ is_active: true }, '-created_date', 200).catch(() => []),
       base44.entities.RecipeOption.list('-created_date', 500).catch(() => []),
       base44.entities.RyanTemplate.filter({ is_active: true }, '-created_date', 200).catch(() => []),
@@ -81,7 +81,7 @@ export default function SKUSetup() {
     setSkus(s);
     setMappings(m);
     setRecipeGroups(rg);
-    setBottleTypes(bt);
+    setContainerTypes(ct);
     setBoxTypes(bx);
     setRecipeOptions(bo);
     setRyanTemplates(rt);
@@ -127,12 +127,16 @@ export default function SKUSetup() {
     setSkuForm(f => ({ ...f, box_type_id, bottles_per_box: bt ? bt.bottles_per_box : '' }));
   };
 
-  // Auto-fill ML when bottle type changes
-  const handleBottleTypeChange = (bottle_type) => {
-    // Extract ML from bottle type name (e.g. "PET 200ml" -> 200)
-    const mlMatch = bottle_type.match(/(\d+)\s*ml/i);
-    const ml = mlMatch ? mlMatch[1] : '';
-    setSkuForm(f => ({ ...f, bottle_type, ml_per_bottle: ml || f.ml_per_bottle }));
+  // Auto-fill ML when container type changes
+  const handleContainerTypeChange = (container_code) => {
+    const container = containerTypes.find(c => c.container_code === container_code);
+    if (container) {
+      setSkuForm(f => ({ 
+        ...f, 
+        bottle_type: container.auto_generated_name,
+        ml_per_bottle: container.ml_per_container 
+      }));
+    }
   };
 
   // Auto-calculate MRP per box when MRP or bottles change
@@ -436,27 +440,33 @@ export default function SKUSetup() {
               <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-4">
                 <p className="text-sm font-bold text-slate-700">📦 Packaging Configuration</p>
                 <div className="grid grid-cols-1 gap-4">
-                  <Field label="Bottle Type *">
-                    {bottleTypes.length > 0 ? (
+                  <Field label="Container Type *">
+                    {containerTypes.length > 0 ? (
                       <select
-                        value={skuForm.bottle_type}
-                        onChange={e => handleBottleTypeChange(e.target.value)}
+                        value={containerTypes.find(c => c.auto_generated_name === skuForm.bottle_type)?.container_code || ''}
+                        onChange={e => handleContainerTypeChange(e.target.value)}
                         className="w-full border border-slate-200 rounded-lg px-4 py-3 text-base h-12 bg-white"
                       >
-                        <option value="">— Select Bottle Type —</option>
-                        {bottleTypes.map(b => <option key={b.id} value={b.name}>{b.name}</option>)}
+                        <option value="">— Select Container Type —</option>
+                        {containerTypes.map(c => (
+                          <option key={c.id} value={c.container_code}>
+                            {c.auto_generated_name}
+                          </option>
+                        ))}
                       </select>
                     ) : (
-                      <Input value={skuForm.bottle_type} onChange={e => handleBottleTypeChange(e.target.value)} placeholder="e.g. PET 200ml" className="h-11 text-base" />
+                      <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+                        <p className="text-xs text-amber-700">No container types defined. Add in Master Data first.</p>
+                      </div>
                     )}
                   </Field>
 
-                  <Field label="ML per Bottle *" info="Volume per bottle (auto-filled from bottle type selection, cannot be edited)">
+                  <Field label="ML per Container *" info="Volume per container (auto-filled from container type selection, cannot be edited)">
                     <Input 
                       type="text" 
                       value={skuForm.ml_per_bottle || ''} 
                       readOnly 
-                      placeholder="Auto-filled from bottle type" 
+                      placeholder="Auto-filled from container type" 
                       className="h-12 text-base bg-slate-50" 
                     />
                   </Field>
