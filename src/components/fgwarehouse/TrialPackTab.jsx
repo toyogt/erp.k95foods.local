@@ -33,14 +33,27 @@ export default function TrialPackTab() {
   });
 
   const addBOMMutation = useMutation({
-    mutationFn: (data) => base44.entities.TrialPackBOM.create({
-      trial_pack_sku: selectedTrialSku,
-      ...data,
-    }),
+    mutationFn: (data) => {
+      const trialPack = trialPacks.find(p => p.item_code === selectedTrialSku);
+      const currentTotal = bomItems.reduce((sum, b) => sum + b.bottles_required, 0);
+      const newTotal = currentTotal + data.bottles_required;
+      
+      if (newTotal > (trialPack?.bottles_per_box || 0)) {
+        throw new Error(`Cannot add ${data.bottles_required} bottles. Would exceed trial pack capacity of ${trialPack.bottles_per_box} bottles.`);
+      }
+      
+      return base44.entities.TrialPackBOM.create({
+        trial_pack_sku: selectedTrialSku,
+        ...data,
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries(['trialPackBOM']);
       toast.success('Component added to BOM');
       setBomForm({ component_sku: '', bottles_required: 1 });
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to add component');
     },
   });
 
@@ -207,6 +220,18 @@ export default function TrialPackTab() {
                   );
                 })}
               </div>
+            </div>
+
+            <div className="border-t pt-4">
+              <Button
+                onClick={() => {
+                  toast.success('BOM saved');
+                  setShowBOMDialog(false);
+                }}
+                className="w-full h-12 text-base bg-green-600 hover:bg-green-700"
+              >
+                Save & Close
+              </Button>
             </div>
           </div>
         </DialogContent>
