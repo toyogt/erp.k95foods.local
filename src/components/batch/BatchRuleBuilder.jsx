@@ -82,12 +82,17 @@ export default function BatchRuleBuilder({ rule, onSaved, onCancel, saveAsNew, s
   const skuPrefix   = selectedSku?.batch_prefix || '';
   const skuNeedsPrefix = activeParts.some(p => p.type === 'sku_prefix') && !skuPrefix;
 
+  // Look up codes from master data
+  const brand = brands.find(b => b.brand_name === selectedSku?.brand_name);
+  const family = families.find(f => f.family_name === selectedSku?.product_family && f.brand_name === selectedSku?.brand_name);
+  const flavour = flavours.find(f => f.flavour_name === selectedSku?.flavour && f.brand_name === selectedSku?.brand_name && f.family_name === selectedSku?.product_family);
+
   const examples = previewExamples(formatObj, {
     date: new Date(previewDate + 'T00:00:00'),
     skuPrefix,
-    brandCode: selectedSku?.brand_code || '',
-    familyCode: selectedSku?.family_code || '',
-    flavourCode: selectedSku?.flavour_code || '',
+    brandCode: brand?.short_code || '',
+    familyCode: family?.short_code || '',
+    flavourCode: flavour?.short_code || '',
   });
 
   const canSave = ruleName.trim() && patternErrors.length === 0;

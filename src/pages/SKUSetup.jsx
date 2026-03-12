@@ -750,6 +750,9 @@ export default function SKUSetup() {
             rule={ruleBuilderMode === 'create' ? null : ruleBuilderRule}
             saveAsNew={ruleBuilderMode === 'duplicate'}
             skus={skus}
+            brands={brands}
+            families={families}
+            flavours={flavours}
             isAdmin={isAdmin}
             onSaved={async (saved) => {
               setRuleBuilderOpen(false);
