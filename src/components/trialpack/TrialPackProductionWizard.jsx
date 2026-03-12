@@ -110,6 +110,7 @@ export default function TrialPackProductionWizard({ onClose }) {
     setScannedBoxes([...scannedBoxes, { 
       lot_id: lotId, 
       sku_code: lot.sku_code, 
+      component_sku: lot.sku_code,
       batch_code: lot.batch_code, 
       mfg_date: lot.mfg_date, 
       exp_date: lot.exp_date,
