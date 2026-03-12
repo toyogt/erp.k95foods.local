@@ -85,6 +85,9 @@ export default function BatchRuleBuilder({ rule, onSaved, onCancel, saveAsNew, s
   const examples = previewExamples(formatObj, {
     date: new Date(previewDate + 'T00:00:00'),
     skuPrefix,
+    brandCode: selectedSku?.brand_code || '',
+    familyCode: selectedSku?.family_code || '',
+    flavourCode: selectedSku?.flavour_code || '',
   });
 
   const canSave = ruleName.trim() && patternErrors.length === 0;
