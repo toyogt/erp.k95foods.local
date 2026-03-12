@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
+import { renderBatchId, parseFormatJson } from '@/components/batch/batchRuleEngine';
 
 const SOURCE_OPTIONS = [
   { value: 'sku_batch_id', label: 'Batch ID' },
@@ -33,9 +34,30 @@ function formatDate(str, fmt) {
   }
 }
 
-function previewValue(row, sku) {
+function previewValue(row, sku, batchRule, brands, families, flavours) {
   switch (row.source) {
-    case 'sku_batch_id': return sku?.batch_prefix ? `${sku.batch_prefix}01` : 'BATCH001';
+    case 'sku_batch_id': {
+      // Use actual batch rule to generate preview
+      if (batchRule && batchRule.format_json) {
+        const formatObj = parseFormatJson(batchRule.format_json);
+        if (formatObj) {
+          const brand = brands?.find(b => b.brand_name === sku?.brand_name);
+          const family = families?.find(f => f.family_name === sku?.product_family);
+          const flavour = flavours?.find(f => f.flavour_name === sku?.flavour);
+          const ctx = {
+            date: new Date(),
+            seq: 1,
+            skuPrefix: sku?.item_code?.substring(0, 3) || '',
+            brandCode: brand?.short_code || '',
+            familyCode: family?.short_code || '',
+            flavourCode: flavour?.short_code || '',
+            uniqueId: '100000', // Preview value
+          };
+          return renderBatchId(formatObj, ctx);
+        }
+      }
+      return sku?.batch_prefix ? `${sku.batch_prefix}01` : 'BATCH001';
+    }
     case 'mfg_date': return formatDate(null, row.format || 'DDMMYY');
     case 'exp_date': return formatDate(null, row.format || 'DDMMYY') + ' (+shelf)';
     case 'mrp': return sku?.mrp || sku?.mrp_box || '120.00';
@@ -48,7 +70,7 @@ function previewValue(row, sku) {
   }
 }
 
-export default function PayloadMapBuilder({ rows, onChange, templatePlaceholders, sku }) {
+export default function PayloadMapBuilder({ rows, onChange, templatePlaceholders, sku, batchRule, brands, families, flavours }) {
   // Merge template placeholders with existing rows
   const [localRows, setLocalRows] = useState(rows || []);
 
@@ -128,7 +150,7 @@ export default function PayloadMapBuilder({ rows, onChange, templatePlaceholders
               </div>
               <div className="col-span-4">
                 <div className="h-9 px-2 flex items-center text-xs font-mono bg-slate-50 border border-slate-200 rounded-md text-slate-700 overflow-hidden">
-                  {previewValue(row, sku)}
+                  {previewValue(row, sku, batchRule, brands, families, flavours)}
                 </div>
               </div>
             </div>

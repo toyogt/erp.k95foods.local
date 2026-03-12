@@ -719,6 +719,10 @@ export default function SKUSetup() {
                     onChange={setPayloadRows}
                     templatePlaceholders={templatePlaceholders}
                     sku={skuForm}
+                    batchRule={batchRules.find(r => r.rule_id === mappingForm.batch_format_rule_id)}
+                    brands={brands}
+                    families={families}
+                    flavours={flavours}
                   />
                 </div>
               </div>
