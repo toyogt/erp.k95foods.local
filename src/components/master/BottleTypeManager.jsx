@@ -3,7 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus, Trash2, Loader2, Package } from 'lucide-react';
+import { Plus, Trash2, Loader2, Package, Pencil } from 'lucide-react';
 import { logAudit } from '@/components/AuditLogger';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
@@ -11,7 +11,8 @@ export default function BottleTypeManager({ user }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: '', bottles_per_crate: '' });
+  const [editingId, setEditingId] = useState(null);
+  const [form, setForm] = useState({ name: '', ml_per_bottle: '', bottles_per_crate: '' });
 
   useEffect(() => { load(); }, []);
 
@@ -22,16 +23,41 @@ export default function BottleTypeManager({ user }) {
     setLoading(false);
   }
 
-  async function handleCreate() {
+  async function handleSave() {
     if (!form.name || !form.bottles_per_crate) return;
-    await base44.entities.BottleType.create({
+    const payload = {
       name: form.name,
       bottles_per_crate: Number(form.bottles_per_crate),
-    });
-    await logAudit({ action: 'Created bottle type: ' + form.name, entity_type: 'BottleType', entity_id: form.name, user });
-    setForm({ name: '', bottles_per_crate: '' });
+    };
+    if (form.ml_per_bottle) payload.ml_per_bottle = Number(form.ml_per_bottle);
+
+    if (editingId) {
+      await base44.entities.BottleType.update(editingId, payload);
+      await logAudit({ action: 'Updated bottle type: ' + form.name, entity_type: 'BottleType', entity_id: form.name, user });
+    } else {
+      await base44.entities.BottleType.create(payload);
+      await logAudit({ action: 'Created bottle type: ' + form.name, entity_type: 'BottleType', entity_id: form.name, user });
+    }
+    setForm({ name: '', ml_per_bottle: '', bottles_per_crate: '' });
+    setEditingId(null);
     setOpen(false);
     load();
+  }
+
+  function handleEdit(item) {
+    setForm({ 
+      name: item.name, 
+      ml_per_bottle: item.ml_per_bottle || '', 
+      bottles_per_crate: item.bottles_per_crate 
+    });
+    setEditingId(item.id);
+    setOpen(true);
+  }
+
+  function handleCancel() {
+    setForm({ name: '', ml_per_bottle: '', bottles_per_crate: '' });
+    setEditingId(null);
+    setOpen(false);
   }
 
   async function handleDelete(item) {
@@ -48,24 +74,28 @@ export default function BottleTypeManager({ user }) {
         <h3 className="font-semibold text-slate-900 flex items-center gap-2">
           <Package className="w-5 h-5" /> Bottle Types
         </h3>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={handleCancel}>
           <DialogTrigger asChild>
             <Button size="sm" className="rounded-xl gap-1.5 h-10 px-4">
               <Plus className="w-4 h-4" /> Add
             </Button>
           </DialogTrigger>
           <DialogContent>
-            <DialogHeader><DialogTitle>Add Bottle Type</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{editingId ? 'Edit' : 'Add'} Bottle Type</DialogTitle></DialogHeader>
             <div className="space-y-4 pt-2">
               <div>
                 <Label>Name</Label>
-                <Input placeholder="e.g. 200ml" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="mt-1 rounded-xl h-12" />
+                <Input placeholder="e.g. PET 200ml" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="mt-1 rounded-xl h-12" />
+              </div>
+              <div>
+                <Label>ML per Bottle</Label>
+                <Input type="number" placeholder="e.g. 200" value={form.ml_per_bottle} onChange={e => setForm({ ...form, ml_per_bottle: e.target.value })} className="mt-1 rounded-xl h-12" />
               </div>
               <div>
                 <Label>Bottles per Crate</Label>
                 <Input type="number" placeholder="e.g. 24" value={form.bottles_per_crate} onChange={e => setForm({ ...form, bottles_per_crate: e.target.value })} className="mt-1 rounded-xl h-12" />
               </div>
-              <Button onClick={handleCreate} className="w-full h-12 rounded-xl text-base">Create</Button>
+              <Button onClick={handleSave} className="w-full h-12 rounded-xl text-base">{editingId ? 'Update' : 'Create'}</Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -79,11 +109,19 @@ export default function BottleTypeManager({ user }) {
             <div key={item.id} className="flex items-center justify-between p-4 rounded-xl bg-white border border-slate-200">
               <div>
                 <span className="font-semibold text-slate-900">{item.name}</span>
-                <span className="text-sm text-slate-500 ml-2">({item.bottles_per_crate} per crate)</span>
+                <span className="text-sm text-slate-500 ml-2">
+                  {item.ml_per_bottle && `${item.ml_per_bottle}ml • `}
+                  {item.bottles_per_crate} per crate
+                </span>
               </div>
-              <Button variant="ghost" size="icon" onClick={() => handleDelete(item)} className="text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg">
-                <Trash2 className="w-4 h-4" />
-              </Button>
+              <div className="flex gap-1">
+                <Button variant="ghost" size="icon" onClick={() => handleEdit(item)} className="text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg">
+                  <Pencil className="w-4 h-4" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={() => handleDelete(item)} className="text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg">
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
           ))}
         </div>
