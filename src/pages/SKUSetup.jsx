@@ -447,61 +447,63 @@ export default function SKUSetup() {
               <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-4">
                 <p className="text-sm font-bold text-slate-700">📦 Packaging Configuration</p>
                 <div className="grid grid-cols-1 gap-4">
-                  <Field label={skuForm.is_trial_pack ? "Container Type" : "Container Type *"}>
-                    {containerTypes.length > 0 ? (
-                      <select
-                        value={containerTypes.find(c => c.auto_generated_name === skuForm.bottle_type)?.container_code || ''}
-                        onChange={e => handleContainerTypeChange(e.target.value)}
-                        className="w-full border border-slate-200 rounded-lg px-4 py-3 text-base h-12 bg-white"
-                      >
-                        <option value="">— Select Container Type —</option>
-                        {containerTypes.map(c => (
-                          <option key={c.id} value={c.container_code}>
-                            {c.auto_generated_name}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
-                        <p className="text-xs text-amber-700">No container types defined. Add in Master Data first.</p>
-                      </div>
-                    )}
-                  </Field>
-
                   {!skuForm.is_trial_pack && (
-                    <Field label="ML per Container *" info="Volume per container (auto-filled from container type selection, cannot be edited)">
-                    <Input 
-                      type="text" 
-                      value={
-                        containerTypes.find(c => c.auto_generated_name === skuForm.bottle_type)?.ml_per_container || ''
-                      } 
-                      readOnly 
-                      placeholder="Select container type first" 
-                      className="h-12 text-base bg-slate-50" 
-                    />
-                  </Field>
-                  )}
+                    <>
+                      <Field label="Container Type *">
+                        {containerTypes.length > 0 ? (
+                          <select
+                            value={containerTypes.find(c => c.auto_generated_name === skuForm.bottle_type)?.container_code || ''}
+                            onChange={e => handleContainerTypeChange(e.target.value)}
+                            className="w-full border border-slate-200 rounded-lg px-4 py-3 text-base h-12 bg-white"
+                          >
+                            <option value="">— Select Container Type —</option>
+                            {containerTypes.map(c => (
+                              <option key={c.id} value={c.container_code}>
+                                {c.auto_generated_name}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+                            <p className="text-xs text-amber-700">No container types defined. Add in Master Data first.</p>
+                          </div>
+                        )}
+                      </Field>
 
-                  <Field label={skuForm.is_trial_pack ? "Cap Type" : "Cap Type *"}>
-                    {capTypes.length > 0 ? (
-                      <select
-                        value={skuForm.cap_sku_code || ''}
-                        onChange={e => setSkuForm(f => ({ ...f, cap_sku_code: e.target.value }))}
-                        className="w-full border border-slate-200 rounded-lg px-4 py-3 text-base h-12 bg-white"
-                      >
-                        <option value="">— Select Cap Type —</option>
-                        {capTypes.map(c => (
-                          <option key={c.id} value={c.cap_sku_code}>
-                            {c.cap_name}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
-                        <p className="text-xs text-amber-700">No cap types defined. Add in Master Data first.</p>
-                      </div>
-                    )}
-                  </Field>
+                      <Field label="ML per Container *" info="Volume per container (auto-filled from container type selection, cannot be edited)">
+                        <Input 
+                          type="text" 
+                          value={
+                            containerTypes.find(c => c.auto_generated_name === skuForm.bottle_type)?.ml_per_container || ''
+                          } 
+                          readOnly 
+                          placeholder="Select container type first" 
+                          className="h-12 text-base bg-slate-50" 
+                        />
+                      </Field>
+
+                      <Field label="Cap Type *">
+                        {capTypes.length > 0 ? (
+                          <select
+                            value={skuForm.cap_sku_code || ''}
+                            onChange={e => setSkuForm(f => ({ ...f, cap_sku_code: e.target.value }))}
+                            className="w-full border border-slate-200 rounded-lg px-4 py-3 text-base h-12 bg-white"
+                          >
+                            <option value="">— Select Cap Type —</option>
+                            {capTypes.map(c => (
+                              <option key={c.id} value={c.cap_sku_code}>
+                                {c.cap_name}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+                            <p className="text-xs text-amber-700">No cap types defined. Add in Master Data first.</p>
+                          </div>
+                        )}
+                      </Field>
+                    </>
+                  )}
 
                   <Field label="Box Type *">
                     <select
@@ -566,33 +568,40 @@ export default function SKUSetup() {
                 <p className="text-sm font-bold text-slate-700">💰 Pricing & Specifications</p>
                 <div className="grid grid-cols-2 gap-4">
                   {!skuForm.is_trial_pack && (
-                    <Field label="Product Barcode" info="Barcode printed on individual bottles/products for retail scanning">
-                      <Input value={skuForm.product_barcode} onChange={e => setSkuForm(f => ({ ...f, product_barcode: e.target.value }))} placeholder="8901234567890" className="h-12 text-base font-mono" />
+                    <>
+                      <Field label="Product Barcode" info="Barcode printed on individual bottles/products for retail scanning">
+                        <Input value={skuForm.product_barcode} onChange={e => setSkuForm(f => ({ ...f, product_barcode: e.target.value }))} placeholder="8901234567890" className="h-12 text-base font-mono" />
+                      </Field>
+                      <Field label="Box Barcode" info="Barcode printed on shipping boxes/cartons for warehouse and logistics scanning">
+                        <Input value={skuForm.box_barcode} onChange={e => setSkuForm(f => ({ ...f, box_barcode: e.target.value }))} placeholder="8901234567999" className="h-12 text-base font-mono" />
+                      </Field>
+                      <Field label="MRP per Bottle (₹) *">
+                        <Input 
+                          type="text" 
+                          inputMode="decimal" 
+                          value={skuForm.mrp} 
+                          onChange={e => setSkuForm(f => ({ ...f, mrp: e.target.value.replace(/[^0-9.]/g, '') }))} 
+                          placeholder="25" 
+                          className="h-12 text-base" 
+                        />
+                      </Field>
+                      <Field label="MRP per Box (₹)" info="Automatically calculated by multiplying MRP per bottle × bottles per box (cannot be edited)">
+                        <Input 
+                          type="text" 
+                          inputMode="decimal" 
+                          value={skuForm.mrp_box} 
+                          readOnly 
+                          placeholder="Auto-calculated" 
+                          className="h-12 text-base bg-slate-50" 
+                        />
+                      </Field>
+                    </>
+                  )}
+                  {skuForm.is_trial_pack && (
+                    <Field label="Box Barcode" info="Barcode printed on shipping boxes/cartons for warehouse and logistics scanning" className="col-span-2">
+                      <Input value={skuForm.box_barcode} onChange={e => setSkuForm(f => ({ ...f, box_barcode: e.target.value }))} placeholder="8901234567999" className="h-12 text-base font-mono" />
                     </Field>
                   )}
-                  <Field label="Box Barcode" info="Barcode printed on shipping boxes/cartons for warehouse and logistics scanning" className={skuForm.is_trial_pack ? 'col-span-2' : ''}>
-                    <Input value={skuForm.box_barcode} onChange={e => setSkuForm(f => ({ ...f, box_barcode: e.target.value }))} placeholder="8901234567999" className="h-12 text-base font-mono" />
-                  </Field>
-                  <Field label="MRP per Bottle (₹) *">
-                    <Input 
-                      type="text" 
-                      inputMode="decimal" 
-                      value={skuForm.mrp} 
-                      onChange={e => setSkuForm(f => ({ ...f, mrp: e.target.value.replace(/[^0-9.]/g, '') }))} 
-                      placeholder="25" 
-                      className="h-12 text-base" 
-                    />
-                  </Field>
-                  <Field label="MRP per Box (₹)" info="Automatically calculated by multiplying MRP per bottle × bottles per box (cannot be edited)">
-                    <Input 
-                      type="text" 
-                      inputMode="decimal" 
-                      value={skuForm.mrp_box} 
-                      readOnly 
-                      placeholder="Auto-calculated" 
-                      className="h-12 text-base bg-slate-50" 
-                    />
-                  </Field>
                 </div>
               </div>
 
