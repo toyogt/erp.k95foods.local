@@ -122,9 +122,9 @@ export default function ContainerTypeManager({ user }) {
         <h3 className="font-semibold text-slate-900 flex items-center gap-2">
           <Package className="w-5 h-5" /> Container Types
         </h3>
-        <Dialog open={open} onOpenChange={handleCancel}>
+        <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button size="sm" className="rounded-xl gap-1.5 h-12 px-5">
+            <Button size="sm" className="rounded-xl gap-1.5 h-12 px-5" onClick={() => setOpen(true)}>
               <Plus className="w-5 h-5" /> Add Container
             </Button>
           </DialogTrigger>
