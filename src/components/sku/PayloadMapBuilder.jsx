@@ -1,6 +1,4 @@
 import { useState, useEffect } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 const SOURCE_OPTIONS = [
@@ -73,76 +71,70 @@ export default function PayloadMapBuilder({ rows, onChange, templatePlaceholders
     update(next);
   };
 
-  const addRow = () => update([...localRows, { placeholder: '', source: '', format: '', custom_text: '' }]);
-  const removeRow = (idx) => update(localRows.filter((_, i) => i !== idx));
-
   return (
     <div className="space-y-3">
-      {/* Table header */}
-      <div className="grid grid-cols-12 gap-2 text-xs font-semibold text-slate-500 px-1">
-        <div className="col-span-3">Placeholder</div>
-        <div className="col-span-3">Value Source</div>
-        <div className="col-span-2">Format</div>
-        <div className="col-span-3">Preview</div>
-        <div className="col-span-1"></div>
-      </div>
-
-      {localRows.map((row, idx) => (
-        <div key={idx} className="grid grid-cols-12 gap-2 items-center">
-          <div className="col-span-3">
-            <Input
-              value={row.placeholder}
-              onChange={e => setRow(idx, { placeholder: e.target.value })}
-              placeholder="e.g. BATCH"
-              className="text-xs h-9 font-mono"
-            />
-          </div>
-          <div className="col-span-3">
-            <select
-              value={row.source}
-              onChange={e => setRow(idx, { source: e.target.value })}
-              className="w-full border border-slate-200 rounded-md px-2 py-1.5 text-xs bg-white h-9"
-            >
-              <option value="">— source —</option>
-              {SOURCE_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-            </select>
-          </div>
-          <div className="col-span-2">
-            {DATE_SOURCES.includes(row.source) ? (
-              <select
-                value={row.format || 'DDMMYY'}
-                onChange={e => setRow(idx, { format: e.target.value })}
-                className="w-full border border-slate-200 rounded-md px-2 py-1.5 text-xs bg-white h-9"
-              >
-                {DATE_FORMATS.map(f => <option key={f} value={f}>{f}</option>)}
-              </select>
-            ) : row.source === 'custom_text' ? (
-              <Input
-                value={row.custom_text || ''}
-                onChange={e => setRow(idx, { custom_text: e.target.value })}
-                placeholder="text"
-                className="text-xs h-9"
-              />
-            ) : (
-              <div className="h-9 px-2 flex items-center text-xs text-slate-400">—</div>
-            )}
-          </div>
-          <div className="col-span-3">
-            <div className="h-9 px-2 flex items-center text-xs font-mono bg-slate-50 border border-slate-200 rounded-md text-slate-700 overflow-hidden">
-              {previewValue(row, sku)}
-            </div>
-          </div>
-          <div className="col-span-1 flex justify-center">
-            <button onClick={() => removeRow(idx)} className="p-1 hover:bg-red-50 rounded text-slate-400 hover:text-red-500">
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
-          </div>
+      {localRows.length === 0 ? (
+        <div className="text-center py-8 text-sm text-slate-400">
+          Select a Ryan Template to configure payload mapping
         </div>
-      ))}
+      ) : (
+        <>
+          {/* Table header */}
+          <div className="grid grid-cols-12 gap-2 text-xs font-semibold text-slate-500 px-1">
+            <div className="col-span-3">Placeholder</div>
+            <div className="col-span-3">Value Source</div>
+            <div className="col-span-2">Format</div>
+            <div className="col-span-4">Preview</div>
+          </div>
 
-      <Button variant="outline" size="sm" onClick={addRow} className="gap-2 text-xs h-8">
-        <Plus className="w-3.5 h-3.5" /> Add Row
-      </Button>
+          {localRows.map((row, idx) => (
+            <div key={idx} className="grid grid-cols-12 gap-2 items-center">
+              <div className="col-span-3">
+                <Input
+                  value={row.placeholder}
+                  readOnly
+                  className="text-xs h-9 font-mono bg-slate-50"
+                />
+              </div>
+              <div className="col-span-3">
+                <select
+                  value={row.source}
+                  onChange={e => setRow(idx, { source: e.target.value })}
+                  className="w-full border border-slate-200 rounded-md px-2 py-1.5 text-xs bg-white h-9"
+                >
+                  <option value="">— source —</option>
+                  {SOURCE_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                </select>
+              </div>
+              <div className="col-span-2">
+                {DATE_SOURCES.includes(row.source) ? (
+                  <select
+                    value={row.format || 'DDMMYY'}
+                    onChange={e => setRow(idx, { format: e.target.value })}
+                    className="w-full border border-slate-200 rounded-md px-2 py-1.5 text-xs bg-white h-9"
+                  >
+                    {DATE_FORMATS.map(f => <option key={f} value={f}>{f}</option>)}
+                  </select>
+                ) : row.source === 'custom_text' ? (
+                  <Input
+                    value={row.custom_text || ''}
+                    onChange={e => setRow(idx, { custom_text: e.target.value })}
+                    placeholder="text"
+                    className="text-xs h-9"
+                  />
+                ) : (
+                  <div className="h-9 px-2 flex items-center text-xs text-slate-400">—</div>
+                )}
+              </div>
+              <div className="col-span-4">
+                <div className="h-9 px-2 flex items-center text-xs font-mono bg-slate-50 border border-slate-200 rounded-md text-slate-700 overflow-hidden">
+                  {previewValue(row, sku)}
+                </div>
+              </div>
+            </div>
+          ))}
+        </>
+      )}
     </div>
   );
 }
