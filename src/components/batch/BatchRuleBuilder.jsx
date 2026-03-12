@@ -24,6 +24,7 @@ const PART_TYPES = [
   { value: 'family_code',  label: 'FAMILY_CODE (family short code)' },
   { value: 'flavour_code', label: 'FLAVOUR_CODE (flavour short code)' },
   { value: 'date_serial',  label: 'DATE_SERIAL (Excel integer)' },
+  { value: 'unique_id',    label: 'UNIQUE_ID (6-digit unique)' },
   { value: 'dup_suffix',   label: 'DUP_SUFFIX (e.g. -2 if dup)' },
 ];
 
@@ -87,12 +88,16 @@ export default function BatchRuleBuilder({ rule, onSaved, onCancel, saveAsNew, s
   const family = families.find(f => f.family_name === selectedSku?.product_family && f.brand_name === selectedSku?.brand_name);
   const flavour = flavours.find(f => f.flavour_name === selectedSku?.flavour && f.brand_name === selectedSku?.brand_name && f.family_name === selectedSku?.product_family);
 
+  // Generate a sample unique ID for preview
+  const sampleUniqueId = String(Math.floor(100000 + Math.random() * 900000));
+
   const examples = previewExamples(formatObj, {
     date: new Date(previewDate + 'T00:00:00'),
     skuPrefix,
     brandCode: brand?.short_code || '',
     familyCode: family?.short_code || '',
     flavourCode: flavour?.short_code || '',
+    uniqueId: sampleUniqueId,
   });
 
   const canSave = ruleName.trim() && patternErrors.length === 0;
@@ -208,7 +213,7 @@ export default function BatchRuleBuilder({ rule, onSaved, onCancel, saveAsNew, s
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-600 space-y-1">
             <p className="font-semibold text-slate-700 mb-1">Allowed tokens:</p>
             <div className="flex flex-wrap gap-1.5">
-              {['{TEXT:KFB}','{DD}','{MM}','{MONTH_LETTER}','{YY}','{YYYY}','{SEQ:2}','{SEQ:3}','{SKU_PREFIX}','{BRAND_CODE}','{FAMILY_CODE}','{FLAVOUR_CODE}','{DATE_SERIAL}','{DUP_SUFFIX}'].map(t => (
+              {['{TEXT:KFB}','{DD}','{MM}','{MONTH_LETTER}','{YY}','{YYYY}','{SEQ:2}','{SEQ:3}','{SKU_PREFIX}','{BRAND_CODE}','{FAMILY_CODE}','{FLAVOUR_CODE}','{DATE_SERIAL}','{UNIQUE_ID}','{DUP_SUFFIX}'].map(t => (
                 <button
                   key={t}
                   onClick={() => setPattern(p => p + t)}
