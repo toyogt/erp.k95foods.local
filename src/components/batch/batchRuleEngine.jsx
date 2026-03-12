@@ -39,6 +39,9 @@ export function renderBatchId(formatObj, ctx) {
       case 'yyyy':        result += yyyy; break;
       case 'seq':         result += String(seq).padStart(part.pad || 2, '0'); break;
       case 'sku_prefix':  result += skuPrefix; break;
+      case 'brand_code':  result += ctx.brandCode || ''; break;
+      case 'family_code': result += ctx.familyCode || ''; break;
+      case 'flavour_code':result += ctx.flavourCode || ''; break;
       case 'date_serial': result += String(dateSerial); break;
       case 'dup_suffix':  result += seq > 1 ? (part.prefix || '-') + String(seq - 1) : ''; break;
       default: break;
@@ -65,13 +68,13 @@ export function parseFormatJson(raw) {
 }
 
 // ── PATTERN MODE ──────────────────────────────────────────────
-const VALID_TOKENS = /\{(TEXT:[^}]+|DD|MM|MONTH_LETTER|YY|YYYY|SEQ:\d+|SKU_PREFIX|DATE_SERIAL|DUP_SUFFIX)\}/g;
+const VALID_TOKENS = /\{(TEXT:[^}]+|DD|MM|MONTH_LETTER|YY|YYYY|SEQ:\d+|SKU_PREFIX|BRAND_CODE|FAMILY_CODE|FLAVOUR_CODE|DATE_SERIAL|DUP_SUFFIX)\}/g;
 
 export function validatePattern(pattern) {
   const errors = [];
   const allTokens = [...pattern.matchAll(/\{[^}]*\}/g)].map(m => m[0]);
   for (const t of allTokens) {
-    if (!t.match(/^\{(TEXT:[^}]+|DD|MM|MONTH_LETTER|YY|YYYY|SEQ:\d+|SKU_PREFIX|DATE_SERIAL|DUP_SUFFIX)\}$/)) {
+    if (!t.match(/^\{(TEXT:[^}]+|DD|MM|MONTH_LETTER|YY|YYYY|SEQ:\d+|SKU_PREFIX|BRAND_CODE|FAMILY_CODE|FLAVOUR_CODE|DATE_SERIAL|DUP_SUFFIX)\}$/)) {
       errors.push(`Unknown token: ${t}`);
     }
   }
@@ -81,7 +84,7 @@ export function validatePattern(pattern) {
 export function patternToParts(pattern) {
   const parts = [];
   let last = 0;
-  const re = /\{(TEXT:[^}]+|DD|MM|MONTH_LETTER|YY|YYYY|SEQ:\d+|SKU_PREFIX|DATE_SERIAL|DUP_SUFFIX)\}/g;
+  const re = /\{(TEXT:[^}]+|DD|MM|MONTH_LETTER|YY|YYYY|SEQ:\d+|SKU_PREFIX|BRAND_CODE|FAMILY_CODE|FLAVOUR_CODE|DATE_SERIAL|DUP_SUFFIX)\}/g;
   let m;
   while ((m = re.exec(pattern)) !== null) {
     if (m.index > last) {
@@ -97,6 +100,9 @@ export function patternToParts(pattern) {
     else if (tok === 'YYYY')            parts.push({ type: 'yyyy' });
     else if (tok.startsWith('SEQ:'))    parts.push({ type: 'seq', pad: parseInt(tok.split(':')[1]) || 2 });
     else if (tok === 'SKU_PREFIX')      parts.push({ type: 'sku_prefix' });
+    else if (tok === 'BRAND_CODE')      parts.push({ type: 'brand_code' });
+    else if (tok === 'FAMILY_CODE')     parts.push({ type: 'family_code' });
+    else if (tok === 'FLAVOUR_CODE')    parts.push({ type: 'flavour_code' });
     else if (tok === 'DATE_SERIAL')     parts.push({ type: 'date_serial' });
     else if (tok === 'DUP_SUFFIX')      parts.push({ type: 'dup_suffix', prefix: '-', value: 'seq_minus_1' });
     last = m.index + m[0].length;
@@ -119,6 +125,9 @@ export function partsToPattern(parts) {
       case 'yyyy':         return '{YYYY}';
       case 'seq':          return `{SEQ:${p.pad || 2}}`;
       case 'sku_prefix':   return '{SKU_PREFIX}';
+      case 'brand_code':   return '{BRAND_CODE}';
+      case 'family_code':  return '{FAMILY_CODE}';
+      case 'flavour_code': return '{FLAVOUR_CODE}';
       case 'date_serial':  return '{DATE_SERIAL}';
       case 'dup_suffix':   return '{DUP_SUFFIX}';
       default: return '';
