@@ -5,7 +5,7 @@ const checks = [
   { key: 'default_recipe_option_id', label: 'Default Recipe Option', skipForTrialPack: true },
   { key: 'bottle_type', label: 'Container Type', skipForTrialPack: true },
   { key: 'cap_sku_code', label: 'Cap Type', skipForTrialPack: true },
-  { key: 'box_type_id', label: 'Box Type' },
+  { key: 'box_type_id', label: 'Box Type', skipForTrialPack: true },
   { key: 'shelf_life_days', label: 'Shelf Life', skipForTrialPack: true },
 ];
 
