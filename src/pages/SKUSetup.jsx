@@ -158,22 +158,31 @@ export default function SKUSetup() {
 
   // Auto-generate SKU code and name when all required fields are filled
   useEffect(() => {
-    if (!selected && skuForm.brand_name && skuForm.product_family && skuForm.flavour && 
-        skuForm.ml_per_bottle && skuForm.bottles_per_box && skuForm.mrp) {
+    if (!selected && skuForm.brand_name && skuForm.product_family && skuForm.flavour && skuForm.bottles_per_box) {
       const brand = brands.find(b => b.brand_name === skuForm.brand_name);
       const family = families.find(f => f.family_name === skuForm.product_family);
       const flavour = flavours.find(f => f.flavour_name === skuForm.flavour);
       const brandCode = brand?.short_code || skuForm.brand_name.substring(0, 3).toUpperCase();
       const familyCode = family?.short_code || skuForm.product_family.substring(0, 3).toUpperCase();
       const flavourCode = flavour?.short_code || skuForm.flavour.substring(0, 3).toUpperCase();
-      const ml = skuForm.ml_per_bottle;
-      const bottles = skuForm.bottles_per_box;
-      const mrp = Math.round(skuForm.mrp);
-      const autoCode = `${brandCode}-${familyCode}-${flavourCode}-${ml}ML-${bottles}X${mrp}`;
-      const autoName = `${skuForm.brand_name} ${skuForm.product_family} ${skuForm.flavour} ${ml}ml - Pack of ${bottles}`;
-      setSkuForm(f => ({ ...f, item_code: autoCode, product_name: autoName }));
+      
+      if (skuForm.is_trial_pack) {
+        // Trial pack: no ML or MRP needed
+        const bottles = skuForm.bottles_per_box;
+        const autoCode = `${brandCode}-${familyCode}-${flavourCode}-TRIAL-${bottles}PC`;
+        const autoName = `${skuForm.brand_name} ${skuForm.product_family} ${skuForm.flavour} Trial Pack - ${bottles} pieces`;
+        setSkuForm(f => ({ ...f, item_code: autoCode, product_name: autoName }));
+      } else if (skuForm.ml_per_bottle && skuForm.mrp) {
+        // Regular SKU: needs ML and MRP
+        const ml = skuForm.ml_per_bottle;
+        const bottles = skuForm.bottles_per_box;
+        const mrp = Math.round(skuForm.mrp);
+        const autoCode = `${brandCode}-${familyCode}-${flavourCode}-${ml}ML-${bottles}X${mrp}`;
+        const autoName = `${skuForm.brand_name} ${skuForm.product_family} ${skuForm.flavour} ${ml}ml - Pack of ${bottles}`;
+        setSkuForm(f => ({ ...f, item_code: autoCode, product_name: autoName }));
+      }
     }
-  }, [skuForm.brand_name, skuForm.product_family, skuForm.flavour, skuForm.ml_per_bottle, skuForm.bottles_per_box, skuForm.mrp, selected, brands, families, flavours]);
+  }, [skuForm.brand_name, skuForm.product_family, skuForm.flavour, skuForm.ml_per_bottle, skuForm.bottles_per_box, skuForm.mrp, skuForm.is_trial_pack, selected, brands, families, flavours]);
 
   // Filtered recipe options for selected group
   const filteredOptions = recipeOptions.filter(o => o.recipe_group_id === skuForm.recipe_group_id);
