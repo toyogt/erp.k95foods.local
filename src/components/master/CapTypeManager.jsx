@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Plus, Pencil, Trash2, Loader2, Upload, FileText, X, ExternalLink, Users } from 'lucide-react';
-import { logAction } from '@/components/AuditLogger';
+import { logAudit } from '@/components/AuditLogger';
 
 export default function CapTypeManager({ user }) {
   const [caps, setCaps] = useState([]);
@@ -107,10 +107,10 @@ export default function CapTypeManager({ user }) {
     try {
       if (selectedCap) {
         await base44.entities.CapType.update(selectedCap.id, payload);
-        await logAction('Update Cap Type', 'CapType', selectedCap.cap_sku_code, user, { cap_sku: selectedCap.cap_sku_code });
+        await logAudit({ action: 'Update Cap Type', entity_type: 'CapType', entity_id: selectedCap.cap_sku_code, user, details: { cap_sku: selectedCap.cap_sku_code } });
       } else {
         await base44.entities.CapType.create(payload);
-        await logAction('Create Cap Type', 'CapType', sku, user, { cap_sku: sku });
+        await logAudit({ action: 'Create Cap Type', entity_type: 'CapType', entity_id: sku, user, details: { cap_sku: sku } });
       }
       setDialogOpen(false);
       resetForm();
@@ -124,7 +124,7 @@ export default function CapTypeManager({ user }) {
   async function handleDelete(cap) {
     if (!confirm(`Delete cap "${cap.cap_name}"?`)) return;
     await base44.entities.CapType.delete(cap.id);
-    await logAction('Delete Cap Type', 'CapType', cap.cap_sku_code, user, { cap_sku: cap.cap_sku_code });
+    await logAudit({ action: 'Delete Cap Type', entity_type: 'CapType', entity_id: cap.cap_sku_code, user, details: { cap_sku: cap.cap_sku_code } });
     await loadData();
   }
 
@@ -174,7 +174,7 @@ export default function CapTypeManager({ user }) {
     };
     try {
       await base44.entities.CapVendor.create(payload);
-      await logAction('Add Cap Vendor', 'CapVendor', selectedCap.cap_sku_code, user, { vendor: vendorForm.vendor_name });
+      await logAudit({ action: 'Add Cap Vendor', entity_type: 'CapVendor', entity_id: selectedCap.cap_sku_code, user, details: { vendor: vendorForm.vendor_name } });
       setVendorDialogOpen(false);
       await loadData();
     } catch (err) {
