@@ -37,10 +37,12 @@ export default function TrialPackTab() {
     mutationFn: (data) => {
       const trialPack = trialPacks.find(p => p.item_code === selectedTrialSku);
       const currentTotal = bomItems.reduce((sum, b) => sum + b.bottles_required, 0);
-      const newTotal = currentTotal + (parseInt(data.bottles_required) || 0);
+      const bottlesRequired = parseInt(data.bottles_required) || 0;
+      const newTotal = currentTotal + bottlesRequired;
+      const capacity = trialPack?.bottles_per_box || 0;
       
-      if (newTotal > (trialPack?.bottles_per_box || 0)) {
-        throw new Error(`Cannot add ${data.bottles_required} bottles. Would exceed trial pack capacity of ${trialPack.bottles_per_box} bottles.`);
+      if (newTotal > capacity) {
+        throw new Error(`Cannot add ${bottlesRequired} bottles. Current BOM has ${currentTotal} bottles, but trial pack capacity is only ${capacity} bottles.`);
       }
       
       return base44.entities.TrialPackBOM.create({
@@ -54,7 +56,7 @@ export default function TrialPackTab() {
       setBomForm({ component_sku: '', bottles_required: 1 });
     },
     onError: (error) => {
-      toast.error(error.message || 'Failed to add component');
+      toast.error(error.message || 'Failed to add component', { duration: 4000 });
     },
   });
 
