@@ -10,12 +10,14 @@ import { logAudit } from '@/components/AuditLogger';
 export default function CapTypeManager({ user }) {
   const [caps, setCaps] = useState([]);
   const [vendors, setVendors] = useState([]);
+  const [capTypes, setCapTypes] = useState([]);
+  const [capColours, setCapColours] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [vendorDialogOpen, setVendorDialogOpen] = useState(false);
   const [selectedCap, setSelectedCap] = useState(null);
   const [form, setForm] = useState({
-    cap_type: 'Crown Cap',
+    cap_type: '',
     cap_colour: '',
     cap_photo_url: '',
     cap_nickname: '',
@@ -30,6 +32,8 @@ export default function CapTypeManager({ user }) {
     is_preferred: false,
     notes: ''
   });
+  const [newCapType, setNewCapType] = useState('');
+  const [newCapColour, setNewCapColour] = useState('');
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -37,12 +41,16 @@ export default function CapTypeManager({ user }) {
 
   async function loadData() {
     setLoading(true);
-    const [capData, vendorData] = await Promise.all([
+    const [capData, vendorData, typeData, colourData] = await Promise.all([
       base44.entities.CapType.list(),
-      base44.entities.CapVendor.list()
+      base44.entities.CapVendor.list(),
+      base44.entities.CapTypeMaster.filter({ is_active: true }, 'sort_order').catch(() => []),
+      base44.entities.CapColourMaster.filter({ is_active: true }, 'sort_order').catch(() => [])
     ]);
     setCaps(capData);
     setVendors(vendorData);
+    setCapTypes(typeData);
+    setCapColours(colourData);
     setLoading(false);
   }
 
@@ -147,8 +155,24 @@ export default function CapTypeManager({ user }) {
   }
 
   function resetForm() {
-    setForm({ cap_type: 'Crown Cap', cap_colour: '', cap_photo_url: '', cap_nickname: '', datasheet_urls: [] });
+    setForm({ cap_type: '', cap_colour: '', cap_photo_url: '', cap_nickname: '', datasheet_urls: [] });
   }
+
+  async function addNewCapType() {
+    if (!newCapType.trim()) return;
+    await base44.entities.CapTypeMaster.create({ cap_type_name: newCapType.trim(), is_active: true });
+    setNewCapType('');
+    await loadData();
+  }
+
+  async function addNewCapColour() {
+    if (!newCapColour.trim()) return;
+    await base44.entities.CapColourMaster.create({ colour_name: newCapColour.trim(), is_active: true });
+    setNewCapColour('');
+    await loadData();
+  }
+
+  const previewDetails = form.cap_type && form.cap_colour ? generateCapDetails(form.cap_type, form.cap_colour) : null;
 
   function openVendorDialog(cap) {
     setSelectedCap(cap);
@@ -279,15 +303,28 @@ export default function CapTypeManager({ user }) {
               <div className="space-y-1 col-span-2">
                 <Label className="text-xs font-medium">Cap Type *</Label>
                 <select value={form.cap_type} onChange={e => setForm(f => ({ ...f, cap_type: e.target.value }))} className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm h-11">
-                  <option value="Crown Cap">Crown Cap</option>
-                  <option value="Lug Cap">Lug Cap</option>
-                  <option value="Screw Cap">Screw Cap</option>
-                  <option value="Flip-Top Cap">Flip-Top Cap</option>
+                  <option value="">Select cap type...</option>
+                  {capTypes.map(ct => <option key={ct.id} value={ct.cap_type_name}>{ct.cap_type_name}</option>)}
                 </select>
+                <div className="flex gap-2 mt-2">
+                  <Input value={newCapType} onChange={e => setNewCapType(e.target.value)} placeholder="Add new cap type" className="h-9 text-xs flex-1" />
+                  <Button size="sm" variant="outline" onClick={addNewCapType} disabled={!newCapType.trim()} className="h-9 px-3 text-xs shrink-0">
+                    <Plus className="w-3 h-3 mr-1" />Add
+                  </Button>
+                </div>
               </div>
               <div className="space-y-1 col-span-2">
                 <Label className="text-xs font-medium">Cap Colour *</Label>
-                <Input value={form.cap_colour} onChange={e => setForm(f => ({ ...f, cap_colour: e.target.value }))} placeholder="e.g. Gold, Silver, Red" className="h-11" />
+                <select value={form.cap_colour} onChange={e => setForm(f => ({ ...f, cap_colour: e.target.value }))} className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm h-11">
+                  <option value="">Select colour...</option>
+                  {capColours.map(cc => <option key={cc.id} value={cc.colour_name}>{cc.colour_name}</option>)}
+                </select>
+                <div className="flex gap-2 mt-2">
+                  <Input value={newCapColour} onChange={e => setNewCapColour(e.target.value)} placeholder="Add new colour" className="h-9 text-xs flex-1" />
+                  <Button size="sm" variant="outline" onClick={addNewCapColour} disabled={!newCapColour.trim()} className="h-9 px-3 text-xs shrink-0">
+                    <Plus className="w-3 h-3 mr-1" />Add
+                  </Button>
+                </div>
               </div>
               <div className="space-y-1 col-span-2">
                 <Label className="text-xs font-medium">Cap Nickname</Label>
@@ -332,12 +369,30 @@ export default function CapTypeManager({ user }) {
                 </label>
               </div>
             </div>
+
+            {/* Preview Section */}
+            {previewDetails && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
+                <p className="text-xs font-bold text-blue-900">Auto-Generated Preview</p>
+                <div className="space-y-1">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-xs text-blue-700 font-medium">SKU Code:</span>
+                    <span className="font-mono text-sm text-blue-900 font-bold">{previewDetails.sku}</span>
+                  </div>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-xs text-blue-700 font-medium">SKU Name:</span>
+                    <span className="text-sm text-blue-900 font-semibold">{previewDetails.name}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="flex gap-2 pt-2">
-              <Button onClick={handleSave} disabled={saving || !form.cap_type || !form.cap_colour?.trim() || !form.cap_photo_url} className="flex-1 h-11">
+              <Button onClick={handleSave} disabled={saving || !form.cap_type || !form.cap_colour?.trim() || !form.cap_photo_url} className="flex-1 h-12">
                 {saving && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
                 {selectedCap ? 'Update' : 'Create'} Cap Type
               </Button>
-              <Button variant="outline" onClick={() => setDialogOpen(false)} className="h-11">Cancel</Button>
+              <Button variant="outline" onClick={() => setDialogOpen(false)} className="h-12">Cancel</Button>
             </div>
           </div>
         </DialogContent>
