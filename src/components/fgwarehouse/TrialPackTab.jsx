@@ -207,13 +207,19 @@ export default function TrialPackTab() {
                   />
                 </div>
                 <Button
-                  onClick={() => addBOMMutation.mutate(bomForm)}
-                  disabled={!bomForm.component_sku || !bomForm.bottles_required || addBOMMutation.isPending}
-                  className="w-full h-12 text-base"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Component
-                </Button>
+                   onClick={() => {
+                     if (!bomForm.component_sku || !bomForm.bottles_required) {
+                       toast.error('Please select a component SKU and enter bottles required');
+                       return;
+                     }
+                     addBOMMutation.mutate(bomForm);
+                   }}
+                   disabled={addBOMMutation.isPending}
+                   className="w-full h-12 text-base"
+                 >
+                   <Plus className="w-4 h-4 mr-2" />
+                   Add Component
+                 </Button>
               </div>
             </div>
 
