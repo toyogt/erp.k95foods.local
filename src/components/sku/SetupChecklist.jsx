@@ -3,33 +3,36 @@ import { CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
 const checks = [
   { key: 'recipe_group_id', label: 'Recipe Group', skipForTrialPack: true },
   { key: 'default_recipe_option_id', label: 'Default Recipe Option', skipForTrialPack: true },
-  { key: 'bottle_type', label: 'Bottle Type', skipForTrialPack: true },
+  { key: 'bottle_type', label: 'Container Type', skipForTrialPack: true },
+  { key: 'cap_sku_code', label: 'Cap Type', skipForTrialPack: true },
   { key: 'box_type_id', label: 'Box Type' },
-  { key: 'shelf_life_days', label: 'Shelf Life' },
+  { key: 'shelf_life_days', label: 'Shelf Life', skipForTrialPack: true },
 ];
 
 const mappingChecks = [
-  { key: 'ryan_template_id', label: 'Ryan Template' },
-  { key: 'batch_format_rule_id', label: 'Batch Format Rule' },
+  { key: 'ryan_template_id', label: 'Ryan Template', skipForTrialPack: true },
+  { key: 'batch_format_rule_id', label: 'Batch Format Rule', skipForTrialPack: true },
 ];
 
 export function isSetupComplete(sku, mapping) {
   const isTrialPack = sku?.is_trial_pack;
   const relevantChecks = isTrialPack ? checks.filter(c => !c.skipForTrialPack) : checks;
+  const relevantMappingChecks = isTrialPack ? mappingChecks.filter(c => !c.skipForTrialPack) : mappingChecks;
   const skuOk = relevantChecks.every(c => !!sku[c.key]);
-  const mapOk = mappingChecks.every(c => !!(mapping || {})[c.key]);
+  const mapOk = relevantMappingChecks.every(c => !!(mapping || {})[c.key]);
   return skuOk && mapOk;
 }
 
 export default function SetupChecklist({ sku, mapping }) {
   const isTrialPack = sku?.is_trial_pack;
   const relevantChecks = isTrialPack ? checks.filter(c => !c.skipForTrialPack) : checks;
+  const relevantMappingChecks = isTrialPack ? mappingChecks.filter(c => !c.skipForTrialPack) : mappingChecks;
   
   const all = [
     ...relevantChecks.map(c => ({ label: c.label, ok: !!sku?.[c.key] })),
-    ...mappingChecks.map(c => ({ label: c.label, ok: !!(mapping || {})[c.key] })),
-    { label: 'Default Artwork', ok: !!sku?.default_artwork_id, optional: true },
-  ];
+    ...relevantMappingChecks.map(c => ({ label: c.label, ok: !!(mapping || {})[c.key] })),
+    { label: 'Default Artwork', ok: !!sku?.default_artwork_id, optional: true, skipForTrialPack: true },
+  ].filter(c => !isTrialPack || !c.skipForTrialPack);
 
   const required = all.filter(c => !c.optional);
   const complete = required.every(c => c.ok);
