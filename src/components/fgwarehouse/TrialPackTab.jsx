@@ -37,7 +37,7 @@ export default function TrialPackTab() {
     mutationFn: (data) => {
       const trialPack = trialPacks.find(p => p.item_code === selectedTrialSku);
       const currentTotal = bomItems.reduce((sum, b) => sum + b.bottles_required, 0);
-      const newTotal = currentTotal + data.bottles_required;
+      const newTotal = currentTotal + (parseInt(data.bottles_required) || 0);
       
       if (newTotal > (trialPack?.bottles_per_box || 0)) {
         throw new Error(`Cannot add ${data.bottles_required} bottles. Would exceed trial pack capacity of ${trialPack.bottles_per_box} bottles.`);
@@ -49,7 +49,7 @@ export default function TrialPackTab() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['trialPackBOM']);
+      queryClient.invalidateQueries({ queryKey: ['trialPackBOM'] });
       toast.success('Component added to BOM');
       setBomForm({ component_sku: '', bottles_required: 1 });
     },
@@ -80,7 +80,10 @@ export default function TrialPackTab() {
 
     if (!isComplete && bomItems.length > 0) {
       setShowCloseConfirm(true);
+      return true; // prevents dialog from closing
     } else {
+      setSelectedTrialSku(null);
+      setBomForm({ component_sku: '', bottles_required: 1 });
       setShowBOMDialog(false);
       setShowCloseConfirm(false);
     }
@@ -92,16 +95,17 @@ export default function TrialPackTab() {
     const requiredBottles = trialPack?.bottles_per_box || 0;
 
     if (totalBottles !== requiredBottles) {
-      toast.error(`BOM incomplete: has ${totalBottles} bottles but needs ${requiredBottles}. Click "Don't Save" to close without saving.`);
-      setShowCloseConfirm(false);
+      toast.error(`BOM incomplete: has ${totalBottles} bottles but needs ${requiredBottles} bottles`, { duration: 4000 });
       return;
     }
 
-    toast.success('BOM saved');
-    setSelectedTrialSku(null);
-    setBomForm({ component_sku: '', bottles_required: 1 });
-    setShowBOMDialog(false);
-    setShowCloseConfirm(false);
+    toast.success('BOM saved successfully', { duration: 3000 });
+    setTimeout(() => {
+      setSelectedTrialSku(null);
+      setBomForm({ component_sku: '', bottles_required: 1 });
+      setShowBOMDialog(false);
+      setShowCloseConfirm(false);
+    }, 500);
   };
 
   return (
@@ -156,7 +160,13 @@ export default function TrialPackTab() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showBOMDialog} onOpenChange={(open) => !open ? handleCloseBOM() : setShowBOMDialog(open)}>
+      <Dialog open={showBOMDialog} onOpenChange={(open) => {
+        if (!open) {
+          handleCloseBOM();
+        } else {
+          setShowBOMDialog(open);
+        }
+      }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-auto">
           <DialogHeader>
             <DialogTitle>Manage BOM: {trialPacks.find(p => p.item_code === selectedTrialSku)?.product_name}</DialogTitle>
@@ -288,10 +298,9 @@ export default function TrialPackTab() {
             </Button>
             <Button
               onClick={handleSaveAndClose}
-              disabled
-              className="flex-1 h-12 text-base bg-gray-400 cursor-not-allowed"
+              className="flex-1 h-12 text-base bg-green-600 hover:bg-green-700"
             >
-              Save & Close (Incomplete)
+              Save & Close
             </Button>
           </div>
         </DialogContent>
