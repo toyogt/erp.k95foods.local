@@ -130,7 +130,7 @@ export default function ContainerTypeManager({ user }) {
           </DialogTrigger>
           <DialogContent className="max-w-md max-h-[90vh] flex flex-col">
             <DialogHeader><DialogTitle>{editingId ? 'Edit' : 'Add'} Container Type</DialogTitle></DialogHeader>
-            <div className="space-y-4 pt-2 pb-6 overflow-y-auto flex-1">
+            <div className="space-y-4 pt-2 pb-20 overflow-y-auto flex-1">
               <div>
                 <Label>Container Type *</Label>
                 <Select value={form.container_type} onValueChange={v => setForm({ ...form, container_type: v })}>
