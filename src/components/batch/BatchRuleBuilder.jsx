@@ -41,10 +41,11 @@ const DEFAULT_FORMAT_OBJ = {
 
 export default function BatchRuleBuilder({ rule, onSaved, onCancel, saveAsNew, skus = [], isAdmin }) {
   // Header fields
-  const [ruleName, setRuleName]     = useState(rule?.rule_name || rule?.description || '');
-  const [resetScope, setResetScope] = useState(rule?.reset_scope || 'DAILY');
-  const [isActive, setIsActive]     = useState(rule?.is_active !== false);
-  const [notes, setNotes]           = useState(rule?.notes || '');
+  const [ruleName, setRuleName]           = useState(rule?.rule_name || rule?.description || '');
+  const [batchDateSource, setBatchDateSource] = useState(rule?.batch_date_source || 'MFG_START');
+  const [resetScope, setResetScope]       = useState(rule?.reset_scope || 'DAILY');
+  const [isActive, setIsActive]           = useState(rule?.is_active !== false);
+  const [notes, setNotes]                 = useState(rule?.notes || '');
 
   // Parts (blocks mode)
   const existing = parseFormatJson(rule?.format_json);
@@ -132,6 +133,7 @@ export default function BatchRuleBuilder({ rule, onSaved, onCancel, saveAsNew, s
     const payload = {
       rule_name: ruleName.trim(),
       description: notes.trim() || ruleName.trim(),
+      batch_date_source: batchDateSource,
       reset_scope: resetScope,
       format_json: JSON.stringify(formatObj),
       is_active: isActive,
@@ -169,7 +171,18 @@ export default function BatchRuleBuilder({ rule, onSaved, onCancel, saveAsNew, s
           />
         </div>
         <div className="space-y-1">
-          <Label className="text-xs font-medium text-slate-600">Reset Scope</Label>
+          <Label className="text-xs font-medium text-slate-600">Batch Date Source</Label>
+          <select
+            value={batchDateSource}
+            onChange={e => setBatchDateSource(e.target.value)}
+            className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm bg-white h-9"
+          >
+            <option value="MFG_START">MFG Start (manufacturing date)</option>
+            <option value="LABEL_START">Label Start (labelling date)</option>
+          </select>
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs font-medium text-slate-600">Sequence Reset Scope</Label>
           <select
             value={resetScope}
             onChange={e => setResetScope(e.target.value)}

@@ -27,7 +27,6 @@ const EMPTY_SKU = {
 
 const EMPTY_MAPPING = {
   ryan_template_id: '', batch_format_rule_id: '',
-  batch_date_source: 'MFG_START', sequence_reset_scope: 'DAILY',
   payload_map_json: '[]',
 };
 
@@ -646,8 +645,8 @@ export default function SKUSetup() {
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="Ryan Template *" className="sm:col-span-2">
+              <div className="grid grid-cols-1 gap-4">
+                <Field label="Ryan Template *">
                   <RyanTemplateField
                     value={mappingForm.ryan_template_id}
                     onChange={v => setMappingForm(f => ({ ...f, ryan_template_id: v }))}
@@ -660,7 +659,7 @@ export default function SKUSetup() {
                   />
                 </Field>
 
-                <Field label="Batch Format Rule *" className="sm:col-span-2">
+                <Field label="Batch Format Rule *">
                   <div className="flex gap-2 items-start">
                     <div className="flex-1 min-w-0">
                       <select
@@ -708,30 +707,6 @@ export default function SKUSetup() {
                       />
                     </div>
                   )}
-                </Field>
-
-                <Field label="Batch Date Source" info="Which date to use when generating batch codes: MFG Start = when manufacturing begins in recipe room, Label Start = when labelling/packing begins. This date is used in batch format rules for date-based components.">
-                  <SelectInput
-                    value={mappingForm.batch_date_source}
-                    onChange={v => setMappingForm(f => ({ ...f, batch_date_source: v }))}
-                    options={[
-                      { value: 'MFG_START', label: 'MFG Start (manufacturing date)' },
-                      { value: 'LABEL_START', label: 'Label Start (labelling date)' },
-                    ]}
-                  />
-                </Field>
-
-                <Field label="Sequence Reset Scope" info="How often the sequence counter resets back to 001: Daily = resets every day (001, 002... then next day starts 001 again), Monthly = resets each month, Yearly = resets each year, Never = continuous counting forever (001, 002, 003... 9999...)">
-                  <SelectInput
-                    value={mappingForm.sequence_reset_scope}
-                    onChange={v => setMappingForm(f => ({ ...f, sequence_reset_scope: v }))}
-                    options={[
-                      { value: 'DAILY', label: 'Daily' },
-                      { value: 'MONTHLY', label: 'Monthly' },
-                      { value: 'YEARLY', label: 'Yearly' },
-                      { value: 'NEVER', label: 'Never (continuous)' },
-                    ]}
-                  />
                 </Field>
               </div>
 
