@@ -41,6 +41,8 @@ export default function TrialPackTab() {
       const newTotal = currentTotal + bottlesRequired;
       const capacity = trialPack?.bottles_per_box || 0;
       
+      console.log('Validation: currentTotal=', currentTotal, 'bottlesRequired=', bottlesRequired, 'newTotal=', newTotal, 'capacity=', capacity, 'bomItems=', bomItems);
+      
       if (newTotal > capacity) {
         throw new Error(`Cannot add ${bottlesRequired} bottles. Current BOM has ${currentTotal} bottles, but trial pack capacity is only ${capacity} bottles.`);
       }
