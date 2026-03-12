@@ -308,9 +308,13 @@ export default function SKUSetup() {
           <Tabs defaultValue="basics" className="w-full">
             <TabsList className="h-9 rounded-xl bg-slate-100 p-1">
               <TabsTrigger value="basics" className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-4">Basics</TabsTrigger>
-              <TabsTrigger value="recipe" className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-4">Recipe & Packaging</TabsTrigger>
-              <TabsTrigger value="printing" className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-4">Printing & Batch</TabsTrigger>
-              <TabsTrigger value="artwork" className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-4">Artwork</TabsTrigger>
+              {!skuForm.is_trial_pack && (
+                <>
+                  <TabsTrigger value="recipe" className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-4">Recipe & Packaging</TabsTrigger>
+                  <TabsTrigger value="printing" className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-4">Printing & Batch</TabsTrigger>
+                  <TabsTrigger value="artwork" className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-4">Artwork</TabsTrigger>
+                </>
+              )}
             </TabsList>
 
             {/* ─── Tab 1: Basics ─────────────────────────────── */}
@@ -346,7 +350,7 @@ export default function SKUSetup() {
                 </div>
                 {skuForm.is_trial_pack && (
                   <p className="text-xs text-purple-700 mt-3 bg-white/50 rounded-lg px-3 py-2">
-                    Trial packs consume other SKUs as components. Recipe, bottle type, and artwork not required.
+                    Trial packs consume other SKUs as components. Only unique batch number will be used — recipe, bottle type, artwork, and batch format not required.
                   </p>
                 )}
               </div>
@@ -519,10 +523,12 @@ export default function SKUSetup() {
               <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-4">
                 <p className="text-sm font-bold text-slate-700">💰 Pricing & Specifications</p>
                 <div className="grid grid-cols-2 gap-4">
-                  <Field label="Product Barcode" info="Barcode printed on individual bottles/products for retail scanning">
-                    <Input value={skuForm.product_barcode} onChange={e => setSkuForm(f => ({ ...f, product_barcode: e.target.value }))} placeholder="8901234567890" className="h-12 text-base font-mono" />
-                  </Field>
-                  <Field label="Box Barcode" info="Barcode printed on shipping boxes/cartons for warehouse and logistics scanning">
+                  {!skuForm.is_trial_pack && (
+                    <Field label="Product Barcode" info="Barcode printed on individual bottles/products for retail scanning">
+                      <Input value={skuForm.product_barcode} onChange={e => setSkuForm(f => ({ ...f, product_barcode: e.target.value }))} placeholder="8901234567890" className="h-12 text-base font-mono" />
+                    </Field>
+                  )}
+                  <Field label="Box Barcode" info="Barcode printed on shipping boxes/cartons for warehouse and logistics scanning" className={skuForm.is_trial_pack ? 'col-span-2' : ''}>
                     <Input value={skuForm.box_barcode} onChange={e => setSkuForm(f => ({ ...f, box_barcode: e.target.value }))} placeholder="8901234567999" className="h-12 text-base font-mono" />
                   </Field>
                   <Field label="MRP per Bottle (₹) *">
