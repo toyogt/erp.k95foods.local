@@ -276,7 +276,7 @@ export default function TrialPackTab() {
               onClick={() => {
                 setShowBOMDialog(false);
                 setShowCloseConfirm(false);
-                toast.info('Changes discarded');
+                toast.success('Changes discarded');
               }}
               variant="outline"
               className="flex-1 h-12 text-base"
