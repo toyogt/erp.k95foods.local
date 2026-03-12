@@ -656,6 +656,7 @@ export default function SKUSetup() {
                     activeTpl={activeTpl}
                     isAdmin={isAdmin}
                     onTemplateUpdated={loadAll}
+                    onCreateNew={() => window.open('/RyanTemplateManager', '_blank')}
                   />
                 </Field>
 
@@ -816,7 +817,7 @@ function Field({ label, children, className = '', info }) {
 /**
  * Ryan Template selector with inline placeholder editor when placeholders_json is empty.
  */
-function RyanTemplateField({ value, onChange, templates, templatePlaceholders, activeTpl, isAdmin, onTemplateUpdated }) {
+function RyanTemplateField({ value, onChange, templates, templatePlaceholders, activeTpl, isAdmin, onTemplateUpdated, onCreateNew }) {
   const [showAddPlaceholders, setShowAddPlaceholders] = useState(false);
   const [chipInput, setChipInput] = useState('');
   const [chips, setChips] = useState([]);
@@ -851,18 +852,28 @@ function RyanTemplateField({ value, onChange, templates, templatePlaceholders, a
 
   return (
     <div className="space-y-2">
-      <select
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm bg-white h-9"
-      >
-        <option value="">— Select template —</option>
-        {templates.map(t => (
-          <option key={t.ryan_template_id} value={t.ryan_template_id}>
-            {t.ryan_template_id}{t.description ? ` — ${t.description}` : ''}
-          </option>
-        ))}
-      </select>
+      <div className="flex gap-2">
+        <select
+          value={value}
+          onChange={e => {
+            if (e.target.value === '__CREATE_NEW__') {
+              onCreateNew && onCreateNew();
+            } else {
+              onChange(e.target.value);
+            }
+          }}
+          className="flex-1 border border-slate-200 rounded-md px-3 py-2 text-sm bg-white h-9"
+        >
+          <option value="">— Select template —</option>
+          <option value="__CREATE_NEW__" className="font-semibold text-blue-600">+ Create New Ryan Template</option>
+          <option disabled>──────────────</option>
+          {templates.map(t => (
+            <option key={t.ryan_template_id} value={t.ryan_template_id}>
+              {t.ryan_template_id}{t.description ? ` — ${t.description}` : ''}
+            </option>
+          ))}
+        </select>
+      </div>
 
       {/* Show placeholders chips */}
       {value && templatePlaceholders.length > 0 && (
