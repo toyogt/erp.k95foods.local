@@ -91,8 +91,8 @@ export default function TrialPackTab() {
     const totalBottles = bomItems.reduce((sum, b) => sum + b.bottles_required, 0);
     const requiredBottles = trialPack?.bottles_per_box || 0;
 
-    if (totalBottles < requiredBottles) {
-      toast.error(`Cannot save: BOM has ${totalBottles} bottles but trial pack needs ${requiredBottles} bottles`);
+    if (totalBottles !== requiredBottles) {
+      toast.error(`BOM incomplete: has ${totalBottles} bottles but needs ${requiredBottles}. Click "Don't Save" to close without saving.`);
       return;
     }
 
