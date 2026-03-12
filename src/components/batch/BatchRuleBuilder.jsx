@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
-  Loader2, Plus, Trash2, ArrowUp, ArrowDown, Save,
-  Copy, AlertTriangle, CheckCircle2, ChevronDown, ChevronUp,
+  Loader2, Save, Copy, AlertTriangle, CheckCircle2, ChevronDown, ChevronUp,
 } from 'lucide-react';
 import {
   MONTH_CODES, previewExamples, validatePattern, patternToParts,
@@ -22,6 +20,9 @@ const PART_TYPES = [
   { value: 'yyyy',         label: 'YYYY (year 4-digit)' },
   { value: 'seq',          label: 'SEQ (sequence)',      hasPad: true },
   { value: 'sku_prefix',   label: 'SKU_PREFIX (batch prefix)' },
+  { value: 'brand_code',   label: 'BRAND_CODE (brand short code)' },
+  { value: 'family_code',  label: 'FAMILY_CODE (family short code)' },
+  { value: 'flavour_code', label: 'FLAVOUR_CODE (flavour short code)' },
   { value: 'date_serial',  label: 'DATE_SERIAL (Excel integer)' },
   { value: 'dup_suffix',   label: 'DUP_SUFFIX (e.g. -2 if dup)' },
 ];
@@ -47,14 +48,10 @@ export default function BatchRuleBuilder({ rule, onSaved, onCancel, saveAsNew, s
   const [isActive, setIsActive]           = useState(rule?.is_active !== false);
   const [notes, setNotes]                 = useState(rule?.notes || '');
 
-  // Parts (blocks mode)
+  // Pattern mode only
   const existing = parseFormatJson(rule?.format_json);
-  const [parts, setParts] = useState(existing?.parts || []);
-  const [builderTab, setBuilderTab] = useState(existing?.meta?.mode === 'pattern' ? 'pattern' : 'blocks');
-
-  // Pattern mode
   const [pattern, setPattern] = useState(
-    existing?.meta?.mode === 'pattern' ? partsToPattern(existing.parts) : ''
+    existing?.parts ? partsToPattern(existing.parts) : ''
   );
   const [patternErrors, setPatternErrors] = useState([]);
 
@@ -67,30 +64,18 @@ export default function BatchRuleBuilder({ rule, onSaved, onCancel, saveAsNew, s
   const [saving, setSaving]     = useState(false);
   const [savedMsg, setSavedMsg] = useState('');
 
-  // Sync parts from pattern when switching to blocks
-  const handleTabChange = (tab) => {
-    if (tab === 'blocks' && builderTab === 'pattern') {
-      const errs = validatePattern(pattern);
-      if (errs.length === 0) setParts(patternToParts(pattern));
-    }
-    if (tab === 'pattern' && builderTab === 'blocks') {
-      setPattern(partsToPattern(parts));
-    }
-    setBuilderTab(tab);
-  };
-
   // Pattern validation on change
   useEffect(() => {
-    if (builderTab === 'pattern') setPatternErrors(validatePattern(pattern));
-  }, [pattern, builderTab]);
+    setPatternErrors(validatePattern(pattern));
+  }, [pattern]);
 
   // Active parts for preview
-  const activeParts = builderTab === 'pattern' ? patternToParts(pattern) : parts;
+  const activeParts = patternToParts(pattern);
   const formatObj = {
     reset_scope: resetScope,
     parts: activeParts,
     month_codes: MONTH_CODES,
-    meta: { mode: builderTab, created_by_builder: true },
+    meta: { mode: 'pattern', created_by_builder: true },
   };
 
   const selectedSku = skus.find(s => s.item_code === previewSku);
@@ -102,29 +87,7 @@ export default function BatchRuleBuilder({ rule, onSaved, onCancel, saveAsNew, s
     skuPrefix,
   });
 
-  // Add/remove/move parts
-  const addPart = () => setParts(p => [...p, { ...EMPTY_PART }]);
-  const removePart = (i) => setParts(p => p.filter((_, idx) => idx !== i));
-  const movePart = (i, dir) => {
-    setParts(p => {
-      const arr = [...p];
-      const target = i + dir;
-      if (target < 0 || target >= arr.length) return arr;
-      [arr[i], arr[target]] = [arr[target], arr[i]];
-      return arr;
-    });
-  };
-  const updatePart = (i, updates) => {
-    setParts(p => p.map((part, idx) => idx === i ? { ...part, ...updates } : part));
-  };
-
-  const applyTemplate = (tpl) => {
-    setParts(tpl.parts.map(p => ({ ...p })));
-    setResetScope(tpl.reset_scope);
-    setBuilderTab('blocks');
-  };
-
-  const canSave = ruleName.trim() && (builderTab !== 'pattern' || patternErrors.length === 0);
+  const canSave = ruleName.trim() && patternErrors.length === 0;
 
   const doSave = async (asNew) => {
     if (!canSave) return;
@@ -211,92 +174,8 @@ export default function BatchRuleBuilder({ rule, onSaved, onCancel, saveAsNew, s
         </div>
       </div>
 
-      {/* Builder tabs */}
-      <Tabs value={builderTab} onValueChange={handleTabChange}>
-        <TabsList className="h-8 bg-slate-100 rounded-lg p-0.5">
-          <TabsTrigger value="templates" className="text-xs px-3 rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm">Templates</TabsTrigger>
-          <TabsTrigger value="blocks"    className="text-xs px-3 rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm">Blocks</TabsTrigger>
-          <TabsTrigger value="pattern"   className="text-xs px-3 rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm">Pattern</TabsTrigger>
-        </TabsList>
-
-        {/* ── Templates ── */}
-        <TabsContent value="templates" className="mt-3 space-y-2">
-          <p className="text-xs text-slate-500 mb-1">Click a template to pre-fill the Blocks list.</p>
-          {STARTER_TEMPLATES.map(tpl => (
-            <button
-              key={tpl.id}
-              onClick={() => applyTemplate(tpl)}
-              className="w-full text-left border border-slate-200 rounded-xl p-3 hover:border-blue-400 hover:bg-blue-50 transition-colors group"
-            >
-              <p className="text-sm font-semibold text-slate-800 group-hover:text-blue-700">{tpl.label}</p>
-              <p className="text-xs text-slate-500 mt-0.5">{tpl.description}</p>
-              <p className="mt-1.5 font-mono text-xs bg-slate-100 rounded px-2 py-1 text-slate-600">
-                {partsToPattern(tpl.parts)}
-              </p>
-            </button>
-          ))}
-        </TabsContent>
-
-        {/* ── Blocks ── */}
-        <TabsContent value="blocks" className="mt-3 space-y-2">
-          {parts.length === 0 && (
-            <p className="text-xs text-slate-400 text-center py-4 border-2 border-dashed border-slate-200 rounded-xl">
-              No parts yet. Add a block or choose a template.
-            </p>
-          )}
-          {parts.map((part, i) => {
-            const typeDef = PART_TYPES.find(t => t.value === part.type) || PART_TYPES[0];
-            return (
-              <div key={i} className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
-                <span className="text-xs text-slate-400 w-4 shrink-0">{i + 1}</span>
-                <select
-                  value={part.type}
-                  onChange={e => updatePart(i, { type: e.target.value, value: '', pad: 2 })}
-                  className="border border-slate-200 rounded-md px-2 py-1 text-xs bg-white flex-1 min-w-0"
-                >
-                  {PART_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                </select>
-                {typeDef.hasValue && (
-                  <Input
-                    value={part.value || ''}
-                    onChange={e => updatePart(i, { value: e.target.value })}
-                    placeholder="value"
-                    className="text-xs h-7 w-24 font-mono"
-                  />
-                )}
-                {typeDef.hasPad && (
-                  <select
-                    value={part.pad || 2}
-                    onChange={e => updatePart(i, { pad: Number(e.target.value) })}
-                    className="border border-slate-200 rounded-md px-2 py-1 text-xs bg-white w-16"
-                  >
-                    <option value={2}>2 digits</option>
-                    <option value={3}>3 digits</option>
-                    <option value={4}>4 digits</option>
-                  </select>
-                )}
-                <div className="flex gap-1 shrink-0">
-                  <button onClick={() => movePart(i, -1)} disabled={i === 0} className="p-1 hover:bg-slate-200 rounded disabled:opacity-30"><ArrowUp className="w-3 h-3" /></button>
-                  <button onClick={() => movePart(i, 1)} disabled={i === parts.length - 1} className="p-1 hover:bg-slate-200 rounded disabled:opacity-30"><ArrowDown className="w-3 h-3" /></button>
-                  <button onClick={() => removePart(i)} className="p-1 hover:bg-red-100 rounded text-red-500"><Trash2 className="w-3 h-3" /></button>
-                </div>
-              </div>
-            );
-          })}
-          <Button variant="outline" size="sm" onClick={addPart} className="gap-1.5 text-xs h-8 w-full border-dashed">
-            <Plus className="w-3 h-3" /> Add Block
-          </Button>
-
-          {/* Live pattern preview */}
-          {parts.length > 0 && (
-            <div className="mt-1 font-mono text-xs bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-600">
-              Pattern: <strong>{partsToPattern(parts)}</strong>
-            </div>
-          )}
-        </TabsContent>
-
-        {/* ── Pattern ── */}
-        <TabsContent value="pattern" className="mt-3 space-y-3">
+      {/* Pattern editor */}
+      <div className="space-y-3">
           <div className="space-y-1">
             <Label className="text-xs font-medium text-slate-600">Pattern String</Label>
             <Input
@@ -321,7 +200,7 @@ export default function BatchRuleBuilder({ rule, onSaved, onCancel, saveAsNew, s
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-600 space-y-1">
             <p className="font-semibold text-slate-700 mb-1">Allowed tokens:</p>
             <div className="flex flex-wrap gap-1.5">
-              {['{TEXT:KFB}','{DD}','{MM}','{MONTH_LETTER}','{YY}','{YYYY}','{SEQ:2}','{SEQ:3}','{SKU_PREFIX}','{DATE_SERIAL}','{DUP_SUFFIX}'].map(t => (
+              {['{TEXT:KFB}','{DD}','{MM}','{MONTH_LETTER}','{YY}','{YYYY}','{SEQ:2}','{SEQ:3}','{SKU_PREFIX}','{BRAND_CODE}','{FAMILY_CODE}','{FLAVOUR_CODE}','{DATE_SERIAL}','{DUP_SUFFIX}'].map(t => (
                 <button
                   key={t}
                   onClick={() => setPattern(p => p + t)}
@@ -331,8 +210,7 @@ export default function BatchRuleBuilder({ rule, onSaved, onCancel, saveAsNew, s
             </div>
             <p className="text-slate-400 mt-2">Tip: click tokens above to insert at end. Literals outside braces are included as-is.</p>
           </div>
-        </TabsContent>
-      </Tabs>
+      </div>
 
       {/* Preview panel */}
       <div className="border border-slate-200 rounded-xl overflow-hidden">
