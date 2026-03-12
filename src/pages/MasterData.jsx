@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 // Advanced masters (SKUs, Recipes, Ingredients, BoxTypes, UOMs, Artworks) live in side-menu pages
-import BottleTypeManager from '@/components/master/BottleTypeManager';
+import ContainerTypeManager from '@/components/master/ContainerTypeManager';
 import LocationManager from '@/components/master/LocationManager';
 import MachineManager from '@/components/master/MachineManager';
 import AppSettingsManager from '@/components/master/AppSettingsManager.jsx';
@@ -47,7 +47,7 @@ export default function MasterData() {
           <TabsList className="inline-flex h-10 rounded-xl bg-slate-100 p-1 min-w-full">
             {isAdmin   && <TabsTrigger value="taxonomy"      className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Taxonomy</TabsTrigger>}
             {isAdmin   && <TabsTrigger value="manufacturers" className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Manufacturers</TabsTrigger>}
-            <TabsTrigger value="bottles"    className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Bottles</TabsTrigger>
+            <TabsTrigger value="bottles"    className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Containers</TabsTrigger>
             <TabsTrigger value="locations"  className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Locations</TabsTrigger>
             <TabsTrigger value="machines"   className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Machines</TabsTrigger>
             <TabsTrigger value="wos"        className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">WOs</TabsTrigger>
@@ -61,7 +61,7 @@ export default function MasterData() {
         </div>
         {isAdmin   && <TabsContent value="taxonomy"      className="mt-4"><ProductTaxonomy /></TabsContent>}
         {isAdmin   && <TabsContent value="manufacturers" className="mt-4"><ManufacturerManager /></TabsContent>}
-        <TabsContent value="bottles"    className="mt-4"><BottleTypeManager user={user} /></TabsContent>
+        <TabsContent value="bottles"    className="mt-4"><ContainerTypeManager user={user} /></TabsContent>
         <TabsContent value="locations"  className="mt-4"><LocationManager user={user} /></TabsContent>
         <TabsContent value="machines"   className="mt-4"><MachineManager user={user} /></TabsContent>
         <TabsContent value="wos"        className="mt-4"><PackingWOManager /></TabsContent>
