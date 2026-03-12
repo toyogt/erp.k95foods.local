@@ -58,6 +58,7 @@ export default function TrialPackTab() {
       setBomForm({ component_sku: '', bottles_required: 1 });
     },
     onError: (error) => {
+      console.log('Mutation error caught:', error);
       toast.error(error.message || 'Failed to add component', { duration: 4000 });
     },
   });
