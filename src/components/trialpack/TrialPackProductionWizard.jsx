@@ -31,7 +31,19 @@ export default function TrialPackProductionWizard({ onClose }) {
 
   const { data: trialPacks = [] } = useQuery({
     queryKey: ['trialPackSKUs'],
-    queryFn: () => base44.entities.ProductMaster.filter({ is_trial_pack: true, is_active: true }),
+    queryFn: async () => {
+      const packs = await base44.entities.ProductMaster.filter({ is_trial_pack: true, is_active: true });
+      const packsWithBOM = [];
+      
+      for (const pack of packs) {
+        const bomItems = await base44.entities.TrialPackBOM.filter({ trial_pack_sku: pack.item_code });
+        if (bomItems.length > 0) {
+          packsWithBOM.push(pack);
+        }
+      }
+      
+      return packsWithBOM;
+    },
   });
 
   const { data: allProducts = [] } = useQuery({
