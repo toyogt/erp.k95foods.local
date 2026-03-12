@@ -49,6 +49,7 @@ export default function MasterData() {
             {isAdmin   && <TabsTrigger value="taxonomy"      className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Taxonomy</TabsTrigger>}
             {isAdmin   && <TabsTrigger value="manufacturers" className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Manufacturers</TabsTrigger>}
             <TabsTrigger value="bottles"    className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Containers</TabsTrigger>
+            <TabsTrigger value="caps"       className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Caps</TabsTrigger>
             <TabsTrigger value="locations"  className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Locations</TabsTrigger>
             <TabsTrigger value="machines"   className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Machines</TabsTrigger>
             <TabsTrigger value="wos"        className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">WOs</TabsTrigger>
@@ -63,6 +64,7 @@ export default function MasterData() {
         {isAdmin   && <TabsContent value="taxonomy"      className="mt-4"><ProductTaxonomy /></TabsContent>}
         {isAdmin   && <TabsContent value="manufacturers" className="mt-4"><ManufacturerManager /></TabsContent>}
         <TabsContent value="bottles"    className="mt-4"><ContainerTypeManager user={user} /></TabsContent>
+        <TabsContent value="caps"       className="mt-4"><CapTypeManager user={user} /></TabsContent>
         <TabsContent value="locations"  className="mt-4"><LocationManager user={user} /></TabsContent>
         <TabsContent value="machines"   className="mt-4"><MachineManager user={user} /></TabsContent>
         <TabsContent value="wos"        className="mt-4"><PackingWOManager /></TabsContent>
