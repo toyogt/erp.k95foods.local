@@ -38,6 +38,7 @@ export default function SKUSetup() {
   const [recipeOptions, setRecipeOptions] = useState([]);
   const [boxTypes, setBoxTypes] = useState([]);
   const [containerTypes, setContainerTypes] = useState([]);
+  const [capTypes, setCapTypes] = useState([]);
   const [ryanTemplates, setRyanTemplates] = useState([]);
   const [batchRules, setBatchRules] = useState([]);
   const [artworks, setArtworks] = useState([]);
@@ -477,7 +478,26 @@ export default function SKUSetup() {
                     />
                   </Field>
 
-
+                  <Field label="Cap Type *">
+                    {capTypes.length > 0 ? (
+                      <select
+                        value={skuForm.cap_sku_code || ''}
+                        onChange={e => setSkuForm(f => ({ ...f, cap_sku_code: e.target.value }))}
+                        className="w-full border border-slate-200 rounded-lg px-4 py-3 text-base h-12 bg-white"
+                      >
+                        <option value="">— Select Cap Type —</option>
+                        {capTypes.map(c => (
+                          <option key={c.id} value={c.cap_sku_code}>
+                            {c.cap_name}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+                        <p className="text-xs text-amber-700">No cap types defined. Add in Master Data first.</p>
+                      </div>
+                    )}
+                  </Field>
 
                   <Field label="Box Type *">
                     <select

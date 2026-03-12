@@ -3,6 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 // Advanced masters (SKUs, Recipes, Ingredients, BoxTypes, UOMs, Artworks) live in side-menu pages
 import ContainerTypeManager from '@/components/master/ContainerTypeManager';
+import CapTypeManager from '@/components/master/CapTypeManager';
 import LocationManager from '@/components/master/LocationManager';
 import MachineManager from '@/components/master/MachineManager';
 import AppSettingsManager from '@/components/master/AppSettingsManager.jsx';
