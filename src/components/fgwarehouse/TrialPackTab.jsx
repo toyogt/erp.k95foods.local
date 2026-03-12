@@ -129,7 +129,7 @@ export default function TrialPackTab() {
                     onChange={(e) => setBomForm({ ...bomForm, component_sku: e.target.value })}
                   >
                     <option value="">Select SKU...</option>
-                    {regularProducts.map(p => (
+                    {regularProducts.filter(p => !bomItems.some(b => b.component_sku === p.item_code)).map(p => (
                       <option key={p.id} value={p.item_code}>
                         {p.item_code} - {p.product_name} ({p.bottles_per_box} bottles/box)
                       </option>
@@ -139,16 +139,20 @@ export default function TrialPackTab() {
                 <div>
                   <label className="text-sm font-medium text-slate-700 block mb-1">Bottles Required</label>
                   <Input
-                    type="number"
-                    min="1"
+                    type="text"
+                    inputMode="numeric"
                     value={bomForm.bottles_required}
-                    onChange={(e) => setBomForm({ ...bomForm, bottles_required: parseInt(e.target.value) || 1 })}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/[^0-9]/g, '');
+                      setBomForm({ ...bomForm, bottles_required: val === '' ? '' : parseInt(val) || 1 });
+                    }}
+                    placeholder="1"
                   />
                 </div>
                 <Button
                   onClick={() => addBOMMutation.mutate(bomForm)}
-                  disabled={!bomForm.component_sku || addBOMMutation.isPending}
-                  className="w-full h-10"
+                  disabled={!bomForm.component_sku || !bomForm.bottles_required || addBOMMutation.isPending}
+                  className="w-full h-12 text-base"
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Add Component
@@ -158,6 +162,26 @@ export default function TrialPackTab() {
 
             <div>
               <h4 className="font-semibold text-slate-900 mb-3">Current BOM</h4>
+              {(() => {
+                const trialPack = trialPacks.find(p => p.item_code === selectedTrialSku);
+                const totalBottles = bomItems.reduce((sum, b) => sum + b.bottles_required, 0);
+                const remainingBottles = (trialPack?.bottles_per_box || 0) - totalBottles;
+                
+                return (
+                  <>
+                    {trialPack && (
+                      <div className={`mb-3 p-3 rounded-lg text-sm ${remainingBottles === 0 ? 'bg-green-50 border border-green-200' : remainingBottles < 0 ? 'bg-red-50 border border-red-200' : 'bg-blue-50 border border-blue-200'}`}>
+                        <p className={`font-semibold ${remainingBottles === 0 ? 'text-green-700' : remainingBottles < 0 ? 'text-red-700' : 'text-blue-700'}`}>
+                          {remainingBottles === 0 ? '✓ Complete' : remainingBottles > 0 ? `${remainingBottles} bottles remaining` : `⚠️ ${Math.abs(remainingBottles)} bottles over capacity`}
+                        </p>
+                        <p className={`text-xs mt-1 ${remainingBottles === 0 ? 'text-green-600' : remainingBottles < 0 ? 'text-red-600' : 'text-blue-600'}`}>
+                          Trial pack: {trialPack.bottles_per_box} bottles • BOM total: {totalBottles} bottles
+                        </p>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
               {bomItems.length === 0 && (
                 <p className="text-sm text-slate-500 text-center py-4">No components yet</p>
               )}
