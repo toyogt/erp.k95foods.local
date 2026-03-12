@@ -40,7 +40,7 @@ const DEFAULT_FORMAT_OBJ = {
   meta: { mode: 'blocks', created_by_builder: true },
 };
 
-export default function BatchRuleBuilder({ rule, onSaved, onCancel, saveAsNew, skus = [], isAdmin }) {
+export default function BatchRuleBuilder({ rule, onSaved, onCancel, saveAsNew, skus = [], brands = [], families = [], flavours = [], isAdmin }) {
   // Header fields
   const [ruleName, setRuleName]           = useState(rule?.rule_name || rule?.description || '');
   const [batchDateSource, setBatchDateSource] = useState(rule?.batch_date_source || 'MFG_START');
