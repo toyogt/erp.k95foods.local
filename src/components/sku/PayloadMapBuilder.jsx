@@ -60,7 +60,7 @@ function previewValue(row, sku, batchRule, brands, families, flavours) {
     }
     case 'mfg_date': return formatDate(null, row.format || 'DDMMYY');
     case 'exp_date': return formatDate(null, row.format || 'DDMMYY') + ' (+shelf)';
-    case 'mrp': return sku?.mrp || sku?.mrp_box || '120.00';
+    case 'mrp': return String(Math.round(sku?.mrp || sku?.mrp_box || 120));
     case 'sku_code': return sku?.item_code || 'SKU001';
     case 'sku_name': return sku?.product_name || 'Product Name';
     case 'bottle_type': return sku?.bottle_type || 'PET';
