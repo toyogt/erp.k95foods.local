@@ -447,7 +447,7 @@ export default function SKUSetup() {
               <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-4">
                 <p className="text-sm font-bold text-slate-700">📦 Packaging Configuration</p>
                 <div className="grid grid-cols-1 gap-4">
-                  <Field label="Container Type *">
+                  <Field label={skuForm.is_trial_pack ? "Container Type" : "Container Type *"}>
                     {containerTypes.length > 0 ? (
                       <select
                         value={containerTypes.find(c => c.auto_generated_name === skuForm.bottle_type)?.container_code || ''}
@@ -468,7 +468,8 @@ export default function SKUSetup() {
                     )}
                   </Field>
 
-                  <Field label="ML per Container *" info="Volume per container (auto-filled from container type selection, cannot be edited)">
+                  {!skuForm.is_trial_pack && (
+                    <Field label="ML per Container *" info="Volume per container (auto-filled from container type selection, cannot be edited)">
                     <Input 
                       type="text" 
                       value={
@@ -479,8 +480,9 @@ export default function SKUSetup() {
                       className="h-12 text-base bg-slate-50" 
                     />
                   </Field>
+                  )}
 
-                  <Field label="Cap Type *">
+                  <Field label={skuForm.is_trial_pack ? "Cap Type" : "Cap Type *"}>
                     {capTypes.length > 0 ? (
                       <select
                         value={skuForm.cap_sku_code || ''}
@@ -533,7 +535,8 @@ export default function SKUSetup() {
                     </div>
                   )}
 
-                  <Field label="Shelf Life *">
+                  {!skuForm.is_trial_pack && (
+                    <Field label="Shelf Life *">
                     <div className="grid grid-cols-2 gap-2">
                       <Input 
                         type="text" 
@@ -554,6 +557,7 @@ export default function SKUSetup() {
                       </select>
                     </div>
                   </Field>
+                  )}
                 </div>
               </div>
 
