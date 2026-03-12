@@ -642,20 +642,8 @@ export default function SKUSetup() {
                   This tab configures how labels are printed and batch codes are generated for this SKU. 
                   <strong> Ryan Template</strong> defines the label design and placeholders (e.g., BATCH, MFG, EXP). 
                   <strong> Batch Format Rule</strong> determines how batch IDs are structured (e.g., date formats, sequences, prefixes). 
-                  <strong> Batch Prefix</strong> (optional) prepends a custom code to every batch. 
                   <strong> Payload Mapping</strong> links SKU data to template placeholders for dynamic label printing.
                 </p>
-              </div>
-
-              <div className="bg-white border border-slate-200 rounded-xl p-4 mb-4">
-                <Field label="Batch Prefix (optional)" info="A short code (2-4 letters) that gets prepended to all batch IDs for this SKU. Example: If prefix is 'TYK' and batch rule generates '250311-001', final batch code becomes 'TYK-250311-001'. Used for product identification and traceability.">
-                  <Input 
-                    value={skuForm.batch_prefix} 
-                    onChange={e => setSkuForm(f => ({ ...f, batch_prefix: e.target.value.toUpperCase() }))} 
-                    placeholder="e.g. TYK" 
-                    className="h-12 text-base font-mono tracking-wider" 
-                  />
-                </Field>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -743,21 +731,6 @@ export default function SKUSetup() {
                       { value: 'NEVER', label: 'Never (continuous)' },
                     ]}
                   />
-                </Field>
-
-                <Field label="Use Batch Prefix from SKU" info="Enable this toggle to automatically prepend the Batch Prefix (configured above) to all batch codes. Example: If enabled and prefix is 'TYK', batch '250311-001' becomes 'TYK-250311-001'. If disabled, batch code will be '250311-001' without prefix." className="sm:col-span-2">
-                  <label className="flex items-center gap-3 cursor-pointer">
-                    <button
-                      type="button"
-                      onClick={() => setMappingForm(f => ({ ...f, use_batch_prefix_from_sku: !f.use_batch_prefix_from_sku }))}
-                      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${mappingForm.use_batch_prefix_from_sku ? 'bg-blue-500' : 'bg-slate-300'}`}
-                    >
-                      <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform ${mappingForm.use_batch_prefix_from_sku ? 'translate-x-5' : 'translate-x-0.5'}`} />
-                    </button>
-                    <span className="text-sm text-slate-700">
-                      Prepend <span className="font-mono font-semibold text-blue-700">{skuForm.batch_prefix || '—'}</span> to batch ID
-                    </span>
-                  </label>
                 </Field>
               </div>
 
