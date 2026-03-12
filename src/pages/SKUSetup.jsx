@@ -63,12 +63,13 @@ export default function SKUSetup() {
 
   const loadAll = useCallback(async () => {
     setLoading(true);
-    const [u, s, m, rg, ct, bx, bo, rt, br, art, brnd, fam, flav] = await Promise.all([
+    const [u, s, m, rg, ct, cap, bx, bo, rt, br, art, brnd, fam, flav] = await Promise.all([
       base44.auth.me().catch(() => null),
       base44.entities.ProductMaster.list('-created_date', 500),
       base44.entities.SKUPrintMapping.list('-created_date', 500).catch(() => []),
       base44.entities.RecipeGroup.filter({ is_active: true }, '-created_date', 200).catch(() => []),
       base44.entities.ContainerType.list('-created_date', 100).catch(() => []),
+      base44.entities.CapType.filter({ is_active: true }, '-created_date', 100).catch(() => []),
       base44.entities.BoxType.filter({ is_active: true }, '-created_date', 200).catch(() => []),
       base44.entities.RecipeOption.list('-created_date', 500).catch(() => []),
       base44.entities.RyanTemplate.filter({ is_active: true }, '-created_date', 200).catch(() => []),
@@ -83,6 +84,7 @@ export default function SKUSetup() {
     setMappings(m);
     setRecipeGroups(rg);
     setContainerTypes(ct);
+    setCapTypes(cap);
     setBoxTypes(bx);
     setRecipeOptions(bo);
     setRyanTemplates(rt);
