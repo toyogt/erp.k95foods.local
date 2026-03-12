@@ -53,6 +53,7 @@ export default function TrialPackTab() {
       });
     },
     onSuccess: () => {
+      console.log('Mutation success - component added');
       queryClient.invalidateQueries({ queryKey: ['trialPackBOM'] });
       toast.success('Component added to BOM');
       setBomForm({ component_sku: '', bottles_required: 1 });
