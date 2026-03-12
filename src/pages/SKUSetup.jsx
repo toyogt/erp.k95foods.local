@@ -468,7 +468,9 @@ export default function SKUSetup() {
                   <Field label="ML per Container *" info="Volume per container (auto-filled from container type selection, cannot be edited)">
                     <Input 
                       type="text" 
-                      value={skuForm.ml_per_bottle || ''} 
+                      value={
+                        containerTypes.find(c => c.auto_generated_name === skuForm.bottle_type)?.ml_per_container || ''
+                      } 
                       readOnly 
                       placeholder="Select container type first" 
                       className="h-12 text-base bg-slate-50" 
