@@ -35,7 +35,7 @@ export default function ContainerTypeManager({ user }) {
   function generateName() {
     const { container_type, ml_per_container, colour, vendor_nickname } = form;
     if (!container_type || !ml_per_container || !colour || !vendor_nickname) return '';
-    return `${container_type} ${ml_per_container}ml ${colour} - ${vendor_nickname}`;
+    return `${ml_per_container}ml ${colour} ${container_type} - ${vendor_nickname}`;
   }
 
   function generateCode() {
