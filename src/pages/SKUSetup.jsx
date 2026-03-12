@@ -129,6 +129,10 @@ export default function SKUSetup() {
 
   // Auto-fill ML when container type changes
   const handleContainerTypeChange = (container_code) => {
+    if (!container_code) {
+      setSkuForm(f => ({ ...f, bottle_type: '', ml_per_bottle: '' }));
+      return;
+    }
     const container = containerTypes.find(c => c.container_code === container_code);
     if (container) {
       setSkuForm(f => ({ 
@@ -466,7 +470,7 @@ export default function SKUSetup() {
                       type="text" 
                       value={skuForm.ml_per_bottle || ''} 
                       readOnly 
-                      placeholder="Auto-filled from container type" 
+                      placeholder="Select container type first" 
                       className="h-12 text-base bg-slate-50" 
                     />
                   </Field>
