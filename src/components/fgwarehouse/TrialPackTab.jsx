@@ -14,6 +14,7 @@ export default function TrialPackTab() {
   const [showBOMDialog, setShowBOMDialog] = useState(false);
   const [selectedTrialSku, setSelectedTrialSku] = useState(null);
   const [bomForm, setBomForm] = useState({ component_sku: '', bottles_required: 1 });
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: trialPacks = [] } = useQuery({
@@ -72,6 +73,34 @@ export default function TrialPackTab() {
     setShowBOMDialog(true);
   };
 
+  const handleCloseBOM = () => {
+    const trialPack = trialPacks.find(p => p.item_code === selectedTrialSku);
+    const totalBottles = bomItems.reduce((sum, b) => sum + b.bottles_required, 0);
+    const isComplete = totalBottles === (trialPack?.bottles_per_box || 0);
+
+    if (!isComplete && bomItems.length > 0) {
+      setShowCloseConfirm(true);
+    } else {
+      setShowBOMDialog(false);
+      setShowCloseConfirm(false);
+    }
+  };
+
+  const handleSaveAndClose = () => {
+    const trialPack = trialPacks.find(p => p.item_code === selectedTrialSku);
+    const totalBottles = bomItems.reduce((sum, b) => sum + b.bottles_required, 0);
+    const requiredBottles = trialPack?.bottles_per_box || 0;
+
+    if (totalBottles < requiredBottles) {
+      toast.error(`Cannot save: BOM has ${totalBottles} bottles but trial pack needs ${requiredBottles} bottles`);
+      return;
+    }
+
+    toast.success('BOM saved');
+    setShowBOMDialog(false);
+    setShowCloseConfirm(false);
+  };
+
   return (
     <div className="space-y-4">
       <Button onClick={() => setShowWizard(true)} size="lg" className="w-full h-14 text-base">
@@ -124,7 +153,7 @@ export default function TrialPackTab() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showBOMDialog} onOpenChange={setShowBOMDialog}>
+      <Dialog open={showBOMDialog} onOpenChange={(open) => !open ? handleCloseBOM() : setShowBOMDialog(open)}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-auto">
           <DialogHeader>
             <DialogTitle>Manage BOM: {trialPacks.find(p => p.item_code === selectedTrialSku)?.product_name}</DialogTitle>
@@ -224,15 +253,42 @@ export default function TrialPackTab() {
 
             <div className="border-t pt-4">
               <Button
-                onClick={() => {
-                  toast.success('BOM saved');
-                  setShowBOMDialog(false);
-                }}
+                onClick={handleSaveAndClose}
                 className="w-full h-12 text-base bg-green-600 hover:bg-green-700"
               >
                 Save & Close
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showCloseConfirm} onOpenChange={setShowCloseConfirm}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Unsaved Changes</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-slate-600 mb-4">
+            The BOM is incomplete. Do you want to save your changes or discard them?
+          </p>
+          <div className="flex gap-3">
+            <Button
+              onClick={() => {
+                setShowBOMDialog(false);
+                setShowCloseConfirm(false);
+                toast.info('Changes discarded');
+              }}
+              variant="outline"
+              className="flex-1 h-12 text-base"
+            >
+              Don't Save
+            </Button>
+            <Button
+              onClick={handleSaveAndClose}
+              className="flex-1 h-12 text-base bg-green-600 hover:bg-green-700"
+            >
+              Save & Close
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
