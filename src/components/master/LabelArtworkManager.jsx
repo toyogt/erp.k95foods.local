@@ -24,6 +24,10 @@ const EMPTY_FORM = {
   notes: '',
 };
 
+const EMPTY_NUTRI = { energy: '', protein: '', carbs: '', fat: '', fiber: '', sugar: '', sodium: '' };
+const EMPTY_INGREDIENT = { name: '', percentage: '', allergen: false };
+const EMPTY_MFG = { name: '', address: '', fssai: '', contact: '', email: '' };
+
 export default function LabelArtworkManager({ user }) {
   const [artworks, setArtworks] = useState([]);
   const [skus, setSkus] = useState([]);
@@ -33,6 +37,9 @@ export default function LabelArtworkManager({ user }) {
   const [editItem, setEditItem] = useState(null);
   const [form, setForm] = useState({ ...EMPTY_FORM, artwork_id: genArtworkId() });
   const [saving, setSaving] = useState(false);
+  const [nutriFields, setNutriFields] = useState({ ...EMPTY_NUTRI });
+  const [ingredients, setIngredients] = useState([]);
+  const [mfgFields, setMfgFields] = useState({ ...EMPTY_MFG });
 
   useEffect(() => {
     load();
@@ -50,6 +57,9 @@ export default function LabelArtworkManager({ user }) {
   function openCreate() {
     setEditItem(null);
     setForm({ ...EMPTY_FORM, artwork_id: genArtworkId() });
+    setNutriFields({ ...EMPTY_NUTRI });
+    setIngredients([]);
+    setMfgFields({ ...EMPTY_MFG });
     setShowForm(true);
   }
 
@@ -70,13 +80,21 @@ export default function LabelArtworkManager({ user }) {
       is_active: a.is_active !== false,
       notes: a.notes || '',
     });
+    setNutriFields({ ...EMPTY_NUTRI, ...(a.nutritional_facts || {}) });
+    setIngredients(Array.isArray(a.ingredient_list) ? a.ingredient_list : []);
+    setMfgFields({ ...EMPTY_MFG, ...(a.manufacturer_details || {}) });
     setShowForm(true);
   }
 
   async function save() {
     if (!form.artwork_name) return;
     setSaving(true);
-    const data = { ...form };
+    const data = {
+      ...form,
+      nutritional_facts: nutriFields,
+      ingredient_list: ingredients,
+      manufacturer_details: mfgFields,
+    };
     if (editItem) {
       await base44.entities.LabelArtwork.update(editItem.id, data);
     } else {
@@ -184,52 +202,48 @@ export default function LabelArtworkManager({ user }) {
             </div>
           </div>
 
-          <div className="space-y-1">
-            <p className="text-xs text-slate-500">Nutritional Facts (JSON)</p>
-            <Textarea
-              className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs font-mono"
-              placeholder='e.g. {"energy": "100 kcal", "protein": "5g", "carbs": "10g", "fat": "2g"}'
-              value={typeof form.nutritional_facts === 'object' ? JSON.stringify(form.nutritional_facts, null, 2) : ''}
-              onChange={e => {
-                try {
-                  const parsed = e.target.value ? JSON.parse(e.target.value) : {};
-                  setForm(f => ({ ...f, nutritional_facts: parsed }));
-                } catch {}
-              }}
-              rows={3}
-            />
+          <div className="border-t border-slate-200 pt-4 space-y-3">
+            <p className="text-sm font-semibold text-slate-700">Nutritional Facts</p>
+            <div className="grid grid-cols-2 gap-3">
+              <input className="h-10 px-3 rounded-lg border border-slate-300 text-sm" placeholder="Energy (e.g. 100 kcal)" value={nutriFields.energy} onChange={e => setNutriFields(n => ({ ...n, energy: e.target.value }))} />
+              <input className="h-10 px-3 rounded-lg border border-slate-300 text-sm" placeholder="Protein (e.g. 5g)" value={nutriFields.protein} onChange={e => setNutriFields(n => ({ ...n, protein: e.target.value }))} />
+              <input className="h-10 px-3 rounded-lg border border-slate-300 text-sm" placeholder="Carbs (e.g. 10g)" value={nutriFields.carbs} onChange={e => setNutriFields(n => ({ ...n, carbs: e.target.value }))} />
+              <input className="h-10 px-3 rounded-lg border border-slate-300 text-sm" placeholder="Fat (e.g. 2g)" value={nutriFields.fat} onChange={e => setNutriFields(n => ({ ...n, fat: e.target.value }))} />
+              <input className="h-10 px-3 rounded-lg border border-slate-300 text-sm" placeholder="Fiber (e.g. 1g)" value={nutriFields.fiber} onChange={e => setNutriFields(n => ({ ...n, fiber: e.target.value }))} />
+              <input className="h-10 px-3 rounded-lg border border-slate-300 text-sm" placeholder="Sugar (e.g. 8g)" value={nutriFields.sugar} onChange={e => setNutriFields(n => ({ ...n, sugar: e.target.value }))} />
+              <input className="col-span-2 h-10 px-3 rounded-lg border border-slate-300 text-sm" placeholder="Sodium (e.g. 150mg)" value={nutriFields.sodium} onChange={e => setNutriFields(n => ({ ...n, sodium: e.target.value }))} />
+            </div>
           </div>
 
-          <div className="space-y-1">
-            <p className="text-xs text-slate-500">Ingredient List (JSON Array)</p>
-            <Textarea
-              className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs font-mono"
-              placeholder='e.g. [{"name": "Water", "percentage": "60%"}, {"name": "Sugar", "allergen": true}]'
-              value={Array.isArray(form.ingredient_list) ? JSON.stringify(form.ingredient_list, null, 2) : '[]'}
-              onChange={e => {
-                try {
-                  const parsed = e.target.value ? JSON.parse(e.target.value) : [];
-                  setForm(f => ({ ...f, ingredient_list: parsed }));
-                } catch {}
-              }}
-              rows={3}
-            />
+          <div className="border-t border-slate-200 pt-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold text-slate-700">Ingredient List</p>
+              <Button size="sm" variant="outline" onClick={() => setIngredients([...ingredients, { ...EMPTY_INGREDIENT }])} className="h-8 min-h-[32px]">
+                <Plus className="w-3 h-3" /> Add
+              </Button>
+            </div>
+            {ingredients.map((ing, i) => (
+              <div key={i} className="flex gap-2 items-start">
+                <input className="flex-1 h-10 px-3 rounded-lg border border-slate-300 text-sm" placeholder="Ingredient name" value={ing.name} onChange={e => { const copy = [...ingredients]; copy[i].name = e.target.value; setIngredients(copy); }} />
+                <input className="w-24 h-10 px-3 rounded-lg border border-slate-300 text-sm" placeholder="%" value={ing.percentage} onChange={e => { const copy = [...ingredients]; copy[i].percentage = e.target.value; setIngredients(copy); }} />
+                <label className="flex items-center gap-1 text-xs whitespace-nowrap h-10 px-2">
+                  <input type="checkbox" checked={ing.allergen} onChange={e => { const copy = [...ingredients]; copy[i].allergen = e.target.checked; setIngredients(copy); }} />
+                  Allergen
+                </label>
+                <Button size="sm" variant="ghost" onClick={() => setIngredients(ingredients.filter((_, idx) => idx !== i))} className="h-10 w-10 p-0 text-red-500">×</Button>
+              </div>
+            ))}
           </div>
 
-          <div className="space-y-1">
-            <p className="text-xs text-slate-500">Manufacturer Details (JSON)</p>
-            <Textarea
-              className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs font-mono"
-              placeholder='e.g. {"name": "K95 Foods", "address": "...", "fssai": "12345", "contact": "..."}'
-              value={typeof form.manufacturer_details === 'object' ? JSON.stringify(form.manufacturer_details, null, 2) : ''}
-              onChange={e => {
-                try {
-                  const parsed = e.target.value ? JSON.parse(e.target.value) : {};
-                  setForm(f => ({ ...f, manufacturer_details: parsed }));
-                } catch {}
-              }}
-              rows={3}
-            />
+          <div className="border-t border-slate-200 pt-4 space-y-3">
+            <p className="text-sm font-semibold text-slate-700">Manufacturer Details</p>
+            <input className="w-full h-10 px-3 rounded-lg border border-slate-300 text-sm" placeholder="Company name" value={mfgFields.name} onChange={e => setMfgFields(m => ({ ...m, name: e.target.value }))} />
+            <Textarea className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" placeholder="Address" value={mfgFields.address} onChange={e => setMfgFields(m => ({ ...m, address: e.target.value }))} rows={2} />
+            <div className="grid grid-cols-2 gap-3">
+              <input className="h-10 px-3 rounded-lg border border-slate-300 text-sm" placeholder="FSSAI License" value={mfgFields.fssai} onChange={e => setMfgFields(m => ({ ...m, fssai: e.target.value }))} />
+              <input className="h-10 px-3 rounded-lg border border-slate-300 text-sm" placeholder="Contact" value={mfgFields.contact} onChange={e => setMfgFields(m => ({ ...m, contact: e.target.value }))} />
+            </div>
+            <input className="w-full h-10 px-3 rounded-lg border border-slate-300 text-sm" placeholder="Email" value={mfgFields.email} onChange={e => setMfgFields(m => ({ ...m, email: e.target.value }))} />
           </div>
 
           <div className="space-y-1">
