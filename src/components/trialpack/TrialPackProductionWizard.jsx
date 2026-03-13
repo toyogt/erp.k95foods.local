@@ -3,11 +3,13 @@ import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { ArrowLeft, CheckCircle, X, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import StepBar from '@/components/fgwarehouse/StepBar';
 import QRScanInput from '@/components/fgwarehouse/QRScanInput';
+import LotCardPrint from '@/components/fgwarehouse/LotCardPrint';
 import { format } from 'date-fns';
 
 const STEPS = [
@@ -23,6 +25,8 @@ export default function TrialPackProductionWizard({ onClose }) {
   const [bom, setBom] = useState([]);
   const [scannedLots, setScannedLots] = useState([]);
   const [user, setUser] = useState(null);
+  const [location, setLocation] = useState('');
+  const [newLot, setNewLot] = useState(null);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -192,7 +196,7 @@ export default function TrialPackProductionWizard({ onClose }) {
       const lotSeq = Date.now();
       const lotId = `LOT-${format(new Date(), 'dd-MM-yyyy')}-${lotSeq}`;
       
-      await base44.entities.WarehouseLot.create({
+      const createdLot = await base44.entities.WarehouseLot.create({
         lot_id: lotId,
         lot_date: format(new Date(), 'yyyy-MM-dd'),
         lot_seq: lotSeq,
@@ -210,6 +214,7 @@ export default function TrialPackProductionWizard({ onClose }) {
         bottles_per_box: selectedSku.bottles_per_box || 6,
         status: 'ACTIVE',
         is_trial_pack: true,
+        location: location || '',
       });
 
       for (const scannedLot of scannedLots) {
@@ -219,13 +224,14 @@ export default function TrialPackProductionWizard({ onClose }) {
         });
       }
 
-      return { lotId, batchCode };
+      return { lotId, batchCode, createdLot };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries(['warehouseLots']);
       queryClient.invalidateQueries(['trialPackProductions']);
+      setNewLot(data.createdLot);
+      setStep('done');
       toast.success('Trial pack production completed');
-      onClose();
     },
   });
 
@@ -376,6 +382,33 @@ export default function TrialPackProductionWizard({ onClose }) {
         </div>
       )}
 
+      {step === 'done' && (
+        <div className="space-y-4">
+          <Card className="p-6">
+            <div className="text-center space-y-3">
+              <div className="w-16 h-16 mx-auto rounded-full bg-green-100 flex items-center justify-center">
+                <CheckCircle className="w-8 h-8 text-green-600" />
+              </div>
+              <div>
+                <p className="text-lg font-bold text-slate-900">Production Complete!</p>
+                <p className="text-sm text-slate-500 mt-1">{quantity} box(es) produced successfully</p>
+              </div>
+            </div>
+          </Card>
+          
+          {newLot && (
+            <Card className="p-4">
+              <p className="text-sm font-semibold text-slate-700 mb-3">🖨️ Print & attach lot card</p>
+              <LotCardPrint lot={newLot} />
+            </Card>
+          )}
+
+          <Button onClick={onClose} className="w-full h-14 text-base font-bold min-h-[56px]">
+            Close
+          </Button>
+        </div>
+      )}
+
       {step === 'confirm' && (
         <div className="space-y-4">
           <Button variant="outline" onClick={() => setStep('scan')} className="h-12 text-base">
@@ -387,10 +420,26 @@ export default function TrialPackProductionWizard({ onClose }) {
             <h3 className="font-bold text-green-900 mb-4 text-base">Ready to Produce</h3>
             <div className="space-y-3 text-sm">
               <div>
-                <p className="text-green-700 text-xs mb-1">Trial Pack</p>
                 <p className="font-bold text-green-900 text-base">{selectedSku?.brand_name}</p>
                 <p className="text-green-700">{selectedSku?.product_family} {selectedSku?.flavour}</p>
+                <p className="text-xs text-green-600 mt-1">{selectedSku?.item_code} · {selectedSku?.bottles_per_box} bottles/box</p>
               </div>
+
+              <div className="bg-white/60 rounded-lg p-3 space-y-2 border border-green-300">
+                <p className="text-xs font-bold text-green-900">📋 Recipe per Trial Pack:</p>
+                {bom.map(item => {
+                  const product = allProducts.find(p => p.item_code === item.component_sku);
+                  return (
+                    <div key={item.id} className="flex justify-between items-center">
+                      <p className="text-xs text-green-800">
+                        <strong>{item.component_sku}</strong> — {product?.brand_name || ''} {product?.flavour || ''}
+                      </p>
+                      <p className="text-xs font-bold text-green-900">{item.bottles_required} bottles</p>
+                    </div>
+                  );
+                })}
+              </div>
+
               <div className="flex justify-between pt-2 border-t border-green-300">
                 <span className="text-green-700">Quantity:</span>
                 <span className="font-bold text-green-900 text-base">{quantity} box(es)</span>
@@ -401,6 +450,16 @@ export default function TrialPackProductionWizard({ onClose }) {
               </div>
             </div>
           </Card>
+
+          <div className="space-y-2">
+            <Label className="text-xs text-slate-500">📍 Location (optional)</Label>
+            <Input 
+              value={location} 
+              onChange={e => setLocation(e.target.value)} 
+              placeholder="e.g. Rack A-3, Bay 2" 
+              className="h-11" 
+            />
+          </div>
 
           <Button onClick={() => createMutation.mutate()} disabled={createMutation.isPending} className="w-full h-16 text-lg bg-green-600 hover:bg-green-700">
             Confirm Production
