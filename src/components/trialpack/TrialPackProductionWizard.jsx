@@ -235,9 +235,9 @@ export default function TrialPackProductionWizard({ onClose }) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <div className="fixed inset-0 bg-slate-50 flex flex-col">
       {/* Header */}
-      <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
+      <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
           <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
             <X className="w-6 h-6 text-slate-700" />
@@ -249,8 +249,8 @@ export default function TrialPackProductionWizard({ onClose }) {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-2xl mx-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden">
+        <div className="max-w-2xl mx-auto p-4 space-y-4 pb-20">
           <StepBar steps={STEPS} currentStep={step} />
 
       {step === 'select' && (
