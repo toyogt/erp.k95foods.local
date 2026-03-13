@@ -11,7 +11,7 @@ export default function TrialPackBOMTab({ sku, skuData }) {
   const queryClient = useQueryClient();
 
   const { data: allProducts = [] } = useQuery({
-    queryKey: ['allProducts'],
+    queryKey: ['allProductsForBOM'],
     queryFn: () => base44.entities.ProductMaster.filter({ is_active: true }),
   });
 
@@ -66,6 +66,16 @@ export default function TrialPackBOMTab({ sku, skuData }) {
         <AlertCircle className="w-12 h-12 mx-auto text-slate-400 mb-2" />
         <p className="text-sm text-slate-600">BOM management is only available for Trial Pack SKUs</p>
         <p className="text-xs text-slate-400 mt-1">Enable "Is Trial Pack" in Basics tab to use this feature</p>
+      </div>
+    );
+  }
+
+  if (!sku) {
+    return (
+      <div className="p-6 text-center bg-amber-50 border border-amber-200 rounded-lg">
+        <AlertCircle className="w-12 h-12 mx-auto text-amber-500 mb-2" />
+        <p className="text-sm text-amber-700 font-semibold">Save SKU First</p>
+        <p className="text-xs text-amber-600 mt-1">You must save this trial pack SKU before configuring its BOM</p>
       </div>
     );
   }

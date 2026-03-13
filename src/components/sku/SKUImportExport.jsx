@@ -10,50 +10,91 @@ export default function SKUImportExport({ products, onImportComplete }) {
   const [importing, setImporting] = useState(false);
   const [file, setFile] = useState(null);
 
-  const generateTemplate = () => {
-    const headers = [
-      'brand_name',
-      'product_family',
-      'product_name',
-      'flavour',
-      'ml_per_bottle',
-      'bottles_per_box',
-      'mrp',
-      'gross_weight_kg',
-      'shelf_life_days',
-      'is_trial_pack',
-      'container_type',
-      'colour',
-      'cap_type',
-      'cap_colour'
-    ];
+  const generateTemplate = async () => {
+    try {
+      // Fetch master data for dropdowns
+      const [brands, families, flavours, containers, caps, boxes] = await Promise.all([
+        base44.entities.BrandMaster.filter({ is_active: true }).catch(() => []),
+        base44.entities.ProductFamilyMaster.filter({ is_active: true }).catch(() => []),
+        base44.entities.FlavourMaster.filter({ is_active: true }).catch(() => []),
+        base44.entities.ContainerType.list('-created_date', 100).catch(() => []),
+        base44.entities.CapType.filter({ is_active: true }).catch(() => []),
+        base44.entities.BoxType.filter({ is_active: true }).catch(() => []),
+      ]);
 
-    const exampleRow = [
-      'Example Brand',
-      'Beverages',
-      'Orange Juice',
-      'Sweet Orange',
-      '250',
-      '12',
-      '50',
-      '3.5',
-      '180',
-      'FALSE',
-      'Glass Bottle',
-      'Transparent',
-      'Crown Cap',
-      'Gold'
-    ];
+      // Build options lists
+      const brandOptions = brands.map(b => b.brand_name).join('/');
+      const containerOptions = containers.map(c => c.container_type).filter((v, i, a) => a.indexOf(v) === i).join('/');
+      const colourOptions = containers.map(c => c.colour).filter((v, i, a) => a.indexOf(v) === i).join('/');
+      const capTypeOptions = [...new Set(caps.map(c => c.cap_type))].join('/');
+      const capColourOptions = [...new Set(caps.map(c => c.cap_colour))].join('/');
 
-    const csv = [headers.join(','), exampleRow.join(',')].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'sku_import_template.csv';
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success('Template downloaded');
+      const headers = [
+        'brand_name',
+        'product_family',
+        'flavour',
+        'ml_per_bottle',
+        'bottles_per_box',
+        'mrp',
+        'gross_weight_kg',
+        'shelf_life_days',
+        'is_trial_pack',
+        'container_type',
+        'colour',
+        'cap_type',
+        'cap_colour'
+      ];
+
+      const optionsRow = [
+        brandOptions || 'Brand1/Brand2/Brand3',
+        'Family is auto-filtered by brand after upload',
+        'Flavour is auto-filtered by brand+family after upload',
+        '250/330/500/750/1000',
+        '6/12/24',
+        '25/30/35/40/50',
+        '3.5/4.0/5.5',
+        '180/365',
+        'TRUE/FALSE',
+        containerOptions || 'Glass Bottle/Can',
+        colourOptions || 'Transparent/Amber',
+        capTypeOptions || 'Crown Cap/Flip-Top Cap',
+        capColourOptions || 'Gold/Silver/Red/Blue'
+      ];
+
+      const exampleRow = [
+        brands[0]?.brand_name || 'Example Brand',
+        families[0]?.family_name || 'Beverages',
+        flavours[0]?.flavour_name || 'Sweet Orange',
+        '250',
+        '12',
+        '50',
+        '3.5',
+        '180',
+        'FALSE',
+        containers[0]?.container_type || 'Glass Bottle',
+        containers[0]?.colour || 'Transparent',
+        caps[0]?.cap_type || 'Crown Cap',
+        caps[0]?.cap_colour || 'Gold'
+      ];
+
+      const csv = [
+        headers.join(','),
+        '# OPTIONS: ' + optionsRow.join(','),
+        exampleRow.join(',')
+      ].join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'sku_import_template.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Smart template downloaded with options');
+    } catch (error) {
+      console.error('Template generation error:', error);
+      toast.error('Failed to generate template');
+    }
   };
 
   const exportSKUs = () => {
