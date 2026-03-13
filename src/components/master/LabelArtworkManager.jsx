@@ -9,11 +9,16 @@ function genArtworkId() {
 
 const EMPTY_FORM = {
   artwork_id: '',
-  sku_code: '',
   artwork_name: '',
   artwork_version: '',
-  barcode: '',
+  brand_logo_url: '',
   preview_url: '',
+  nutritional_facts: {},
+  ingredient_list: [],
+  manufacturer_details: {},
+  note_text: '',
+  mrp_display_format: '',
+  shelf_life_format: '',
   is_active: true,
   notes: '',
 };
@@ -30,8 +35,6 @@ export default function LabelArtworkManager({ user }) {
 
   useEffect(() => {
     load();
-    base44.entities.ProductMaster.filter({ is_active: true }, 'item_code', 200)
-      .then(setSkus).catch(() => {});
   }, []);
 
   async function load() {
@@ -53,11 +56,16 @@ export default function LabelArtworkManager({ user }) {
     setEditItem(a);
     setForm({
       artwork_id: a.artwork_id,
-      sku_code: a.sku_code || '',
       artwork_name: a.artwork_name || '',
       artwork_version: a.artwork_version || '',
-      barcode: a.barcode || '',
+      brand_logo_url: a.brand_logo_url || '',
       preview_url: a.preview_url || '',
+      nutritional_facts: a.nutritional_facts || {},
+      ingredient_list: a.ingredient_list || [],
+      manufacturer_details: a.manufacturer_details || {},
+      note_text: a.note_text || '',
+      mrp_display_format: a.mrp_display_format || '',
+      shelf_life_format: a.shelf_life_format || '',
       is_active: a.is_active !== false,
       notes: a.notes || '',
     });
@@ -65,18 +73,9 @@ export default function LabelArtworkManager({ user }) {
   }
 
   async function save() {
-    if (!form.sku_code || !form.artwork_name) return;
+    if (!form.artwork_name) return;
     setSaving(true);
-    const data = {
-      artwork_id: form.artwork_id,
-      sku_code: form.sku_code,
-      artwork_name: form.artwork_name,
-      artwork_version: form.artwork_version,
-      barcode: form.barcode,
-      preview_url: form.preview_url,
-      is_active: form.is_active,
-      notes: form.notes,
-    };
+    const data = { ...form };
     if (editItem) {
       await base44.entities.LabelArtwork.update(editItem.id, data);
     } else {
@@ -95,9 +94,8 @@ export default function LabelArtworkManager({ user }) {
   const filtered = artworks.filter(a => {
     const q = search.toLowerCase();
     return !q ||
-      (a.sku_code || '').toLowerCase().includes(q) ||
       (a.artwork_name || '').toLowerCase().includes(q) ||
-      (a.barcode || '').toLowerCase().includes(q) ||
+      (a.artwork_id || '').toLowerCase().includes(q) ||
       (a.artwork_version || '').toLowerCase().includes(q);
   });
 
@@ -108,61 +106,46 @@ export default function LabelArtworkManager({ user }) {
           <h3 className="font-semibold text-slate-800">{editItem ? 'Edit Artwork' : 'New Label Artwork'}</h3>
           <Button variant="ghost" size="sm" onClick={() => setShowForm(false)}>Cancel</Button>
         </div>
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
+        <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4 max-h-[80vh] overflow-y-auto">
           <div className="space-y-1">
             <p className="text-xs text-slate-500">Artwork ID (auto)</p>
-            <input readOnly className="w-full h-9 px-3 rounded-lg border border-slate-200 text-sm font-mono bg-slate-50" value={form.artwork_id} />
-          </div>
-
-          <div className="space-y-1">
-            <p className="text-xs text-slate-500">SKU *</p>
-            <select
-              className="w-full h-9 px-3 rounded-lg border border-slate-300 text-sm bg-white"
-              value={form.sku_code}
-              onChange={e => setForm(f => ({ ...f, sku_code: e.target.value }))}
-            >
-              <option value="">— Select SKU —</option>
-              {skus.map(s => (
-                <option key={s.id} value={s.item_code}>{s.item_code}{s.product_name ? ` — ${s.product_name}` : ''}</option>
-              ))}
-            </select>
+            <input readOnly className="w-full h-10 px-3 rounded-lg border border-slate-200 text-sm font-mono bg-slate-50" value={form.artwork_id} />
           </div>
 
           <div className="space-y-1">
             <p className="text-xs text-slate-500">Artwork Name *</p>
             <input
-              className="w-full h-9 px-3 rounded-lg border border-slate-300 text-sm"
+              className="w-full h-10 px-3 rounded-lg border border-slate-300 text-sm"
               placeholder="e.g. Mango 500ml Standard"
               value={form.artwork_name}
               onChange={e => setForm(f => ({ ...f, artwork_name: e.target.value }))}
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <p className="text-xs text-slate-500">Version</p>
-              <input
-                className="w-full h-9 px-3 rounded-lg border border-slate-300 text-sm"
-                placeholder="e.g. v1, v2.1"
-                value={form.artwork_version}
-                onChange={e => setForm(f => ({ ...f, artwork_version: e.target.value }))}
-              />
-            </div>
-            <div className="space-y-1">
-              <p className="text-xs text-slate-500">Barcode</p>
-              <input
-                className="w-full h-9 px-3 rounded-lg border border-slate-300 text-sm font-mono"
-                placeholder="Product barcode (optional)"
-                value={form.barcode}
-                onChange={e => setForm(f => ({ ...f, barcode: e.target.value }))}
-              />
-            </div>
+          <div className="space-y-1">
+            <p className="text-xs text-slate-500">Version</p>
+            <input
+              className="w-full h-10 px-3 rounded-lg border border-slate-300 text-sm"
+              placeholder="e.g. v1.0, v2.1"
+              value={form.artwork_version}
+              onChange={e => setForm(f => ({ ...f, artwork_version: e.target.value }))}
+            />
           </div>
 
           <div className="space-y-1">
-            <p className="text-xs text-slate-500">Preview Image URL (optional)</p>
+            <p className="text-xs text-slate-500">Brand Logo URL</p>
             <input
-              className="w-full h-9 px-3 rounded-lg border border-slate-300 text-sm"
+              className="w-full h-10 px-3 rounded-lg border border-slate-300 text-sm"
+              placeholder="https://..."
+              value={form.brand_logo_url}
+              onChange={e => setForm(f => ({ ...f, brand_logo_url: e.target.value }))}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <p className="text-xs text-slate-500">Preview Image URL</p>
+            <input
+              className="w-full h-10 px-3 rounded-lg border border-slate-300 text-sm"
               placeholder="https://..."
               value={form.preview_url}
               onChange={e => setForm(f => ({ ...f, preview_url: e.target.value }))}
@@ -170,10 +153,41 @@ export default function LabelArtworkManager({ user }) {
           </div>
 
           <div className="space-y-1">
-            <p className="text-xs text-slate-500">Notes</p>
+            <p className="text-xs text-slate-500">Note Text (for label)</p>
             <input
-              className="w-full h-9 px-3 rounded-lg border border-slate-300 text-sm"
-              placeholder="Optional notes"
+              className="w-full h-10 px-3 rounded-lg border border-slate-300 text-sm"
+              placeholder="e.g. See bottles for individual mfg date and batch no."
+              value={form.note_text}
+              onChange={e => setForm(f => ({ ...f, note_text: e.target.value }))}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <p className="text-xs text-slate-500">MRP Display Format</p>
+              <input
+                className="w-full h-10 px-3 rounded-lg border border-slate-300 text-sm"
+                placeholder="e.g. MRP: ₹{mrp}"
+                value={form.mrp_display_format}
+                onChange={e => setForm(f => ({ ...f, mrp_display_format: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-slate-500">Shelf Life Format</p>
+              <input
+                className="w-full h-10 px-3 rounded-lg border border-slate-300 text-sm"
+                placeholder="e.g. {months} months from MFG"
+                value={form.shelf_life_format}
+                onChange={e => setForm(f => ({ ...f, shelf_life_format: e.target.value }))}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <p className="text-xs text-slate-500">Notes (internal)</p>
+            <input
+              className="w-full h-10 px-3 rounded-lg border border-slate-300 text-sm"
+              placeholder="Optional internal notes"
               value={form.notes}
               onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
             />
@@ -184,10 +198,14 @@ export default function LabelArtworkManager({ user }) {
             Active
           </label>
 
+          <p className="text-xs text-slate-400 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+            💡 Nutritional facts, ingredients, and manufacturer details can be added via API or future UI enhancement
+          </p>
+
           <Button
-            className="w-full"
+            className="w-full h-11 min-h-[44px]"
             onClick={save}
-            disabled={saving || !form.sku_code || !form.artwork_name}
+            disabled={saving || !form.artwork_name}
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : editItem ? 'Save Changes' : 'Create Artwork'}
           </Button>
@@ -202,8 +220,8 @@ export default function LabelArtworkManager({ user }) {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
-            className="w-full h-9 pl-9 pr-3 rounded-lg border border-slate-200 text-sm"
-            placeholder="Search by SKU, name, barcode…"
+            className="w-full h-10 pl-9 pr-3 rounded-lg border border-slate-200 text-sm"
+            placeholder="Search by name, ID, version…"
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
@@ -232,10 +250,9 @@ export default function LabelArtworkManager({ user }) {
                   <span className="text-xs bg-blue-100 text-blue-700 font-bold px-2 py-0.5 rounded-full">{a.artwork_version}</span>
                 )}
                 {!a.is_active && <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">Inactive</span>}
-              </div>
-              <p className="text-xs text-slate-500 font-mono mt-0.5">{a.sku_code}</p>
-              {a.barcode && <p className="text-xs text-slate-400 mt-0.5">Barcode: <span className="font-mono">{a.barcode}</span></p>}
-              <p className="text-xs text-slate-400 mt-0.5 font-mono">{a.artwork_id}</p>
+                </div>
+                <p className="text-xs text-slate-400 mt-0.5 font-mono">{a.artwork_id}</p>
+                {a.note_text && <p className="text-xs text-slate-500 mt-1">{a.note_text}</p>}
             </div>
             <div className="flex flex-col items-end gap-2 shrink-0">
               <Button size="sm" variant="ghost" onClick={() => openEdit(a)} className="h-7 w-7 p-0">
