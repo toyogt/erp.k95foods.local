@@ -34,7 +34,7 @@ export default function TrialPackTab() {
   });
 
   const addBOMMutation = useMutation({
-    mutationFn: (data) => {
+    mutationFn: async (data) => {
       const trialPack = trialPacks.find(p => p.item_code === selectedTrialSku);
       const currentTotal = bomItems.reduce((sum, b) => sum + b.bottles_required, 0);
       const bottlesRequired = parseInt(data.bottles_required) || 0;
@@ -44,7 +44,9 @@ export default function TrialPackTab() {
       console.log('Validation: currentTotal=', currentTotal, 'bottlesRequired=', bottlesRequired, 'newTotal=', newTotal, 'capacity=', capacity, 'bomItems=', bomItems);
       
       if (newTotal > capacity) {
-        throw new Error(`Cannot add ${bottlesRequired} bottles. Current BOM has ${currentTotal} bottles, but trial pack capacity is only ${capacity} bottles.`);
+        const error = new Error(`Cannot add ${bottlesRequired} bottles. Current BOM has ${currentTotal} bottles, but trial pack capacity is only ${capacity} bottles.`);
+        console.log('Throwing validation error:', error.message);
+        return Promise.reject(error);
       }
       
       return base44.entities.TrialPackBOM.create({
