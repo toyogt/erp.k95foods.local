@@ -41,7 +41,6 @@ export default function SKUSearchInput({ skus, value, onChange, placeholder = 'S
           <div className="min-w-0 flex-1">
             <p className="text-base font-bold text-slate-900">{selectedSku.brand_name}</p>
             <p className="text-sm text-slate-700">{selectedSku.product_family || ''} {selectedSku.flavour || ''}</p>
-            <p className="text-xs text-slate-500 mt-1">{selectedSku.product_name}</p>
             <p className="text-xs text-slate-400 mt-0.5">
               {selectedSku.item_code} · {selectedSku.bottles_per_box} bottles/box
             </p>
@@ -83,7 +82,6 @@ export default function SKUSearchInput({ skus, value, onChange, placeholder = 'S
               >
                 <p className="font-bold text-slate-900 text-sm">{s.brand_name}</p>
                 <p className="text-xs text-slate-700">{s.product_family || ''} {s.flavour || ''}</p>
-                <p className="text-xs text-slate-500 mt-1">{s.product_name}</p>
                 <p className="text-xs text-slate-400 mt-0.5">
                   {s.item_code} · {s.bottles_per_box} bottles/box
                 </p>
