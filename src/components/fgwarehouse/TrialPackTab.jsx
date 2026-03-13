@@ -132,11 +132,11 @@ export default function TrialPackTab() {
         </div>
       </div>
 
-      <Dialog open={showWizard} onOpenChange={setShowWizard}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-auto">
+      {showWizard && (
+        <div className="fixed inset-0 z-50 bg-white">
           <TrialPackProductionWizard onClose={() => setShowWizard(false)} />
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
 
       <Dialog open={showBOMDialog} onOpenChange={(open) => {
         if (!open) {

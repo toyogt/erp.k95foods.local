@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { ArrowLeft, CheckCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle, X, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import StepBar from '@/components/fgwarehouse/StepBar';
 import QRScanInput from '@/components/fgwarehouse/QRScanInput';
@@ -74,10 +74,20 @@ export default function TrialPackProductionWizard({ onClose }) {
     return Math.min(...mins);
   };
 
-  const getSuggestedLots = (componentSku) => {
-    return lots
+  const getSuggestedLots = (componentSku, boxesNeeded) => {
+    const availableLots = lots
       .filter(lot => lot.sku_code === componentSku && lot.boxes_balance > 0)
-      .sort((a, b) => new Date(a.exp_date) - new Date(b.exp_date));
+      .sort((a, b) => new Date(a.mfg_date) - new Date(b.mfg_date));
+    
+    // Calculate total available
+    const totalAvailable = availableLots.reduce((sum, lot) => sum + (lot.boxes_balance || 0), 0);
+    
+    // Return lots with availability info
+    return {
+      lots: availableLots,
+      totalAvailable,
+      isEnough: totalAvailable >= boxesNeeded
+    };
   };
 
   const handleSkuSelect = async (pack) => {
@@ -219,9 +229,29 @@ export default function TrialPackProductionWizard({ onClose }) {
     },
   });
 
+  const handleRemoveLot = (lotId) => {
+    setScannedLots(scannedLots.filter(l => l.lot_id !== lotId));
+    toast.success('Lot removed');
+  };
+
   return (
-    <div className="space-y-6">
-      <StepBar steps={STEPS} currentStep={step} />
+    <div className="min-h-screen bg-slate-50 flex flex-col">
+      {/* Header */}
+      <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
+        <div className="flex items-center gap-3">
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
+            <X className="w-6 h-6 text-slate-700" />
+          </button>
+          <div>
+            <h1 className="font-bold text-slate-900 text-lg">Trial Pack Production</h1>
+            <p className="text-xs text-slate-500">Step {step === 'select' ? '1' : step === 'scan' ? '2' : '3'} of 3</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-2xl mx-auto p-4 space-y-4">
+          <StepBar steps={STEPS} currentStep={step} />
 
       {step === 'select' && (
         <div className="space-y-4">
@@ -248,14 +278,6 @@ export default function TrialPackProductionWizard({ onClose }) {
             Back
           </Button>
 
-          {/* Trial Pack Being Made */}
-          <Card className="p-4 bg-purple-50 border-purple-200">
-            <p className="text-xs text-purple-600 font-semibold mb-1">Making Trial Pack</p>
-            <p className="font-bold text-purple-900 text-base">{selectedSku?.brand_name}</p>
-            <p className="text-sm text-purple-700">{selectedSku?.product_family} {selectedSku?.flavour}</p>
-            <p className="text-xs text-purple-600 mt-2">{selectedSku?.bottles_per_box || 0} bottles per box</p>
-          </Card>
-
           <Card className="p-5">
             <h3 className="font-bold text-slate-900 mb-3 text-base">How many trial pack boxes to make?</h3>
             <Input 
@@ -269,6 +291,13 @@ export default function TrialPackProductionWizard({ onClose }) {
             <p className="text-xs text-slate-500 mt-2 text-center">
               Minimum: {calculateMinProduction(bom)} box(es) based on BOM
             </p>
+            {selectedSku && (
+              <div className="mt-4 pt-4 border-t border-slate-200">
+                <p className="font-bold text-slate-700 text-sm">{selectedSku.brand_name}</p>
+                <p className="text-xs text-slate-600">{selectedSku.product_family} {selectedSku.flavour}</p>
+                <p className="text-xs text-slate-500 mt-1">{selectedSku.bottles_per_box || 0} bottles per box</p>
+              </div>
+            )}
           </Card>
 
           <Card className="p-5">
@@ -279,7 +308,7 @@ export default function TrialPackProductionWizard({ onClose }) {
               const qty = parseInt(quantity) || 0;
               const boxesNeeded = Math.ceil((item.bottles_required * qty) / bottlesPerBox);
               const scanned = scannedLots.filter(l => l.component_sku === item.component_sku).reduce((sum, l) => sum + l.boxes_used, 0);
-              const suggested = getSuggestedLots(item.component_sku);
+              const lotInfo = getSuggestedLots(item.component_sku, boxesNeeded);
 
               return (
                 <div key={item.id} className="mb-4 pb-4 border-b last:border-0">
@@ -293,9 +322,20 @@ export default function TrialPackProductionWizard({ onClose }) {
                     </div>
                     <p className="text-sm font-bold text-slate-700 shrink-0 ml-3">{scanned}/{boxesNeeded} scanned</p>
                   </div>
-                  {suggested.length > 0 && scanned < boxesNeeded && (
-                    <div className="text-xs text-blue-600 bg-blue-50 rounded px-2 py-1.5 mt-2">
-                      Suggested: {suggested[0].lot_id} ({suggested[0].boxes_balance} available)
+                  {qty > 0 && scanned < boxesNeeded && (
+                    <div className="mt-2">
+                      {!lotInfo.isEnough ? (
+                        <div className="text-xs text-red-600 bg-red-50 rounded px-2 py-1.5 border border-red-200">
+                          ⚠️ Not enough stock! Need {boxesNeeded} boxes but only {lotInfo.totalAvailable} available. Receive more or reduce quantity.
+                        </div>
+                      ) : (
+                        <div className="text-xs text-blue-600 bg-blue-50 rounded px-2 py-1.5 space-y-1">
+                          <p className="font-semibold">Suggested lots (oldest first):</p>
+                          {lotInfo.lots.slice(0, 3).map(l => (
+                            <p key={l.lot_id}>• {l.lot_id} ({l.boxes_balance} available)</p>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -303,21 +343,25 @@ export default function TrialPackProductionWizard({ onClose }) {
             })}
           </Card>
 
-          <QRScanInput onScan={handleScanLot} placeholder="Scan LOT" className="h-16 text-lg" />
+          <QRScanInput onScan={handleScanLot} placeholder="Scan LOT for all components" className="h-16 text-base" />
 
           {scannedLots.length > 0 && (
             <Card className="p-4">
               <h3 className="font-bold text-slate-900 mb-3 text-sm">Scanned Lots ({scannedLots.length})</h3>
-              <div className="space-y-2 max-h-48 overflow-auto">
+              <div className="space-y-2 max-h-64 overflow-auto">
                 {scannedLots.map((lot, idx) => (
-                  <div key={idx} className="text-sm bg-slate-50 p-3 rounded">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="font-mono font-bold text-slate-900">{lot.lot_id}</p>
-                        <p className="text-xs text-slate-600">{lot.product_name}</p>
-                      </div>
-                      <p className="text-xs font-bold text-slate-700">{lot.boxes_used} box(es)</p>
+                  <div key={idx} className="text-sm bg-slate-50 p-3 rounded flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-mono font-bold text-slate-900 text-xs">{lot.lot_id}</p>
+                      <p className="text-xs text-slate-600 truncate">{lot.product_name}</p>
+                      <p className="text-xs text-slate-500 mt-1">{lot.boxes_used} box(es) used</p>
                     </div>
+                    <button
+                      onClick={() => handleRemoveLot(lot.lot_id)}
+                      className="p-2 hover:bg-red-50 rounded-lg transition-colors shrink-0"
+                    >
+                      <Trash2 className="w-4 h-4 text-red-600" />
+                    </button>
                   </div>
                 ))}
               </div>
@@ -362,6 +406,8 @@ export default function TrialPackProductionWizard({ onClose }) {
           </Button>
         </div>
       )}
+        </div>
+      </div>
     </div>
   );
 }
