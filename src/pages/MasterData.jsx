@@ -15,6 +15,8 @@ import ErrorMessagesManager from '@/components/master/ErrorMessagesManager';
 import DowntimeReasonManager from '@/components/master/DowntimeReasonManager';
 import ProductTaxonomy from '@/pages/ProductTaxonomy';
 import ManufacturerManager from '@/components/master/ManufacturerManager';
+import CustomerManager from '@/components/master/CustomerManager';
+import SKUCustomerBarcodeManager from '@/components/master/SKUCustomerBarcodeManager';
 import { Loader2 } from 'lucide-react';
 
 export default function MasterData() {
@@ -48,6 +50,8 @@ export default function MasterData() {
           <TabsList className="inline-flex h-10 rounded-xl bg-slate-100 p-1 min-w-full">
             {isAdmin   && <TabsTrigger value="taxonomy"      className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Taxonomy</TabsTrigger>}
             {isAdmin   && <TabsTrigger value="manufacturers" className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Manufacturers</TabsTrigger>}
+            {isAdmin   && <TabsTrigger value="customers"     className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Customers</TabsTrigger>}
+            {isAdmin   && <TabsTrigger value="sku-barcodes"  className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">SKU Barcodes</TabsTrigger>}
             <TabsTrigger value="bottles"    className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Containers</TabsTrigger>
             <TabsTrigger value="caps"       className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Caps</TabsTrigger>
             <TabsTrigger value="locations"  className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Locations</TabsTrigger>
@@ -63,6 +67,8 @@ export default function MasterData() {
         </div>
         {isAdmin   && <TabsContent value="taxonomy"      className="mt-4"><ProductTaxonomy /></TabsContent>}
         {isAdmin   && <TabsContent value="manufacturers" className="mt-4"><ManufacturerManager /></TabsContent>}
+        {isAdmin   && <TabsContent value="customers"     className="mt-4"><CustomerManager /></TabsContent>}
+        {isAdmin   && <TabsContent value="sku-barcodes"  className="mt-4"><SKUCustomerBarcodeManager /></TabsContent>}
         <TabsContent value="bottles"    className="mt-4"><ContainerTypeManager user={user} /></TabsContent>
         <TabsContent value="caps"       className="mt-4"><CapTypeManager user={user} /></TabsContent>
         <TabsContent value="locations"  className="mt-4"><LocationManager user={user} /></TabsContent>
