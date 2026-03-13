@@ -28,6 +28,7 @@ export default function TrialPackProductionWizard({ onClose }) {
   const [location, setLocation] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [newLot, setNewLot] = useState(null);
+  const [boxLabels, setBoxLabels] = useState([]);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -234,6 +235,26 @@ export default function TrialPackProductionWizard({ onClose }) {
         customer_barcode: customerBarcode?.barcode_value || null,
       });
 
+      // Generate box labels for trial pack
+      const boxLabels = [];
+      for (let i = 1; i <= qty; i++) {
+        const boxSerial = `${batchCode}-${String(i).padStart(4, '0')}`;
+        await base44.entities.BoxLabel.create({
+          box_serial: boxSerial,
+          item_code: selectedSku.item_code,
+          product_name: selectedSku.product_name,
+          batch_no: batchCode,
+          mfg_date: oldestMfg,
+          exp_date: oldestExp,
+          qr_payload: boxSerial,
+          status: 'PRINTED_UNREGISTERED',
+          product_code: selectedSku.item_code,
+          printed_at: new Date().toISOString(),
+          printed_by: user?.email,
+        });
+        boxLabels.push(boxSerial);
+      }
+
       for (const scannedLot of scannedLots) {
         const lot = lots.find(l => l.lot_id === scannedLot.lot_id);
         await base44.entities.WarehouseLot.update(lot.id, {
@@ -241,12 +262,14 @@ export default function TrialPackProductionWizard({ onClose }) {
         });
       }
 
-      return { lotId, batchCode, createdLot };
+      return { lotId, batchCode, createdLot, boxLabels };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries(['warehouseLots']);
       queryClient.invalidateQueries(['trialPackProductions']);
+      queryClient.invalidateQueries(['boxLabels']);
       setNewLot(data.createdLot);
+      setBoxLabels(data.boxLabels || []);
       setStep('done');
       toast.success('Trial pack production completed');
     },
@@ -417,6 +440,20 @@ export default function TrialPackProductionWizard({ onClose }) {
             <Card className="p-4">
               <p className="text-sm font-semibold text-slate-700 mb-3">🖨️ Print & attach lot card</p>
               <LotCardPrint lot={newLot} />
+            </Card>
+          )}
+
+          {boxLabels.length > 0 && (
+            <Card className="p-4">
+              <p className="text-sm font-semibold text-slate-700 mb-3">📦 Box Labels Created</p>
+              <p className="text-xs text-slate-600 mb-3">
+                {boxLabels.length} box label(s) generated. Print them from Box Label Print page.
+              </p>
+              <div className="bg-slate-50 rounded-lg p-3 border border-slate-200">
+                <p className="text-xs font-mono text-slate-700">
+                  {boxLabels[0]} {boxLabels.length > 1 && `to ${boxLabels[boxLabels.length - 1]}`}
+                </p>
+              </div>
             </Card>
           )}
 
