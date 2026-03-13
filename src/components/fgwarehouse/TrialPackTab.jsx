@@ -124,42 +124,12 @@ export default function TrialPackTab() {
       </Button>
 
       <div className="border-t pt-4">
-        <h3 className="font-bold text-slate-900 mb-3">Trial Pack SKUs</h3>
-
-        {trialPacks.length === 0 && (
-          <Card className="p-6 text-center bg-slate-50">
-            <Package className="w-12 h-12 mx-auto text-slate-400 mb-2" />
-            <p className="text-sm text-slate-600">No trial pack SKUs found</p>
-            <p className="text-xs text-slate-400 mt-1">Add SKUs with is_trial_pack=true in SKU Setup</p>
-          </Card>
-        )}
-
-        {trialPacks.map(pack => {
-          const packBOM = bomItems.filter(b => b.trial_pack_sku === pack.item_code);
-          const totalBottles = packBOM.reduce((sum, b) => sum + b.bottles_required, 0);
-
-          return (
-            <Card key={pack.id} className="p-4 mb-3">
-              <div className="flex justify-between items-start mb-2">
-                <div>
-                  <p className="font-bold text-slate-900">{pack.product_name}</p>
-                  <p className="text-sm text-slate-500">{pack.item_code}</p>
-                  <p className="text-xs text-slate-400">
-                    {pack.bottles_per_box || 0} bottles per pack
-                    {selectedTrialSku === pack.item_code && packBOM.length > 0 && ` • BOM: ${totalBottles} bottles`}
-                  </p>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleManageBOM(pack.item_code)}
-                >
-                  Manage BOM
-                </Button>
-              </div>
-            </Card>
-          );
-        })}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+          <p className="text-sm text-blue-900 font-medium">BOM Configuration</p>
+          <p className="text-xs text-blue-700 mt-1">
+            To configure Bill of Materials for trial packs, go to SKU Setup → select trial pack SKU → BOM tab
+          </p>
+        </div>
       </div>
 
       <Dialog open={showWizard} onOpenChange={setShowWizard}>
