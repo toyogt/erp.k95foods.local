@@ -12,21 +12,27 @@ const EMPTY_FORM = {
   artwork_id: '',
   artwork_name: '',
   artwork_version: '',
-  brand_logo_url: '',
+  label_size: '',
   preview_url: '',
+  open_file_url: '',
+  approved_file_url: '',
   nutritional_facts: {},
   ingredient_list: [],
-  manufacturer_details: {},
+  manufacturer_id: '',
+  net_quantity_format: '',
+  expiry_format: '',
   note_text: '',
   mrp_display_format: '',
-  shelf_life_format: '',
+  approval_status: 'DRAFT',
+  approved_by: '',
+  approved_date: '',
+  version_notes: '',
   is_active: true,
   notes: '',
 };
 
 const EMPTY_NUTRI = { energy: '', protein: '', carbs: '', fat: '', fiber: '', sugar: '', sodium: '' };
 const EMPTY_INGREDIENT = { name: '', percentage: '', allergen: false };
-const EMPTY_MFG = { name: '', address: '', fssai: '', contact: '', email: '' };
 
 export default function LabelArtworkManager({ user }) {
   const [artworks, setArtworks] = useState([]);
@@ -39,7 +45,7 @@ export default function LabelArtworkManager({ user }) {
   const [saving, setSaving] = useState(false);
   const [nutriFields, setNutriFields] = useState({ ...EMPTY_NUTRI });
   const [ingredients, setIngredients] = useState([]);
-  const [mfgFields, setMfgFields] = useState({ ...EMPTY_MFG });
+  const [manufacturers, setManufacturers] = useState([]);
 
   useEffect(() => {
     load();
@@ -48,8 +54,12 @@ export default function LabelArtworkManager({ user }) {
   async function load() {
     setLoading(true);
     try {
-      const r = await base44.entities.LabelArtwork.list('-created_date', 200);
-      setArtworks(r);
+      const [artList, mfgList] = await Promise.all([
+        base44.entities.LabelArtwork.list('-created_date', 200),
+        base44.entities.ManufacturerMaster.filter({ is_active: true })
+      ]);
+      setArtworks(artList);
+      setManufacturers(mfgList);
     } catch { /* offline */ }
     setLoading(false);
   }
@@ -59,7 +69,6 @@ export default function LabelArtworkManager({ user }) {
     setForm({ ...EMPTY_FORM, artwork_id: genArtworkId() });
     setNutriFields({ ...EMPTY_NUTRI });
     setIngredients([]);
-    setMfgFields({ ...EMPTY_MFG });
     setShowForm(true);
   }
 
@@ -69,20 +78,26 @@ export default function LabelArtworkManager({ user }) {
       artwork_id: a.artwork_id,
       artwork_name: a.artwork_name || '',
       artwork_version: a.artwork_version || '',
-      brand_logo_url: a.brand_logo_url || '',
+      label_size: a.label_size || '',
       preview_url: a.preview_url || '',
+      open_file_url: a.open_file_url || '',
+      approved_file_url: a.approved_file_url || '',
       nutritional_facts: a.nutritional_facts || {},
       ingredient_list: a.ingredient_list || [],
-      manufacturer_details: a.manufacturer_details || {},
+      manufacturer_id: a.manufacturer_id || '',
+      net_quantity_format: a.net_quantity_format || '',
+      expiry_format: a.expiry_format || '',
       note_text: a.note_text || '',
       mrp_display_format: a.mrp_display_format || '',
-      shelf_life_format: a.shelf_life_format || '',
+      approval_status: a.approval_status || 'DRAFT',
+      approved_by: a.approved_by || '',
+      approved_date: a.approved_date || '',
+      version_notes: a.version_notes || '',
       is_active: a.is_active !== false,
       notes: a.notes || '',
     });
     setNutriFields({ ...EMPTY_NUTRI, ...(a.nutritional_facts || {}) });
     setIngredients(Array.isArray(a.ingredient_list) ? a.ingredient_list : []);
-    setMfgFields({ ...EMPTY_MFG, ...(a.manufacturer_details || {}) });
     setShowForm(true);
   }
 
@@ -93,7 +108,6 @@ export default function LabelArtworkManager({ user }) {
       ...form,
       nutritional_facts: nutriFields,
       ingredient_list: ingredients,
-      manufacturer_details: mfgFields,
     };
     if (editItem) {
       await base44.entities.LabelArtwork.update(editItem.id, data);
@@ -141,24 +155,25 @@ export default function LabelArtworkManager({ user }) {
             />
           </div>
 
-          <div className="space-y-1">
-            <p className="text-xs text-slate-500">Version</p>
-            <input
-              className="w-full h-10 px-3 rounded-lg border border-slate-300 text-sm"
-              placeholder="e.g. v1.0, v2.1"
-              value={form.artwork_version}
-              onChange={e => setForm(f => ({ ...f, artwork_version: e.target.value }))}
-            />
-          </div>
-
-          <div className="space-y-1">
-            <p className="text-xs text-slate-500">Brand Logo URL</p>
-            <input
-              className="w-full h-10 px-3 rounded-lg border border-slate-300 text-sm"
-              placeholder="https://..."
-              value={form.brand_logo_url}
-              onChange={e => setForm(f => ({ ...f, brand_logo_url: e.target.value }))}
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <p className="text-xs text-slate-500">Version</p>
+              <input
+                className="w-full h-10 px-3 rounded-lg border border-slate-300 text-sm"
+                placeholder="e.g. v1.0, v2.1"
+                value={form.artwork_version}
+                onChange={e => setForm(f => ({ ...f, artwork_version: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-slate-500">Label Size</p>
+              <input
+                className="w-full h-10 px-3 rounded-lg border border-slate-300 text-sm"
+                placeholder="e.g. 90mm x 60mm"
+                value={form.label_size}
+                onChange={e => setForm(f => ({ ...f, label_size: e.target.value }))}
+              />
+            </div>
           </div>
 
           <div className="space-y-1">
@@ -172,6 +187,61 @@ export default function LabelArtworkManager({ user }) {
           </div>
 
           <div className="space-y-1">
+            <p className="text-xs text-slate-500">Label Open File URL</p>
+            <input
+              className="w-full h-10 px-3 rounded-lg border border-slate-300 text-sm"
+              placeholder="https://... (AI, PSD, editable design file)"
+              value={form.open_file_url}
+              onChange={e => setForm(f => ({ ...f, open_file_url: e.target.value }))}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <p className="text-xs text-slate-500">Label Approved File URL</p>
+            <input
+              className="w-full h-10 px-3 rounded-lg border border-slate-300 text-sm"
+              placeholder="https://... (PDF, print-ready file)"
+              value={form.approved_file_url}
+              onChange={e => setForm(f => ({ ...f, approved_file_url: e.target.value }))}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <p className="text-xs text-slate-500">Manufacturer</p>
+            <select
+              className="w-full h-10 px-3 rounded-lg border border-slate-300 text-sm"
+              value={form.manufacturer_id}
+              onChange={e => setForm(f => ({ ...f, manufacturer_id: e.target.value }))}
+            >
+              <option value="">Select manufacturer...</option>
+              {manufacturers.map(m => (
+                <option key={m.id} value={m.manufacturer_id}>{m.manufacturer_name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <p className="text-xs text-slate-500">Net Quantity Format</p>
+              <input
+                className="w-full h-10 px-3 rounded-lg border border-slate-300 text-sm"
+                placeholder="e.g. 500 ml, {volume} ml"
+                value={form.net_quantity_format}
+                onChange={e => setForm(f => ({ ...f, net_quantity_format: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-slate-500">Expiry Format</p>
+              <input
+                className="w-full h-10 px-3 rounded-lg border border-slate-300 text-sm"
+                placeholder="e.g. {months} months from MFG"
+                value={form.expiry_format}
+                onChange={e => setForm(f => ({ ...f, expiry_format: e.target.value }))}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1">
             <p className="text-xs text-slate-500">Note Text (for label)</p>
             <input
               className="w-full h-10 px-3 rounded-lg border border-slate-300 text-sm"
@@ -181,25 +251,14 @@ export default function LabelArtworkManager({ user }) {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <p className="text-xs text-slate-500">MRP Display Format</p>
-              <input
-                className="w-full h-10 px-3 rounded-lg border border-slate-300 text-sm"
-                placeholder="e.g. MRP: ₹{mrp}"
-                value={form.mrp_display_format}
-                onChange={e => setForm(f => ({ ...f, mrp_display_format: e.target.value }))}
-              />
-            </div>
-            <div className="space-y-1">
-              <p className="text-xs text-slate-500">Shelf Life Format</p>
-              <input
-                className="w-full h-10 px-3 rounded-lg border border-slate-300 text-sm"
-                placeholder="e.g. {months} months from MFG"
-                value={form.shelf_life_format}
-                onChange={e => setForm(f => ({ ...f, shelf_life_format: e.target.value }))}
-              />
-            </div>
+          <div className="space-y-1">
+            <p className="text-xs text-slate-500">MRP Display Format</p>
+            <input
+              className="w-full h-10 px-3 rounded-lg border border-slate-300 text-sm"
+              placeholder="e.g. MRP: ₹{mrp}"
+              value={form.mrp_display_format}
+              onChange={e => setForm(f => ({ ...f, mrp_display_format: e.target.value }))}
+            />
           </div>
 
           <div className="border-t border-slate-200 pt-4 space-y-3">
@@ -236,14 +295,35 @@ export default function LabelArtworkManager({ user }) {
           </div>
 
           <div className="border-t border-slate-200 pt-4 space-y-3">
-            <p className="text-sm font-semibold text-slate-700">Manufacturer Details</p>
-            <input className="w-full h-10 px-3 rounded-lg border border-slate-300 text-sm" placeholder="Company name" value={mfgFields.name} onChange={e => setMfgFields(m => ({ ...m, name: e.target.value }))} />
-            <Textarea className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" placeholder="Address" value={mfgFields.address} onChange={e => setMfgFields(m => ({ ...m, address: e.target.value }))} rows={2} />
-            <div className="grid grid-cols-2 gap-3">
-              <input className="h-10 px-3 rounded-lg border border-slate-300 text-sm" placeholder="FSSAI License" value={mfgFields.fssai} onChange={e => setMfgFields(m => ({ ...m, fssai: e.target.value }))} />
-              <input className="h-10 px-3 rounded-lg border border-slate-300 text-sm" placeholder="Contact" value={mfgFields.contact} onChange={e => setMfgFields(m => ({ ...m, contact: e.target.value }))} />
+            <p className="text-sm font-semibold text-slate-700">Approval & Versioning</p>
+            <div className="space-y-1">
+              <p className="text-xs text-slate-500">Approval Status</p>
+              <select
+                className="w-full h-10 px-3 rounded-lg border border-slate-300 text-sm"
+                value={form.approval_status}
+                onChange={e => setForm(f => ({ ...f, approval_status: e.target.value }))}
+              >
+                <option value="DRAFT">Draft</option>
+                <option value="PENDING_APPROVAL">Pending Approval</option>
+                <option value="APPROVED">Approved</option>
+                <option value="ARCHIVED">Archived</option>
+              </select>
             </div>
-            <input className="w-full h-10 px-3 rounded-lg border border-slate-300 text-sm" placeholder="Email" value={mfgFields.email} onChange={e => setMfgFields(m => ({ ...m, email: e.target.value }))} />
+            <div className="space-y-1">
+              <p className="text-xs text-slate-500">Version Notes</p>
+              <Textarea
+                className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm"
+                placeholder="What changed in this version?"
+                value={form.version_notes}
+                onChange={e => setForm(f => ({ ...f, version_notes: e.target.value }))}
+                rows={2}
+              />
+            </div>
+            {form.approved_by && (
+              <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 text-xs text-emerald-700">
+                Approved by {form.approved_by} on {form.approved_date ? new Date(form.approved_date).toLocaleDateString() : 'N/A'}
+              </div>
+            )}
           </div>
 
           <div className="space-y-1">
