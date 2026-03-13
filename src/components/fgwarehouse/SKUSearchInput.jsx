@@ -37,14 +37,13 @@ export default function SKUSearchInput({ skus, value, onChange, placeholder = 'S
   return (
     <div className="relative">
       {selectedSku ? (
-        <div className="flex items-center border border-slate-300 rounded-xl px-3 py-3 bg-white min-h-[56px]">
+        <div className="flex items-center border border-slate-300 rounded-xl px-4 py-3 bg-white min-h-[56px]">
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-slate-900 leading-snug">
-              {selectedSku.brand_name ? `${selectedSku.brand_name} — ` : ''}{selectedSku.product_name}
-              {selectedSku.flavour ? ` (${selectedSku.flavour})` : ''}
-            </p>
+            <p className="text-base font-bold text-slate-900">{selectedSku.brand_name}</p>
+            <p className="text-sm text-slate-700">{selectedSku.product_family || ''} {selectedSku.flavour || ''}</p>
+            <p className="text-xs text-slate-500 mt-1">{selectedSku.product_name}</p>
             <p className="text-xs text-slate-400 mt-0.5">
-              {selectedSku.item_code} · {selectedSku.bottles_per_box} btls/box
+              {selectedSku.item_code} · {selectedSku.bottles_per_box} bottles/box
             </p>
           </div>
           <button
@@ -82,12 +81,11 @@ export default function SKUSearchInput({ skus, value, onChange, placeholder = 'S
                 onClick={() => select(s)}
                 className="w-full text-left px-4 py-3 hover:bg-slate-50 active:bg-slate-100 border-b border-slate-100 last:border-0"
               >
-                <p className="text-sm font-semibold text-slate-900 leading-snug">
-                  {s.brand_name ? `${s.brand_name} — ` : ''}{s.product_name}
-                  {s.flavour ? ` (${s.flavour})` : ''}
-                </p>
+                <p className="font-bold text-slate-900 text-sm">{s.brand_name}</p>
+                <p className="text-xs text-slate-700">{s.product_family || ''} {s.flavour || ''}</p>
+                <p className="text-xs text-slate-500 mt-1">{s.product_name}</p>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  {s.item_code}{s.product_family ? ` · ${s.product_family}` : ''} · {s.bottles_per_box} btls/box
+                  {s.item_code} · {s.bottles_per_box} bottles/box
                 </p>
               </button>
             ))

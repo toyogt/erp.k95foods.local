@@ -520,7 +520,7 @@ export default function ReceiveTab({ skus, lots, onRefresh, user, onBack }) {
               <div className="space-y-3">
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
                   <p className="text-sm font-bold text-amber-900 mb-2">📱 Instructions:</p>
-                  <p className="text-sm text-amber-800">Please scan the lot QR card using the scanner below.</p>
+                  <p className="text-sm text-amber-800">Please scan the lot QR card using the scanner below before putting the boxes</p>
                 </div>
                 
                 <p className="text-xs text-slate-600 font-semibold">Available lots for batch <strong>{batch_code}</strong>:</p>
