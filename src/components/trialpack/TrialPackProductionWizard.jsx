@@ -26,6 +26,7 @@ export default function TrialPackProductionWizard({ onClose }) {
   const [scannedLots, setScannedLots] = useState([]);
   const [user, setUser] = useState(null);
   const [location, setLocation] = useState('');
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [newLot, setNewLot] = useState(null);
   const queryClient = useQueryClient();
 
@@ -58,6 +59,16 @@ export default function TrialPackProductionWizard({ onClose }) {
   const { data: lots = [] } = useQuery({
     queryKey: ['warehouseLots'],
     queryFn: () => base44.entities.WarehouseLot.filter({ status: 'ACTIVE' }),
+  });
+
+  const { data: customers = [] } = useQuery({
+    queryKey: ['customers'],
+    queryFn: () => base44.entities.Customer.filter({ is_active: true }),
+  });
+
+  const { data: customerBarcodes = [] } = useQuery({
+    queryKey: ['customerBarcodes'],
+    queryFn: () => base44.entities.SKUCustomerBarcode.filter({ is_active: true }),
   });
 
   const loadBOM = async (sku) => {
@@ -196,6 +207,10 @@ export default function TrialPackProductionWizard({ onClose }) {
       const lotSeq = Date.now();
       const lotId = `LOT-${format(new Date(), 'dd-MM-yyyy')}-${lotSeq}`;
       
+      const customerBarcode = selectedCustomer 
+        ? customerBarcodes.find(cb => cb.customer_id === selectedCustomer && cb.sku_code === selectedSku.item_code)
+        : null;
+
       const createdLot = await base44.entities.WarehouseLot.create({
         lot_id: lotId,
         lot_date: format(new Date(), 'yyyy-MM-dd'),
@@ -215,6 +230,8 @@ export default function TrialPackProductionWizard({ onClose }) {
         status: 'ACTIVE',
         is_trial_pack: true,
         location: location || '',
+        customer_id: selectedCustomer || null,
+        customer_barcode: customerBarcode?.barcode_value || null,
       });
 
       for (const scannedLot of scannedLots) {
@@ -452,16 +469,35 @@ export default function TrialPackProductionWizard({ onClose }) {
           </Card>
 
           <div className="space-y-2">
+            <Label className="text-xs text-slate-500">👤 Customer (optional)</Label>
+            <select
+              value={selectedCustomer || ''}
+              onChange={e => setSelectedCustomer(e.target.value || null)}
+              className="w-full h-12 px-3 rounded-lg border border-slate-300 text-base bg-white min-h-[48px]"
+            >
+              <option value="">— No specific customer —</option>
+              {customers.map(c => (
+                <option key={c.id} value={c.customer_id}>{c.customer_name}</option>
+              ))}
+            </select>
+            {selectedCustomer && customerBarcodes.find(cb => cb.customer_id === selectedCustomer && cb.sku_code === selectedSku?.item_code) && (
+              <p className="text-xs text-blue-600 bg-blue-50 px-3 py-2 rounded-lg border border-blue-200">
+                ✓ Custom barcode configured: {customerBarcodes.find(cb => cb.customer_id === selectedCustomer && cb.sku_code === selectedSku?.item_code)?.barcode_value}
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
             <Label className="text-xs text-slate-500">📍 Location (optional)</Label>
             <Input 
               value={location} 
               onChange={e => setLocation(e.target.value)} 
               placeholder="e.g. Rack A-3, Bay 2" 
-              className="h-11" 
+              className="h-12 text-base min-h-[48px]" 
             />
           </div>
 
-          <Button onClick={() => createMutation.mutate()} disabled={createMutation.isPending} className="w-full h-16 text-lg bg-green-600 hover:bg-green-700">
+          <Button onClick={() => createMutation.mutate()} disabled={createMutation.isPending} className="w-full h-16 text-lg bg-green-600 hover:bg-green-700 min-h-[56px]">
             Confirm Production
           </Button>
         </div>
