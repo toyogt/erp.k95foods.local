@@ -13,6 +13,8 @@ import PayloadMapBuilder from '@/components/sku/PayloadMapBuilder';
 import ArtworkTab from '@/components/sku/ArtworkTab';
 import BatchRuleBuilder from '@/components/batch/BatchRuleBuilder';
 import BatchRulePreview from '@/components/batch/BatchRulePreview.jsx';
+import TrialPackBOMTab from '@/components/sku/TrialPackBOMTab';
+import SKUImportExport from '@/components/sku/SKUImportExport';
 
 function genId(prefix) { return prefix + '-' + Date.now().toString(36).toUpperCase().slice(-5); }
 
@@ -293,9 +295,12 @@ export default function SKUSetup() {
     <div className="h-[calc(100vh-80px)] flex flex-col lg:flex-row gap-0 overflow-hidden rounded-xl border border-slate-200 bg-white">
       {/* Left: SKU List */}
       <div className="lg:w-72 xl:w-80 border-b lg:border-b-0 lg:border-r border-slate-200 flex flex-col overflow-hidden">
-        <div className="px-4 py-3 border-b border-slate-200">
-          <h1 className="text-base font-bold text-slate-900">SKU Setup</h1>
-          <p className="text-xs text-slate-500">End-to-end configuration in one place</p>
+        <div className="px-4 py-3 border-b border-slate-200 space-y-3">
+          <div>
+            <h1 className="text-base font-bold text-slate-900">SKU Setup</h1>
+            <p className="text-xs text-slate-500">End-to-end configuration in one place</p>
+          </div>
+          <SKUImportExport products={skus} onImportComplete={loadAll} />
         </div>
         <SKUList skus={skus} mappings={mappings} selected={selected} onSelect={openSku} onNew={openNew} />
       </div>
@@ -334,6 +339,9 @@ export default function SKUSetup() {
                   <TabsTrigger value="printing" className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-4">Printing & Batch</TabsTrigger>
                   <TabsTrigger value="artwork" className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-4">Artwork</TabsTrigger>
                 </>
+              )}
+              {skuForm.is_trial_pack && (
+                <TabsTrigger value="bom" className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-4">BOM</TabsTrigger>
               )}
             </TabsList>
 
@@ -803,6 +811,13 @@ export default function SKUSetup() {
                 onDefaultChanged={(artworkId) => setSkuForm(f => ({ ...f, default_artwork_id: artworkId }))}
               />
             </TabsContent>
+
+            {/* ─── Tab 5: BOM (Trial Packs Only) ───────────── */}
+            {skuForm.is_trial_pack && (
+              <TabsContent value="bom" className="mt-4">
+                <TrialPackBOMTab sku={selected?.item_code} skuData={skuForm} />
+              </TabsContent>
+            )}
           </Tabs>
         </div>
       </div>
