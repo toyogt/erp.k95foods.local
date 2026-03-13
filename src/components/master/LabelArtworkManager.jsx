@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import { Loader2, Plus, Pencil, ToggleLeft, ToggleRight, Search } from 'lucide-react';
 
 function genArtworkId() {
@@ -184,6 +185,54 @@ export default function LabelArtworkManager({ user }) {
           </div>
 
           <div className="space-y-1">
+            <p className="text-xs text-slate-500">Nutritional Facts (JSON)</p>
+            <Textarea
+              className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs font-mono"
+              placeholder='e.g. {"energy": "100 kcal", "protein": "5g", "carbs": "10g", "fat": "2g"}'
+              value={typeof form.nutritional_facts === 'object' ? JSON.stringify(form.nutritional_facts, null, 2) : ''}
+              onChange={e => {
+                try {
+                  const parsed = e.target.value ? JSON.parse(e.target.value) : {};
+                  setForm(f => ({ ...f, nutritional_facts: parsed }));
+                } catch {}
+              }}
+              rows={3}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <p className="text-xs text-slate-500">Ingredient List (JSON Array)</p>
+            <Textarea
+              className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs font-mono"
+              placeholder='e.g. [{"name": "Water", "percentage": "60%"}, {"name": "Sugar", "allergen": true}]'
+              value={Array.isArray(form.ingredient_list) ? JSON.stringify(form.ingredient_list, null, 2) : '[]'}
+              onChange={e => {
+                try {
+                  const parsed = e.target.value ? JSON.parse(e.target.value) : [];
+                  setForm(f => ({ ...f, ingredient_list: parsed }));
+                } catch {}
+              }}
+              rows={3}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <p className="text-xs text-slate-500">Manufacturer Details (JSON)</p>
+            <Textarea
+              className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs font-mono"
+              placeholder='e.g. {"name": "K95 Foods", "address": "...", "fssai": "12345", "contact": "..."}'
+              value={typeof form.manufacturer_details === 'object' ? JSON.stringify(form.manufacturer_details, null, 2) : ''}
+              onChange={e => {
+                try {
+                  const parsed = e.target.value ? JSON.parse(e.target.value) : {};
+                  setForm(f => ({ ...f, manufacturer_details: parsed }));
+                } catch {}
+              }}
+              rows={3}
+            />
+          </div>
+
+          <div className="space-y-1">
             <p className="text-xs text-slate-500">Notes (internal)</p>
             <input
               className="w-full h-10 px-3 rounded-lg border border-slate-300 text-sm"
@@ -197,10 +246,6 @@ export default function LabelArtworkManager({ user }) {
             <input type="checkbox" checked={form.is_active} onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))} />
             Active
           </label>
-
-          <p className="text-xs text-slate-400 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
-            💡 Nutritional facts, ingredients, and manufacturer details can be added via API or future UI enhancement
-          </p>
 
           <Button
             className="w-full h-11 min-h-[44px]"
