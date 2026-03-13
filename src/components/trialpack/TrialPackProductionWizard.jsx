@@ -235,7 +235,7 @@ export default function TrialPackProductionWizard({ onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-50 flex flex-col">
+    <div className="fixed inset-0 bg-slate-50 flex flex-col z-50">
       {/* Header */}
       <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
@@ -249,7 +249,7 @@ export default function TrialPackProductionWizard({ onClose }) {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto overflow-x-hidden">
+      <div className="flex-1 overflow-y-auto">
         <div className="max-w-2xl mx-auto p-4 space-y-4 pb-20">
           <StepBar steps={STEPS} currentStep={step} />
 
@@ -301,7 +301,8 @@ export default function TrialPackProductionWizard({ onClose }) {
           </Card>
 
           <Card className="p-5">
-            <h3 className="font-bold text-slate-900 mb-4 text-base">Required Components</h3>
+            <h3 className="font-bold text-slate-900 mb-2 text-base">Required Components</h3>
+            <p className="text-xs text-slate-600 mb-4">Collect required number of boxes from each lot for the SKU</p>
             {bom.map(item => {
               const product = allProducts.find(p => p.item_code === item.component_sku);
               const bottlesPerBox = product?.bottles_per_box || 1;
@@ -332,7 +333,7 @@ export default function TrialPackProductionWizard({ onClose }) {
                         <div className="text-xs text-blue-600 bg-blue-50 rounded px-2 py-1.5 space-y-1">
                           <p className="font-semibold">Suggested lots (oldest first):</p>
                           {lotInfo.lots.slice(0, 3).map(l => (
-                            <p key={l.lot_id}>• {l.lot_id} ({l.boxes_balance} available)</p>
+                            <p key={l.lot_id}>• {l.lot_id} {l.location && `📍 ${l.location}`} ({l.boxes_balance} available)</p>
                           ))}
                         </div>
                       )}
