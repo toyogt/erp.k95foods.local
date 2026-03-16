@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import TrialPackTab from '@/components/fgwarehouse/TrialPackTab';
 import MasterCartonTab from '@/components/fgwarehouse/MasterCartonTab';
 
-export default function MoreTab({ onBack }) {
+export default function MoreTab({ onBack, skus = [] }) {
   const [activeTab, setActiveTab] = useState('trial');
 
   return (
@@ -27,7 +27,7 @@ export default function MoreTab({ onBack }) {
         </TabsList>
 
         <TabsContent value="trial" className="mt-4">
-          <TrialPackTab />
+          <TrialPackTab skus={skus} />
         </TabsContent>
 
         <TabsContent value="carton" className="mt-4">
