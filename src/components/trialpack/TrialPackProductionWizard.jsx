@@ -95,12 +95,19 @@ export default function TrialPackProductionWizard({ onClose }) {
       .filter(lot => lot.sku_code === componentSku && lot.boxes_balance > 0)
       .sort((a, b) => new Date(a.mfg_date) - new Date(b.mfg_date));
     
-    // Calculate total available
     const totalAvailable = availableLots.reduce((sum, lot) => sum + (lot.boxes_balance || 0), 0);
     
-    // Return lots with availability info
+    // Only include lots needed to fulfill boxesNeeded (greedy fill from oldest)
+    const lotsNeeded = [];
+    let remaining = boxesNeeded;
+    for (const lot of availableLots) {
+      if (remaining <= 0) break;
+      lotsNeeded.push(lot);
+      remaining -= lot.boxes_balance || 0;
+    }
+    
     return {
-      lots: availableLots,
+      lots: lotsNeeded,
       totalAvailable,
       isEnough: totalAvailable >= boxesNeeded
     };
