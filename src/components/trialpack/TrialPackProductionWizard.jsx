@@ -149,7 +149,7 @@ export default function TrialPackProductionWizard({ onClose }) {
     const alreadyScanned = scannedLots.filter(l => l.component_sku === lot.sku_code).reduce((sum, l) => sum + l.boxes_used, 0);
 
     if (alreadyScanned >= boxesNeeded) {
-      toast.error(`Already scanned enough ${lot.sku_code}`);
+      toast.error(`Already scanned enough for ${lot.sku_code}`);
       return;
     }
 
@@ -158,6 +158,13 @@ export default function TrialPackProductionWizard({ onClose }) {
       toast.error('No boxes available in this lot');
       return;
     }
+
+    // Check if this is the oldest available lot for this component
+    const availableLots = lots
+      .filter(l => l.sku_code === lot.sku_code && l.boxes_balance > 0)
+      .sort((a, b) => new Date(a.mfg_date) - new Date(b.mfg_date));
+    const oldestLot = availableLots[0];
+    const isOldest = oldestLot?.lot_id === lotId;
 
     setScannedLots([...scannedLots, { 
       lot_id: lotId, 
@@ -168,9 +175,19 @@ export default function TrialPackProductionWizard({ onClose }) {
       mfg_date: lot.mfg_date, 
       exp_date: lot.exp_date,
       bottles_per_box: bottlesPerBox,
-      boxes_used: boxesToTake
+      boxes_used: boxesToTake,
+      isNotOldest: !isOldest,
+      oldestLotId: isOldest ? null : oldestLot?.lot_id,
     }]);
-    toast.success(`Scanned ${lot.product_name} - ${boxesToTake} box(es)`);
+
+    if (!isOldest && oldestLot) {
+      toast(`⚠️ Scanned — but note: Older lot ${oldestLot.lot_id} has ${oldestLot.boxes_balance} boxes available. Consider using that first.`, {
+        duration: 5000,
+        style: { background: '#fef3c7', color: '#92400e', border: '1px solid #f59e0b' },
+      });
+    } else {
+      toast.success(`Scanned ${lot.product_name} — ${boxesToTake} boxes`);
+    }
   };
 
   const isAllScanned = () => {
