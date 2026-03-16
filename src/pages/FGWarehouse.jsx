@@ -27,8 +27,8 @@ export default function FGWarehouse() {
     if (!silent) setLoading(true);
     const [u, s, l] = await Promise.all([
       base44.auth.me().catch(() => null),
-      base44.entities.ProductMaster.list('-created_date', 500),
-      base44.entities.WarehouseLot.list('-created_date', 500),
+      base44.entities.ProductMaster.list('-created_date', 200),
+      base44.entities.WarehouseLot.list('-created_date', 300),
     ]);
     setUser(u);
     setSkus(s || []);
