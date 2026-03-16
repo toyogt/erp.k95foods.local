@@ -9,7 +9,7 @@ import { Plus, Package, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import TrialPackProductionWizard from '@/components/trialpack/TrialPackProductionWizard';
 
-export default function TrialPackTab() {
+export default function TrialPackTab({ skus = [] }) {
   const [showWizard, setShowWizard] = useState(false);
   const [showBOMDialog, setShowBOMDialog] = useState(false);
   const [selectedTrialSku, setSelectedTrialSku] = useState(null);
@@ -17,15 +17,8 @@ export default function TrialPackTab() {
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   const queryClient = useQueryClient();
 
-  const { data: trialPacks = [] } = useQuery({
-    queryKey: ['trialPackSKUs'],
-    queryFn: () => base44.entities.ProductMaster.filter({ is_trial_pack: true, is_active: true }),
-  });
-
-  const { data: allProducts = [] } = useQuery({
-    queryKey: ['allProducts'],
-    queryFn: () => base44.entities.ProductMaster.filter({ is_active: true }),
-  });
+  const trialPacks = skus.filter(s => s.is_trial_pack && s.is_active);
+  const allProducts = skus.filter(s => s.is_active);
 
   const { data: bomItems = [] } = useQuery({
     queryKey: ['trialPackBOM', selectedTrialSku],
