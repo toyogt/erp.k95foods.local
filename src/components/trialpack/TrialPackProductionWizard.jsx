@@ -460,7 +460,7 @@ export default function TrialPackProductionWizard({ onClose }) {
               </div>
               <div>
                 <p className="text-lg font-bold text-slate-900">Production Complete!</p>
-                <p className="text-sm text-slate-500 mt-1">{quantity} box(es) produced successfully</p>
+                <p className="text-sm text-slate-500 mt-1">{quantity} boxes produced successfully</p>
               </div>
             </div>
           </Card>
