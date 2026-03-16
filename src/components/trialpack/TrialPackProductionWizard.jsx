@@ -425,7 +425,12 @@ export default function TrialPackProductionWizard({ onClose }) {
                     <div className="flex-1 min-w-0">
                       <p className="font-mono font-bold text-slate-900 text-xs">{lot.lot_id}</p>
                       <p className="text-xs text-slate-600 truncate">{lot.product_name}</p>
-                      <p className="text-xs text-slate-500 mt-1">{lot.boxes_used} box(es) used</p>
+                      <p className="text-xs text-slate-500 mt-1">{lot.boxes_used} boxes used</p>
+                      {lot.isNotOldest && lot.oldestLotId && (
+                        <p className="text-xs text-amber-700 bg-amber-50 rounded px-1.5 py-0.5 mt-1 border border-amber-200">
+                          ⚠️ Older lot available: {lot.oldestLotId}
+                        </p>
+                      )}
                     </div>
                     <button
                       onClick={() => handleRemoveLot(lot.lot_id)}
