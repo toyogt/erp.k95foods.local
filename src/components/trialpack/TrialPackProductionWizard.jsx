@@ -525,7 +525,7 @@ export default function TrialPackProductionWizard({ onClose }) {
 
               <div className="flex justify-between pt-2 border-t border-green-300">
                 <span className="text-green-700">Quantity:</span>
-                <span className="font-bold text-green-900 text-base">{quantity} box(es)</span>
+                <span className="font-bold text-green-900 text-base">{quantity} boxes</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-green-700">Lots Used:</span>
