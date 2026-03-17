@@ -348,7 +348,7 @@ export default function TrialPackProductionWizard({ onClose }) {
 
   const handleRemoveLot = (lotId) => {
     setScannedLots(scannedLots.filter(l => l.lot_id !== lotId));
-    toast.success('Lot removed');
+    setAlert(null);
   };
 
   return (
