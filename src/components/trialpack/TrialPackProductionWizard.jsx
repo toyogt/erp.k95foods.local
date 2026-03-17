@@ -46,6 +46,7 @@ export default function TrialPackProductionWizard({ onClose }) {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [newLot, setNewLot] = useState(null);
   const [boxLabels, setBoxLabels] = useState([]);
+  const [boxLabelObjects, setBoxLabelObjects] = useState([]);
   const [alert, setAlert] = useState(null);
   const queryClient = useQueryClient();
 
