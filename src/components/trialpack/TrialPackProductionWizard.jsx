@@ -161,31 +161,31 @@ export default function TrialPackProductionWizard({ onClose }) {
 
     // Guard: quantity must be set first
     if (qty <= 0) {
-      toast.error('Set the quantity before scanning lots');
+      showAlert('error', 'Set the quantity before scanning lots');
       return;
     }
 
     const lot = lots.find(l => l.lot_id === lotId);
     if (!lot) {
-      toast.error(`Lot not found: ${lotId}`);
+      showAlert('error', `Lot not found: ${lotId}`);
       return;
     }
 
     // Guard: lot must be active with stock
     if (lot.status !== 'ACTIVE') {
-      toast.error(`Lot ${lotId} is ${lot.status} — cannot use it`);
+      showAlert('error', `Lot ${lotId} is ${lot.status} — cannot use it`);
       return;
     }
 
     // Guard: duplicate scan
     if (scannedLots.some(l => l.lot_id === lotId)) {
-      toast.error(`Lot ${lotId} is already scanned. Remove it first if you want to re-scan.`);
+      showAlert('error', `Lot ${lotId} is already scanned. Remove it first if you want to re-scan.`);
       return;
     }
 
     const requiredComponent = bom.find(b => b.component_sku === lot.sku_code);
     if (!requiredComponent) {
-      toast.error(`SKU ${lot.sku_code} is not part of the BOM for this trial pack`);
+      showAlert('error', `SKU ${lot.sku_code} is not part of the BOM for this trial pack`);
       return;
     }
 
@@ -198,13 +198,13 @@ export default function TrialPackProductionWizard({ onClose }) {
 
     // Guard: component already fully covered
     if (alreadyScanned >= boxesNeeded) {
-      toast.error(`${lot.sku_code} is already fully covered (${alreadyScanned}/${boxesNeeded} boxes scanned). No more needed.`);
+      showAlert('error', `${lot.sku_code} is already fully covered (${alreadyScanned}/${boxesNeeded} boxes scanned). No more lots needed for this component.`);
       return;
     }
 
     // Guard: lot has no boxes
     if (!lot.boxes_balance || lot.boxes_balance <= 0) {
-      toast.error(`Lot ${lotId} has no boxes in stock`);
+      showAlert('error', `Lot ${lotId} has no boxes in stock`);
       return;
     }
 
@@ -232,12 +232,9 @@ export default function TrialPackProductionWizard({ onClose }) {
     }]);
 
     if (!isOldest && oldestLot) {
-      toast(`⚠️ Added — but older lot ${oldestLot.lot_id} (${oldestLot.boxes_balance} boxes) should be used first. Remove this and scan that one instead.`, {
-        duration: 6000,
-        style: { background: '#fef3c7', color: '#92400e', border: '1px solid #f59e0b' },
-      });
+      showAlert('warn', `Added — but older lot ${oldestLot.lot_id} (${oldestLot.boxes_balance} boxes) should be used first. Remove this and scan that one instead.`);
     } else {
-      toast.success(`Scanned ${lot.product_name} — ${boxesToTake} boxes`);
+      showAlert('success', `Scanned ${lot.product_name} — ${boxesToTake} boxes`);
     }
   };
 
