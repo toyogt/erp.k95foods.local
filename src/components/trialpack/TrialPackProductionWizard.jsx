@@ -144,12 +144,12 @@ export default function TrialPackProductionWizard({ onClose }) {
     setSelectedSku(pack);
     const bomData = await loadBOM(pack.item_code);
     if (bomData.length === 0) {
-      toast.error('No BOM configured for this trial pack');
+      showAlert('error', 'No BOM configured for this trial pack');
       return;
     }
     const minQty = calculateMinProduction(bomData);
     if (minQty === 0 || minQty === Infinity) {
-      toast.error('Invalid BOM configuration');
+      showAlert('error', 'Invalid BOM configuration');
       return;
     }
     setQuantity(minQty);
