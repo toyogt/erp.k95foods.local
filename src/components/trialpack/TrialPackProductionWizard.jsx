@@ -17,6 +17,23 @@ const STEPS = [
   { id: 'confirm', label: 'Confirm' },
 ];
 
+// Inline alert banner shown inside the overlay (no z-index/toast issues)
+function ScanAlert({ alert, onDismiss }) {
+  if (!alert) return null;
+  const isError = alert.type === 'error';
+  const isWarn = alert.type === 'warn';
+  return (
+    <div className={`flex items-start gap-3 px-4 py-3 rounded-xl border text-sm font-medium
+      ${isError ? 'bg-red-50 border-red-300 text-red-800' : isWarn ? 'bg-amber-50 border-amber-300 text-amber-800' : 'bg-green-50 border-green-300 text-green-800'}`}>
+      <div className="shrink-0 mt-0.5">
+        {isError ? <XCircle className="w-5 h-5" /> : isWarn ? <AlertTriangle className="w-5 h-5" /> : <CheckCircle2 className="w-5 h-5" />}
+      </div>
+      <p className="flex-1 leading-snug">{alert.message}</p>
+      <button onClick={onDismiss} className="shrink-0 opacity-60 hover:opacity-100"><X className="w-4 h-4" /></button>
+    </div>
+  );
+}
+
 export default function TrialPackProductionWizard({ onClose }) {
   const [step, setStep] = useState('select');
   const [selectedSku, setSelectedSku] = useState(null);
@@ -28,7 +45,18 @@ export default function TrialPackProductionWizard({ onClose }) {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [newLot, setNewLot] = useState(null);
   const [boxLabels, setBoxLabels] = useState([]);
+  const [alert, setAlert] = useState(null);
   const queryClient = useQueryClient();
+
+  const showAlert = useCallback((type, message) => {
+    setAlert({ type, message });
+  }, []);
+
+  // Lock body scroll while wizard is open
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
 
   useEffect(() => {
     base44.auth.me().then(setUser);
