@@ -347,6 +347,7 @@ export default function TrialPackProductionWizard({ onClose }) {
       queryClient.invalidateQueries(['boxLabels']);
       setNewLot(data.createdLot);
       setBoxLabels(data.boxLabels || []);
+      setBoxLabelObjects(data.boxLabelObjects || []);
       setStep('done');
     },
   });
