@@ -130,49 +130,73 @@ export default function TrialPackProductionWizard({ onClose }) {
   };
 
   const handleScanLot = (lotId) => {
+    const qty = parseInt(quantity) || 0;
+
+    // Guard: quantity must be set first
+    if (qty <= 0) {
+      toast.error('Set the quantity before scanning lots');
+      return;
+    }
+
     const lot = lots.find(l => l.lot_id === lotId);
     if (!lot) {
-      toast.error('Lot not found');
+      toast.error(`Lot not found: ${lotId}`);
+      return;
+    }
+
+    // Guard: lot must be active with stock
+    if (lot.status !== 'ACTIVE') {
+      toast.error(`Lot ${lotId} is ${lot.status} — cannot use it`);
+      return;
+    }
+
+    // Guard: duplicate scan
+    if (scannedLots.some(l => l.lot_id === lotId)) {
+      toast.error(`Lot ${lotId} is already scanned. Remove it first if you want to re-scan.`);
       return;
     }
 
     const requiredComponent = bom.find(b => b.component_sku === lot.sku_code);
     if (!requiredComponent) {
-      toast.error(`${lot.sku_code} not in BOM`);
+      toast.error(`SKU ${lot.sku_code} is not part of the BOM for this trial pack`);
       return;
     }
 
     const product = allProducts.find(p => p.item_code === lot.sku_code);
     const bottlesPerBox = product?.bottles_per_box || 1;
-    const qty = parseInt(quantity) || 0;
     const boxesNeeded = Math.ceil((requiredComponent.bottles_required * qty) / bottlesPerBox);
-    const alreadyScanned = scannedLots.filter(l => l.component_sku === lot.sku_code).reduce((sum, l) => sum + l.boxes_used, 0);
+    const alreadyScanned = scannedLots
+      .filter(l => l.component_sku === lot.sku_code)
+      .reduce((sum, l) => sum + l.boxes_used, 0);
 
+    // Guard: component already fully covered
     if (alreadyScanned >= boxesNeeded) {
-      toast.error(`Already scanned enough for ${lot.sku_code}`);
+      toast.error(`${lot.sku_code} is already fully covered (${alreadyScanned}/${boxesNeeded} boxes scanned). No more needed.`);
       return;
     }
 
-    const boxesToTake = Math.min(boxesNeeded - alreadyScanned, lot.boxes_balance || 0);
-    if (boxesToTake <= 0) {
-      toast.error('No boxes available in this lot');
+    // Guard: lot has no boxes
+    if (!lot.boxes_balance || lot.boxes_balance <= 0) {
+      toast.error(`Lot ${lotId} has no boxes in stock`);
       return;
     }
+
+    const boxesToTake = Math.min(boxesNeeded - alreadyScanned, lot.boxes_balance);
 
     // Check if this is the oldest available lot for this component
     const availableLots = lots
-      .filter(l => l.sku_code === lot.sku_code && l.boxes_balance > 0)
+      .filter(l => l.sku_code === lot.sku_code && l.boxes_balance > 0 && l.status === 'ACTIVE')
       .sort((a, b) => new Date(a.mfg_date) - new Date(b.mfg_date));
     const oldestLot = availableLots[0];
     const isOldest = oldestLot?.lot_id === lotId;
 
-    setScannedLots([...scannedLots, { 
-      lot_id: lotId, 
+    setScannedLots([...scannedLots, {
+      lot_id: lotId,
       sku_code: lot.sku_code,
-      product_name: lot.product_name, 
+      product_name: lot.product_name,
       component_sku: lot.sku_code,
-      batch_code: lot.batch_code, 
-      mfg_date: lot.mfg_date, 
+      batch_code: lot.batch_code,
+      mfg_date: lot.mfg_date,
       exp_date: lot.exp_date,
       bottles_per_box: bottlesPerBox,
       boxes_used: boxesToTake,
@@ -181,8 +205,8 @@ export default function TrialPackProductionWizard({ onClose }) {
     }]);
 
     if (!isOldest && oldestLot) {
-      toast(`⚠️ Scanned — but note: Older lot ${oldestLot.lot_id} has ${oldestLot.boxes_balance} boxes available. Consider using that first.`, {
-        duration: 5000,
+      toast(`⚠️ Added — but older lot ${oldestLot.lot_id} (${oldestLot.boxes_balance} boxes) should be used first. Remove this and scan that one instead.`, {
+        duration: 6000,
         style: { background: '#fef3c7', color: '#92400e', border: '1px solid #f59e0b' },
       });
     } else {
