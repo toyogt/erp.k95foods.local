@@ -383,7 +383,7 @@ export default function TrialPackProductionWizard({ onClose }) {
               className="h-16 text-2xl text-center font-bold"
             />
             <p className="text-xs text-slate-500 mt-2 text-center">
-              Minimum: {calculateMinProduction(bom)} box(es) based on BOM
+              Minimum: {calculateMinProduction(bom)} boxes based on BOM
             </p>
             {selectedSku && (
               <div className="mt-4 pt-4 border-t border-slate-200">
