@@ -412,7 +412,7 @@ export default function TrialPackProductionWizard({ onClose }) {
                       <p className="font-bold text-slate-900 text-sm">{item.component_sku}</p>
                       <p className="text-xs text-slate-600 mt-0.5">{product?.product_name || ''}</p>
                       <p className="text-xs text-slate-500 mt-1">
-                        {item.bottles_required * qty} bottles needed = {boxesNeeded} box(es)
+                        {item.bottles_required * qty} bottles needed = {boxesNeeded} boxes
                       </p>
                     </div>
                     <p className="text-sm font-bold text-slate-700 shrink-0 ml-3">{scanned}/{boxesNeeded} scanned</p>
