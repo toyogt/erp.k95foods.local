@@ -343,7 +343,6 @@ export default function TrialPackProductionWizard({ onClose }) {
       setNewLot(data.createdLot);
       setBoxLabels(data.boxLabels || []);
       setStep('done');
-      toast.success('Trial pack production completed');
     },
   });
 
