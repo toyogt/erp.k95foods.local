@@ -532,16 +532,71 @@ export default function TrialPackProductionWizard({ onClose }) {
             </Card>
           )}
 
-          {boxLabels.length > 0 && (
+          {boxLabelObjects.length > 0 && (
             <Card className="p-4">
-              <p className="text-sm font-semibold text-slate-700 mb-3">📦 Box Labels Created</p>
-              <p className="text-xs text-slate-600 mb-3">
-                {boxLabels.length} box labels generated.
-              </p>
-              <div className="bg-slate-50 rounded-lg p-3 border border-slate-200">
-                <p className="text-xs font-mono text-slate-700">
-                  {boxLabels[0]} {boxLabels.length > 1 && `to ${boxLabels[boxLabels.length - 1]}`}
-                </p>
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm font-semibold text-slate-700">📦 Box Labels ({boxLabelObjects.length})</p>
+                <Button
+                  onClick={() => {
+                    const win = window.open('', '_blank');
+                    const html = `<!DOCTYPE html><html><head><title>Box Labels</title>
+                      <style>
+                        @page { size: 4in 6in; margin: 0; }
+                        body { margin: 0; padding: 0; }
+                        .box-label-page { page-break-after: always; }
+                        .box-label-page:last-child { page-break-after: avoid; }
+                      </style>
+                    </head><body>
+                      ${boxLabelObjects.map(lbl => `
+                        <div class="box-label-page" style="width:4in;height:6in;display:flex;flex-direction:column;border:1px solid #000;font-family:Arial,Helvetica,sans-serif;font-size:10pt;padding:0.15in;box-sizing:border-box;background:#fff;color:#000;overflow:hidden;">
+                          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.1in;">
+                            <div style="flex:1;">
+                              <div style="font-size:7pt;color:#777;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:3pt;">${selectedSku?.brand_name || ''}</div>
+                              <div style="font-size:16pt;font-weight:bold;line-height:1.15;margin-bottom:3pt;">${selectedSku?.product_name || lbl.product_name}</div>
+                              ${selectedSku?.flavour ? `<div style="font-size:10pt;font-weight:600;color:#444;">${selectedSku.flavour}</div>` : ''}
+                            </div>
+                          </div>
+                          <div style="border-top:0.5pt solid #ccc;margin:0.1in 0;"></div>
+                          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.05in;">
+                            <div>
+                              <div style="font-size:6.5pt;color:#888;text-transform:uppercase;">Mfg Date</div>
+                              <div style="font-size:12pt;font-weight:bold;margin-top:1pt;">${lbl.mfg_date ? lbl.mfg_date.split('-').reverse().join('-') : '—'}</div>
+                            </div>
+                            <div>
+                              <div style="font-size:6.5pt;color:#888;text-transform:uppercase;">Exp Date</div>
+                              <div style="font-size:12pt;font-weight:bold;color:#b91c1c;margin-top:1pt;">${lbl.exp_date ? lbl.exp_date.split('-').reverse().join('-') : '—'}</div>
+                            </div>
+                            <div>
+                              <div style="font-size:6.5pt;color:#888;text-transform:uppercase;">Batch</div>
+                              <div style="font-size:10pt;font-weight:bold;margin-top:1pt;word-break:break-all;">${lbl.batch_no}</div>
+                            </div>
+                          </div>
+                          <div style="border-top:0.5pt solid #ccc;margin:0.1in 0;"></div>
+                          <div>
+                            <div style="font-size:6.5pt;color:#888;text-transform:uppercase;">Box Serial</div>
+                            <div style="font-size:11pt;font-weight:bold;font-family:monospace;margin-top:2pt;word-break:break-all;">${lbl.box_serial}</div>
+                          </div>
+                          <div style="border-top:0.5pt solid #ccc;margin:0.1in 0;"></div>
+                          ${selectedSku?.bottles_per_box ? `<div style="font-size:10pt;font-weight:600;">Bottles per box: ${selectedSku.bottles_per_box}</div>` : ''}
+                          ${selectedSku?.item_code ? `<div style="font-size:8pt;color:#888;margin-top:4pt;">${selectedSku.item_code}</div>` : ''}
+                        </div>
+                      `).join('')}
+                    </body></html>`;
+                    win.document.write(html);
+                    win.document.close();
+                    win.focus();
+                    setTimeout(() => { win.print(); win.close(); }, 400);
+                  }}
+                  className="h-12 px-5 text-base font-semibold min-h-[48px] bg-slate-900 hover:bg-slate-700"
+                >
+                  <Printer className="w-5 h-5 mr-2" />
+                  Print All Labels
+                </Button>
+              </div>
+              <div className="bg-slate-50 rounded-lg p-3 border border-slate-200 space-y-1">
+                {boxLabelObjects.map((lbl, i) => (
+                  <p key={i} className="text-xs font-mono text-slate-700">{lbl.box_serial}</p>
+                ))}
               </div>
             </Card>
           )}
