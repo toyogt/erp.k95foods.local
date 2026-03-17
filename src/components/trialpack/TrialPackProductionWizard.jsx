@@ -500,7 +500,7 @@ export default function TrialPackProductionWizard({ onClose }) {
             <Card className="p-4">
               <p className="text-sm font-semibold text-slate-700 mb-3">📦 Box Labels Created</p>
               <p className="text-xs text-slate-600 mb-3">
-                {boxLabels.length} box label(s) generated.
+                {boxLabels.length} box labels generated.
               </p>
               <div className="bg-slate-50 rounded-lg p-3 border border-slate-200">
                 <p className="text-xs font-mono text-slate-700">
