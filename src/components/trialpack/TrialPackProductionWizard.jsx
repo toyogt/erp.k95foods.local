@@ -1,12 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
-import { ArrowLeft, CheckCircle, X, Trash2, Printer } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { ArrowLeft, CheckCircle, X, Trash2, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
 import StepBar from '@/components/fgwarehouse/StepBar';
 import QRScanInput from '@/components/fgwarehouse/QRScanInput';
 import LotCardPrint from '@/components/fgwarehouse/LotCardPrint';
