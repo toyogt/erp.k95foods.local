@@ -538,54 +538,101 @@ export default function TrialPackProductionWizard({ onClose }) {
                 <p className="text-sm font-semibold text-slate-700">📦 Box Labels ({boxLabelObjects.length})</p>
                 <Button
                   onClick={() => {
+                    const sku = selectedSku;
+                    function fmtDate(d) {
+                      if (!d) return '—';
+                      const p = d.split('-');
+                      return p.length === 3 ? `${p[2]}-${p[1]}-${p[0]}` : d;
+                    }
+                    // Build one label page per box
+                    const pages = boxLabelObjects.map(lbl => {
+                      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(lbl.qr_payload || lbl.box_serial)}`;
+                      const barcodeVal = sku?.product_barcode || sku?.item_code || lbl.item_code || 'UNKNOWN';
+                      const barcodeUrl = `https://barcodeapi.org/api/128/${encodeURIComponent(barcodeVal)}`;
+                      const mfg = fmtDate(lbl.mfg_date);
+                      const exp = fmtDate(lbl.exp_date);
+                      const bottlesPerBox = sku?.bottles_per_box || '';
+                      const mlPerBottle = sku?.ml_per_bottle || '';
+                      const qtyVol = bottlesPerBox && mlPerBottle ? `${bottlesPerBox} × ${mlPerBottle} ml` : (bottlesPerBox ? `${bottlesPerBox} bottles` : '');
+                      return `
+                        <div class="label-page">
+                          <!-- TOP: brand + product + QR -->
+                          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6pt;">
+                            <div style="flex:1;">
+                              ${sku?.brand_name ? `<div style="font-size:7pt;color:#777;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:3pt;">${sku.brand_name}</div>` : ''}
+                              <div style="font-size:15pt;font-weight:bold;line-height:1.15;margin-bottom:3pt;">${sku?.product_name || lbl.product_name || ''}</div>
+                              ${sku?.flavour ? `<div style="font-size:10pt;font-weight:600;color:#444;">${sku.flavour}</div>` : ''}
+                              ${sku?.item_code ? `<div style="font-size:7pt;color:#999;margin-top:3pt;">${sku.item_code}</div>` : ''}
+                            </div>
+                            <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;">
+                              <img src="${qrUrl}" style="width:0.9in;height:0.9in;" />
+                              <div style="font-size:5pt;color:#666;max-width:1in;word-break:break-all;text-align:center;margin-top:2pt;">${lbl.box_serial}</div>
+                            </div>
+                          </div>
+                          <div class="divider"></div>
+                          <!-- DATES + BATCH -->
+                          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4pt;">
+                            <div>
+                              <div class="field-label">Mfg Date</div>
+                              <div class="field-value">${mfg}</div>
+                            </div>
+                            <div>
+                              <div class="field-label">Exp Date</div>
+                              <div class="field-value" style="color:#b91c1c;">${exp}</div>
+                            </div>
+                            <div>
+                              <div class="field-label">Batch No.</div>
+                              <div style="font-size:8pt;font-weight:bold;margin-top:1pt;word-break:break-all;">${lbl.batch_no}</div>
+                            </div>
+                          </div>
+                          <div class="divider"></div>
+                          <!-- SPECS -->
+                          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6pt 12pt;">
+                            ${qtyVol ? `<div><div class="field-label">Contents</div><div style="font-size:10pt;font-weight:600;">${qtyVol}</div></div>` : ''}
+                            ${sku?.gross_weight_kg ? `<div><div class="field-label">Gross Weight</div><div style="font-size:10pt;font-weight:600;">${sku.gross_weight_kg} kg</div></div>` : ''}
+                            ${sku?.mrp_box ? `<div><div class="field-label">MRP (Box)</div><div style="font-size:12pt;font-weight:bold;">₹ ${sku.mrp_box}</div></div>` : ''}
+                          </div>
+                          <div class="divider"></div>
+                          <!-- BARCODE -->
+                          <div style="display:flex;justify-content:center;">
+                            <img src="${barcodeUrl}" style="height:0.6in;max-width:3.4in;" />
+                          </div>
+                          <div class="divider"></div>
+                          <!-- MANUFACTURER -->
+                          <div style="display:flex;justify-content:space-between;gap:8pt;flex:1;">
+                            <div style="flex:1;">
+                              ${sku?.manufacturer_name ? `<div style="font-size:8pt;font-weight:bold;margin-bottom:2pt;">${sku.manufacturer_name}</div>` : ''}
+                              ${sku?.address_1 ? `<div style="font-size:7pt;color:#444;line-height:1.4;">${sku.address_1}</div>` : ''}
+                              ${sku?.address_2 ? `<div style="font-size:7pt;color:#444;line-height:1.4;">${sku.address_2}</div>` : ''}
+                            </div>
+                            <div style="flex-shrink:0;text-align:right;">
+                              ${sku?.fssai_no ? `<div style="font-size:7pt;color:#555;"><b>FSSAI:</b> ${sku.fssai_no}</div>` : ''}
+                              ${sku?.customer_care_phone ? `<div style="font-size:7pt;color:#555;margin-top:2pt;"><b>Care:</b> ${sku.customer_care_phone}</div>` : ''}
+                            </div>
+                          </div>
+                          <div style="font-size:6pt;color:#aaa;text-align:right;margin-top:4pt;">
+                            Printed ${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                          </div>
+                        </div>`;
+                    });
                     const win = window.open('', '_blank');
-                    const html = `<!DOCTYPE html><html><head><title>Box Labels</title>
+                    win.document.write(`<!DOCTYPE html><html><head><title>Box Labels – ${sku?.product_name || ''}</title>
                       <style>
                         @page { size: 4in 6in; margin: 0; }
-                        body { margin: 0; padding: 0; }
-                        .box-label-page { page-break-after: always; }
-                        .box-label-page:last-child { page-break-after: avoid; }
+                        * { box-sizing: border-box; }
+                        body { margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; font-size: 10pt; color: #000; background: #fff; }
+                        .label-page { width:4in; height:6in; padding:0.15in; display:flex; flex-direction:column; border:1px solid #000; overflow:hidden; page-break-after:always; }
+                        .label-page:last-child { page-break-after:avoid; }
+                        .divider { border-top:0.5pt solid #ccc; margin:0.08in 0; }
+                        .field-label { font-size:6.5pt; color:#888; text-transform:uppercase; letter-spacing:0.05em; }
+                        .field-value { font-size:12pt; font-weight:bold; margin-top:1pt; }
                       </style>
-                    </head><body>
-                      ${boxLabelObjects.map(lbl => `
-                        <div class="box-label-page" style="width:4in;height:6in;display:flex;flex-direction:column;border:1px solid #000;font-family:Arial,Helvetica,sans-serif;font-size:10pt;padding:0.15in;box-sizing:border-box;background:#fff;color:#000;overflow:hidden;">
-                          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.1in;">
-                            <div style="flex:1;">
-                              <div style="font-size:7pt;color:#777;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:3pt;">${selectedSku?.brand_name || ''}</div>
-                              <div style="font-size:16pt;font-weight:bold;line-height:1.15;margin-bottom:3pt;">${selectedSku?.product_name || lbl.product_name}</div>
-                              ${selectedSku?.flavour ? `<div style="font-size:10pt;font-weight:600;color:#444;">${selectedSku.flavour}</div>` : ''}
-                            </div>
-                          </div>
-                          <div style="border-top:0.5pt solid #ccc;margin:0.1in 0;"></div>
-                          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.05in;">
-                            <div>
-                              <div style="font-size:6.5pt;color:#888;text-transform:uppercase;">Mfg Date</div>
-                              <div style="font-size:12pt;font-weight:bold;margin-top:1pt;">${lbl.mfg_date ? lbl.mfg_date.split('-').reverse().join('-') : '—'}</div>
-                            </div>
-                            <div>
-                              <div style="font-size:6.5pt;color:#888;text-transform:uppercase;">Exp Date</div>
-                              <div style="font-size:12pt;font-weight:bold;color:#b91c1c;margin-top:1pt;">${lbl.exp_date ? lbl.exp_date.split('-').reverse().join('-') : '—'}</div>
-                            </div>
-                            <div>
-                              <div style="font-size:6.5pt;color:#888;text-transform:uppercase;">Batch</div>
-                              <div style="font-size:10pt;font-weight:bold;margin-top:1pt;word-break:break-all;">${lbl.batch_no}</div>
-                            </div>
-                          </div>
-                          <div style="border-top:0.5pt solid #ccc;margin:0.1in 0;"></div>
-                          <div>
-                            <div style="font-size:6.5pt;color:#888;text-transform:uppercase;">Box Serial</div>
-                            <div style="font-size:11pt;font-weight:bold;font-family:monospace;margin-top:2pt;word-break:break-all;">${lbl.box_serial}</div>
-                          </div>
-                          <div style="border-top:0.5pt solid #ccc;margin:0.1in 0;"></div>
-                          ${selectedSku?.bottles_per_box ? `<div style="font-size:10pt;font-weight:600;">Bottles per box: ${selectedSku.bottles_per_box}</div>` : ''}
-                          ${selectedSku?.item_code ? `<div style="font-size:8pt;color:#888;margin-top:4pt;">${selectedSku.item_code}</div>` : ''}
-                        </div>
-                      `).join('')}
-                    </body></html>`;
-                    win.document.write(html);
+                    </head><body>${pages.join('')}</body></html>`);
                     win.document.close();
                     win.focus();
-                    setTimeout(() => { win.print(); win.close(); }, 400);
+                    // Wait for images (QR + barcode) to load before printing
+                    win.onload = () => { setTimeout(() => { win.print(); }, 300); };
+                    setTimeout(() => { try { win.print(); } catch(e) {} }, 2500);
                   }}
                   className="h-12 px-5 text-base font-semibold min-h-[48px] bg-slate-900 hover:bg-slate-700"
                 >
