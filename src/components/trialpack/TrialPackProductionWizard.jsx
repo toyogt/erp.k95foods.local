@@ -310,10 +310,11 @@ export default function TrialPackProductionWizard({ onClose }) {
       });
 
       // Generate box labels for trial pack
-      const boxLabels = [];
+      const boxSerials = [];
+      const boxLabelObjs = [];
       for (let i = 1; i <= qty; i++) {
         const boxSerial = `${batchCode}-${String(i).padStart(4, '0')}`;
-        await base44.entities.BoxLabel.create({
+        const labelObj = {
           box_serial: boxSerial,
           item_code: selectedSku.item_code,
           product_name: selectedSku.product_name,
@@ -325,8 +326,10 @@ export default function TrialPackProductionWizard({ onClose }) {
           product_code: selectedSku.item_code,
           printed_at: new Date().toISOString(),
           printed_by: user?.email,
-        });
-        boxLabels.push(boxSerial);
+        };
+        await base44.entities.BoxLabel.create(labelObj);
+        boxSerials.push(boxSerial);
+        boxLabelObjs.push(labelObj);
       }
 
       for (const scannedLot of scannedLots) {
@@ -336,7 +339,7 @@ export default function TrialPackProductionWizard({ onClose }) {
         });
       }
 
-      return { lotId, batchCode, createdLot, boxLabels };
+      return { lotId, batchCode, createdLot, boxLabels: boxSerials, boxLabelObjects: boxLabelObjs };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries(['warehouseLots']);
