@@ -185,7 +185,32 @@ export default function BarcodeOCRTest() {
     setDetectedSerial(null);
     setOcrRawText('');
     setErrorMsg('');
+    savedBarcodeRef.current = null;
   };
+
+  // Restart camera to retry OCR but keep the already-scanned barcode
+  const retryOCR = useCallback(async () => {
+    setDetectedSerial(null);
+    setOcrRawText('');
+    setErrorMsg('');
+    ocrRunningRef.current = false;
+    setStatus(STATUS.STARTING);
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+      });
+      streamRef.current = stream;
+      videoRef.current.srcObject = stream;
+      await videoRef.current.play();
+      setCameraActive(true);
+      setStatus(STATUS.SCANNING);
+      scanLoop();
+    } catch (e) {
+      setStatus(STATUS.ERROR);
+      setErrorMsg('Camera access denied or not available.');
+    }
+  }, []); // eslint-disable-line
 
   const statusLabel = {
     [STATUS.IDLE]: 'Ready',
