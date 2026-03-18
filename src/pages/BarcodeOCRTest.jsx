@@ -231,7 +231,10 @@ export default function BarcodeOCRTest() {
     setDetectedSerial(null);
     setOcrRawText('');
     setErrorMsg('');
+    setAlignScore(0);
     savedBarcodeRef.current = null;
+    stableCountRef.current = 0;
+    lastBarcodeValueRef.current = null;
   };
 
   // Restart camera to retry OCR but keep the already-scanned barcode
