@@ -194,16 +194,14 @@ export default function BarcodeOCRTest() {
         }
 
         if (stableCountRef.current >= STABLE_FRAMES_NEEDED) {
-          // Locked and stable — save barcode, now ask user to aim at serial
+          // Locked and stable — save barcode and immediately run OCR
           const barcode = bc.rawValue;
           setScannedBarcode(barcode);
           savedBarcodeRef.current = barcode;
           stableCountRef.current = 0;
           lastBarcodeValueRef.current = null;
           setAlignScore(0);
-          setStatus(STATUS.SERIAL_AIM);
-          // Keep camera running — user will tap "Read Serial" button
-          rafRef.current = requestAnimationFrame(scanLoop);
+          runOCR(canvas);
         } else {
           rafRef.current = requestAnimationFrame(scanLoop);
         }
