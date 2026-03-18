@@ -130,9 +130,17 @@ export default function BarcodeOCRTest() {
   }, []); // eslint-disable-line
 
   const runOCR = useCallback(async (canvas) => {
-    if (ocrRunningRef.current || !workerRef.current) return;
+    if (ocrRunningRef.current) return;
     ocrRunningRef.current = true;
     setStatus(STATUS.OCR);
+
+    if (!workerRef.current) {
+      setOcrRawText('OCR engine not available.');
+      setDetectedSerial(null);
+      setStatus(STATUS.DONE);
+      stopCamera();
+      return;
+    }
 
     // Crop bottom-half of label where serial is typically printed
     const cropCanvas = document.createElement('canvas');
@@ -152,7 +160,7 @@ export default function BarcodeOCRTest() {
       stopCamera();
     } catch (e) {
       setStatus(STATUS.ERROR);
-      setErrorMsg('OCR failed. Please try again.');
+      setErrorMsg('OCR failed: ' + (e?.message || 'unknown error'));
       ocrRunningRef.current = false;
     }
   }, [stopCamera]);
