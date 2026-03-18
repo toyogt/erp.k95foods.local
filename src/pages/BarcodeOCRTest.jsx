@@ -317,9 +317,8 @@ export default function BarcodeOCRTest() {
   const statusLabel = {
     [STATUS.IDLE]: 'Ready',
     [STATUS.STARTING]: 'Starting camera…',
-    [STATUS.SCANNING]: 'Step 1 of 2 — Point at product barcode',
-    [STATUS.SERIAL_AIM]: `✓ Barcode scanned! Step 2 — Now point at the serial number text`,
-    [STATUS.OCR]: 'Reading serial number…',
+    [STATUS.SCANNING]: 'Point camera at the full label — barcode + serial visible',
+    [STATUS.OCR]: 'Barcode locked! Reading serial number…',
     [STATUS.DONE]: 'Done!',
     [STATUS.ERROR]: errorMsg || 'Error',
   }[status];
