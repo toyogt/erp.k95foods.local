@@ -36,15 +36,22 @@ export default function BarcodeOCRTest() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const worker = await createWorker('eng');
-      if (!cancelled) {
-        workerRef.current = worker;
-        setWorkerReady(true);
+      try {
+        const worker = await createWorker('eng');
+        if (!cancelled) {
+          workerRef.current = worker;
+          setWorkerReady(true);
+        }
+      } catch (e) {
+        if (!cancelled) {
+          // Allow page to function even if OCR fails to init
+          setWorkerReady(true);
+        }
       }
     })();
     return () => {
       cancelled = true;
-      workerRef.current?.terminate();
+      try { workerRef.current?.terminate(); } catch(_) {}
     };
   }, []);
 
