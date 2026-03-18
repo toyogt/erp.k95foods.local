@@ -8,6 +8,11 @@ import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import BarcodeOCRTest from './pages/BarcodeOCRTest';
+import FMSMyTasks from './pages/FMSMyTasks';
+import FMSProcesses from './pages/FMSProcesses';
+import FMSActiveRuns from './pages/FMSActiveRuns';
+import FMSMonitor from './pages/FMSMonitor';
+import FMSUsers from './pages/FMSUsers';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -60,6 +65,11 @@ const AuthenticatedApp = () => {
         />
       ))}
       <Route path="/BarcodeOCRTest" element={<LayoutWrapper currentPageName="BarcodeOCRTest"><BarcodeOCRTest /></LayoutWrapper>} />
+      <Route path="/FMSMyTasks" element={<FMSMyTasks />} />
+      <Route path="/FMSProcesses" element={<FMSProcesses />} />
+      <Route path="/FMSActiveRuns" element={<FMSActiveRuns />} />
+      <Route path="/FMSMonitor" element={<FMSMonitor />} />
+      <Route path="/FMSUsers" element={<FMSUsers />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
