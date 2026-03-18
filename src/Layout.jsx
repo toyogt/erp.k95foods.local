@@ -8,7 +8,8 @@ import {
   LayoutDashboard, ScrollText, Settings, ChevronLeft,
   Factory, LogOut, Menu, X,
   Droplets, Thermometer, Truck, Tag,
-  ListChecks, Bell, Printer, ClipboardCheck, Layers, Warehouse, BarChart3, Upload, Search, FlaskConical, PackageSearch, Zap, ShoppingCart, Inbox, ShieldCheck, PackageOpen, TestTube2, Archive
+  ListChecks, Bell, Printer, ClipboardCheck, Layers, Warehouse, BarChart3, Upload, Search, FlaskConical, PackageSearch, Zap, ShoppingCart, Inbox, ShieldCheck, PackageOpen, TestTube2, Archive,
+  GitBranch, Activity, Users, Eye, Play
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
