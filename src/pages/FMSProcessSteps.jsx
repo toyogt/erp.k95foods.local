@@ -19,12 +19,13 @@ export default function FMSProcessSteps() {
   const [editStep, setEditStep] = useState(null);
 
   const load = async () => {
-    const [procs, stps, u] = await Promise.all([
-      base44.entities.Process.filter({ id: processId }),
+    if (!processId || processId === ':processId') return;
+    const [proc, stps, u] = await Promise.all([
+      base44.entities.Process.get(processId),
       base44.entities.ProcessStep.filter({ process_id: processId }),
       base44.auth.me(),
     ]);
-    setProcess(procs[0]);
+    setProcess(proc);
     stps.sort((a, b) => a.step_number - b.step_number);
     setSteps(stps);
     setUser(u);
