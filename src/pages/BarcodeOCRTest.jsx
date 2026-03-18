@@ -330,13 +330,25 @@ export default function BarcodeOCRTest() {
           )}
 
           {(status === STATUS.DONE || status === STATUS.ERROR) && (
-            <Button
-              onClick={reset}
-              className="w-full h-14 text-base font-bold min-h-[56px] bg-slate-700 hover:bg-slate-600"
-            >
-              <RefreshCw className="w-5 h-5 mr-2" />
-              Scan Again
-            </Button>
+            <div className="space-y-3">
+              {/* Retry OCR only — keep the barcode, just re-read serial */}
+              {status === STATUS.DONE && !detectedSerial && (
+                <Button
+                  onClick={retryOCR}
+                  className="w-full h-14 text-base font-bold min-h-[56px] bg-yellow-500 hover:bg-yellow-600 text-black"
+                >
+                  <ScanLine className="w-5 h-5 mr-2" />
+                  Retry Serial Read (barcode saved)
+                </Button>
+              )}
+              <Button
+                onClick={reset}
+                className="w-full h-14 text-base font-bold min-h-[56px] bg-slate-700 hover:bg-slate-600"
+              >
+                <RefreshCw className="w-5 h-5 mr-2" />
+                Scan Again (full reset)
+              </Button>
+            </div>
           )}
         </div>
 
