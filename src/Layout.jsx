@@ -65,6 +65,15 @@ const ALL_NAV_ITEMS = [
   { label: 'Master Data',           page: 'MasterData',              icon: Settings,       adminOnly: true },
 ];
 
+// FMS nav items with their own role rules (checked inline)
+const FMS_NAV_ITEMS = [
+  { label: 'FMS Dashboard',  page: 'FMSDashboard',  icon: GitBranch,    roles: ['admin', 'pc', 'designer', 'user'] },
+  { label: 'Processes',      page: 'FMSProcesses',  icon: ListChecks,   roles: ['admin', 'designer'] },
+  { label: 'Active Runs',    page: 'FMSActiveRuns', icon: Play,         roles: ['admin', 'pc', 'designer', 'user'] },
+  { label: 'Monitor',        page: 'FMSMonitor',    icon: Eye,          roles: ['admin', 'pc'] },
+  { label: 'FMS Users',      page: 'FMSUsersAdmin', icon: Users,        roles: ['admin'] },
+];
+
 export default function Layout({ children, currentPageName }) {
   const [user, setUser] = useState(null);
   const [userLoading, setUserLoading] = useState(true);
