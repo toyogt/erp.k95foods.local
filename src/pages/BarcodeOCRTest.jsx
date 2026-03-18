@@ -32,6 +32,9 @@ export default function BarcodeOCRTest() {
   const [workerReady, setWorkerReady] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
   const savedBarcodeRef = useRef(null);
+  const stableCountRef = useRef(0);       // how many consecutive frames barcode is well-centred
+  const lastBarcodeValueRef = useRef(null);
+  const STABLE_FRAMES_NEEDED = 5;        // must be stable for 5 frames before OCR fires
 
   // Init Tesseract worker
   useEffect(() => {
