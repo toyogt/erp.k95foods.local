@@ -31,6 +31,7 @@ export default function BarcodeOCRTest() {
   const [errorMsg, setErrorMsg] = useState('');
   const [workerReady, setWorkerReady] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
+  const [alignScore, setAlignScore] = useState(0); // 0-100 alignment score shown to user
   const savedBarcodeRef = useRef(null);
   const stableCountRef = useRef(0);       // how many consecutive frames barcode is well-centred
   const lastBarcodeValueRef = useRef(null);
