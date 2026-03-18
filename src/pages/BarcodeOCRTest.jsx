@@ -363,26 +363,7 @@ export default function BarcodeOCRTest() {
             </div>
           )}
 
-          {/* Step 2: Serial aim overlay — show a target zone for the serial text */}
-          {cameraActive && status === STATUS.SERIAL_AIM && (
-            <div className="absolute inset-0 pointer-events-none">
-              {/* Dimmed areas above and below the serial target zone */}
-              <div className="absolute inset-x-0 top-0 bg-black/50" style={{ bottom: '75%' }} />
-              <div className="absolute inset-x-0 bottom-0 bg-black/50" style={{ top: '75%' }} />
-              {/* Bright target box */}
-              <div className="absolute inset-x-10 border-2 border-yellow-400 rounded-lg"
-                style={{ top: '25%', bottom: '25%' }}>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-yellow-300 text-xs font-bold bg-black/60 px-2 py-1 rounded">
-                    Serial Number Here
-                  </span>
-                </div>
-              </div>
-              <p className="absolute bottom-3 left-0 right-0 text-white/80 text-xs text-center">
-                Fill this box with the serial number text, then tap the button
-              </p>
-            </div>
-          )}
+
 
           {/* Status overlay */}
           {(status === STATUS.OCR) && (
