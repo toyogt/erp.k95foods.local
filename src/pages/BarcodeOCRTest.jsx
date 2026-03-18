@@ -31,6 +31,7 @@ export default function BarcodeOCRTest() {
   const [errorMsg, setErrorMsg] = useState('');
   const [workerReady, setWorkerReady] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
+  const savedBarcodeRef = useRef(null);
 
   // Init Tesseract worker
   useEffect(() => {
