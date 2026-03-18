@@ -454,7 +454,6 @@ export default function BarcodeOCRTest() {
 
           {cameraActive && status === STATUS.SCANNING && (
             <>
-              {/* Manual trigger if BarcodeDetector not available */}
               {!detectorRef.current && (
                 <Button
                   onClick={handleManualOCR}
@@ -465,7 +464,7 @@ export default function BarcodeOCRTest() {
                 </Button>
               )}
               <Button
-                onClick={stopCamera}
+                onClick={reset}
                 variant="outline"
                 className="w-full h-12 text-base min-h-[48px] border-slate-600 text-slate-300 hover:bg-slate-800"
               >
@@ -473,6 +472,27 @@ export default function BarcodeOCRTest() {
                 Cancel
               </Button>
             </>
+          )}
+
+          {/* Step 2: user has aimed at serial — tap to OCR */}
+          {cameraActive && status === STATUS.SERIAL_AIM && (
+            <div className="space-y-3">
+              <Button
+                onClick={handleManualOCR}
+                className="w-full h-16 text-lg font-bold min-h-[64px] bg-yellow-400 hover:bg-yellow-300 text-black"
+              >
+                <ScanLine className="w-6 h-6 mr-2" />
+                Read Serial Number Now
+              </Button>
+              <Button
+                onClick={reset}
+                variant="outline"
+                className="w-full h-12 text-base min-h-[48px] border-slate-600 text-slate-300 hover:bg-slate-800"
+              >
+                <CameraOff className="w-5 h-5 mr-2" />
+                Cancel
+              </Button>
+            </div>
           )}
 
           {(status === STATUS.DONE || status === STATUS.ERROR) && (
