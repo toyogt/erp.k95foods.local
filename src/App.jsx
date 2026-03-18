@@ -59,6 +59,7 @@ const AuthenticatedApp = () => {
           }
         />
       ))}
+      <Route path="/BarcodeOCRTest" element={<LayoutWrapper currentPageName="BarcodeOCRTest"><BarcodeOCRTest /></LayoutWrapper>} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
