@@ -354,48 +354,47 @@ function TestLabelPrinter() {
         @page { size: 4in 6in; margin: 0; }
         * { box-sizing: border-box; }
         body { margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; color: #000; background: #fff; }
-        .label { width: 4in; height: 6in; padding: 0.15in; display: flex; flex-direction: column; border: 1px solid #000; overflow: hidden; }
-        .divider { border-top: 0.5pt solid #ccc; margin: 0.1in 0; }
+        .label { width: 4in; height: 6in; padding: 0.15in; display: flex; flex-direction: column; gap: 0; }
+        .divider { border-top: 0.5pt solid #ccc; margin: 0.07in 0; }
         .field-label { font-size: 6.5pt; color: #888; text-transform: uppercase; letter-spacing: 0.05em; }
       </style>
     </head><body>
       <div class="label">
         <!-- Brand + Product -->
-        <div style="margin-bottom:4pt;">
+        <div>
           <div style="font-size:7pt;color:#777;text-transform:uppercase;letter-spacing:0.08em;">${fields.brand_name}</div>
-          <div style="font-size:16pt;font-weight:bold;line-height:1.2;">${fields.product_name}</div>
-          ${fields.bottles_per_box ? `<div style="font-size:9pt;color:#555;margin-top:2pt;">${fields.bottles_per_box} bottles per box</div>` : ''}
+          <div style="font-size:15pt;font-weight:bold;line-height:1.2;">${fields.product_name}</div>
+          ${fields.bottles_per_box ? `<div style="font-size:8pt;color:#555;margin-top:1pt;">${fields.bottles_per_box} bottles per box</div>` : ''}
         </div>
         <div class="divider"></div>
 
         <!-- Dates -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6pt;margin-bottom:4pt;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4pt;">
           <div>
             <div class="field-label">Mfg Date</div>
-            <div style="font-size:13pt;font-weight:bold;">${fmtDate(fields.mfg_date)}</div>
+            <div style="font-size:12pt;font-weight:bold;">${fmtDate(fields.mfg_date)}</div>
           </div>
           ${fields.exp_date ? `<div>
             <div class="field-label">Exp Date</div>
-            <div style="font-size:13pt;font-weight:bold;color:#b91c1c;">${fmtDate(fields.exp_date)}</div>
+            <div style="font-size:12pt;font-weight:bold;color:#b91c1c;">${fmtDate(fields.exp_date)}</div>
           </div>` : ''}
         </div>
         <div class="divider"></div>
 
         <!-- Product Barcode -->
-        <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:4pt;">
-          <div class="field-label" style="align-self:flex-start;margin-bottom:4pt;">Product Barcode</div>
-          <img src="${barcodeUrl}" style="height:0.7in;max-width:3.5in;" />
-          <div style="font-size:8pt;color:#555;margin-top:2pt;font-family:monospace;">${fields.barcode_value}</div>
+        <div style="display:flex;flex-direction:column;align-items:center;">
+          <div class="field-label" style="align-self:flex-start;margin-bottom:3pt;">Product Barcode</div>
+          <img src="${barcodeUrl}" style="height:0.65in;max-width:3.5in;" />
+          <div style="font-size:7.5pt;color:#555;margin-top:1pt;font-family:monospace;">${fields.barcode_value}</div>
         </div>
         <div class="divider"></div>
 
-        <!-- Serial Number — large readable text, no barcode -->
-        <div style="flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;background:#f8f8f8;border:1pt solid #ddd;border-radius:4pt;padding:0.1in;">
-          <div class="field-label" style="margin-bottom:6pt;">Box Serial Number</div>
-          <div style="font-size:22pt;font-weight:bold;font-family:'Courier New',Courier,monospace;letter-spacing:0.06em;text-align:center;word-break:break-all;">
+        <!-- Serial Number — immediately below barcode, large text -->
+        <div style="display:flex;flex-direction:column;align-items:center;background:#f8f8f8;border:1pt solid #ddd;border-radius:4pt;padding:0.08in 0.1in;">
+          <div class="field-label" style="margin-bottom:5pt;">Box Serial Number</div>
+          <div style="font-size:24pt;font-weight:bold;font-family:'Courier New',Courier,monospace;letter-spacing:0.06em;text-align:center;word-break:break-all;">
             ${fields.serial_number}
           </div>
-          <div style="font-size:7pt;color:#aaa;margin-top:6pt;">Read manually — no barcode/QR</div>
         </div>
       </div>
     </body></html>`);
