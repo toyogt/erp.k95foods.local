@@ -8,6 +8,12 @@ import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import BarcodeOCRTest from './pages/BarcodeOCRTest';
+import FMSDashboard from './pages/FMSDashboard';
+import FMSProcesses from './pages/FMSProcesses';
+import FMSProcessSteps from './pages/FMSProcessSteps';
+import FMSActiveRuns from './pages/FMSActiveRuns';
+import FMSMonitor from './pages/FMSMonitor';
+import FMSUsersAdmin from './pages/FMSUsersAdmin';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
