@@ -66,6 +66,12 @@ const AuthenticatedApp = () => {
         />
       ))}
       <Route path="/BarcodeOCRTest" element={<LayoutWrapper currentPageName="BarcodeOCRTest"><BarcodeOCRTest /></LayoutWrapper>} />
+      <Route path="/FMSDashboard" element={<LayoutWrapper currentPageName="FMSDashboard"><FMSDashboard /></LayoutWrapper>} />
+      <Route path="/FMSProcesses" element={<LayoutWrapper currentPageName="FMSProcesses"><FMSProcesses /></LayoutWrapper>} />
+      <Route path="/FMSProcessSteps/:processId" element={<LayoutWrapper currentPageName="FMSProcessSteps"><FMSProcessSteps /></LayoutWrapper>} />
+      <Route path="/FMSActiveRuns" element={<LayoutWrapper currentPageName="FMSActiveRuns"><FMSActiveRuns /></LayoutWrapper>} />
+      <Route path="/FMSMonitor" element={<LayoutWrapper currentPageName="FMSMonitor"><FMSMonitor /></LayoutWrapper>} />
+      <Route path="/FMSUsersAdmin" element={<LayoutWrapper currentPageName="FMSUsersAdmin"><FMSUsersAdmin /></LayoutWrapper>} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
