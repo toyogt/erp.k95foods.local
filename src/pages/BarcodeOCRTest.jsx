@@ -230,12 +230,28 @@ export default function BarcodeOCRTest() {
       return;
     }
 
-    // Use full frame — serial can appear anywhere on the label
+    // Crop to the centre 80% width × middle 50% height of frame
+    // User has been asked to point the camera so the serial box fills this zone
+    const cw = canvas.width;
+    const ch = canvas.height;
+    const cropX = Math.floor(cw * 0.10);
+    const cropY = Math.floor(ch * 0.25);
+    const cropW = Math.floor(cw * 0.80);
+    const cropH = Math.floor(ch * 0.50);
+
     const cropCanvas = document.createElement('canvas');
-    cropCanvas.width = canvas.width;
-    cropCanvas.height = canvas.height;
+    cropCanvas.width = cropW;
+    cropCanvas.height = cropH;
     const cropCtx = cropCanvas.getContext('2d');
-    cropCtx.drawImage(canvas, 0, 0);
+
+    // Scale up 2× for better OCR accuracy on small text
+    cropCanvas.width = cropW * 2;
+    cropCanvas.height = cropH * 2;
+    cropCtx.drawImage(canvas, cropX, cropY, cropW, cropH, 0, 0, cropW * 2, cropH * 2);
+
+    // Increase contrast to help OCR read dark text
+    cropCtx.filter = 'contrast(1.4) brightness(1.05)';
+    cropCtx.drawImage(canvas, cropX, cropY, cropW, cropH, 0, 0, cropW * 2, cropH * 2);
 
     try {
       const { data } = await workerRef.current.recognize(cropCanvas);
