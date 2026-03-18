@@ -15,6 +15,41 @@ const STATUS = {
   ERROR: 'error',
 };
 
+// Pure date pattern — DD-MM-YYYY, MM/DD/YYYY, YYYY-MM-DD etc — should be excluded
+const DATE_PATTERN = /^(\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4}|\d{4}[-\/]\d{1,2}[-\/]\d{1,2})$/;
+
+// A valid serial must have BOTH letters AND digits, optionally with dashes/dots
+// and be at least 6 chars. Pure numbers (like barcode digits) are excluded.
+const SERIAL_PATTERN = /^(?=[A-Z0-9\-\.]{6,}$)(?=.*[A-Z])(?=.*[0-9])[A-Z0-9\-\.]{6,}$/i;
+
+function extractSerial(rawText) {
+  const lines = rawText.split(/\n/).map(l => l.trim()).filter(Boolean);
+
+  // Strategy 1: find line after "BOX SERIAL NUMBER" or "SERIAL" label
+  for (let i = 0; i < lines.length; i++) {
+    if (/serial\s*(number)?/i.test(lines[i])) {
+      // Next non-empty line after the label heading is the serial value
+      for (let j = i + 1; j < lines.length; j++) {
+        const candidate = lines[j].replace(/\s+/g, '').toUpperCase();
+        if (SERIAL_PATTERN.test(candidate) && !DATE_PATTERN.test(candidate)) {
+          return candidate;
+        }
+      }
+    }
+  }
+
+  // Strategy 2: pick the longest token that matches serial pattern and is not a date
+  const allTokens = rawText.split(/[\s\n\r,;:]+/)
+    .map(t => t.replace(/[^A-Z0-9\-\.]/gi, '').toUpperCase())
+    .filter(t => SERIAL_PATTERN.test(t) && !DATE_PATTERN.test(t));
+
+  if (allTokens.length === 0) return null;
+
+  // Prefer the longest one (serial numbers tend to be long)
+  allTokens.sort((a, b) => b.length - a.length);
+  return allTokens[0];
+}
+
 export default function BarcodeOCRTest() {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
