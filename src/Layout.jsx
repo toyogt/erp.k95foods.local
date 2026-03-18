@@ -62,6 +62,12 @@ const ALL_NAV_ITEMS = [
   { label: 'Ryan Templates',        page: 'RyanTemplateManager',     icon: Printer,        adminOnly: true },
   { label: 'Product Taxonomy',      page: 'ProductTaxonomy',         icon: Layers,         adminOnly: true },
   { label: 'Master Data',           page: 'MasterData',              icon: Settings,       adminOnly: true },
+  // ── Process Flow Management ───────────────────────────────────────────────
+  { label: 'My Tasks (FMS)',        page: 'FMSMyTasks',              icon: ListChecks      },
+  { label: 'Processes (FMS)',       page: 'FMSProcesses',            icon: GitBranch,      adminOnly: true },
+  { label: 'Active Runs (FMS)',     page: 'FMSActiveRuns',           icon: PlayCircle      },
+  { label: 'Process Monitor (FMS)',  page: 'FMSMonitor',              icon: MonitorDot      },
+  { label: 'FMS Users',            page: 'FMSUsers',                icon: Users,          adminOnly: true },
 ];
 
 export default function Layout({ children, currentPageName }) {
