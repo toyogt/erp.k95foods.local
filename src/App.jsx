@@ -8,12 +8,6 @@ import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import BarcodeOCRTest from './pages/BarcodeOCRTest';
-import FMSDashboard from './pages/FMSDashboard';
-import FMSProcesses from './pages/FMSProcesses';
-import FMSProcessSteps from './pages/FMSProcessSteps';
-import FMSActiveRuns from './pages/FMSActiveRuns';
-import FMSMonitor from './pages/FMSMonitor';
-import FMSUsersAdmin from './pages/FMSUsersAdmin';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -66,12 +60,6 @@ const AuthenticatedApp = () => {
         />
       ))}
       <Route path="/BarcodeOCRTest" element={<LayoutWrapper currentPageName="BarcodeOCRTest"><BarcodeOCRTest /></LayoutWrapper>} />
-      <Route path="/FMSDashboard" element={<LayoutWrapper currentPageName="FMSDashboard"><FMSDashboard /></LayoutWrapper>} />
-      <Route path="/FMSProcesses" element={<LayoutWrapper currentPageName="FMSProcesses"><FMSProcesses /></LayoutWrapper>} />
-      <Route path="/FMSProcessSteps/:processId" element={<LayoutWrapper currentPageName="FMSProcessSteps"><FMSProcessSteps /></LayoutWrapper>} />
-      <Route path="/FMSActiveRuns" element={<LayoutWrapper currentPageName="FMSActiveRuns"><FMSActiveRuns /></LayoutWrapper>} />
-      <Route path="/FMSMonitor" element={<LayoutWrapper currentPageName="FMSMonitor"><FMSMonitor /></LayoutWrapper>} />
-      <Route path="/FMSUsersAdmin" element={<LayoutWrapper currentPageName="FMSUsersAdmin"><FMSUsersAdmin /></LayoutWrapper>} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
