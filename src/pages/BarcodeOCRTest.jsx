@@ -201,9 +201,9 @@ export default function BarcodeOCRTest() {
       const { data } = await workerRef.current.recognize(cropCanvas);
       const raw = data.text || '';
       setOcrRawText(raw);
-      // Try to extract serial: any alphanumeric token 6+ chars
-      const tokens = raw.split(/[\s\n\r]+/).filter(t => /^[A-Z0-9\-]{6,}$/i.test(t));
-      setDetectedSerial(tokens.length > 0 ? tokens.join(' | ') : null);
+
+      const serial = extractSerial(raw);
+      setDetectedSerial(serial);
       setStatus(STATUS.DONE);
       stopCamera();
     } catch (e) {
