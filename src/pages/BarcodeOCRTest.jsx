@@ -9,8 +9,7 @@ import { Camera, CameraOff, RefreshCw, ScanLine, Printer } from 'lucide-react';
 const STATUS = {
   IDLE: 'idle',
   STARTING: 'starting',
-  SCANNING: 'scanning',       // Step 1: scanning for product barcode
-  SERIAL_AIM: 'serial_aim',   // Step 2: user aims at serial number box
+  SCANNING: 'scanning',
   OCR: 'ocr',
   DONE: 'done',
   ERROR: 'error',
