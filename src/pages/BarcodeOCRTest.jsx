@@ -114,14 +114,56 @@ export default function BarcodeOCRTest() {
     const ctx = canvas.getContext('2d');
     ctx.drawImage(video, 0, 0);
 
-    // Barcode detection
     if (detectorRef.current) {
       detectorRef.current.detect(canvas).then(barcodes => {
-        if (barcodes.length > 0 && !ocrRunningRef.current) {
-          const barcode = barcodes[0].rawValue;
+        if (ocrRunningRef.current) return;
+
+        if (barcodes.length === 0) {
+          // No barcode visible — reset stability
+          stableCountRef.current = 0;
+          lastBarcodeValueRef.current = null;
+          setAlignScore(0);
+          rafRef.current = requestAnimationFrame(scanLoop);
+          return;
+        }
+
+        const bc = barcodes[0];
+        const { x, y, width, height } = bc.boundingBox;
+        const cw = canvas.width;
+        const ch = canvas.height;
+
+        // Barcode centre relative to frame
+        const bcCx = x + width / 2;
+        const bcCy = y + height / 2;
+
+        // How centred horizontally (0=edge, 1=perfect centre)
+        const hScore = 1 - Math.abs(bcCx / cw - 0.5) * 2;
+
+        // How centred vertically (want barcode roughly in middle 40-70% vertically)
+        const relY = bcCy / ch;
+        const vScore = relY >= 0.3 && relY <= 0.75 ? 1 : 0.3;
+
+        // Barcode width should be at least 40% of frame width (close enough)
+        const sizeScore = Math.min(width / cw / 0.4, 1);
+
+        const score = Math.round(hScore * 0.4 * 100 + vScore * 0.3 * 100 + sizeScore * 0.3 * 100);
+        setAlignScore(score);
+
+        const isAligned = score >= 70 && bc.rawValue === lastBarcodeValueRef.current;
+
+        if (isAligned) {
+          stableCountRef.current += 1;
+        } else {
+          stableCountRef.current = 1;
+          lastBarcodeValueRef.current = bc.rawValue;
+        }
+
+        if (stableCountRef.current >= STABLE_FRAMES_NEEDED) {
+          // Locked and stable — fire OCR
+          const barcode = bc.rawValue;
           setScannedBarcode(barcode);
           savedBarcodeRef.current = barcode;
-          // Trigger OCR on current frame
+          stableCountRef.current = 0;
           runOCR(canvas);
         } else {
           rafRef.current = requestAnimationFrame(scanLoop);
