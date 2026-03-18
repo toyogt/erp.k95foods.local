@@ -301,7 +301,141 @@ export default function BarcodeOCRTest() {
         {!workerReady && (
           <p className="text-slate-500 text-xs text-center mt-3">Loading OCR engine in background…</p>
         )}
+
+        {/* ── PRINT TEST LABEL ── */}
+        <div className="mt-8 border-t border-slate-700 pt-6">
+          <h2 className="text-white text-base font-bold mb-1">Print Test Label</h2>
+          <p className="text-slate-400 text-xs mb-4">Fill in test values and print a 4×6 label — barcode on top, serial as large text below</p>
+          <TestLabelPrinter />
+        </div>
       </div>
+    </div>
+  );
+}
+
+function TestLabelPrinter() {
+  const [fields, setFields] = useState({
+    product_name: 'Test Product',
+    brand_name: 'Test Brand',
+    barcode_value: '8901234567890',
+    serial_number: 'TP-2026-00042',
+    mfg_date: new Date().toISOString().split('T')[0],
+    exp_date: '',
+    bottles_per_box: '6',
+  });
+
+  const set = (k, v) => setFields(f => ({ ...f, [k]: v }));
+
+  const printLabel = () => {
+    function fmtDate(d) {
+      if (!d) return '—';
+      const p = d.split('-');
+      return p.length === 3 ? `${p[2]}-${p[1]}-${p[0]}` : d;
+    }
+    const barcodeUrl = `https://barcodeapi.org/api/128/${encodeURIComponent(fields.barcode_value)}`;
+    const win = window.open('', '_blank');
+    win.document.write(`<!DOCTYPE html><html><head><title>Test Label</title>
+      <style>
+        @page { size: 4in 6in; margin: 0; }
+        * { box-sizing: border-box; }
+        body { margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; color: #000; background: #fff; }
+        .label { width: 4in; height: 6in; padding: 0.15in; display: flex; flex-direction: column; border: 1px solid #000; overflow: hidden; }
+        .divider { border-top: 0.5pt solid #ccc; margin: 0.1in 0; }
+        .field-label { font-size: 6.5pt; color: #888; text-transform: uppercase; letter-spacing: 0.05em; }
+      </style>
+    </head><body>
+      <div class="label">
+        <!-- Brand + Product -->
+        <div style="margin-bottom:4pt;">
+          <div style="font-size:7pt;color:#777;text-transform:uppercase;letter-spacing:0.08em;">${fields.brand_name}</div>
+          <div style="font-size:16pt;font-weight:bold;line-height:1.2;">${fields.product_name}</div>
+          ${fields.bottles_per_box ? `<div style="font-size:9pt;color:#555;margin-top:2pt;">${fields.bottles_per_box} bottles per box</div>` : ''}
+        </div>
+        <div class="divider"></div>
+
+        <!-- Dates -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6pt;margin-bottom:4pt;">
+          <div>
+            <div class="field-label">Mfg Date</div>
+            <div style="font-size:13pt;font-weight:bold;">${fmtDate(fields.mfg_date)}</div>
+          </div>
+          ${fields.exp_date ? `<div>
+            <div class="field-label">Exp Date</div>
+            <div style="font-size:13pt;font-weight:bold;color:#b91c1c;">${fmtDate(fields.exp_date)}</div>
+          </div>` : ''}
+        </div>
+        <div class="divider"></div>
+
+        <!-- Product Barcode -->
+        <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:4pt;">
+          <div class="field-label" style="align-self:flex-start;margin-bottom:4pt;">Product Barcode</div>
+          <img src="${barcodeUrl}" style="height:0.7in;max-width:3.5in;" />
+          <div style="font-size:8pt;color:#555;margin-top:2pt;font-family:monospace;">${fields.barcode_value}</div>
+        </div>
+        <div class="divider"></div>
+
+        <!-- Serial Number — large readable text, no barcode -->
+        <div style="flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;background:#f8f8f8;border:1pt solid #ddd;border-radius:4pt;padding:0.1in;">
+          <div class="field-label" style="margin-bottom:6pt;">Box Serial Number</div>
+          <div style="font-size:22pt;font-weight:bold;font-family:'Courier New',Courier,monospace;letter-spacing:0.06em;text-align:center;word-break:break-all;">
+            ${fields.serial_number}
+          </div>
+          <div style="font-size:7pt;color:#aaa;margin-top:6pt;">Read manually — no barcode/QR</div>
+        </div>
+      </div>
+    </body></html>`);
+    win.document.close();
+    win.focus();
+    win.onload = () => setTimeout(() => win.print(), 300);
+    setTimeout(() => { try { win.print(); } catch(e) {} }, 2000);
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-3">
+        <div className="col-span-2">
+          <Label className="text-slate-300 text-xs mb-1 block">Product Name</Label>
+          <Input value={fields.product_name} onChange={e => set('product_name', e.target.value)}
+            className="bg-slate-800 border-slate-600 text-white h-12 text-base" />
+        </div>
+        <div>
+          <Label className="text-slate-300 text-xs mb-1 block">Brand Name</Label>
+          <Input value={fields.brand_name} onChange={e => set('brand_name', e.target.value)}
+            className="bg-slate-800 border-slate-600 text-white h-12 text-base" />
+        </div>
+        <div>
+          <Label className="text-slate-300 text-xs mb-1 block">Bottles per Box</Label>
+          <Input value={fields.bottles_per_box} onChange={e => set('bottles_per_box', e.target.value)}
+            className="bg-slate-800 border-slate-600 text-white h-12 text-base" />
+        </div>
+        <div className="col-span-2">
+          <Label className="text-slate-300 text-xs mb-1 block">Product Barcode Value</Label>
+          <Input value={fields.barcode_value} onChange={e => set('barcode_value', e.target.value)}
+            className="bg-slate-800 border-slate-600 text-white h-12 text-base font-mono" />
+        </div>
+        <div className="col-span-2">
+          <Label className="text-slate-300 text-xs mb-1 block">Serial Number (printed as text)</Label>
+          <Input value={fields.serial_number} onChange={e => set('serial_number', e.target.value)}
+            className="bg-slate-800 border-slate-600 text-yellow-300 h-12 text-base font-mono font-bold" />
+        </div>
+        <div>
+          <Label className="text-slate-300 text-xs mb-1 block">Mfg Date</Label>
+          <Input type="date" value={fields.mfg_date} onChange={e => set('mfg_date', e.target.value)}
+            className="bg-slate-800 border-slate-600 text-white h-12 text-base" />
+        </div>
+        <div>
+          <Label className="text-slate-300 text-xs mb-1 block">Exp Date (optional)</Label>
+          <Input type="date" value={fields.exp_date} onChange={e => set('exp_date', e.target.value)}
+            className="bg-slate-800 border-slate-600 text-white h-12 text-base" />
+        </div>
+      </div>
+      <Button
+        onClick={printLabel}
+        className="w-full h-14 text-base font-bold min-h-[56px] bg-emerald-600 hover:bg-emerald-700"
+      >
+        <Printer className="w-5 h-5 mr-2" />
+        Print Test Label (4×6)
+      </Button>
     </div>
   );
 }
