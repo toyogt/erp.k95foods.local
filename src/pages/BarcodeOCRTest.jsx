@@ -278,12 +278,41 @@ export default function BarcodeOCRTest() {
           <video ref={videoRef} className="w-full h-full object-cover" muted playsInline />
           <canvas ref={canvasRef} className="hidden" />
 
-          {/* Overlay guide lines */}
-          {cameraActive && (
+          {/* Overlay guide lines with alignment indicator */}
+          {cameraActive && status === STATUS.SCANNING && (
             <div className="absolute inset-0 pointer-events-none">
-              <div className="absolute inset-x-6 top-1/4 bottom-1/4 border-2 border-yellow-400 rounded-lg opacity-60" />
-              <div className="absolute inset-x-6 top-1/4 bottom-1/4 flex items-center justify-center">
-                <ScanLine className="text-yellow-400 w-8 h-8 opacity-70 animate-pulse" />
+              {/* Target box — user should fit barcode inside this */}
+              <div className={`absolute inset-x-8 border-2 rounded-lg transition-colors duration-200 ${
+                alignScore >= 70 ? 'border-green-400' : alignScore >= 40 ? 'border-yellow-400' : 'border-red-400 opacity-70'
+              }`} style={{ top: '28%', bottom: '35%' }} />
+
+              {/* Corner brackets */}
+              {['top-[28%] left-8', 'top-[28%] right-8', 'bottom-[35%] left-8', 'bottom-[35%] right-8'].map((pos, i) => (
+                <div key={i} className={`absolute w-5 h-5 ${pos} ${alignScore >= 70 ? 'border-green-400' : 'border-yellow-400'} ${
+                  i === 0 ? 'border-t-2 border-l-2' : i === 1 ? 'border-t-2 border-r-2' : i === 2 ? 'border-b-2 border-l-2' : 'border-b-2 border-r-2'
+                }`} />
+              ))}
+
+              {/* Alignment bar at bottom of viewfinder */}
+              <div className="absolute bottom-3 left-6 right-6">
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 h-2 bg-white/20 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-150 ${
+                        alignScore >= 70 ? 'bg-green-400' : alignScore >= 40 ? 'bg-yellow-400' : 'bg-red-400'
+                      }`}
+                      style={{ width: `${alignScore}%` }}
+                    />
+                  </div>
+                  <span className={`text-xs font-bold w-10 text-right ${
+                    alignScore >= 70 ? 'text-green-300' : alignScore >= 40 ? 'text-yellow-300' : 'text-red-300'
+                  }`}>
+                    {alignScore >= 70 ? '✓ OK' : `${alignScore}%`}
+                  </span>
+                </div>
+                <p className="text-white/70 text-xs text-center mt-1">
+                  {alignScore >= 70 ? 'Hold still — locking…' : alignScore > 0 ? 'Align barcode to centre box' : 'Point at label barcode'}
+                </p>
               </div>
             </div>
           )}
