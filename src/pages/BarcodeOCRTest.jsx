@@ -116,6 +116,7 @@ export default function BarcodeOCRTest() {
         if (barcodes.length > 0 && !ocrRunningRef.current) {
           const barcode = barcodes[0].rawValue;
           setScannedBarcode(barcode);
+          savedBarcodeRef.current = barcode;
           // Trigger OCR on current frame
           runOCR(canvas);
         } else {
