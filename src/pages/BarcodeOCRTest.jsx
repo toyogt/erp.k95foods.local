@@ -142,12 +142,12 @@ export default function BarcodeOCRTest() {
       return;
     }
 
-    // Crop bottom-half of label where serial is typically printed
+    // Use full frame — serial can appear anywhere on the label
     const cropCanvas = document.createElement('canvas');
     cropCanvas.width = canvas.width;
-    cropCanvas.height = Math.floor(canvas.height * 0.5);
+    cropCanvas.height = canvas.height;
     const cropCtx = cropCanvas.getContext('2d');
-    cropCtx.drawImage(canvas, 0, Math.floor(canvas.height * 0.5), canvas.width, cropCanvas.height, 0, 0, cropCanvas.width, cropCanvas.height);
+    cropCtx.drawImage(canvas, 0, 0);
 
     try {
       const { data } = await workerRef.current.recognize(cropCanvas);
