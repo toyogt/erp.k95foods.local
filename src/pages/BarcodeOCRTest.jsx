@@ -327,7 +327,7 @@ export default function BarcodeOCRTest() {
     <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-start p-4 gap-4">
       <div className="w-full max-w-lg">
         <h1 className="text-white text-xl font-bold text-center mb-1">Barcode + Serial OCR Test</h1>
-        <p className="text-slate-400 text-sm text-center mb-4">Scan the product barcode — app will auto-read the serial number text from the same label</p>
+        <p className="text-slate-400 text-sm text-center mb-4">Hold the full label in view — barcode is auto-detected and serial number is read instantly in one step</p>
 
         {/* Camera viewfinder */}
         <div className="relative w-full aspect-video bg-black rounded-2xl overflow-hidden mb-4 border-2 border-slate-700">
