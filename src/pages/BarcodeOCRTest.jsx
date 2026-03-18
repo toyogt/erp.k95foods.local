@@ -2,7 +2,9 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { createWorker } from 'tesseract.js';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Camera, CameraOff, RefreshCw, CheckCircle, ScanLine } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Camera, CameraOff, RefreshCw, ScanLine, Printer } from 'lucide-react';
 
 const STATUS = {
   IDLE: 'idle',
