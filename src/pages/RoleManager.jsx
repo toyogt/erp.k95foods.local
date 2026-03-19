@@ -56,34 +56,29 @@ function RoleForm({ initial, onSave, onCancel, saving }) {
   const [form, setForm] = useState(initialData);
   const [expandedModule, setExpandedModule] = useState(null);
 
-  const toggleModule = (mod) => {
-    const isCurrentlySelected = form.module_access.includes(mod);
-    const modulePages = getPagesInModule(mod).map(p => p.pageKey);
-    
-    setForm(f => {
-      let newPages = f.page_access || [];
-      if (isCurrentlySelected) {
-        // Deselecting module: remove all pages from this module
-        newPages = newPages.filter(p => !modulePages.includes(p));
-      }
-      
-      return {
-        ...f,
-        module_access: isCurrentlySelected
-          ? f.module_access.filter(m => m !== mod)
-          : [...f.module_access, mod],
-        page_access: newPages,
-      };
-    });
+  const toggleExpandModule = (mod) => {
+    setExpandedModule(expandedModule === mod ? null : mod);
   };
 
-  const togglePageAccess = (pageKey) => {
-    setForm(f => ({
-      ...f,
-      page_access: f.page_access?.includes(pageKey)
+  const togglePageAccess = (pageKey, moduleKey) => {
+    setForm(f => {
+      const isCurrentlySelected = f.page_access?.includes(pageKey);
+      const newPageAccess = isCurrentlySelected
         ? f.page_access.filter(p => p !== pageKey)
-        : [...(f.page_access || []), pageKey],
-    }));
+        : [...(f.page_access || []), pageKey];
+
+      // If selecting a page, auto-select the module
+      let newModuleAccess = f.module_access;
+      if (!isCurrentlySelected && !newModuleAccess.includes(moduleKey)) {
+        newModuleAccess = [...newModuleAccess, moduleKey];
+      }
+
+      return {
+        ...f,
+        module_access: newModuleAccess,
+        page_access: newPageAccess,
+      };
+    });
   };
 
   return (
