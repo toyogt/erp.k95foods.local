@@ -113,6 +113,8 @@ export const pageRegistry = [
    { pageKey: 'PermissionPolicyManager', title: 'Permission Policies', moduleKey: 'ADMIN', icon: Shield, roles: ['admin'], adminOnly: true },
    { pageKey: 'FMSHealthDashboard', title: 'FMS Health', moduleKey: 'ADMIN', icon: BarChart4, roles: ['admin'], adminOnly: true },
    { pageKey: 'SyncCenter', title: 'Sync Center', moduleKey: 'ADMIN', icon: Activity, roles: ['admin'], adminOnly: true },
+   { pageKey: 'RulesManager', title: 'Rules Manager', moduleKey: 'ADMIN', icon: ShieldCheck, roles: ['admin'], adminOnly: true },
+   { pageKey: 'BlockedAttemptsViewer', title: 'Blocked Attempts', moduleKey: 'ADMIN', icon: AlertCircle, roles: ['admin'], adminOnly: true },
    { pageKey: 'RoutesDiagnostics', title: 'Routes Diagnostics', moduleKey: 'ADMIN', icon: Activity, roles: ['admin'], adminOnly: true, system: true, mobileVisible: false },
 ];
 
