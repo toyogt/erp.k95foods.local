@@ -95,6 +95,23 @@ export async function linkFMSRef(instanceId, newRefId) {
  * @param {string} opts.title          - human-readable label for this instance
  * @param {object} opts.triggerData    - any extra key-value data to store
  */
+/**
+ * findFMSInstanceByRef — find active process instance(s) that contain refId in their ref_chain.
+ * Use this after fireFMSEvent when you need the instanceId to call linkFMSRef.
+ */
+export async function findFMSInstanceByRef(refId) {
+  try {
+    const all = await base44.entities.FMSProcessInstance.filter({ status: 'active' }, '-triggered_at', 50);
+    return all.filter(inst => {
+      const chain = Array.isArray(inst.ref_chain) ? inst.ref_chain : [inst.trigger_ref_id].filter(Boolean);
+      return chain.includes(refId);
+    });
+  } catch (e) {
+    console.warn('[FMS] findFMSInstanceByRef failed:', e?.message);
+    return [];
+  }
+}
+
 export async function triggerFMSProcess({ triggerSource, triggerRefId, title, triggerData = {} }) {
   try {
     const processes = await base44.entities.FMSProcess.filter({
