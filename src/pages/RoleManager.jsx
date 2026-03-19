@@ -136,7 +136,7 @@ function RoleForm({ initial, onSave, onCancel, saving }) {
                      <ChevronDown className={`w-4 h-4 transition-transform ${expandedModule === mod ? 'rotate-180' : ''}`} />
                    )}
                  </button>
-                 {isSelected && expandedModule === mod && (
+                 {expandedModule === mod && (
                    <div className="bg-slate-50 border-t border-slate-200 p-3 space-y-1.5 max-h-48 overflow-y-auto">
                      <p className="text-xs text-slate-500 mb-2">Select pages this role can access:</p>
                      {modulePages.length === 0 ? (
