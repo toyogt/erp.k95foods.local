@@ -77,6 +77,7 @@ export default function FMSProcesses() {
   );
 
   return (
+    <>
     <div className="p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -221,6 +222,6 @@ export default function FMSProcesses() {
           }}
         />
       )}
-    </div>
+    </>
   );
 }

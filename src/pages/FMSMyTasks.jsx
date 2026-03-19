@@ -171,6 +171,7 @@ export default function FMSMyTasks() {
   const onTime = tasks.filter(t => getTATStatus(t.deadline) === 'on_time');
 
   return (
+    <>
     <div className="p-6 max-w-3xl mx-auto">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-slate-800">My Tasks</h1>
@@ -258,6 +259,6 @@ export default function FMSMyTasks() {
           </DialogContent>
         </Dialog>
       )}
-    </div>
+    </>
   );
 }
