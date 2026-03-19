@@ -3,6 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Loader2, AlertTriangle, Plus, Trash2 } from 'lucide-react';
 import { genId, logPurchaseAudit } from './purchaseHelpers';
+import { fireFMSEvent, findFMSInstanceByRef, linkFMSRef } from '@/lib/useFMSAutoComplete';
 
 export default function POForm({ user, isAdmin, sourceMR, sourceItems, onDone, onCancel }) {
   const [suppliers, setSuppliers] = useState([]);
