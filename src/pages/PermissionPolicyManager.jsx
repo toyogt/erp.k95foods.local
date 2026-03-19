@@ -100,7 +100,13 @@ export default function PermissionPolicyManager() {
         )}
       </div>
 
-      <p className="text-slate-600">Unified access control: modules → pages → actions → approvals</p>
+      <div className="space-y-3">
+        <p className="text-slate-600">Unified access control: modules → pages → actions</p>
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <p className="text-sm text-blue-900 font-medium">Default Behavior</p>
+          <p className="text-xs text-blue-800 mt-1">If no permission policy is created for a role: <strong>Default DENY</strong>. Users can only access pages and actions explicitly granted in a policy. This is the most secure approach.</p>
+        </div>
+      </div>
 
       {policies.length === 0 ? (
         <div className="text-center py-12 text-slate-400">
