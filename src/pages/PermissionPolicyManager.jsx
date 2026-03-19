@@ -21,6 +21,8 @@ export default function PermissionPolicyManager() {
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
