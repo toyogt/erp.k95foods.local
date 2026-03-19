@@ -32,11 +32,9 @@ export async function getAllowedPagesFromDB(user) {
         pages.forEach(p => allowedPages.add(p.pageKey));
       });
       
-      // Apply page_access overrides: REMOVE specific pages if listed
+      // If page_access overrides are set, replace module pages with only those pages
       if (role.page_access?.length > 0) {
-        role.page_access.forEach(pageKey => {
-          allowedPages.delete(pageKey);
-        });
+        return role.page_access;
       }
       
       return Array.from(allowedPages);
