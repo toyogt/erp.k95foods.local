@@ -261,26 +261,18 @@ export default function RoleManager() {
         </Dialog>
       )}
 
-      {/* Delete confirm */}
-      {deleteTarget && (
-        <Dialog open onOpenChange={() => setDeleteTarget(null)}>
-          <DialogContent className="max-w-sm">
-            <DialogHeader>
-              <DialogTitle>Delete Role?</DialogTitle>
-            </DialogHeader>
-            <p className="text-sm text-slate-600">
-              Are you sure you want to delete the <strong>{deleteTarget.label}</strong> role?
-              Users currently assigned this role will lose their access.
-            </p>
-            <div className="flex gap-2 justify-end mt-4">
-              <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>
-              <Button className="bg-red-600 hover:bg-red-700 h-11 px-4" onClick={handleDelete} disabled={deleting}>
-                {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Delete Role'}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
+      {/* Deactivate confirm */}
+      <ConfirmDialog
+        open={!!deactivateTarget}
+        onOpenChange={(open) => !open && setDeactivateTarget(null)}
+        title="Deactivate Role?"
+        description={`Deactivate "${deactivateTarget?.label}"? Users with this role will lose access, but the role record and history are preserved.`}
+        confirmLabel="Deactivate"
+        cancelLabel="Cancel"
+        onConfirm={handleDeactivate}
+        isDestructive={true}
+        isLoading={deactivating}
+      />
     </div>
   );
 }
