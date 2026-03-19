@@ -85,6 +85,7 @@ export const pageRegistry = [
   { pageKey: 'FMSActiveRuns', title: 'Active Runs', moduleKey: 'FMS', icon: PlayCircle, roles: ['admin', 'process_controller', 'process_designer', 'user'] },
   { pageKey: 'FMSMonitor', title: 'Monitor', moduleKey: 'FMS', icon: MonitorDot, roles: ['admin', 'process_controller', 'user'] },
   { pageKey: 'FMSProcesses', title: 'Processes', moduleKey: 'FMS', icon: GitBranch, roles: ['admin', 'process_designer'], adminOnly: true },
+  { pageKey: 'FMSHealthDashboard', title: 'FMS Health', moduleKey: 'FMS', icon: BarChart4, roles: ['admin'], adminOnly: true },
 
   // ─── ADMIN / MASTER DATA ───
   { pageKey: 'MasterData', title: 'Master Data', moduleKey: 'ADMIN', icon: Settings, roles: ['admin', 'production_manager', 'user'] },
@@ -111,11 +112,10 @@ export const pageRegistry = [
   { pageKey: 'PermissionPolicyManager', title: 'Permission Policies', moduleKey: 'USER_MANAGEMENT', icon: Shield, roles: ['admin'], adminOnly: true },
   { pageKey: 'AccessAuditLog', title: 'Access Audit Log', moduleKey: 'USER_MANAGEMENT', icon: ScrollText, roles: ['admin'], adminOnly: true },
   { pageKey: 'PermissionMatrixDashboard', title: 'Permission Dashboard', moduleKey: 'USER_MANAGEMENT', icon: ShieldCheck, roles: ['admin'], adminOnly: true },
+  { pageKey: 'ApprovalRulesManager', title: 'Approval Rules', moduleKey: 'USER_MANAGEMENT', icon: GitBranch, roles: ['admin'], adminOnly: true },
+  { pageKey: 'ApprovalWorkflowHub', title: 'Approval Workflow Hub', moduleKey: 'USER_MANAGEMENT', icon: ClipboardCheck, roles: ['admin'], adminOnly: true },
 
   // ─── ADMIN / SYSTEM ───
-  { pageKey: 'ApprovalRulesManager', title: 'Approval Rules', moduleKey: 'ADMIN', icon: GitBranch, roles: ['admin'], adminOnly: true },
-  { pageKey: 'ApprovalWorkflowHub', title: 'Approval Workflow Hub', moduleKey: 'ADMIN', icon: ClipboardCheck, roles: ['admin'], adminOnly: true },
-  { pageKey: 'FMSHealthDashboard', title: 'FMS Health', moduleKey: 'ADMIN', icon: BarChart4, roles: ['admin'], adminOnly: true },
   { pageKey: 'SyncCenter', title: 'Sync Center', moduleKey: 'ADMIN', icon: Activity, roles: ['admin'], adminOnly: true },
   { pageKey: 'RulesManager', title: 'Rules Manager', moduleKey: 'ADMIN', icon: ShieldCheck, roles: ['admin'], adminOnly: true },
   { pageKey: 'BlockedAttemptsViewer', title: 'Blocked Attempts', moduleKey: 'ADMIN', icon: AlertCircle, roles: ['admin'], adminOnly: true },
