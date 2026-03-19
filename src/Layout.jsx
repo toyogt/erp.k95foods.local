@@ -3,7 +3,7 @@ import { createPageUrl } from '@/utils';
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import OfflineProvider, { OfflineBanner } from '@/components/OfflineProvider';
-import { MODULES, getModuleForPage, getVisibleModules, getVisiblePages } from '@/components/nav/moduleConfig';
+import { getVisibleModules, getVisiblePagesInModule, getModuleForPage, getAllPages } from '@/lib/registryConfig';
 import { isOperatorLayout } from '@/lib/roleLayoutMap';
 import OperatorLayout from '@/components/layouts/OperatorLayout';
 import AccessDenied from '@/components/AccessDenied';
@@ -74,7 +74,7 @@ export default function Layout({ children, currentPageName }) {
     return <OperatorLayout currentPageName={currentPageName} user={user}>{children}</OperatorLayout>;
   }
 
-  const visibleModules = getVisibleModules(role, roleModuleAccess);
+  const visibleModules = getVisibleModules(role);
   const activeModule = getModuleForPage(currentPageName);
 
   const toggleModule = (key) => {
@@ -108,17 +108,17 @@ export default function Layout({ children, currentPageName }) {
         </Link>
 
         {/* Module groups */}
-        {visibleModules.filter(m => m.key !== 'DASHBOARD').map(mod => {
+        {visibleModules.filter(m => m.moduleKey !== 'DASHBOARD').map(mod => {
           const Icon = mod.icon;
-          const pages = getVisiblePages(mod, role, roleModuleAccess);
+          const pages = getVisiblePagesInModule(mod.moduleKey, role);
           if (pages.length === 0) return null; // Hide module if no pages visible
-          const isActive = activeModule?.key === mod.key;
-          const isExpanded = expandedModules[mod.key];
+          const isActive = activeModule?.moduleKey === mod.moduleKey;
+          const isExpanded = expandedModules[mod.moduleKey];
 
           return (
             <div key={mod.key}>
               <button
-                onClick={() => !sidebarCollapsed && toggleModule(mod.key)}
+                onClick={() => !sidebarCollapsed && toggleModule(mod.moduleKey)}
                 className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
                   isActive && !isExpanded
                     ? 'bg-slate-100 text-slate-900'
@@ -140,11 +140,11 @@ export default function Layout({ children, currentPageName }) {
                 <div className="ml-3 pl-3 border-l-2 border-slate-100 mt-0.5 space-y-0.5">
                   {pages.map(page => {
                     const PIcon = page.icon;
-                    const pageActive = currentPageName === page.key;
+                    const pageActive = currentPageName === page.pageKey;
                     return (
                       <Link
-                        key={page.key}
-                        to={createPageUrl(page.key)}
+                        key={page.pageKey}
+                        to={createPageUrl(page.pageKey)}
                         onClick={onNavigate}
                         className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all ${
                           pageActive
@@ -153,7 +153,7 @@ export default function Layout({ children, currentPageName }) {
                         }`}
                       >
                         <PIcon className="w-3.5 h-3.5 shrink-0" />
-                        <span>{page.label}</span>
+                        <span>{page.title}</span>
                       </Link>
                     );
                   })}
