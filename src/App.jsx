@@ -17,6 +17,11 @@ import UserManagement from './pages/UserManagement';
 import RoleManager from './pages/RoleManager';
 import ApprovalRulesManager from './pages/ApprovalRulesManager';
 import PermissionMatrix from './pages/PermissionMatrix';
+import PermissionMatrixDashboard from './pages/PermissionMatrixDashboard';
+import ApprovalWorkflowHub from './pages/ApprovalWorkflowHub';
+import AccessAuditLog from './pages/AccessAuditLog';
+import FMSHealthDashboard from './pages/FMSHealthDashboard';
+import OperatorDashboardMobile from './pages/OperatorDashboardMobile';
 // Add page imports here
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -79,6 +84,11 @@ const AuthenticatedApp = () => {
       <Route path="/RoleManager" element={<LayoutWrapper currentPageName="RoleManager"><RoleManager /></LayoutWrapper>} />
       <Route path="/ApprovalRulesManager" element={<LayoutWrapper currentPageName="ApprovalRulesManager"><ApprovalRulesManager /></LayoutWrapper>} />
       <Route path="/PermissionMatrix" element={<LayoutWrapper currentPageName="PermissionMatrix"><PermissionMatrix /></LayoutWrapper>} />
+      <Route path="/PermissionMatrixDashboard" element={<LayoutWrapper currentPageName="PermissionMatrixDashboard"><PermissionMatrixDashboard /></LayoutWrapper>} />
+      <Route path="/ApprovalWorkflowHub" element={<LayoutWrapper currentPageName="ApprovalWorkflowHub"><ApprovalWorkflowHub /></LayoutWrapper>} />
+      <Route path="/AccessAuditLog" element={<LayoutWrapper currentPageName="AccessAuditLog"><AccessAuditLog /></LayoutWrapper>} />
+      <Route path="/FMSHealthDashboard" element={<LayoutWrapper currentPageName="FMSHealthDashboard"><FMSHealthDashboard /></LayoutWrapper>} />
+      <Route path="/OperatorDashboardMobile" element={<LayoutWrapper currentPageName="OperatorDashboardMobile"><OperatorDashboardMobile /></LayoutWrapper>} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
