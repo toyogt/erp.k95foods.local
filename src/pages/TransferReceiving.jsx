@@ -30,7 +30,7 @@ export default function TransferReceivingPage() {
     lines,
     loading,
     error,
-    removeL ine,
+    removeLine,
     refreshTransfer,
   } = useTransferReceivingData(transferId);
 
