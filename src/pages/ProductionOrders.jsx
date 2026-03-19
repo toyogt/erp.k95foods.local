@@ -8,6 +8,7 @@ import {
   Plus, Pencil, Trash2, Loader2, Search, Zap,
   Download, Upload, ChevronDown, ChevronRight, Info, FlaskConical
 } from 'lucide-react';
+import { triggerFMSProcess } from '@/lib/useFMSAutoComplete';
 
 function genOrderId() {
   const d = new Date();
@@ -256,10 +257,18 @@ export default function ProductionOrders() {
 
   const saveOrder = async () => {
     if (!orderForm.order_id.trim()) { alert('Order ID is required'); return; }
+    let createdOrder = null;
     if (editingOrder) {
       await base44.entities.ProductionOrder.update(editingOrder.id, orderForm);
     } else {
-      await base44.entities.ProductionOrder.create(orderForm);
+      createdOrder = await base44.entities.ProductionOrder.create(orderForm);
+      // Trigger FMS process for new production order
+      await triggerFMSProcess({
+        triggerSource: 'production_order_created',
+        triggerRefId: createdOrder.id,
+        title: `Production Order ${orderForm.order_id}`,
+        triggerData: { order_id: orderForm.order_id, order_name: orderForm.order_name },
+      });
     }
     setOrderDialogOpen(false);
     loadData();
