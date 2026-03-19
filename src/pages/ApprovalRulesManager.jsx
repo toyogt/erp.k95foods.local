@@ -149,14 +149,16 @@ export default function ApprovalRulesManager() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [me, rulesData, rolesData] = await Promise.all([
+    const [me, rulesData, rolesData, types] = await Promise.all([
       base44.auth.me(),
       base44.entities.DocumentApprovalRule.list('doc_type'),
       base44.entities.AppRole.filter({ is_active: true }, 'label'),
+      getDocumentTypes(),
     ]);
     setUser(me);
     setRules(rulesData);
     setRoles(rolesData);
+    setDocTypes(types);
     setLoading(false);
   }, []);
 
