@@ -166,6 +166,9 @@ export default function GRNReceive() {
       user,
     });
 
+    // FMS: fire grn_received using grn.id (in chain)
+    await fireFMSEvent('grn_received', selected.id);
+
     setDone(true);
     setSubmitting(false);
     load();

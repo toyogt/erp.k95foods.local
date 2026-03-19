@@ -93,7 +93,7 @@ function GateDetail({ entry, user, onDone }) {
     const supp = suppliers.find(s => s.supplier_id === suppId);
     const grn_id = genId('GRN');
 
-    await base44.entities.GRNHeader.create({
+    const grn = await base44.entities.GRNHeader.create({
       grn_id,
       gate_id: entry.gate_id,
       supplier_id: suppId,
@@ -104,6 +104,18 @@ function GateDetail({ entry, user, onDone }) {
       received_by: user?.email || '',
     });
     await logGrnAudit({ action: 'GRN_CREATED', entity_type: 'GRNHeader', entity_id: grn_id, details: { gate_id: entry.gate_id, po_id: linkedPO }, user });
+
+    // FMS: fire grn_received using po.id (in chain), then link grn into chain
+    if (linkedPO) {
+      const po = candidatePOs.find(p => p.po_id === linkedPO);
+      if (po?.id) {
+        await fireFMSEvent('grn_received', po.id);
+        const instances = await findFMSInstanceByRef(po.id);
+        for (const inst of instances) {
+          await linkFMSRef(inst.id, grn.id);
+        }
+      }
+    }
 
     // Pre-fill GRN items from PO items
     if (linkedPO) {

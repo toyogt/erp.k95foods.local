@@ -148,6 +148,10 @@ export default function QCInbox() {
 
     await logGrnAudit({ action: `QC_RESULT_${overall}`, entity_type: 'QCInspection', entity_id: qc_id, details: { grn_id: selected.grn_id, overall }, user });
 
+    // FMS: fire QC result event using grn.id (in chain)
+    const qcEventKey = overall === 'PASS' ? 'grn_qc_approved' : 'grn_qc_rejected';
+    await fireFMSEvent(qcEventKey, selected.id);
+
     setDone({ qc_id, overall });
     setSubmitting(false);
     load();

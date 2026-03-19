@@ -186,6 +186,18 @@ export default function InvoiceCapture() {
         user,
       });
 
+      // FMS: fire invoice_captured; if linked to a PO, use po in ref_chain and link invoice
+      await fireFMSEvent('invoice_captured', inv?.id || null);
+      if (poId) {
+        const poRecord = await base44.entities.PurchaseOrder.filter({ po_id: poId });
+        if (poRecord[0]?.id) {
+          const instances = await findFMSInstanceByRef(poRecord[0].id);
+          for (const inst of instances) {
+            await linkFMSRef(inst.id, inv.id);
+          }
+        }
+      }
+
       alert(`Invoice ${id} saved successfully!`);
       window.location.reload();
     } catch (err) {
