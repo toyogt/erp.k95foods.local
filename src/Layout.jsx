@@ -1,81 +1,18 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import OfflineProvider, { OfflineBanner } from '@/components/OfflineProvider';
-import useModuleAccess from '@/components/modules/useModuleAccess';
-import {
-  LayoutDashboard, ScrollText, Settings, ChevronLeft,
-  Factory, LogOut, Menu, X,
-  Droplets, Thermometer, Truck, Tag,
-  ListChecks, Bell, Printer, ClipboardCheck, Layers, Warehouse, BarChart3, Upload, Search, FlaskConical, PackageSearch, Zap, ShoppingCart, Inbox, ShieldCheck, PackageOpen, TestTube2, Archive,
-  GitBranch, PlayCircle, MonitorDot, Users
-} from 'lucide-react';
+import { MODULES, getModuleForPage, getVisibleModules, getVisiblePages } from '@/components/nav/moduleConfig';
+import { ChevronLeft, Factory, LogOut, X, ChevronDown, LayoutDashboard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-
-// adminOnly: true  → only shown to admin users
-const ALL_NAV_ITEMS = [
-  // ── Daily ops ──────────────────────────────────────────────────────────────
-  { label: 'Dashboard',          page: 'Dashboard',          icon: LayoutDashboard },
-  { label: 'Production',         page: 'ProductionControl',  icon: Factory         },
-  { label: 'Production Orders',  page: 'ProductionOrders',   icon: ListChecks      },
-  { label: 'Liquid Plans',       page: 'LiquidPlans',        icon: Droplets        },
-  { label: 'Filling Station',    page: 'FillingStation',     icon: Droplets        },
-  { label: 'Chamber Station',    page: 'ChamberStation',     icon: Thermometer     },
-  { label: 'Transfer/Receiving', page: 'TransferReceiving',  icon: Truck           },
-  { label: 'Dispatch Crates',    page: 'DispatchCrates',     icon: Truck           },
-  { label: 'Labelling Line',     page: 'LabellingLine',      icon: Tag             },
-  { label: 'Label Roll Mgr',     page: 'LabelRollManager',   icon: Printer         },
-  { label: 'Box Label Print',    page: 'BoxLabelPrint',      icon: Printer         },
-  { label: 'Label Approvals',    page: 'BoxLabelApprovals',  icon: ClipboardCheck  },
-  { label: 'Pallet Build',       page: 'BoxPalletBuild',     icon: Layers          },
-  { label: 'Warehouse Ops',      page: 'WarehouseOps',       icon: Warehouse       },
-  { label: 'FG Warehouse',       page: 'FGWarehouse',        icon: Warehouse       },
-  { label: 'Box Stock',          page: 'BoxStockDashboard',  icon: BarChart3       },
-  { label: 'Opening Stock',      page: 'OpeningStockImport', icon: Upload          },
-  { label: 'Pull Lists',         page: 'PullLists',          icon: ListChecks      },
-  { label: 'Alerts',             page: 'AlertsPage',         icon: Bell            },
-  { label: 'Shift KPIs',         page: 'ShiftKPIDashboard',  icon: BarChart3       },
-  { label: 'Feeder Kiosk',       page: 'FeederKiosk',        icon: Tag             },
-  { label: 'Purchase & GRN',     page: 'PurchaseGRNHub',      icon: ShoppingCart    },
-  { label: 'Purchase',           page: 'PurchaseOps',         icon: ShoppingCart    },
-  { label: 'Approvals Inbox',    page: 'ApprovalsInbox',      icon: Inbox           },
-  { label: 'Gate Entry',         page: 'GateEntry',           icon: ShieldCheck     },
-  { label: 'Gate Inbox',         page: 'GateInbox',           icon: Truck           },
-  { label: 'GRN Receive',        page: 'GRNReceive',          icon: PackageOpen     },
-  { label: 'QC Inbox',           page: 'QCInbox',             icon: TestTube2       },
-  { label: 'Putaway',            page: 'Putaway',             icon: Archive         },
-  { label: 'Invoice Capture',    page: 'InvoiceCapture',      icon: Upload          },
-  { label: '3-Way Match',        page: 'ThreeWayMatch',       icon: ShieldCheck     },
-  { label: 'Payment Requests',   page: 'PaymentRequests',     icon: ShoppingCart    },
-  { label: 'Suppliers',          page: 'SupplierManager',     icon: Truck,          adminOnly: true },
-  { label: 'Warehouses & Bins',  page: 'WarehouseBins',       icon: Warehouse,      adminOnly: true },
-  { label: 'Trace Investigation',page: 'TraceInvestigation', icon: Search          },
-  { label: 'Audit Log',          page: 'AuditLogPage',       icon: ScrollText      },
-  // ── Admin: master setup ───────────────────────────────────────────────────
-  { label: 'SKU Setup',             page: 'SKUSetup',                icon: PackageSearch,  adminOnly: true },
-  { label: 'Recipe Builder',        page: 'RecipeBuilder',           icon: FlaskConical,   adminOnly: true },
-  { label: 'Ingredients',           page: 'IngredientManager',       icon: Zap,            adminOnly: true },
-  { label: 'Ingredient Groups',     page: 'IngredientGroupManager',  icon: Zap,            adminOnly: true },
-  { label: 'UOMs',                  page: 'UOMManager',              icon: Tag,            adminOnly: true },
-  { label: 'Box Types',             page: 'BoxTypeManager',          icon: Layers,         adminOnly: true },
-  { label: 'Label Artworks',        page: 'LabelArtworkManager',     icon: Printer,        adminOnly: true },
-  { label: 'Ryan Templates',        page: 'RyanTemplateManager',     icon: Printer,        adminOnly: true },
-  { label: 'Product Taxonomy',      page: 'ProductTaxonomy',         icon: Layers,         adminOnly: true },
-  { label: 'Master Data',           page: 'MasterData',              icon: Settings,       adminOnly: true },
-  // ── Process Flow Management ───────────────────────────────────────────────
-  { label: 'My Tasks (FMS)',        page: 'FMSMyTasks',              icon: ListChecks      },
-  { label: 'Processes (FMS)',       page: 'FMSProcesses',            icon: GitBranch,      adminOnly: true },
-  { label: 'Active Runs (FMS)',     page: 'FMSActiveRuns',           icon: PlayCircle      },
-  { label: 'Process Monitor (FMS)',  page: 'FMSMonitor',              icon: MonitorDot      },
-  { label: 'FMS Users',            page: 'FMSUsers',                icon: Users,          adminOnly: true },
-];
 
 export default function Layout({ children, currentPageName }) {
   const [user, setUser] = useState(null);
   const [userLoading, setUserLoading] = useState(true);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const { isEnabled } = useModuleAccess(user);
+  const [moduleMenuOpen, setModuleMenuOpen] = useState(null); // key of open module dropdown
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const dropdownRef = useRef(null);
 
   useEffect(() => {
     base44.auth.me()
@@ -85,9 +22,22 @@ export default function Layout({ children, currentPageName }) {
 
   useEffect(() => { window.scrollTo(0, 0); }, [currentPageName]);
 
-  const isDashboard = currentPageName === 'Dashboard';
-  const isAdmin = user?.role === 'admin';
-  const isFGOnly = user?.role === 'warehouse';
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClick(e) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setModuleMenuOpen(null);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  if (userLoading) return null;
+
+  const role = user?.role || 'user';
+  const isAdmin = role === 'admin';
+  const isFGOnly = role === 'warehouse';
 
   // Redirect FG-only users to FGWarehouse
   useEffect(() => {
@@ -95,81 +45,232 @@ export default function Layout({ children, currentPageName }) {
       window.location.replace(createPageUrl('FGWarehouse'));
     }
   }, [isFGOnly, currentPageName]);
-  if (userLoading) return null;
 
+  if (isFGOnly) return (
+    <OfflineProvider>
+      <div className="min-h-screen bg-slate-50">
+        <OfflineBanner />
+        <main className="max-w-screen-2xl mx-auto px-4 py-5 pb-24">{children}</main>
+      </div>
+    </OfflineProvider>
+  );
+
+  const visibleModules = getVisibleModules(role);
+  const activeModule = getModuleForPage(currentPageName);
+  const isDashboard = currentPageName === 'Dashboard';
   const fromPage = new URLSearchParams(window.location.search).get('from');
-  // Only filter nav once user is loaded to avoid flashing admin items
-  const NAV_ITEMS = user
-    ? ALL_NAV_ITEMS.filter(n => isEnabled(n.page) && (!n.adminOnly || isAdmin))
-    : [];
-  const pageTitle = ALL_NAV_ITEMS.find(n => n.page === currentPageName)?.label || currentPageName?.replace(/([A-Z])/g, ' $1').trim();
+
+  // Pages in the active module (for the sub-nav bar)
+  const activeModulePages = activeModule ? getVisiblePages(activeModule, role) : [];
+
+  // Back destination — go to Dashboard if no from param, not on dashboard
+  const backTo = fromPage ? createPageUrl(fromPage) : createPageUrl('Dashboard');
 
   return (
     <OfflineProvider>
       <div className="min-h-screen bg-slate-50 overflow-x-hidden max-w-full">
         <style>{`
-          :root { --factory-primary: #0f172a; --factory-accent: #2563eb; }
+          :root { --factory-primary: #0f172a; }
           body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; -webkit-font-smoothing: antialiased; }
           * { -webkit-tap-highlight-color: transparent; }
-          /* Prevent iOS auto-zoom on input focus (requires font-size >= 16px on inputs) */
           input, select, textarea { font-size: 16px !important; }
-          /* Larger touch targets for header buttons */
-          .touch-target { min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; }
         `}</style>
         <OfflineBanner />
-        {/* Header - hidden for warehouse-only users */}
-        {!isFGOnly && (<header className="sticky top-0 z-50 bg-white border-b border-slate-200">
-          <div className="max-w-screen-2xl mx-auto flex items-center justify-between px-3 h-14">
-            <div className="flex items-center gap-2">
-              {!isDashboard && (
-                <Link to={createPageUrl(fromPage || 'Dashboard')} className="w-12 h-12 -ml-1 rounded-xl hover:bg-slate-100 active:bg-slate-200 transition-colors flex items-center justify-center">
-                  <ChevronLeft className="w-7 h-7 text-slate-700" />
+
+        {/* ── TOP NAV BAR ─────────────────────────────────────────────────── */}
+        <header className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
+          {/* Row 1: Brand + Module Tabs + User */}
+          <div className="max-w-screen-2xl mx-auto flex items-center gap-0 px-3 h-14">
+
+            {/* Brand / Back button */}
+            <div className="flex items-center gap-2 shrink-0 mr-4">
+              {!isDashboard ? (
+                <Link to={backTo} className="w-10 h-10 -ml-1 rounded-xl hover:bg-slate-100 active:bg-slate-200 flex items-center justify-center transition-colors">
+                  <ChevronLeft className="w-6 h-6 text-slate-700" />
                 </Link>
-              )}
-              {isDashboard && (
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center shrink-0">
-                    <Factory className="w-4 h-4 text-white" />
+              ) : null}
+              <Link to={createPageUrl('Dashboard')} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center shrink-0">
+                  <Factory className="w-4 h-4 text-white" />
+                </div>
+                <span className="hidden sm:block font-bold text-slate-900 text-sm leading-tight tracking-tight">K95</span>
+              </Link>
+            </div>
+
+            {/* ── Desktop module tabs ─────────────────────────────── */}
+            <nav ref={dropdownRef} className="hidden md:flex items-center gap-0.5 flex-1 overflow-x-auto scrollbar-hide">
+              {/* Dashboard tab */}
+              <Link
+                to={createPageUrl('Dashboard')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+                  isDashboard ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                <LayoutDashboard className="w-4 h-4" />
+                Dashboard
+              </Link>
+
+              {visibleModules.filter(m => m.key !== 'DASHBOARD').map(mod => {
+                const Icon = mod.icon;
+                const isActive = activeModule?.key === mod.key;
+                const isOpen = moduleMenuOpen === mod.key;
+                const pages = getVisiblePages(mod, role);
+
+                return (
+                  <div key={mod.key} className="relative">
+                    <button
+                      onClick={() => setModuleMenuOpen(isOpen ? null : mod.key)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+                        isActive ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      {mod.label}
+                      <ChevronDown className={`w-3 h-3 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {/* Dropdown */}
+                    {isOpen && (
+                      <div className="absolute top-full left-0 mt-1 w-56 bg-white rounded-xl border border-slate-200 shadow-lg z-50 py-1.5 overflow-hidden">
+                        {pages.map(page => {
+                          const PIcon = page.icon;
+                          const pageActive = currentPageName === page.key;
+                          return (
+                            <Link
+                              key={page.key}
+                              to={createPageUrl(page.key)}
+                              onClick={() => setModuleMenuOpen(null)}
+                              className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
+                                pageActive ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-50'
+                              }`}
+                            >
+                              <PIcon className="w-4 h-4 shrink-0" />
+                              {page.label}
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
-                  <div>
-                    <p className="font-bold text-slate-900 text-sm leading-tight tracking-tight">K95 Foods Pvt. Ltd.</p>
-                    <p className="text-xs text-slate-400 leading-tight">Factory Exec</p>
-                  </div>
+                );
+              })}
+            </nav>
+
+            {/* ── Right side: user + mobile menu btn ─────────────── */}
+            <div className="flex items-center gap-2 ml-auto shrink-0">
+              {user && (
+                <div className="hidden md:flex items-center gap-2">
+                  <span className="text-xs text-slate-500 font-medium max-w-[120px] truncate">{user.full_name || user.email}</span>
+                  <button
+                    onClick={() => base44.auth.logout()}
+                    className="w-8 h-8 rounded-lg hover:bg-red-50 flex items-center justify-center text-slate-400 hover:text-red-500 transition-colors"
+                    title="Sign out"
+                  >
+                    <LogOut className="w-4 h-4" />
+                  </button>
                 </div>
               )}
-              {!isDashboard && (
-                <h1 className="font-semibold text-slate-900 text-base">{pageTitle}</h1>
-              )}
+
+              {/* Mobile hamburger */}
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="md:hidden w-11 h-11 rounded-xl hover:bg-slate-100 active:bg-slate-200 flex items-center justify-center transition-colors"
+              >
+                {mobileMenuOpen
+                  ? <X className="w-6 h-6 text-slate-700" />
+                  : <svg className="w-6 h-6 text-slate-700" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                }
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => setMenuOpen(!menuOpen)}
-              className="w-12 h-12 rounded-xl hover:bg-slate-100 active:bg-slate-200 transition-colors flex items-center justify-center"
-            >
-              {menuOpen ? <X className="w-7 h-7 text-slate-700" /> : <Menu className="w-7 h-7 text-slate-700" />}
-            </button>
           </div>
-          {menuOpen && (
-            <div className="absolute top-14 left-0 right-0 bg-white border-b border-slate-200 shadow-lg z-50">
-              <div className="max-w-screen-2xl mx-auto p-3 space-y-1">
-                {NAV_ITEMS.map(item => {
-                  const Icon = item.icon;
-                  const isActive = currentPageName === item.page;
+
+          {/* Row 2: Sub-nav bar (current module's pages) — desktop only */}
+          {activeModule && activeModulePages.length > 0 && (
+            <div className="hidden md:block border-t border-slate-100 bg-slate-50">
+              <div className="max-w-screen-2xl mx-auto px-4 flex items-center gap-1 h-10 overflow-x-auto scrollbar-hide">
+                <span className={`text-xs font-semibold mr-2 ${activeModule.color}`}>{activeModule.label} /</span>
+                {activeModulePages.map(page => {
+                  const PIcon = page.icon;
+                  const isActive = currentPageName === page.key;
                   return (
-                    <Link key={item.page} to={createPageUrl(item.page)} onClick={() => setMenuOpen(false)}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'}`}>
-                      <Icon className="w-5 h-5" />
-                      <span className="font-medium text-sm">{item.label}</span>
+                    <Link
+                      key={page.key}
+                      to={createPageUrl(page.key)}
+                      className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
+                        isActive
+                          ? `${activeModule.bgColor} ${activeModule.color} font-semibold`
+                          : 'text-slate-500 hover:bg-white hover:text-slate-800'
+                      }`}
+                    >
+                      <PIcon className="w-3.5 h-3.5" />
+                      {page.label}
                     </Link>
                   );
                 })}
+              </div>
+            </div>
+          )}
+
+          {/* ── Mobile full-screen menu ──────────────────────────────────── */}
+          {mobileMenuOpen && (
+            <div className="md:hidden absolute top-14 left-0 right-0 bg-white border-b border-slate-200 shadow-xl z-50 max-h-[85vh] overflow-y-auto">
+              <div className="p-3 space-y-0.5">
+                {/* Dashboard */}
+                <Link
+                  to={createPageUrl('Dashboard')}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isDashboard ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'}`}
+                >
+                  <LayoutDashboard className="w-5 h-5" />
+                  <span className="font-medium text-sm">Dashboard</span>
+                </Link>
+
+                {/* Modules */}
+                {visibleModules.filter(m => m.key !== 'DASHBOARD').map(mod => {
+                  const Icon = mod.icon;
+                  const pages = getVisiblePages(mod, role);
+                  const isModActive = activeModule?.key === mod.key;
+
+                  return (
+                    <div key={mod.key}>
+                      <div className={`flex items-center gap-3 px-4 py-2.5 rounded-xl mt-1 ${isModActive ? mod.bgColor : ''}`}>
+                        <Icon className={`w-4 h-4 ${mod.color}`} />
+                        <span className={`font-semibold text-xs uppercase tracking-wider ${mod.color}`}>{mod.label}</span>
+                      </div>
+                      <div className="ml-3 pl-3 border-l-2 border-slate-100 space-y-0.5">
+                        {pages.map(page => {
+                          const PIcon = page.icon;
+                          const pageActive = currentPageName === page.key;
+                          return (
+                            <Link
+                              key={page.key}
+                              to={createPageUrl(page.key)}
+                              onClick={() => setMobileMenuOpen(false)}
+                              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                                pageActive ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'
+                              }`}
+                            >
+                              <PIcon className="w-4 h-4" />
+                              <span className="font-medium text-sm">{page.label}</span>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Sign out */}
                 {user && (
                   <div className="border-t border-slate-100 pt-2 mt-2">
-                    <div className="px-4 py-2 text-xs text-slate-400">
-                      {user.full_name || user.email}
-                    </div>
-                    <button onClick={() => base44.auth.logout()}
-                      className="flex items-center gap-3 px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 w-full transition-all">
+                    <div className="px-4 py-2 text-xs text-slate-400">{user.full_name || user.email}</div>
+                    <button
+                      onClick={() => base44.auth.logout()}
+                      className="flex items-center gap-3 px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 w-full transition-all"
+                    >
                       <LogOut className="w-5 h-5" />
                       <span className="font-medium text-sm">Sign Out</span>
                     </button>
@@ -178,7 +279,8 @@ export default function Layout({ children, currentPageName }) {
               </div>
             </div>
           )}
-        </header>)}
+        </header>
+
         <main className="max-w-screen-2xl mx-auto px-4 py-5 pb-24">{children}</main>
       </div>
     </OfflineProvider>
