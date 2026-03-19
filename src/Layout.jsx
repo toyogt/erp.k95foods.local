@@ -16,6 +16,7 @@ export default function Layout({ children, currentPageName }) {
   const [user, setUser] = useState(null);
   const [userLoading, setUserLoading] = useState(true);
   const [roleModuleAccess, setRoleModuleAccess] = useState(null); // from DB AppRole
+  const [allowedPages, setAllowedPages] = useState([]);          // allowed pages for this user
   const [sidebarOpen, setSidebarOpen] = useState(false);       // mobile drawer
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // desktop collapse
   const [expandedModules, setExpandedModules] = useState({});  // which modules are expanded
@@ -23,13 +24,19 @@ export default function Layout({ children, currentPageName }) {
   useEffect(() => {
     base44.auth.me().then(async u => {
       setUser(u);
-      if (u?.role && u.role !== 'admin') {
-        // Load this user's role record to get module_access
-        base44.entities.AppRole.filter({ role_key: u.role, is_active: true })
-          .then(roles => {
-            if (roles?.[0]?.module_access) setRoleModuleAccess(roles[0].module_access);
-          })
-          .catch(() => {});
+      if (u?.role) {
+        // Load allowed pages from database
+        const pages = await getAllowedPagesFromDB(u);
+        setAllowedPages(pages);
+        
+        if (u.role !== 'admin') {
+          // Load this user's role record to get module_access
+          base44.entities.AppRole.filter({ role_key: u.role, is_active: true })
+            .then(roles => {
+              if (roles?.[0]?.module_access) setRoleModuleAccess(roles[0].module_access);
+            })
+            .catch(() => {});
+        }
       }
       setUserLoading(false);
     }).catch(() => setUserLoading(false));
