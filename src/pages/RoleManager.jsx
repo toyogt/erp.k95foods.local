@@ -29,7 +29,7 @@ const MODULE_LABELS = {
   QUALITY: 'Quality', ACCOUNTS: 'Accounts', FMS: 'Process Flow', ADMIN: 'Admin',
 };
 
-const EMPTY_FORM = { role_key: '', label: '', description: '', color: 'slate', module_access: [], is_active: true, is_system: false };
+const EMPTY_FORM = { role_key: '', label: '', description: '', color: 'slate', module_access: [], page_access: [], is_active: true, is_system: false };
 
 function RoleForm({ initial, onSave, onCancel, saving }) {
   const [form, setForm] = useState(initial || EMPTY_FORM);
