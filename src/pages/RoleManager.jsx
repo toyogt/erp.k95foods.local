@@ -163,9 +163,7 @@ export default function RoleManager() {
     load();
   };
 
-  if (!loading && user?.role !== 'admin') {
-    return <div className="flex items-center justify-center h-64 text-slate-400">Admin access required.</div>;
-  }
+  // Access control handled by Layout.jsx — if user isn't admin, they won't reach this page
 
   const getColorCls = (color) => {
     const c = COLOR_OPTIONS.find(c => c.value === color);
