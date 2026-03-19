@@ -322,23 +322,17 @@ export default function ApprovalRulesManager() {
         </Dialog>
       )}
 
-      {deleteTarget && (
-        <Dialog open onOpenChange={() => setDeleteTarget(null)}>
-          <DialogContent className="max-w-sm">
-            <DialogHeader><DialogTitle>Delete Rule?</DialogTitle></DialogHeader>
-            <p className="text-sm text-slate-600">
-              Delete the <strong>{deleteTarget.action_label}</strong> rule for <strong>{deleteTarget.doc_type}</strong>?
-              This will immediately affect who can perform this action.
-            </p>
-            <div className="flex gap-2 justify-end mt-4">
-              <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>
-              <Button className="bg-red-600 hover:bg-red-700 h-11 px-4" onClick={handleDelete} disabled={deleting}>
-                {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Delete'}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Delete Approval Rule?"
+        description={`Delete the "${deleteTarget?.action_label}" rule for "${getDocTypeLabel(deleteTarget?.doc_type)}"? This will immediately affect who can perform this action.`}
+        confirmLabel="Delete Rule"
+        cancelLabel="Cancel"
+        onConfirm={handleDelete}
+        isDestructive={true}
+        isLoading={deleting}
+      />
     </div>
   );
 }
