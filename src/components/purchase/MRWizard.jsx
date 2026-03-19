@@ -58,7 +58,7 @@ export default function MRWizard({ user, onDone, onCancel }) {
     const mrId = genId('MR');
     const today = new Date().toISOString().split('T')[0];
     try {
-      await base44.entities.PurchaseRequest.create({
+      const pr = await base44.entities.PurchaseRequest.create({
         mr_id: mrId,
         request_date: today,
         requested_by: user?.email || '',
@@ -79,6 +79,15 @@ export default function MRWizard({ user, onDone, onCancel }) {
         })
       ));
       await logPurchaseAudit({ action: `MR ${mrId} created and submitted`, entity_type: 'PurchaseRequest', entity_id: mrId, user });
+
+      // Auto-trigger any FMS process configured for purchase_request_created
+      await triggerFMSProcess({
+        triggerSource: 'purchase_request_created',
+        triggerRefId: pr.id,
+        title: `Purchase Request ${mrId}${department ? ' — ' + department : ''}`,
+        triggerData: { mr_id: mrId, department, requested_by: user?.email || '' },
+      });
+
       onDone();
     } catch (e) {
       alert('Error: ' + e.message);
