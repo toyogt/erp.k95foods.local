@@ -16,7 +16,7 @@ import {
   Search, PlayCircle, MonitorDot, Users, FlaskConical,
   PackageSearch, Zap, Box, TestTube2, ShieldCheck,
   Archive, FileText, ClipboardList, Shield, Zap as ZapIcon,
-  Activity, BarChart4, AlertCircle,
+  Activity, BarChart4, AlertCircle, AlertTriangle,
 } from 'lucide-react';
 
 /**
