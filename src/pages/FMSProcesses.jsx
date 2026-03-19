@@ -58,10 +58,10 @@ export default function FMSProcesses() {
 
   const deleteStep = async (step) => {
     if (!window.confirm(`Delete step "${step.name}"?`)) return;
-    await base44.entities.FMSProcessStep.delete(step.id);
+    // Optimistically remove from local state immediately
     const processId = step.process_id;
-    setSteps(prev => ({ ...prev, [processId]: undefined }));
-    loadSteps(processId);
+    setSteps(prev => ({ ...prev, [processId]: (prev[processId] || []).filter(s => s.id !== step.id) }));
+    await base44.entities.FMSProcessStep.delete(step.id);
   };
 
   const toggleActive = async (p) => {
@@ -218,8 +218,10 @@ export default function FMSProcesses() {
           onSaved={() => {
             const pid = showStepForm.processId;
             setShowStepForm(null);
-            setSteps(prev => ({ ...prev, [pid]: undefined }));
-            loadSteps(pid);
+            // Refresh steps for this process only (not full page reload)
+            base44.entities.FMSProcessStep.filter({ process_id: pid }, 'step_order', 100).then(s => {
+              setSteps(prev => ({ ...prev, [pid]: s.sort((a, b) => a.step_order - b.step_order) }));
+            });
           }}
         />
       )}
