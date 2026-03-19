@@ -8,6 +8,20 @@ import { Textarea } from '@/components/ui/textarea';
 import { base44 } from '@/api/base44Client';
 import { TAT_TYPE_LABELS, TAT_UNIT_LABELS, TAT_ANCHOR_LABELS } from '@/lib/fmsHelpers';
 import { COMPLETE_EVENTS, groupEventsByCategory } from '@/lib/fmsAppEvents';
+import StepChecklistBuilder from './StepChecklistBuilder';
+import { Info } from 'lucide-react';
+
+const ANCHOR_HINTS = {
+  run_start: 'Timer starts from when the entire process run was first triggered (e.g. day 0 of the whole workflow).',
+  step_start: 'Timer starts from when this specific step becomes active (i.e. the previous step was completed).',
+  predecessor_completion: 'Same as Step Start — timer starts the moment the previous step is marked done.',
+};
+
+const TYPE_HINTS = {
+  calendar_days: 'Counts every day including weekends and holidays. e.g. "2 days" means exactly 2 × 24h.',
+  working_days: 'Skips Saturdays and Sundays. e.g. "2 working days" after Friday = deadline on Tuesday.',
+  hours: 'Time measured in hours (no day/weekend skipping). e.g. 48 hours = 2 days exactly.',
+};
 
 export default function StepForm({ step, processId, nextOrder, users, onClose, onSaved }) {
   const [form, setForm] = useState({
@@ -24,10 +38,13 @@ export default function StepForm({ step, processId, nextOrder, users, onClose, o
     tat_anchor_type: step?.tat_anchor_type || 'step_start',
     fixed_due_time: step?.fixed_due_time || '',
     completion_mode: step?.completion_mode || 'manual',
+    completion_submode: step?.completion_submode || 'mark_done',
+    step_checklist: step?.step_checklist || [],
     auto_complete_event: step?.auto_complete_event || '',
     reminder_hours_before: step?.reminder_hours_before || 2,
   });
   const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState('basic'); // basic | tat | completion
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -37,7 +54,6 @@ export default function StepForm({ step, processId, nextOrder, users, onClose, o
     set('assignee_name', u?.full_name || email);
   };
 
-  // When type is hours, force unit to hours
   const handleTatType = (v) => {
     set('tat_type', v);
     if (v === 'hours') set('tat_unit', 'hours');
@@ -48,9 +64,9 @@ export default function StepForm({ step, processId, nextOrder, users, onClose, o
     if (!form.name.trim() || !form.assignee_email) return;
     setSaving(true);
     const payload = { ...form };
-    // Clean up unused fields
     if (!payload.fixed_due_time) delete payload.fixed_due_time;
     if (payload.completion_mode !== 'auto') delete payload.auto_complete_event;
+    if (payload.completion_submode !== 'checklist') delete payload.step_checklist;
     if (step?.id) {
       await base44.entities.FMSProcessStep.update(step.id, payload);
     } else {
@@ -64,164 +80,249 @@ export default function StepForm({ step, processId, nextOrder, users, onClose, o
     ? [['hours', 'Hours']]
     : Object.entries(TAT_UNIT_LABELS).filter(([k]) => k !== 'hours');
 
+  // Build human-readable TAT preview
+  const tatPreview = (() => {
+    if (!form.tat_value) return null;
+    const unit = TAT_UNIT_LABELS[form.tat_unit] || form.tat_unit;
+    const type = TAT_TYPE_LABELS[form.tat_type] || form.tat_type;
+    const anchor = TAT_ANCHOR_LABELS[form.tat_anchor_type] || form.tat_anchor_type;
+    const time = form.fixed_due_time && form.tat_type !== 'hours' ? ` at ${form.fixed_due_time}` : '';
+    return `${form.tat_value} ${unit} (${type}) after ${anchor}${time}`;
+  })();
+
+  const tabs = [
+    { id: 'basic', label: 'Details' },
+    { id: 'tat', label: 'TAT / Deadline' },
+    { id: 'completion', label: 'Completion' },
+  ];
+
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-lg max-h-[92vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{step ? 'Edit Step' : `Add Step ${form.step_order}`}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4 pt-2">
-          {/* Step Order + Name */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>Step Order</Label>
-              <Input type="number" value={form.step_order} onChange={e => set('step_order', Number(e.target.value))} className="mt-1" min={1} />
-            </div>
-            <div>
-              <Label>Step Name *</Label>
-              <Input value={form.name} onChange={e => set('name', e.target.value)} placeholder="e.g. Manager Approval" className="mt-1" />
-            </div>
-          </div>
 
-          {/* Description + Instructions */}
-          <div>
-            <Label>What to Do (Description)</Label>
-            <Textarea value={form.description} onChange={e => set('description', e.target.value)} placeholder="Describe the task clearly..." className="mt-1 h-20" />
-          </div>
-          <div>
-            <Label>How to Do It (Instructions)</Label>
-            <Textarea value={form.instructions} onChange={e => set('instructions', e.target.value)} placeholder="Step-by-step instructions..." className="mt-1 h-20" />
-          </div>
+        {/* Tab nav */}
+        <div className="flex gap-1 bg-slate-100 rounded-lg p-1">
+          {tabs.map(t => (
+            <button
+              key={t.id}
+              onClick={() => setActiveTab(t.id)}
+              className={`flex-1 py-1.5 text-xs font-medium rounded-md transition ${
+                activeTab === t.id ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
 
-          {/* Assignee */}
-          <div>
-            <Label>Assignee *</Label>
-            {users && users.length > 0 ? (
-              <Select value={form.assignee_email} onValueChange={handleAssignee}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Select assignee…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {users.map(u => (
-                    <SelectItem key={u.email} value={u.email}>
-                      {u.full_name || u.email}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : (
-              <Input value={form.assignee_email} onChange={e => set('assignee_email', e.target.value)} placeholder="assignee@company.com" className="mt-1" />
-            )}
-          </div>
+        <div className="space-y-4 pt-1">
 
-          {/* TAT Section */}
-          <div className="border border-slate-200 rounded-xl p-3 space-y-3 bg-slate-50">
-            <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Turnaround Time (TAT)</p>
-
-            {/* TAT Type + Value + Unit */}
-            <div className="grid grid-cols-3 gap-2">
+          {/* ── TAB: BASIC DETAILS ── */}
+          {activeTab === 'basic' && (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>Step Order</Label>
+                  <Input type="number" value={form.step_order} onChange={e => set('step_order', Number(e.target.value))} className="mt-1" min={1} />
+                </div>
+                <div>
+                  <Label>Step Name *</Label>
+                  <Input value={form.name} onChange={e => set('name', e.target.value)} placeholder="e.g. Manager Approval" className="mt-1" />
+                </div>
+              </div>
               <div>
-                <Label className="text-xs">Count Type</Label>
+                <Label>Assignee *</Label>
+                {users && users.length > 0 ? (
+                  <Select value={form.assignee_email} onValueChange={handleAssignee}>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder="Select assignee…" /></SelectTrigger>
+                    <SelectContent>
+                      {users.map(u => <SelectItem key={u.email} value={u.email}>{u.full_name || u.email}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input value={form.assignee_email} onChange={e => set('assignee_email', e.target.value)} placeholder="assignee@company.com" className="mt-1" />
+                )}
+              </div>
+              <div>
+                <Label>What to Do (Description)</Label>
+                <Textarea value={form.description} onChange={e => set('description', e.target.value)} placeholder="Describe the task clearly..." className="mt-1 h-20" />
+              </div>
+              <div>
+                <Label>How to Do It (Instructions)</Label>
+                <Textarea value={form.instructions} onChange={e => set('instructions', e.target.value)} placeholder="Step-by-step instructions..." className="mt-1 h-20" />
+              </div>
+            </>
+          )}
+
+          {/* ── TAB: TAT / DEADLINE ── */}
+          {activeTab === 'tat' && (
+            <div className="space-y-4">
+              {/* Count Type */}
+              <div>
+                <Label className="text-sm">Count Type — how is time measured?</Label>
                 <Select value={form.tat_type} onValueChange={handleTatType}>
-                  <SelectTrigger className="mt-1 h-9">
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {Object.entries(TAT_TYPE_LABELS).map(([k, v]) => (
                       <SelectItem key={k} value={k}>{v}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                {TYPE_HINTS[form.tat_type] && (
+                  <p className="text-xs text-blue-600 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 mt-2 flex gap-2">
+                    <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />{TYPE_HINTS[form.tat_type]}
+                  </p>
+                )}
               </div>
-              <div>
-                <Label className="text-xs">Value</Label>
-                <Input type="number" value={form.tat_value} onChange={e => set('tat_value', Number(e.target.value))} className="mt-1 h-9" min={1} />
+
+              {/* Value + Unit */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-sm">Duration Value</Label>
+                  <Input type="number" value={form.tat_value} onChange={e => set('tat_value', Number(e.target.value))} className="mt-1" min={1} />
+                </div>
+                <div>
+                  <Label className="text-sm">Unit</Label>
+                  <Select value={form.tat_unit} onValueChange={v => set('tat_unit', v)} disabled={form.tat_type === 'hours'}>
+                    <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {unitOptions.map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
+
+              {/* Anchor */}
               <div>
-                <Label className="text-xs">Unit</Label>
-                <Select value={form.tat_unit} onValueChange={v => set('tat_unit', v)} disabled={form.tat_type === 'hours'}>
-                  <SelectTrigger className="mt-1 h-9">
-                    <SelectValue />
-                  </SelectTrigger>
+                <Label className="text-sm">Start Counting From (Anchor)</Label>
+                <Select value={form.tat_anchor_type} onValueChange={v => set('tat_anchor_type', v)}>
+                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {unitOptions.map(([k, v]) => (
+                    {Object.entries(TAT_ANCHOR_LABELS).map(([k, v]) => (
                       <SelectItem key={k} value={k}>{v}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                {ANCHOR_HINTS[form.tat_anchor_type] && (
+                  <p className="text-xs text-blue-600 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 mt-2 flex gap-2">
+                    <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />{ANCHOR_HINTS[form.tat_anchor_type]}
+                  </p>
+                )}
+              </div>
+
+              {/* Fixed Due Time — hide for hours type */}
+              {form.tat_type !== 'hours' && (
+                <div>
+                  <Label className="text-sm">Fixed Due Time <span className="text-slate-400 font-normal">(optional)</span></Label>
+                  <Input type="time" value={form.fixed_due_time} onChange={e => set('fixed_due_time', e.target.value)} className="mt-1" />
+                  <p className="text-xs text-slate-400 mt-1">
+                    Pins the deadline to a specific clock time (e.g. 17:00 = 5pm). Leave blank to use time-of-day from when the step starts.
+                  </p>
+                </div>
+              )}
+
+              {/* Preview */}
+              {tatPreview && (
+                <div className="bg-slate-800 text-white rounded-xl px-4 py-3 text-sm">
+                  <p className="text-slate-400 text-xs font-medium uppercase tracking-wide mb-1">Deadline Preview</p>
+                  <p className="font-semibold">Due: {tatPreview}</p>
+                </div>
+              )}
+
+              {/* Reminder */}
+              <div>
+                <Label className="text-sm">Send Reminder (hours before deadline)</Label>
+                <Input type="number" value={form.reminder_hours_before} onChange={e => set('reminder_hours_before', Number(e.target.value))} className="mt-1" min={0} />
               </div>
             </div>
+          )}
 
-            {/* TAT Anchor */}
-            <div>
-              <Label className="text-xs">Calculated From (Anchor)</Label>
-              <Select value={form.tat_anchor_type} onValueChange={v => set('tat_anchor_type', v)}>
-                <SelectTrigger className="mt-1 h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(TAT_ANCHOR_LABELS).map(([k, v]) => (
-                    <SelectItem key={k} value={k}>{v}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Optional fixed due time */}
-            <div>
-              <Label className="text-xs">Fixed Due Time (optional, e.g. 17:00)</Label>
-              <Input type="time" value={form.fixed_due_time} onChange={e => set('fixed_due_time', e.target.value)} className="mt-1 h-9" placeholder="HH:MM" />
-              <p className="text-xs text-slate-400 mt-1">Pins the deadline to a specific time of day</p>
-            </div>
-
-            {/* Preview */}
-            {form.tat_value > 0 && (
-              <div className="text-xs bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-600">
-                <span className="font-medium">Due:</span> {form.tat_value} {TAT_UNIT_LABELS[form.tat_unit] || form.tat_unit} ({TAT_TYPE_LABELS[form.tat_type]}) after{' '}
-                {TAT_ANCHOR_LABELS[form.tat_anchor_type]}{form.fixed_due_time ? ` at ${form.fixed_due_time}` : ''}
+          {/* ── TAB: COMPLETION ── */}
+          {activeTab === 'completion' && (
+            <div className="space-y-4">
+              {/* Completion Mode */}
+              <div>
+                <Label className="text-sm">How is this step completed?</Label>
+                <Select value={form.completion_mode} onValueChange={v => set('completion_mode', v)}>
+                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="manual">Manual — user marks it done</SelectItem>
+                    <SelectItem value="auto">Auto — triggered by an app event</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-            )}
-          </div>
 
-          {/* Completion Mode + Reminder */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>Completion Mode</Label>
-              <Select value={form.completion_mode} onValueChange={v => set('completion_mode', v)}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="manual">Manual (user marks done)</SelectItem>
-                  <SelectItem value="auto">Auto (app event)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Reminder (hours before)</Label>
-              <Input type="number" value={form.reminder_hours_before} onChange={e => set('reminder_hours_before', Number(e.target.value))} className="mt-1" min={0} />
-            </div>
-          </div>
+              {/* Manual sub-mode */}
+              {form.completion_mode === 'manual' && (
+                <div>
+                  <Label className="text-sm">Manual Completion Type</Label>
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => set('completion_submode', 'mark_done')}
+                      className={`border rounded-xl p-3 text-left transition ${
+                        form.completion_submode === 'mark_done'
+                          ? 'border-slate-800 bg-slate-800 text-white'
+                          : 'border-slate-200 bg-white text-slate-700 hover:border-slate-400'
+                      }`}
+                    >
+                      <p className="font-semibold text-sm">Mark Done</p>
+                      <p className={`text-xs mt-1 ${form.completion_submode === 'mark_done' ? 'text-slate-300' : 'text-slate-400'}`}>
+                        Simple one-tap completion. Optionally add a note.
+                      </p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => set('completion_submode', 'checklist')}
+                      className={`border rounded-xl p-3 text-left transition ${
+                        form.completion_submode === 'checklist'
+                          ? 'border-slate-800 bg-slate-800 text-white'
+                          : 'border-slate-200 bg-white text-slate-700 hover:border-slate-400'
+                      }`}
+                    >
+                      <p className="font-semibold text-sm">With Checklist</p>
+                      <p className={`text-xs mt-1 ${form.completion_submode === 'checklist' ? 'text-slate-300' : 'text-slate-400'}`}>
+                        User fills a form (text, photos, videos, checkboxes) before marking done.
+                      </p>
+                    </button>
+                  </div>
+                </div>
+              )}
 
-          {form.completion_mode === 'auto' && (
-            <div>
-              <Label>Auto-Complete Event</Label>
-              <Select value={form.auto_complete_event} onValueChange={v => set('auto_complete_event', v)}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Select the app event that completes this step…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(groupEventsByCategory(COMPLETE_EVENTS)).map(([cat, events]) => (
-                    <div key={cat}>
-                      <div className="px-2 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wide">{cat}</div>
-                      {events.map(e => (
-                        <SelectItem key={e.key} value={e.key}>{e.label}</SelectItem>
+              {/* Checklist builder */}
+              {form.completion_mode === 'manual' && form.completion_submode === 'checklist' && (
+                <div>
+                  <Label className="text-sm mb-2 block">Checklist Items</Label>
+                  <StepChecklistBuilder
+                    items={form.step_checklist}
+                    onChange={items => set('step_checklist', items)}
+                  />
+                </div>
+              )}
+
+              {/* Auto event picker */}
+              {form.completion_mode === 'auto' && (
+                <div>
+                  <Label className="text-sm">Auto-Complete Event</Label>
+                  <Select value={form.auto_complete_event} onValueChange={v => set('auto_complete_event', v)}>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Select the app event that completes this step…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(groupEventsByCategory(COMPLETE_EVENTS)).map(([cat, events]) => (
+                        <div key={cat}>
+                          <div className="px-2 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wide">{cat}</div>
+                          {events.map(e => <SelectItem key={e.key} value={e.key}>{e.label}</SelectItem>)}
+                        </div>
                       ))}
-                    </div>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-slate-500 mt-1">This step auto-completes when the selected app event fires</p>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-slate-500 mt-1">This step auto-completes when the selected app event fires</p>
+                </div>
+              )}
             </div>
           )}
 
