@@ -95,12 +95,14 @@ function calculateDeadlineSafe(anchorTime, step) {
 
 // Complete a step and activate the next one
 async function completeStepAndAdvance(base44, stepInst, completedBy, completionNote, now) {
-  await base44.asServiceRole.entities.FMSStepInstance.update(stepInst.id, {
+  const completionUpdate = {
     status: 'completed',
     completed_at: now,
     completed_by: completedBy,
     completion_note: completionNote || '',
-  });
+  };
+  if (checklist_responses) completionUpdate.checklist_responses = checklist_responses;
+  await base44.asServiceRole.entities.FMSStepInstance.update(stepInst.id, completionUpdate);
 
   const instances = await base44.asServiceRole.entities.FMSProcessInstance.filter({ id: stepInst.instance_id });
   const instance = instances[0];
@@ -240,6 +242,7 @@ Deno.serve(async (req) => {
 
       const now = new Date().toISOString();
       const completedBy = completed_by_override || user.email;
+      const { checklist_responses } = body;
 
       // If this step completion produces a new record (e.g. PO created), 
       // add its ID to the instance's ref_chain for future step matching
