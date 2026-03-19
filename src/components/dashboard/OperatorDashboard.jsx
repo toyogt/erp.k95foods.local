@@ -46,9 +46,18 @@ export default function OperatorDashboard({ user }) {
   const [offlineQueue, setOfflineQueue] = useState(0);
   const [widgetData, setWidgetData] = useState({});
 
-  // Stations this role is allowed to see — computed purely from roles.js, no async needed
-  const allowedPages = getAllowedPages(user);
-  const visibleStations = ALL_STATIONS.filter(s => allowedPages.includes(s.page));
+  // Stations this role is allowed to see — from database AppRole
+  const [allowedPages, setAllowedPages] = useState([]);
+  
+  useEffect(() => {
+    if (user) {
+      getAllowedPagesFromDB(user).then(pages => setAllowedPages(pages));
+    }
+  }, [user]);
+
+  const visibleStations = allowedPages.includes('*') 
+    ? ALL_STATIONS 
+    : ALL_STATIONS.filter(s => allowedPages.includes(s.page));
 
   const widgetKeys = ROLE_WIDGETS[user?.role] || [];
   const needsData = widgetKeys.length > 0;
