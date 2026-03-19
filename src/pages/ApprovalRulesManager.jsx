@@ -263,7 +263,7 @@ export default function ApprovalRulesManager() {
       ) : (
         <div className="space-y-6">
           {Object.entries(grouped).map(([docType, docRules]) => {
-            const docLabel = DOC_TYPES.find(d => d.value === docType)?.label || docType;
+            const docLabel = getDocTypeLabel(docType);
             return (
               <div key={docType} className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
                 <div className="px-4 py-3 bg-slate-50 border-b border-slate-200">
