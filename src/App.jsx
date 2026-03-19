@@ -22,6 +22,7 @@ import ApprovalWorkflowHub from './pages/ApprovalWorkflowHub';
 import AccessAuditLog from './pages/AccessAuditLog';
 import FMSHealthDashboard from './pages/FMSHealthDashboard';
 import OperatorDashboardMobile from './pages/OperatorDashboardMobile';
+import PermissionPolicyManager from './pages/PermissionPolicyManager';
 // Add page imports here
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -89,6 +90,7 @@ const AuthenticatedApp = () => {
       <Route path="/AccessAuditLog" element={<LayoutWrapper currentPageName="AccessAuditLog"><AccessAuditLog /></LayoutWrapper>} />
       <Route path="/FMSHealthDashboard" element={<LayoutWrapper currentPageName="FMSHealthDashboard"><FMSHealthDashboard /></LayoutWrapper>} />
       <Route path="/OperatorDashboardMobile" element={<LayoutWrapper currentPageName="OperatorDashboardMobile"><OperatorDashboardMobile /></LayoutWrapper>} />
+      <Route path="/PermissionPolicyManager" element={<LayoutWrapper currentPageName="PermissionPolicyManager"><PermissionPolicyManager /></LayoutWrapper>} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
