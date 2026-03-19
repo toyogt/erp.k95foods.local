@@ -116,6 +116,16 @@ export default function POForm({ user, isAdmin, sourceMR, sourceItems, onDone, o
         action: `PO ${poId} created for supplier ${selectedSupplier.supplier_name}${overrideNote}`,
         entity_type: 'PurchaseOrder', entity_id: poId, user
       });
+
+      // FMS: fire event using PR's id (already in ref_chain), then link PO into chain
+      if (sourceMR?.id) {
+        await fireFMSEvent('purchase_order_created', sourceMR.id);
+        const instances = await findFMSInstanceByRef(sourceMR.id);
+        for (const inst of instances) {
+          await linkFMSRef(inst.id, po.id);
+        }
+      }
+
       onDone();
     } catch (e) { alert('Error: ' + e.message); }
     setLoading(false);
