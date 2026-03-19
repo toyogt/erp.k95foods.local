@@ -83,7 +83,7 @@ export default function POForm({ user, isAdmin, sourceMR, sourceItems, onDone, o
     const poId = genId('PO');
     const today = new Date().toISOString().split('T')[0];
     try {
-      await base44.entities.PurchaseOrder.create({
+      const po = await base44.entities.PurchaseOrder.create({
         po_id: poId,
         supplier_id: selectedSupplier.supplier_id,
         supplier_name: selectedSupplier.supplier_name,
