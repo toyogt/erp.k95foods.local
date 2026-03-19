@@ -1,18 +1,19 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import OfflineProvider, { OfflineBanner } from '@/components/OfflineProvider';
 import { MODULES, getModuleForPage, getVisibleModules, getVisiblePages } from '@/components/nav/moduleConfig';
-import { ChevronLeft, Factory, LogOut, X, ChevronDown, LayoutDashboard } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import {
+  Factory, LogOut, X, ChevronDown, LayoutDashboard, Menu, ChevronRight
+} from 'lucide-react';
 
 export default function Layout({ children, currentPageName }) {
   const [user, setUser] = useState(null);
   const [userLoading, setUserLoading] = useState(true);
-  const [moduleMenuOpen, setModuleMenuOpen] = useState(null); // key of open module dropdown
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const dropdownRef = useRef(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);       // mobile drawer
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // desktop collapse
+  const [expandedModules, setExpandedModules] = useState({});  // which modules are expanded
 
   useEffect(() => {
     base44.auth.me()
@@ -22,22 +23,18 @@ export default function Layout({ children, currentPageName }) {
 
   useEffect(() => { window.scrollTo(0, 0); }, [currentPageName]);
 
-  // Close dropdown on outside click
+  // Auto-expand the active module
   useEffect(() => {
-    function handleClick(e) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setModuleMenuOpen(null);
-      }
+    const active = getModuleForPage(currentPageName);
+    if (active) {
+      setExpandedModules(prev => ({ ...prev, [active.key]: true }));
     }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, []);
+  }, [currentPageName]);
 
   const role = user?.role || 'user';
   const isAdmin = role === 'admin';
   const isFGOnly = role === 'warehouse';
 
-  // Redirect FG-only users to FGWarehouse
   useEffect(() => {
     if (!userLoading && isFGOnly && currentPageName !== 'FGWarehouse') {
       window.location.replace(createPageUrl('FGWarehouse'));
@@ -58,230 +55,186 @@ export default function Layout({ children, currentPageName }) {
   const visibleModules = getVisibleModules(role);
   const activeModule = getModuleForPage(currentPageName);
   const isDashboard = currentPageName === 'Dashboard';
-  const fromPage = new URLSearchParams(window.location.search).get('from');
 
-  // Pages in the active module (for the sub-nav bar)
-  const activeModulePages = activeModule ? getVisiblePages(activeModule, role) : [];
+  const toggleModule = (key) => {
+    setExpandedModules(prev => ({ ...prev, [key]: !prev[key] }));
+  };
 
-  // Back destination — go to Dashboard if no from param, not on dashboard
-  const backTo = fromPage ? createPageUrl(fromPage) : createPageUrl('Dashboard');
+  const SidebarContent = ({ onNavigate }) => (
+    <div className="flex flex-col h-full">
+      {/* Brand */}
+      <div className="flex items-center gap-2.5 px-4 h-14 border-b border-slate-200 shrink-0">
+        <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center shrink-0">
+          <Factory className="w-4 h-4 text-white" />
+        </div>
+        {!sidebarCollapsed && (
+          <span className="font-bold text-slate-900 text-sm tracking-tight">K95 ERP</span>
+        )}
+      </div>
+
+      {/* Nav */}
+      <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
+        {/* Dashboard */}
+        <Link
+          to={createPageUrl('Dashboard')}
+          onClick={onNavigate}
+          className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+            isDashboard ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+          }`}
+        >
+          <LayoutDashboard className="w-4 h-4 shrink-0" />
+          {!sidebarCollapsed && <span>Dashboard</span>}
+        </Link>
+
+        {/* Module groups */}
+        {visibleModules.filter(m => m.key !== 'DASHBOARD').map(mod => {
+          const Icon = mod.icon;
+          const pages = getVisiblePages(mod, role);
+          const isActive = activeModule?.key === mod.key;
+          const isExpanded = expandedModules[mod.key];
+
+          return (
+            <div key={mod.key}>
+              <button
+                onClick={() => !sidebarCollapsed && toggleModule(mod.key)}
+                className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                  isActive && !isExpanded
+                    ? 'bg-slate-100 text-slate-900'
+                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                }`}
+                title={sidebarCollapsed ? mod.label : undefined}
+              >
+                <Icon className={`w-4 h-4 shrink-0 ${isActive ? mod.color : ''}`} />
+                {!sidebarCollapsed && (
+                  <>
+                    <span className="flex-1 text-left">{mod.label}</span>
+                    <ChevronDown className={`w-3.5 h-3.5 transition-transform text-slate-400 ${isExpanded ? 'rotate-180' : ''}`} />
+                  </>
+                )}
+              </button>
+
+              {/* Sub-pages */}
+              {!sidebarCollapsed && isExpanded && (
+                <div className="ml-3 pl-3 border-l-2 border-slate-100 mt-0.5 space-y-0.5">
+                  {pages.map(page => {
+                    const PIcon = page.icon;
+                    const pageActive = currentPageName === page.key;
+                    return (
+                      <Link
+                        key={page.key}
+                        to={createPageUrl(page.key)}
+                        onClick={onNavigate}
+                        className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all ${
+                          pageActive
+                            ? 'bg-slate-900 text-white font-medium'
+                            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                        }`}
+                      >
+                        <PIcon className="w-3.5 h-3.5 shrink-0" />
+                        <span>{page.label}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </nav>
+
+      {/* User / Logout */}
+      {user && (
+        <div className="border-t border-slate-200 p-3 shrink-0">
+          {!sidebarCollapsed && (
+            <div className="px-2 py-1 text-xs text-slate-400 truncate mb-1">{user.full_name || user.email}</div>
+          )}
+          <button
+            onClick={() => base44.auth.logout()}
+            className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-slate-500 hover:bg-red-50 hover:text-red-600 transition-all w-full ${
+              sidebarCollapsed ? 'justify-center' : ''
+            }`}
+            title="Sign out"
+          >
+            <LogOut className="w-4 h-4 shrink-0" />
+            {!sidebarCollapsed && <span>Sign Out</span>}
+          </button>
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <OfflineProvider>
-      <div className="min-h-screen bg-slate-50 overflow-x-hidden max-w-full">
+      <div className="min-h-screen bg-slate-50 flex overflow-x-hidden">
         <style>{`
           :root { --factory-primary: #0f172a; }
           body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; -webkit-font-smoothing: antialiased; }
           * { -webkit-tap-highlight-color: transparent; }
           input, select, textarea { font-size: 16px !important; }
         `}</style>
-        <OfflineBanner />
 
-        {/* ── TOP NAV BAR ─────────────────────────────────────────────────── */}
-        <header className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
-          {/* Row 1: Brand + Module Tabs + User */}
-          <div className="max-w-screen-2xl mx-auto flex items-center gap-0 px-3 h-14">
+        {/* ── Desktop Sidebar ──────────────────────────────────────────── */}
+        <aside className={`hidden md:flex flex-col bg-white border-r border-slate-200 shrink-0 transition-all duration-200 ${
+          sidebarCollapsed ? 'w-16' : 'w-60'
+        }`}>
+          <SidebarContent onNavigate={() => {}} />
+          {/* Collapse toggle */}
+          <button
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            className="absolute left-0 top-1/2 -translate-y-1/2 w-5 h-10 bg-white border border-slate-200 rounded-r-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-all z-30"
+            style={{ left: sidebarCollapsed ? '3.5rem' : '14.5rem' }}
+          >
+            {sidebarCollapsed
+              ? <ChevronRight className="w-3 h-3" />
+              : <ChevronRight className="w-3 h-3 rotate-180" />
+            }
+          </button>
+        </aside>
 
-            {/* Brand / Back button */}
-            <div className="flex items-center gap-2 shrink-0 mr-4">
-              {!isDashboard ? (
-                <Link to={backTo} className="w-10 h-10 -ml-1 rounded-xl hover:bg-slate-100 active:bg-slate-200 flex items-center justify-center transition-colors">
-                  <ChevronLeft className="w-6 h-6 text-slate-700" />
-                </Link>
-              ) : null}
-              <Link to={createPageUrl('Dashboard')} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center shrink-0">
-                  <Factory className="w-4 h-4 text-white" />
-                </div>
-                <span className="hidden sm:block font-bold text-slate-900 text-sm leading-tight tracking-tight">K95</span>
-              </Link>
-            </div>
+        {/* ── Mobile Overlay ───────────────────────────────────────────── */}
+        {sidebarOpen && (
+          <div
+            className="md:hidden fixed inset-0 bg-black/40 z-40"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
 
-            {/* ── Desktop module tabs ─────────────────────────────── */}
-            <nav ref={dropdownRef} className="hidden md:flex items-center gap-0.5 flex-1 overflow-x-auto scrollbar-hide">
-              {/* Dashboard tab */}
-              <Link
-                to={createPageUrl('Dashboard')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
-                  isDashboard ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'
-                }`}
-              >
-                <LayoutDashboard className="w-4 h-4" />
-                Dashboard
-              </Link>
+        {/* ── Mobile Drawer ────────────────────────────────────────────── */}
+        <div className={`md:hidden fixed top-0 left-0 h-full w-72 bg-white border-r border-slate-200 z-50 transition-transform duration-200 ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}>
+          <SidebarContent onNavigate={() => setSidebarOpen(false)} />
+        </div>
 
-              {visibleModules.filter(m => m.key !== 'DASHBOARD').map(mod => {
-                const Icon = mod.icon;
-                const isActive = activeModule?.key === mod.key;
-                const isOpen = moduleMenuOpen === mod.key;
-                const pages = getVisiblePages(mod, role);
+        {/* ── Main area ────────────────────────────────────────────────── */}
+        <div className="flex-1 flex flex-col min-w-0">
+          <OfflineBanner />
 
-                return (
-                  <div key={mod.key} className="relative">
-                    <button
-                      onClick={() => setModuleMenuOpen(isOpen ? null : mod.key)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
-                        isActive ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'
-                      }`}
-                    >
-                      <Icon className="w-4 h-4" />
-                      {mod.label}
-                      <ChevronDown className={`w-3 h-3 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-                    </button>
-
-                    {/* Dropdown */}
-                    {isOpen && (
-                      <div className="absolute top-full left-0 mt-1 w-56 bg-white rounded-xl border border-slate-200 shadow-lg z-50 py-1.5 overflow-hidden">
-                        {pages.map(page => {
-                          const PIcon = page.icon;
-                          const pageActive = currentPageName === page.key;
-                          return (
-                            <Link
-                              key={page.key}
-                              to={createPageUrl(page.key)}
-                              onClick={() => setModuleMenuOpen(null)}
-                              className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
-                                pageActive ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-50'
-                              }`}
-                            >
-                              <PIcon className="w-4 h-4 shrink-0" />
-                              {page.label}
-                            </Link>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </nav>
-
-            {/* ── Right side: user + mobile menu btn ─────────────── */}
-            <div className="flex items-center gap-2 ml-auto shrink-0">
-              {user && (
-                <div className="hidden md:flex items-center gap-2">
-                  <span className="text-xs text-slate-500 font-medium max-w-[120px] truncate">{user.full_name || user.email}</span>
-                  <button
-                    onClick={() => base44.auth.logout()}
-                    className="w-8 h-8 rounded-lg hover:bg-red-50 flex items-center justify-center text-slate-400 hover:text-red-500 transition-colors"
-                    title="Sign out"
-                  >
-                    <LogOut className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
-
-              {/* Mobile hamburger */}
-              <button
-                type="button"
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="md:hidden w-11 h-11 rounded-xl hover:bg-slate-100 active:bg-slate-200 flex items-center justify-center transition-colors"
-              >
-                {mobileMenuOpen
-                  ? <X className="w-6 h-6 text-slate-700" />
-                  : <svg className="w-6 h-6 text-slate-700" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-                    </svg>
-                }
-              </button>
-            </div>
-          </div>
-
-          {/* Row 2: Sub-nav bar (current module's pages) — desktop only */}
-          {activeModule && activeModulePages.length > 0 && (
-            <div className="hidden md:block border-t border-slate-100 bg-slate-50">
-              <div className="max-w-screen-2xl mx-auto px-4 flex items-center gap-1 h-10 overflow-x-auto scrollbar-hide">
-                <span className={`text-xs font-semibold mr-2 ${activeModule.color}`}>{activeModule.label} /</span>
-                {activeModulePages.map(page => {
-                  const PIcon = page.icon;
-                  const isActive = currentPageName === page.key;
-                  return (
-                    <Link
-                      key={page.key}
-                      to={createPageUrl(page.key)}
-                      className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
-                        isActive
-                          ? `${activeModule.bgColor} ${activeModule.color} font-semibold`
-                          : 'text-slate-500 hover:bg-white hover:text-slate-800'
-                      }`}
-                    >
-                      <PIcon className="w-3.5 h-3.5" />
-                      {page.label}
-                    </Link>
-                  );
-                })}
+          {/* Mobile top bar */}
+          <header className="md:hidden sticky top-0 z-30 bg-white border-b border-slate-200 flex items-center gap-3 px-4 h-14 shadow-sm">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="w-11 h-11 rounded-xl flex items-center justify-center hover:bg-slate-100 active:bg-slate-200 transition-colors"
+            >
+              <Menu className="w-6 h-6 text-slate-700" />
+            </button>
+            <Link to={createPageUrl('Dashboard')} className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-slate-900 flex items-center justify-center">
+                <Factory className="w-3.5 h-3.5 text-white" />
               </div>
-            </div>
-          )}
+              <span className="font-bold text-slate-900 text-sm">K95 ERP</span>
+            </Link>
+            {activeModule && (
+              <span className={`ml-auto text-xs font-semibold ${activeModule.color}`}>
+                {activeModule.label}
+              </span>
+            )}
+          </header>
 
-          {/* ── Mobile full-screen menu ──────────────────────────────────── */}
-          {mobileMenuOpen && (
-            <div className="md:hidden absolute top-14 left-0 right-0 bg-white border-b border-slate-200 shadow-xl z-50 max-h-[85vh] overflow-y-auto">
-              <div className="p-3 space-y-0.5">
-                {/* Dashboard */}
-                <Link
-                  to={createPageUrl('Dashboard')}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isDashboard ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'}`}
-                >
-                  <LayoutDashboard className="w-5 h-5" />
-                  <span className="font-medium text-sm">Dashboard</span>
-                </Link>
-
-                {/* Modules */}
-                {visibleModules.filter(m => m.key !== 'DASHBOARD').map(mod => {
-                  const Icon = mod.icon;
-                  const pages = getVisiblePages(mod, role);
-                  const isModActive = activeModule?.key === mod.key;
-
-                  return (
-                    <div key={mod.key}>
-                      <div className={`flex items-center gap-3 px-4 py-2.5 rounded-xl mt-1 ${isModActive ? mod.bgColor : ''}`}>
-                        <Icon className={`w-4 h-4 ${mod.color}`} />
-                        <span className={`font-semibold text-xs uppercase tracking-wider ${mod.color}`}>{mod.label}</span>
-                      </div>
-                      <div className="ml-3 pl-3 border-l-2 border-slate-100 space-y-0.5">
-                        {pages.map(page => {
-                          const PIcon = page.icon;
-                          const pageActive = currentPageName === page.key;
-                          return (
-                            <Link
-                              key={page.key}
-                              to={createPageUrl(page.key)}
-                              onClick={() => setMobileMenuOpen(false)}
-                              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                                pageActive ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'
-                              }`}
-                            >
-                              <PIcon className="w-4 h-4" />
-                              <span className="font-medium text-sm">{page.label}</span>
-                            </Link>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-
-                {/* Sign out */}
-                {user && (
-                  <div className="border-t border-slate-100 pt-2 mt-2">
-                    <div className="px-4 py-2 text-xs text-slate-400">{user.full_name || user.email}</div>
-                    <button
-                      onClick={() => base44.auth.logout()}
-                      className="flex items-center gap-3 px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 w-full transition-all"
-                    >
-                      <LogOut className="w-5 h-5" />
-                      <span className="font-medium text-sm">Sign Out</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </header>
-
-        <main className="max-w-screen-2xl mx-auto px-4 py-5 pb-24">{children}</main>
+          <main className="flex-1 px-4 py-5 pb-24 max-w-screen-2xl w-full mx-auto">
+            {children}
+          </main>
+        </div>
       </div>
     </OfflineProvider>
   );
