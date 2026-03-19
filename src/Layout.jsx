@@ -74,7 +74,10 @@ export default function Layout({ children, currentPageName }) {
     return <OperatorLayout currentPageName={currentPageName} user={user}>{children}</OperatorLayout>;
   }
 
-  const visibleModules = getVisibleModules(role);
+  // Get modules from database (AppRole.module_access) for non-admins, otherwise use registry
+  const visibleModules = isAdmin 
+    ? getVisibleModules(role) 
+    : getVisibleModules(role).filter(m => roleModuleAccess?.includes(m.moduleKey));
   const activeModule = getModuleForPage(currentPageName);
 
   const toggleModule = (moduleKey) => {
