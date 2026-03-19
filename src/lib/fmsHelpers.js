@@ -99,7 +99,7 @@ export const TAT_UNIT_LABELS = {
 
 export const TAT_ANCHOR_LABELS = {
   run_start: 'Process Start (when the whole run began)',
-  step_start: 'When this step becomes active',
+  step_start: 'Previous Step Completion',
 };
 
 export function formatTATSummary(step) {

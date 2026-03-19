@@ -13,7 +13,7 @@ import { Info } from 'lucide-react';
 
 const ANCHOR_HINTS = {
   run_start: 'Timer starts from when the entire process was first triggered — useful for global deadlines across all steps (e.g. "must complete within 5 days of the PR being raised").',
-  step_start: 'Timer starts the moment the previous step is marked done and this step becomes active — the most common choice.',
+  step_start: 'Timer starts the moment the previous step is marked done — the most common choice.',
 };
 
 const TYPE_HINTS = {
