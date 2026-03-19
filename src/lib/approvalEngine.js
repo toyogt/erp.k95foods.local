@@ -39,7 +39,7 @@ export function canAccessPageWithRole(roleRecord, pageKey) {
   // Module-level access
   const grantedModules = roleRecord.module_access || [];
   for (const mod of grantedModules) {
-    if (MODULE_PAGES[mod]?.includes(pageKey)) return true;
+    if (getModulePages(mod).includes(pageKey)) return true;
   }
   return false;
 }
