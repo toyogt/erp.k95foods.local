@@ -1,43 +1,95 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
 
-// Calculate deadline from activation time based on TAT settings
-function calculateDeadline(activatedAt, tatType, tatValue, tatTime) {
-  const base = new Date(activatedAt);
+// Convert TAT value+unit to milliseconds (approximate)
+function tatToMs(value, unit) {
+  const v = value || 1;
+  switch (unit) {
+    case 'hours': return v * 60 * 60 * 1000;
+    case 'week':  return v * 7 * 24 * 60 * 60 * 1000;
+    case 'month': return v * 30 * 24 * 60 * 60 * 1000;
+    case 'day':
+    default:      return v * 24 * 60 * 60 * 1000;
+  }
+}
 
-  if (tatType === 'fixed_hours') {
-    const hours = tatValue || 24;
-    return new Date(base.getTime() + hours * 60 * 60 * 1000).toISOString();
+// Add working days (skipping weekends)
+function addWorkingDays(base, days) {
+  let count = 0;
+  const cur = new Date(base);
+  while (count < days) {
+    cur.setDate(cur.getDate() + 1);
+    const dow = cur.getDay();
+    if (dow !== 0 && dow !== 6) count++;
+  }
+  return cur;
+}
+
+// Calculate deadline from an anchor time based on new TAT fields:
+// tat_type: calendar_days | working_days | hours
+// tat_unit: hours | day | week | month
+// tat_value: numeric
+// fixed_due_time: optional HH:MM to pin time of day
+function calculateDeadline(anchorTime, tatType, tatValue, tatUnit, fixedDueTime) {
+  const base = new Date(anchorTime);
+  const value = tatValue || 1;
+  let result;
+
+  if (tatType === 'working_days') {
+    // working_days: tat_unit should be day/week but always counts working days
+    const days = tatUnit === 'week' ? value * 5 : (tatUnit === 'month' ? value * 22 : value);
+    result = addWorkingDays(base, days);
+  } else if (tatType === 'hours') {
+    // hours type: always use hours unit
+    result = new Date(base.getTime() + value * 60 * 60 * 1000);
+  } else {
+    // calendar_days: add raw time
+    result = new Date(base.getTime() + tatToMs(value, tatUnit || 'day'));
   }
 
-  if (tatType === 'end_of_day') {
+  // Apply fixed due time if specified (e.g. "17:00")
+  if (fixedDueTime) {
+    const [h, m] = fixedDueTime.split(':').map(Number);
+    result.setHours(h, m, 0, 0);
+    // If pinned time would be in the past relative to anchor+duration, move forward one day
+    if (result <= base) result.setDate(result.getDate() + 1);
+  }
+
+  return result.toISOString();
+}
+
+// Legacy shim: support old tat_type values (fixed_hours, end_of_day, etc.)
+function calculateDeadlineSafe(anchorTime, step) {
+  const { tat_type, tat_unit, tat_value, tat_anchor_type, fixed_due_time, tat_time } = step;
+
+  // New-style fields
+  if (['calendar_days', 'working_days', 'hours'].includes(tat_type)) {
+    return calculateDeadline(anchorTime, tat_type, tat_value, tat_unit, fixed_due_time);
+  }
+
+  // Legacy fallback
+  const base = new Date(anchorTime);
+  if (tat_type === 'fixed_hours') {
+    return new Date(base.getTime() + (tat_value || 24) * 60 * 60 * 1000).toISOString();
+  }
+  if (tat_type === 'end_of_day') {
     const eod = new Date(base);
-    const [h, m] = (tatTime || '18:00').split(':').map(Number);
+    const [h, m] = (tat_time || '18:00').split(':').map(Number);
     eod.setHours(h, m, 0, 0);
     if (eod <= base) eod.setDate(eod.getDate() + 1);
     return eod.toISOString();
   }
-
-  if (tatType === 'fixed_clock_time') {
+  if (tat_type === 'fixed_clock_time') {
     const target = new Date(base);
-    const [h, m] = (tatTime || '17:00').split(':').map(Number);
+    const [h, m] = (tat_time || '17:00').split(':').map(Number);
     target.setHours(h, m, 0, 0);
     if (target <= base) target.setDate(target.getDate() + 1);
     return target.toISOString();
   }
-
-  if (tatType === 'business_days') {
-    const days = tatValue || 1;
-    let count = 0;
-    const cur = new Date(base);
-    while (count < days) {
-      cur.setDate(cur.getDate() + 1);
-      const dow = cur.getDay();
-      if (dow !== 0 && dow !== 6) count++;
-    }
+  if (tat_type === 'business_days') {
+    const cur = addWorkingDays(base, tat_value || 1);
     cur.setHours(18, 0, 0, 0);
     return cur.toISOString();
   }
-
   return new Date(base.getTime() + 24 * 60 * 60 * 1000).toISOString();
 }
 
