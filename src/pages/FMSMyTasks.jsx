@@ -2,14 +2,17 @@ import { useState, useEffect, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
 import FMSLayout from '@/components/fms/FMSLayout';
 import TATBadge from '@/components/fms/TATBadge';
+import StepChecklistRunner from '@/components/fms/StepChecklistRunner';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { CheckCircle2, ChevronDown, ChevronUp, Loader2, ClipboardList } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { CheckCircle2, ChevronDown, ChevronUp, Loader2, ClipboardList, ClipboardCheck } from 'lucide-react';
 import { formatDateTime, getTATStatus } from '@/lib/fmsHelpers';
+import { Input } from '@/components/ui/input';
 
-function TaskCard({ step, onComplete, completing }) {
+function TaskCard({ step, onComplete, onOpenChecklist, completing }) {
   const [expanded, setExpanded] = useState(false);
   const tatStatus = getTATStatus(step.deadline);
+  const isChecklist = step.completion_mode !== 'auto' && step.completion_submode === 'checklist';
 
   const borderColor = tatStatus === 'overdue' ? 'border-l-red-500' : tatStatus === 'at_risk' ? 'border-l-yellow-400' : 'border-l-green-400';
 
@@ -25,6 +28,11 @@ function TaskCard({ step, onComplete, completing }) {
               {step.completion_mode === 'auto' && (
                 <span className="text-xs bg-blue-50 text-blue-500 px-2 py-0.5 rounded-full">Auto-complete</span>
               )}
+              {isChecklist && (
+                <span className="text-xs bg-purple-50 text-purple-600 px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <ClipboardCheck className="w-3 h-3" /> Checklist required
+                </span>
+              )}
             </div>
             <h3 className="font-semibold text-slate-800 mt-1 text-base">{step.step_name}</h3>
             {step.description && (
@@ -37,15 +45,27 @@ function TaskCard({ step, onComplete, completing }) {
           </div>
           <div className="flex flex-col gap-2 items-end shrink-0">
             {step.completion_mode !== 'auto' && (
-              <Button
-                size="sm"
-                onClick={() => onComplete(step)}
-                disabled={completing === step.id}
-                className="gap-1.5 min-h-[44px] min-w-[120px] bg-green-600 hover:bg-green-700"
-              >
-                {completing === step.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                Mark Done
-              </Button>
+              isChecklist ? (
+                <Button
+                  size="sm"
+                  onClick={() => onOpenChecklist(step)}
+                  disabled={completing === step.id}
+                  className="gap-1.5 min-h-[44px] min-w-[130px] bg-purple-600 hover:bg-purple-700"
+                >
+                  {completing === step.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <ClipboardCheck className="w-4 h-4" />}
+                  Fill & Complete
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  onClick={() => onComplete(step)}
+                  disabled={completing === step.id}
+                  className="gap-1.5 min-h-[44px] min-w-[120px] bg-green-600 hover:bg-green-700"
+                >
+                  {completing === step.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                  Mark Done
+                </Button>
+              )
             )}
             <button
               onClick={() => setExpanded(e => !e)}
@@ -74,33 +94,50 @@ function TaskCard({ step, onComplete, completing }) {
   );
 }
 
+// Simple mark-done modal with note
+function MarkDoneModal({ step, onConfirm, onCancel, loading }) {
+  const [note, setNote] = useState('');
+  return (
+    <div className="space-y-4">
+      <div>
+        <h3 className="font-semibold text-slate-800 text-base">{step.step_name}</h3>
+        <p className="text-sm text-slate-500 mt-0.5">Mark this step as completed.</p>
+      </div>
+      <div>
+        <label className="text-xs font-medium text-slate-600">Completion Note (optional)</label>
+        <Input value={note} onChange={e => setNote(e.target.value)} placeholder="Any notes…" className="mt-1" />
+      </div>
+      <div className="flex gap-2">
+        <Button variant="outline" onClick={onCancel} className="flex-1 min-h-[44px]">Cancel</Button>
+        <Button onClick={() => onConfirm({ note })} disabled={loading} className="flex-1 min-h-[44px] bg-green-600 hover:bg-green-700 gap-2">
+          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+          Mark Done
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export default function FMSMyTasks() {
   const [user, setUser] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [completing, setCompleting] = useState(null);
-  const [filter, setFilter] = useState('active'); // active | all
+  const [activeModal, setActiveModal] = useState(null); // { step, type: 'markdone' | 'checklist' }
 
   const load = useCallback(async () => {
     const me = await base44.auth.me();
     setUser(me);
-
-    const query = { assignee_email: me.email, status: 'active' };
-    const allSteps = await base44.entities.FMSStepInstance.filter(query, '-deadline', 100);
-
-    // Load instance names
+    const allSteps = await base44.entities.FMSStepInstance.filter({ assignee_email: me.email, status: 'active' }, '-deadline', 100);
     const instanceIds = [...new Set(allSteps.map(s => s.instance_id))];
     const instances = await Promise.all(instanceIds.map(id => base44.entities.FMSProcessInstance.filter({ id })));
     const instanceMap = {};
     instances.flat().forEach(inst => { instanceMap[inst.id] = inst; });
-
     const enriched = allSteps.map(s => ({
       ...s,
       _process_name: instanceMap[s.instance_id]?.process_name || s.process_id,
       _instance_title: instanceMap[s.instance_id]?.title || '',
     }));
-
-    // Sort: overdue first, then at_risk, then on_time
     enriched.sort((a, b) => {
       const priority = { overdue: 0, at_risk: 1, on_time: 2, unknown: 3 };
       const pa = priority[getTATStatus(a.deadline)] ?? 3;
@@ -108,25 +145,27 @@ export default function FMSMyTasks() {
       if (pa !== pb) return pa - pb;
       return new Date(a.deadline || 0) - new Date(b.deadline || 0);
     });
-
     setTasks(enriched);
     setLoading(false);
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
-  const completeTask = async (step) => {
-    const note = window.prompt(`Completion note for "${step.step_name}" (optional):`);
-    if (note === null) return; // cancelled
+  const doComplete = async (step, { note, checklist_responses }) => {
     setCompleting(step.id);
     await base44.functions.invoke('fmsTriggerProcess', {
       action: 'complete_step',
       step_instance_id: step.id,
       completion_note: note || '',
+      checklist_responses: checklist_responses || null,
     });
     setCompleting(null);
+    setActiveModal(null);
     load();
   };
+
+  const handleMarkDone = (step) => setActiveModal({ step, type: 'markdone' });
+  const handleOpenChecklist = (step) => setActiveModal({ step, type: 'checklist' });
 
   const overdue = tasks.filter(t => getTATStatus(t.deadline) === 'overdue');
   const atRisk = tasks.filter(t => getTATStatus(t.deadline) === 'at_risk');
@@ -152,7 +191,6 @@ export default function FMSMyTasks() {
           </div>
         ) : (
           <div className="space-y-6">
-            {/* Summary bar */}
             <div className="grid grid-cols-3 gap-3">
               <div className="bg-red-50 border border-red-100 rounded-xl p-3 text-center">
                 <p className="text-2xl font-bold text-red-600">{overdue.length}</p>
@@ -172,7 +210,7 @@ export default function FMSMyTasks() {
               <div>
                 <h2 className="text-sm font-semibold text-red-600 uppercase tracking-wider mb-3">⚠ Overdue ({overdue.length})</h2>
                 <div className="space-y-3">
-                  {overdue.map(t => <TaskCard key={t.id} step={t} onComplete={completeTask} completing={completing} />)}
+                  {overdue.map(t => <TaskCard key={t.id} step={t} onComplete={handleMarkDone} onOpenChecklist={handleOpenChecklist} completing={completing} />)}
                 </div>
               </div>
             )}
@@ -180,7 +218,7 @@ export default function FMSMyTasks() {
               <div>
                 <h2 className="text-sm font-semibold text-yellow-600 uppercase tracking-wider mb-3">⏰ Due Soon ({atRisk.length})</h2>
                 <div className="space-y-3">
-                  {atRisk.map(t => <TaskCard key={t.id} step={t} onComplete={completeTask} completing={completing} />)}
+                  {atRisk.map(t => <TaskCard key={t.id} step={t} onComplete={handleMarkDone} onOpenChecklist={handleOpenChecklist} completing={completing} />)}
                 </div>
               </div>
             )}
@@ -188,13 +226,40 @@ export default function FMSMyTasks() {
               <div>
                 <h2 className="text-sm font-semibold text-green-600 uppercase tracking-wider mb-3">✓ On Track ({onTime.length})</h2>
                 <div className="space-y-3">
-                  {onTime.map(t => <TaskCard key={t.id} step={t} onComplete={completeTask} completing={completing} />)}
+                  {onTime.map(t => <TaskCard key={t.id} step={t} onComplete={handleMarkDone} onOpenChecklist={handleOpenChecklist} completing={completing} />)}
                 </div>
               </div>
             )}
           </div>
         )}
       </div>
+
+      {/* Completion Modal */}
+      {activeModal && (
+        <Dialog open onOpenChange={() => setActiveModal(null)}>
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                {activeModal.type === 'checklist' ? 'Complete Step Checklist' : 'Complete Step'}
+              </DialogTitle>
+            </DialogHeader>
+            {activeModal.type === 'checklist' ? (
+              <StepChecklistRunner
+                step={activeModal.step}
+                onComplete={(data) => doComplete(activeModal.step, data)}
+                onCancel={() => setActiveModal(null)}
+              />
+            ) : (
+              <MarkDoneModal
+                step={activeModal.step}
+                loading={completing === activeModal.step.id}
+                onConfirm={(data) => doComplete(activeModal.step, data)}
+                onCancel={() => setActiveModal(null)}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
+      )}
     </FMSLayout>
   );
 }
