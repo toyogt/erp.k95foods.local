@@ -46,32 +46,33 @@ export default function PermissionPolicyManager() {
     try {
       if (modal.mode === 'create') {
         await base44.entities.PermissionPolicy.create(policyData);
-        await auditPolicyCreated(user, policyData.role_key, policyData.module_access);
+        await auditPermissionPolicyCreated(user, policyData.role_key, policyData.module_access);
       } else {
         await base44.entities.PermissionPolicy.update(modal.policy.id, policyData);
-        await auditPolicyUpdated(user, policyData.role_key, { modules: policyData.module_access });
+        await auditPermissionPolicyUpdated(user, policyData.role_key, { modules: policyData.module_access });
       }
       clearPermissionCache(policyData.role_key);
       setModal(null);
       load();
     } catch (e) {
       console.error('Error saving policy:', e);
-      alert('Failed to save policy');
     }
     setSaving(false);
   };
 
-  const handleDelete = async (policy) => {
-    if (!confirm(`Delete policy for ${policy.role_key}?`)) return;
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
     try {
-      await base44.entities.PermissionPolicy.delete(policy.id);
-      await auditPolicyDeleted(user, policy.role_key);
-      clearPermissionCache(policy.role_key);
+      await base44.entities.PermissionPolicy.delete(deleteTarget.id);
+      await auditPermissionPolicyDeleted(user, deleteTarget.role_key);
+      clearPermissionCache(deleteTarget.role_key);
+      setDeleteTarget(null);
       load();
     } catch (e) {
       console.error('Error deleting policy:', e);
-      alert('Failed to delete policy');
     }
+    setDeleting(false);
   };
 
   if (!loading && user?.role !== 'admin') {
