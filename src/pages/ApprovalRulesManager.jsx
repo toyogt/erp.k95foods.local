@@ -139,6 +139,7 @@ export default function ApprovalRulesManager() {
   const [user, setUser] = useState(null);
   const [rules, setRules] = useState([]);
   const [roles, setRoles] = useState([]);
+  const [docTypes, setDocTypes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterDoc, setFilterDoc] = useState('all');
   const [modal, setModal] = useState(null);
