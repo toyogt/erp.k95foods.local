@@ -153,10 +153,11 @@ export const MODULES = [
       { key: 'AuditLogPage',         label: 'Audit Log',          icon: ScrollText,    roles: ['admin','production_manager','qa','user'] },
       { key: 'UserManagement',       label: 'User Management',    icon: Users,         roles: ['admin'], adminOnly: true },
       { key: 'RoleManager',          label: 'Role Manager',       icon: Shield,        roles: ['admin'], adminOnly: true },
+      { key: 'PermissionMatrix',     label: 'Permission Matrix',  icon: ShieldCheck,   roles: ['admin'], adminOnly: true },
       { key: 'ApprovalRulesManager', label: 'Approval Rules',     icon: GitBranch,     roles: ['admin'], adminOnly: true },
-    ],
-  },
-];
+      ],
+      },
+      ];
 
 /**
  * Given a page key, find which module it belongs to.
