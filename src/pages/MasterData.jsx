@@ -10,7 +10,7 @@ import AppSettingsManager from '@/components/master/AppSettingsManager.jsx';
 import PackingWOManager from '@/components/master/PackingWOManager';
 import ChecklistTemplateManager from '@/components/master/ChecklistTemplateManager';
 import SyncQueueViewer from '@/components/master/SyncQueueViewer';
-import ModuleAccessManager from '@/components/master/ModuleAccessManager';
+
 import ErrorMessagesManager from '@/components/master/ErrorMessagesManager';
 import DowntimeReasonManager from '@/components/master/DowntimeReasonManager';
 import ProductTaxonomy from '@/pages/ProductTaxonomy';
@@ -59,7 +59,7 @@ export default function MasterData() {
             <TabsTrigger value="wos"        className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">WOs</TabsTrigger>
             {isManager && <TabsTrigger value="checklists" className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Checklists</TabsTrigger>}
             {isManager && <TabsTrigger value="downtime"   className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Downtime</TabsTrigger>}
-            {isAdmin   && <TabsTrigger value="modules"    className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Modules</TabsTrigger>}
+
             {isAdmin   && <TabsTrigger value="syncqueue"  className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Sync Queue</TabsTrigger>}
             {isAdmin   && <TabsTrigger value="errors"     className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Errors</TabsTrigger>}
             {isAdmin   && <TabsTrigger value="settings"   className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Settings</TabsTrigger>}
@@ -76,7 +76,7 @@ export default function MasterData() {
         <TabsContent value="wos"        className="mt-4"><PackingWOManager /></TabsContent>
         {isManager && <TabsContent value="checklists" className="mt-4"><ChecklistTemplateManager /></TabsContent>}
         {isManager && <TabsContent value="downtime"   className="mt-4"><DowntimeReasonManager /></TabsContent>}
-        {isAdmin   && <TabsContent value="modules"    className="mt-4"><ModuleAccessManager /></TabsContent>}
+
         {isAdmin   && <TabsContent value="syncqueue"  className="mt-4"><SyncQueueViewer /></TabsContent>}
         {isAdmin   && <TabsContent value="errors"     className="mt-4"><ErrorMessagesManager /></TabsContent>}
         {isAdmin   && <TabsContent value="settings"   className="mt-4"><AppSettingsManager user={user} /></TabsContent>}
