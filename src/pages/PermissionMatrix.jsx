@@ -85,165 +85,88 @@ export default function PermissionMatrix() {
   if (loading) return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin" /></div>;
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">Permission Matrix</h1>
-        <p className="text-sm text-slate-500">Define what each role can do with each document type</p>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex gap-2 border-b border-slate-200">
-        <button
-          onClick={() => setActiveTab('access')}
-          className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors ${
-            activeTab === 'access'
-              ? 'border-slate-900 text-slate-900'
-              : 'border-transparent text-slate-500 hover:text-slate-700'
-          }`}
-        >
-          Access Control (CRUD)
-        </button>
-        <button
-          onClick={() => setActiveTab('approval')}
-          className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors ${
-            activeTab === 'approval'
-              ? 'border-slate-900 text-slate-900'
-              : 'border-transparent text-slate-500 hover:text-slate-700'
-          }`}
-        >
-          Approval Rules (Workflow)
-        </button>
-      </div>
-
-      {/* Access Control Tab */}
-      {activeTab === 'access' && (
-        <div className="space-y-4">
-          <Button onClick={() => { setEditingRule(null); setFormOpen(true); }} className="gap-1.5 text-xs">
-            <Plus className="w-3.5 h-3.5" /> New Rule
-          </Button>
-
-          <div className="overflow-x-auto border border-slate-200 rounded-lg">
-            <table className="w-full text-xs">
-              <thead className="bg-slate-100 text-slate-700 uppercase tracking-wide sticky top-0">
-                <tr>
-                  <th className="px-4 py-2 text-left min-w-40">Document Type</th>
-                  <th className="px-4 py-2 text-center">Role</th>
-                  <th className="px-4 py-2 text-center">View</th>
-                  <th className="px-4 py-2 text-center">Create</th>
-                  <th className="px-4 py-2 text-center">Edit</th>
-                  <th className="px-4 py-2 text-center">Delete</th>
-                  <th className="px-4 py-2 text-center">Approve</th>
-                  <th className="px-4 py-2 text-center">Reject</th>
-                  <th className="px-4 py-2 text-center">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 bg-white">
-                {accessRules.length === 0 ? (
-                  <tr>
-                    <td colSpan="9" className="px-4 py-8 text-center text-slate-400">
-                      No rules defined. Create one to get started.
-                    </td>
-                  </tr>
-                ) : (
-                  accessRules.map(rule => (
-                    <tr key={rule.id} className="hover:bg-slate-50">
-                      <td className="px-4 py-2 font-mono font-semibold text-slate-900">{rule.doc_type}</td>
-                      <td className="px-4 py-2">
-                        <div className="flex flex-wrap gap-1 justify-center">
-                          {rule.allowed_roles?.map(r => (
-                            <span key={r} className="bg-slate-200 text-slate-700 px-2 py-0.5 rounded text-xs font-medium">
-                              {r}
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="px-4 py-2 text-center">{rule.can_view ? <Check className="w-4 h-4 text-green-600 mx-auto" /> : <X className="w-4 h-4 text-slate-300 mx-auto" />}</td>
-                      <td className="px-4 py-2 text-center">{rule.can_create ? <Check className="w-4 h-4 text-green-600 mx-auto" /> : <X className="w-4 h-4 text-slate-300 mx-auto" />}</td>
-                      <td className="px-4 py-2 text-center">{rule.can_edit ? <Check className="w-4 h-4 text-green-600 mx-auto" /> : <X className="w-4 h-4 text-slate-300 mx-auto" />}</td>
-                      <td className="px-4 py-2 text-center">—</td>
-                      <td className="px-4 py-2 text-center">{rule.can_approve ? <Check className="w-4 h-4 text-green-600 mx-auto" /> : <X className="w-4 h-4 text-slate-300 mx-auto" />}</td>
-                      <td className="px-4 py-2 text-center">{rule.can_reject ? <Check className="w-4 h-4 text-green-600 mx-auto" /> : <X className="w-4 h-4 text-slate-300 mx-auto" />}</td>
-                      <td className="px-4 py-2 text-center flex gap-1 justify-center">
-                        <button onClick={() => { setEditingRule(rule); setFormOpen(true); }} className="p-1.5 hover:bg-slate-100 rounded">
-                          <Pencil className="w-3.5 h-3.5 text-slate-500" />
-                        </button>
-                        <button onClick={() => handleDeleteRule(rule.id)} className="p-1.5 hover:bg-red-50 rounded">
-                          <Trash2 className="w-3.5 h-3.5 text-red-500" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+    <div className="max-w-6xl mx-auto space-y-5 pb-12">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Document Access Matrix</h1>
+          <p className="text-sm text-slate-500 mt-0.5">Define CRUD permissions for each document type per role</p>
         </div>
-      )}
+        <Button onClick={() => handleEditRule(null)} className="gap-2 min-h-[44px]">
+          <Plus className="w-4 h-4" /> New Rule
+        </Button>
+      </div>
 
-      {/* Approval Rules Tab */}
-      {activeTab === 'approval' && (
-        <div className="space-y-4">
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex gap-2">
-            <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-            <p className="text-xs text-blue-800">Approval rules define which roles can perform state transitions (e.g., SUBMITTED → APPROVED).</p>
-          </div>
+      {/* Info */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex gap-3">
+        <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+        <div className="text-sm text-blue-900">
+          <p className="font-semibold">3-Tier Permission Model:</p>
+          <ul className="text-xs mt-2 space-y-1">
+            <li><strong>Module Level:</strong> Which modules a role can access (Role Manager)</li>
+            <li><strong>Entity Level:</strong> CRUD operations per document type (This page)</li>
+            <li><strong>Workflow Level:</strong> State transitions per action (Approval Rules Manager)</li>
+          </ul>
+        </div>
+      </div>
 
-          <div className="overflow-x-auto border border-slate-200 rounded-lg">
-            <table className="w-full text-xs">
-              <thead className="bg-slate-100 text-slate-700 uppercase tracking-wide sticky top-0">
-                <tr>
-                  <th className="px-4 py-2 text-left min-w-40">Document Type</th>
-                  <th className="px-4 py-2 text-left min-w-32">Transition</th>
-                  <th className="px-4 py-2 text-left min-w-40">Action</th>
-                  <th className="px-4 py-2 text-left">Roles</th>
-                  <th className="px-4 py-2 text-center">Reason?</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 bg-white">
-                {approvalRules.length === 0 ? (
-                  <tr>
-                    <td colSpan="5" className="px-4 py-8 text-center text-slate-400">
-                      No approval rules defined yet.
-                    </td>
-                  </tr>
-                ) : (
-                  approvalRules.map(rule => (
-                    <tr key={rule.id} className="hover:bg-slate-50">
-                      <td className="px-4 py-2 font-mono font-semibold text-slate-900">{rule.doc_type}</td>
-                      <td className="px-4 py-2 text-xs font-mono">
-                        <span className="bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded">{rule.from_state}</span>
-                        <span className="mx-1">→</span>
-                        <span className="bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded">{rule.to_state}</span>
-                      </td>
-                      <td className="px-4 py-2">
-                        <span className={`px-2 py-0.5 rounded-full font-medium text-xs ${
-                          rule.action_style === 'approve' ? 'bg-green-100 text-green-700' :
-                          rule.action_style === 'reject' ? 'bg-red-100 text-red-700' :
-                          'bg-slate-100 text-slate-700'
-                        }`}>
-                          {rule.action_label}
+      {/* Rules Table */}
+      <div className="overflow-x-auto border border-slate-200 rounded-lg bg-white">
+        <table className="w-full text-sm">
+          <thead className="bg-slate-100 text-slate-700 uppercase tracking-wide font-semibold sticky top-0">
+            <tr>
+              <th className="px-4 py-3 text-left min-w-40">Document Type</th>
+              <th className="px-4 py-3 text-left min-w-48">Role</th>
+              <th className="px-4 py-3 text-center">View</th>
+              <th className="px-4 py-3 text-center">Create</th>
+              <th className="px-4 py-3 text-center">Edit</th>
+              <th className="px-4 py-3 text-center">Delete</th>
+              <th className="px-4 py-3 text-center">Approve</th>
+              <th className="px-4 py-3 text-center">Reject</th>
+              <th className="px-4 py-3 text-center w-20">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {accessRules.length === 0 ? (
+              <tr>
+                <td colSpan="9" className="px-4 py-12 text-center text-slate-400">
+                  <p className="font-medium">No rules yet</p>
+                  <p className="text-xs mt-1">Click "New Rule" to get started</p>
+                </td>
+              </tr>
+            ) : (
+              accessRules.map(rule => (
+                <tr key={rule.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="px-4 py-3 font-semibold text-slate-900">{rule.doc_type}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap gap-1">
+                      {rule.allowed_roles?.map(r => (
+                        <span key={r} className="bg-slate-200 text-slate-700 px-2 py-0.5 rounded text-xs font-medium">
+                          {roles.find(x => x.role_key === r)?.label || r}
                         </span>
-                      </td>
-                      <td className="px-4 py-2">
-                        <div className="flex flex-wrap gap-1">
-                          {rule.allowed_roles?.map(r => (
-                            <span key={r} className="bg-slate-200 text-slate-700 px-2 py-0.5 rounded text-xs font-medium">
-                              {r}
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="px-4 py-2 text-center">
-                        {rule.require_reason ? <Check className="w-4 h-4 text-amber-600 mx-auto" /> : <X className="w-4 h-4 text-slate-300 mx-auto" />}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+                      ))}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-center">{rule.can_view ? <Check className="w-5 h-5 text-green-600 mx-auto" /> : <X className="w-5 h-5 text-slate-300 mx-auto" />}</td>
+                  <td className="px-4 py-3 text-center">{rule.can_create ? <Check className="w-5 h-5 text-green-600 mx-auto" /> : <X className="w-5 h-5 text-slate-300 mx-auto" />}</td>
+                  <td className="px-4 py-3 text-center">{rule.can_edit ? <Check className="w-5 h-5 text-green-600 mx-auto" /> : <X className="w-5 h-5 text-slate-300 mx-auto" />}</td>
+                  <td className="px-4 py-3 text-center">{rule.can_delete ? <Check className="w-5 h-5 text-red-600 mx-auto" /> : <X className="w-5 h-5 text-slate-300 mx-auto" />}</td>
+                  <td className="px-4 py-3 text-center">{rule.can_approve ? <Check className="w-5 h-5 text-green-600 mx-auto" /> : <X className="w-5 h-5 text-slate-300 mx-auto" />}</td>
+                  <td className="px-4 py-3 text-center">{rule.can_reject ? <Check className="w-5 h-5 text-red-600 mx-auto" /> : <X className="w-5 h-5 text-slate-300 mx-auto" />}</td>
+                  <td className="px-4 py-3 text-center flex gap-1 justify-center">
+                    <button onClick={() => handleEditRule(rule)} className="p-1.5 hover:bg-slate-100 rounded transition-colors" title="Edit">
+                      <Pencil className="w-4 h-4 text-slate-600" />
+                    </button>
+                    <button onClick={() => setDeleteTarget(rule)} className="p-1.5 hover:bg-red-50 rounded transition-colors" title="Delete">
+                      <Trash2 className="w-4 h-4 text-red-500" />
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
 
       {/* Edit Dialog */}
       {formOpen && editingRule && (
