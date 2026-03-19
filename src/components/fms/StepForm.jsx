@@ -12,9 +12,8 @@ import StepChecklistBuilder from './StepChecklistBuilder';
 import { Info } from 'lucide-react';
 
 const ANCHOR_HINTS = {
-  run_start: 'Timer starts from when the entire process run was first triggered (e.g. day 0 of the whole workflow).',
-  step_start: 'Timer starts from when this specific step becomes active (i.e. the previous step was completed).',
-  predecessor_completion: 'Same as Step Start — timer starts the moment the previous step is marked done.',
+  run_start: 'Timer starts from when the entire process was first triggered — useful for global deadlines across all steps (e.g. "must complete within 5 days of the PR being raised").',
+  step_start: 'Timer starts the moment the previous step is marked done and this step becomes active — the most common choice.',
 };
 
 const TYPE_HINTS = {
