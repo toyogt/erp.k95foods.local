@@ -3,6 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { Loader2, WifiOff, Bell } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import { canAccessPage } from '@/lib/permissionResolver';
 import LiveCounters from './LiveCounters';
 import LocationHeatmap from './LocationHeatmap';
 import RecentActivity from './RecentActivity';
@@ -47,10 +48,21 @@ export default function AdminDashboard({ user }) {
   const [openAlertCount, setOpenAlertCount] = useState(0);
   const [cratesByLocation, setCratesByLocation] = useState([]);
   const [recentLogs, setRecentLogs] = useState([]);
+  const [allowedPages, setAllowedPages] = useState([]);
 
   useEffect(() => {
+    // Load user's allowed pages
+    const loadPermissions = async () => {
+      try {
+        const pages = await canAccessPage(user);
+        setAllowedPages(pages);
+      } catch (e) {
+        console.error('Failed to load permissions:', e);
+      }
+    };
+    loadPermissions();
     loadData();
-  }, []);
+  }, [user]);
 
   async function loadData() {
     try {
@@ -169,7 +181,7 @@ export default function AdminDashboard({ user }) {
           <Link to={createPageUrl('CustomizeDashboard')} className="text-xs text-blue-600 font-medium">Customize ›</Link>
         </div>
         <div className="space-y-3">
-          {ALL_STATIONS.map(s => <StationCard key={s.page} {...s} />)}
+          {ALL_STATIONS.filter(s => user?.role === 'admin' || allowedPages.includes(s.page)).map(s => <StationCard key={s.page} {...s} />)}
         </div>
       </div>
 
