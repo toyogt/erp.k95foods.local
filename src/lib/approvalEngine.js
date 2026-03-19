@@ -12,25 +12,20 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
+import { pageRegistry, moduleRegistry, getPagesInModule } from '@/lib/registryConfig';
 
-// ── Module key → page keys mapping (mirrors moduleConfig.js) ──────────────────
-export const MODULE_PAGES = {
-  DASHBOARD:   ['Dashboard'],
-  PRODUCTION:  ['ProductionControl','ProductionOrders','LiquidPlans','FillingStation','ChamberStation','RecipeStation','ShiftKPIDashboard','PullLists'],
-  LABELLING:   ['LabellingLine','LabelRollManager','BoxLabelPrint','BoxLabelApprovals','BoxPalletBuild','FeederKiosk'],
-  WAREHOUSE:   ['TransferReceiving','DispatchCrates','FGWarehouse','WarehouseOps','BoxStockDashboard','OpeningStockImport'],
-  PURCHASE:    ['PurchaseOps','SupplierManager','ApprovalsInbox'],
-  GRN:         ['GateEntry','GateInbox','GRNReceive','Putaway'],
-  QUALITY:     ['QCInbox'],
-  ACCOUNTS:    ['InvoiceCapture','ThreeWayMatch','PaymentRequests'],
-  FMS:         ['FMSMyTasks','FMSActiveRuns','FMSMonitor','FMSProcesses','FMSUsers'],
-  ADMIN:       ['MasterData','SKUSetup','RecipeBuilder','IngredientManager','IngredientGroupManager','UOMManager','BoxTypeManager','LabelArtworkManager','RyanTemplateManager','ProductTaxonomy','WarehouseBins','TraceInvestigation','AlertsPage','AuditLogPage','UserManagement','RoleManager','ApprovalRulesManager'],
-};
+/**
+ * Get module pages dynamically from registryConfig
+ * Single source of truth prevents duplication
+ */
+export function getModulePages(moduleKey) {
+  return getPagesInModule(moduleKey).map(p => p.pageKey);
+}
 
-export const ALL_MODULE_KEYS = Object.keys(MODULE_PAGES);
+export const ALL_MODULE_KEYS = moduleRegistry.map(m => m.moduleKey);
 
-// Admin-only pages that never appear in role module access (always admin only)
-export const ADMIN_ONLY_PAGES = ['UserManagement', 'RoleManager', 'ApprovalRulesManager', 'FMSProcesses', 'SKUSetup', 'RecipeBuilder'];
+// Admin-only pages derived from registryConfig
+export const ADMIN_ONLY_PAGES = pageRegistry.filter(p => p.adminOnly).map(p => p.pageKey);
 
 /**
  * Check if a user's role key can access a given page, based on AppRole records.
