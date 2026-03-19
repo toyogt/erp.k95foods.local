@@ -85,8 +85,29 @@ export function isAdmin(user) {
 }
 
 export const TAT_TYPE_LABELS = {
-  fixed_hours: 'Fixed Hours',
-  end_of_day: 'End of Day',
-  fixed_clock_time: 'Fixed Time',
-  business_days: 'Business Days',
+  calendar_days: 'Calendar Days',
+  working_days: 'Working Days',
+  hours: 'Hours',
 };
+
+export const TAT_UNIT_LABELS = {
+  hours: 'Hours',
+  day: 'Days',
+  week: 'Weeks',
+  month: 'Months',
+};
+
+export const TAT_ANCHOR_LABELS = {
+  run_start: 'Run Start',
+  step_start: 'Step Start',
+  predecessor_completion: 'Previous Step Completion',
+};
+
+export function formatTATSummary(step) {
+  if (!step?.tat_value) return '—';
+  const type = TAT_TYPE_LABELS[step.tat_type] || step.tat_type || '';
+  const unit = TAT_UNIT_LABELS[step.tat_unit] || step.tat_unit || '';
+  const anchor = TAT_ANCHOR_LABELS[step.tat_anchor_type] || step.tat_anchor_type || '';
+  const due = step.fixed_due_time ? ` at ${step.fixed_due_time}` : '';
+  return `${step.tat_value} ${unit} (${type}) after ${anchor}${due}`;
+}
