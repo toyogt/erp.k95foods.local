@@ -6,6 +6,8 @@ import OfflineProvider, { OfflineBanner } from '@/components/OfflineProvider';
 import { MODULES, getModuleForPage, getVisibleModules, getVisiblePages } from '@/components/nav/moduleConfig';
 import { isOperatorLayout } from '@/lib/roleLayoutMap';
 import OperatorLayout from '@/components/layouts/OperatorLayout';
+import AccessDenied from '@/components/AccessDenied';
+import { getAllowedPagesFromDB } from '@/lib/accessControl';
 import {
   Factory, LogOut, X, ChevronDown, LayoutDashboard, Menu, ChevronRight
 } from 'lucide-react';
