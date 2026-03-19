@@ -101,6 +101,7 @@ export const pageRegistry = [
   { pageKey: 'TraceInvestigation', title: 'Trace Investigation', moduleKey: 'ADMIN', icon: Search, roles: ['admin', 'production_manager', 'user'] },
   { pageKey: 'AlertsPage', title: 'Alerts', moduleKey: 'ADMIN', icon: Bell, roles: ['admin', 'production_manager', 'label_supervisor', 'labelling_supervisor', 'user'] },
   { pageKey: 'AuditLogPage', title: 'Audit Log', moduleKey: 'ADMIN', icon: ScrollText, roles: ['admin', 'production_manager', 'qa', 'user'] },
+  { pageKey: 'TraceabilityExplorer', title: 'Traceability Explorer', moduleKey: 'ADMIN', icon: Search, roles: ['admin', 'production_manager', 'qa', 'warehouse_ops', 'user'] },
 
   // ─── ADMIN / SYSTEM ───
    { pageKey: 'UserManagement', title: 'User Management', moduleKey: 'ADMIN', icon: Users, roles: ['admin'], adminOnly: true },
