@@ -50,7 +50,7 @@ export default function Layout({ children, currentPageName }) {
   useEffect(() => {
     const active = getModuleForPage(currentPageName);
     if (active) {
-      setExpandedModules(prev => ({ ...prev, [active.key]: true }));
+      setExpandedModules(prev => ({ ...prev, [active.moduleKey]: true }));
     }
   }, [currentPageName]);
 
@@ -77,8 +77,8 @@ export default function Layout({ children, currentPageName }) {
   const visibleModules = getVisibleModules(role);
   const activeModule = getModuleForPage(currentPageName);
 
-  const toggleModule = (key) => {
-    setExpandedModules(prev => ({ ...prev, [key]: !prev[key] }));
+  const toggleModule = (moduleKey) => {
+    setExpandedModules(prev => ({ ...prev, [moduleKey]: !prev[moduleKey] }));
   };
 
   const SidebarContent = ({ onNavigate }) => (
