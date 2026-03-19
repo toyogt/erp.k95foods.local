@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import {
   Plus, Loader2, Search, ChevronDown, ChevronRight, Trash2, Info, AlertTriangle
 } from 'lucide-react';
+import { fireFMSEvent, findFMSInstanceByRef, linkFMSRef } from '@/lib/useFMSAutoComplete';
 
 // ── helpers ────────────────────────────────────────────────
 function genPlanId() {
@@ -290,7 +291,7 @@ function CreatePlanDialog({ open, onClose, products, boxTypes, recipeGroups, rec
 
     setSaving(true);
     const planId = genPlanId();
-    await base44.entities.LiquidBatchPlan.create({
+    const plan = await base44.entities.LiquidBatchPlan.create({
       plan_id: planId,
       recipe_id: recipeGroupId,
       recipe_name: recipeGroups.find(g => g.recipe_group_id === recipeGroupId)?.recipe_name || recipeGroupId,
@@ -333,6 +334,16 @@ function CreatePlanDialog({ open, onClose, products, boxTypes, recipeGroups, rec
       });
       seq++;
     }
+
+    // FMS: fire event and link plan into ref_chain
+    // Note: If this plan was created from ProductionOrder, it would have been triggered by that order.
+    // For standalone plan creation, fire the event and link to any matching instance.
+    await fireFMSEvent('liquid_plan_created', plan.id);
+    const instances = await findFMSInstanceByRef(plan.id);
+    for (const inst of instances) {
+      await linkFMSRef(inst.id, plan.id);
+    }
+
     setSaving(false);
     onCreated(planId);
     onClose();
