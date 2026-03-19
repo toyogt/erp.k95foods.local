@@ -97,7 +97,7 @@ export default function UserManagement() {
           </div>
           <p className="text-sm text-slate-500 mt-0.5">Manage users and assign roles</p>
         </div>
-        <Button onClick={() => setShowInvite(true)} className="gap-2 min-h-[44px]">
+        <Button onClick={() => setShowInvite(true)} className="gap-2 h-11 px-4">
           <UserPlus className="w-4 h-4" /> Invite User
         </Button>
       </div>
@@ -208,7 +208,7 @@ export default function UserManagement() {
               {inviteError && <p className="text-red-600 text-sm">{inviteError}</p>}
               <div className="flex gap-2 justify-end">
                 <Button variant="outline" onClick={() => setShowInvite(false)}>Cancel</Button>
-                <Button onClick={invite} disabled={inviting || !inviteEmail} className="min-h-[44px]">
+                <Button onClick={invite} disabled={inviting || !inviteEmail} className="h-11 px-4">
                   {inviting ? <><Loader2 className="w-4 h-4 animate-spin mr-1" />Inviting…</> : 'Send Invite'}
                 </Button>
               </div>

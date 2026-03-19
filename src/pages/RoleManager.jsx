@@ -114,7 +114,7 @@ function RoleForm({ initial, onSave, onCancel, saving }) {
         <Button
           disabled={saving || !form.role_key || !form.label}
           onClick={() => onSave(form)}
-          className="min-h-[44px]"
+          className="h-11 px-4"
         >
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : (initial ? 'Save Changes' : 'Create Role')}
         </Button>
@@ -183,7 +183,7 @@ export default function RoleManager() {
           </div>
           <p className="text-sm text-slate-500 mt-0.5">Create and manage application roles and their module access</p>
         </div>
-        <Button onClick={() => setModal({ mode: 'create' })} className="gap-2 min-h-[44px]">
+        <Button onClick={() => setModal({ mode: 'create' })} className="gap-2 h-11 px-4">
           <Plus className="w-4 h-4" /> New Role
         </Button>
       </div>
@@ -263,7 +263,7 @@ export default function RoleManager() {
             </p>
             <div className="flex gap-2 justify-end mt-4">
               <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>
-              <Button className="bg-red-600 hover:bg-red-700 min-h-[44px]" onClick={handleDelete} disabled={deleting}>
+              <Button className="bg-red-600 hover:bg-red-700 h-11 px-4" onClick={handleDelete} disabled={deleting}>
                 {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Delete Role'}
               </Button>
             </div>
