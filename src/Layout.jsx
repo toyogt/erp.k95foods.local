@@ -114,7 +114,10 @@ export default function Layout({ children, currentPageName }) {
         {visibleModules.filter(m => m.moduleKey !== 'DASHBOARD').map(mod => {
           const Icon = mod.icon;
           const pages = getVisiblePagesInModule(mod.moduleKey, role);
-          if (pages.length === 0) return null; // Hide module if no pages visible
+          
+          // Filter pages by allowedPages (respects page_access overrides)
+          const visiblePages = pages.filter(p => allowedPages.includes('*') || allowedPages.includes(p.pageKey));
+          if (visiblePages.length === 0) return null; // Hide module if no pages visible
           const isActive = activeModule?.moduleKey === mod.moduleKey;
           const isExpanded = expandedModules[mod.moduleKey];
 
@@ -141,7 +144,7 @@ export default function Layout({ children, currentPageName }) {
               {/* Sub-pages */}
               {!sidebarCollapsed && isExpanded && (
                 <div className="ml-3 pl-3 border-l-2 border-slate-100 mt-0.5 space-y-0.5">
-                  {pages.map(page => {
+                  {visiblePages.map(page => {
                     const PIcon = page.icon;
                     const pageActive = currentPageName === page.pageKey;
                     return (
