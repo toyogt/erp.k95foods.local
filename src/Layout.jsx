@@ -99,7 +99,7 @@ export default function Layout({ children, currentPageName }) {
         {/* Module groups */}
         {visibleModules.filter(m => m.key !== 'DASHBOARD').map(mod => {
           const Icon = mod.icon;
-          const pages = getVisiblePages(mod, role);
+          const pages = getVisiblePages(mod, role, roleModuleAccess);
           const isActive = activeModule?.key === mod.key;
           const isExpanded = expandedModules[mod.key];
 
