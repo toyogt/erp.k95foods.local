@@ -22,6 +22,13 @@ export default function InstanceDetail({ instanceId, user, users, onClose, onUpd
   const [loading, setLoading] = useState(true);
   const [reassignStep, setReassignStep] = useState(null);
   const [escalateStep, setEscalateStep] = useState(null);
+  const [copiedId, setCopiedId] = useState(null);
+
+  const copyId = (id) => {
+    navigator.clipboard.writeText(id);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 1500);
+  };
 
   const load = async () => {
     const [instances, stepList, logList] = await Promise.all([
