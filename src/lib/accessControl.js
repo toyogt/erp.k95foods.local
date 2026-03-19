@@ -34,11 +34,9 @@ export async function getAllowedPagesFromDB(user) {
       
       // If page_access overrides are set, replace module pages with only those pages
       if (role.page_access?.length > 0) {
-        console.log('Using page_access overrides:', role.page_access);
         return role.page_access;
       }
       
-      console.log('Using module pages:', Array.from(allowedPages));
       return Array.from(allowedPages);
     }
   } catch (err) {
