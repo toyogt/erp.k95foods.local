@@ -3,6 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Loader2, Plus, Trash2, ChevronRight, ChevronLeft } from 'lucide-react';
 import { genId, logPurchaseAudit } from './purchaseHelpers';
+import { triggerFMSProcess } from '@/lib/useFMSAutoComplete';
 
 export default function MRWizard({ user, onDone, onCancel }) {
   const [step, setStep] = useState(1);
