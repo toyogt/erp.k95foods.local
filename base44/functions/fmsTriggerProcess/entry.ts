@@ -259,7 +259,7 @@ Deno.serve(async (req) => {
         }
       }
 
-      const result = await completeStepAndAdvance(base44, stepInst, completedBy, completion_note, now);
+      const result = await completeStepAndAdvance(base44, stepInst, completedBy, completion_note, now, checklist_responses);
       return Response.json({ success: true, message: result.process_completed ? 'Process completed' : 'Step completed, next step activated', ...result });
     }
 
