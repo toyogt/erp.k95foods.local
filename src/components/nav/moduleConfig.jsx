@@ -4,8 +4,8 @@ import {
   Droplets, Thermometer, Truck, Printer, ClipboardCheck,
   Layers, BarChart3, Upload, ListChecks, Bell, ScrollText,
   Search, PlayCircle, MonitorDot, Users, FlaskConical,
-  PackageSearch, Zap, BoxIcon, TestTube2, ShieldCheck,
-  Archive, FileText, BarChart2, GitMerge, ClipboardList,
+  PackageSearch, Zap, Box, TestTube2, ShieldCheck,
+  Archive, FileText, GitMerge, ClipboardList,
 } from 'lucide-react';
 
 /**
@@ -145,7 +145,7 @@ export const MODULES = [
       { key: 'IngredientManager',    label: 'Ingredients',        icon: Zap,           roles: ['admin'], adminOnly: true },
       { key: 'IngredientGroupManager',label:'Ingredient Groups',  icon: Zap,           roles: ['admin'], adminOnly: true },
       { key: 'UOMManager',           label: 'UOMs',               icon: Tag,           roles: ['admin'], adminOnly: true },
-      { key: 'BoxTypeManager',       label: 'Box Types',          icon: BoxIcon,       roles: ['admin'], adminOnly: true },
+      { key: 'BoxTypeManager',       label: 'Box Types',          icon: Box,           roles: ['admin'], adminOnly: true },
       { key: 'LabelArtworkManager',  label: 'Label Artworks',     icon: Printer,       roles: ['admin'], adminOnly: true },
       { key: 'RyanTemplateManager',  label: 'Ryan Templates',     icon: Printer,       roles: ['admin'], adminOnly: true },
       { key: 'ProductTaxonomy',      label: 'Product Taxonomy',   icon: Layers,        roles: ['admin'], adminOnly: true },
