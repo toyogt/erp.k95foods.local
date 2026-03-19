@@ -3,7 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { Loader2, WifiOff, Bell } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { canAccessPage } from '@/lib/permissionResolver';
+import { getAllowedPagesFromDB } from '@/lib/accessControl';
 import LiveCounters from './LiveCounters';
 import LocationHeatmap from './LocationHeatmap';
 import RecentActivity from './RecentActivity';
@@ -54,13 +54,14 @@ export default function AdminDashboard({ user }) {
     // Load user's allowed pages
     const loadPermissions = async () => {
       try {
-        const pages = await canAccessPage(user);
-        setAllowedPages(pages);
+        const pages = await getAllowedPagesFromDB(user);
+        setAllowedPages(pages || []);
       } catch (e) {
         console.error('Failed to load permissions:', e);
+        setAllowedPages([]);
       }
     };
-    loadPermissions();
+    if (user) loadPermissions();
     loadData();
   }, [user]);
 
