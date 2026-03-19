@@ -118,10 +118,7 @@ function RoleForm({ initial, onSave, onCancel, saving }) {
              return (
                <div key={mod} className="border border-slate-200 rounded-lg overflow-hidden">
                  <button
-                   onClick={() => {
-                     toggleModule(mod);
-                     if (!isSelected) setExpandedModule(mod);
-                   }}
+                   onClick={() => toggleExpandModule(mod)}
                    className={`w-full flex items-center gap-2 px-3 py-2.5 text-sm font-medium transition-all ${
                      isSelected
                        ? 'bg-slate-900 text-white'
@@ -132,10 +129,10 @@ function RoleForm({ initial, onSave, onCancel, saving }) {
                      type="checkbox"
                      checked={isSelected}
                      onChange={() => {}}
-                     className="cursor-pointer"
+                     className="cursor-pointer pointer-events-none"
                    />
                    <span className="flex-1 text-left">{MODULE_LABELS[mod] || mod}</span>
-                   {isSelected && (
+                   {modulePages.length > 0 && (
                      <ChevronDown className={`w-4 h-4 transition-transform ${expandedModule === mod ? 'rotate-180' : ''}`} />
                    )}
                  </button>
