@@ -1,5 +1,5 @@
 import { base44 } from '@/api/base44Client';
-import { getPagesInModule, ALL_MODULE_KEYS } from '@/lib/registryConfig';
+import { getPagesInModule } from '@/lib/registryConfig';
 
 /**
  * Get allowed pages for a user from database AppRole
