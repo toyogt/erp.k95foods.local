@@ -232,7 +232,6 @@ export default function FMSMyTasks() {
           </div>
         )}
       </div>
-
       {/* Completion Modal */}
       {activeModal && (
         <Dialog open onOpenChange={() => setActiveModal(null)}>
