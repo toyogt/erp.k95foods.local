@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Loader2, Plus, Pencil, Trash2, Shield, ChevronDown, ChevronUp } from 'lucide-react';
 import { ALL_MODULE_KEYS } from '@/lib/approvalEngine';
+import { getPagesInModule, getVisiblePagesInModule } from '@/lib/registryConfig';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { auditRoleCreated, auditRoleUpdated, auditRoleDeactivated } from '@/lib/auditAdminActions';
 
@@ -32,6 +33,7 @@ const EMPTY_FORM = { role_key: '', label: '', description: '', color: 'slate', m
 
 function RoleForm({ initial, onSave, onCancel, saving }) {
   const [form, setForm] = useState(initial || EMPTY_FORM);
+  const [expandedModule, setExpandedModule] = useState(null);
 
   const toggleModule = (mod) => {
     setForm(f => ({
@@ -39,6 +41,15 @@ function RoleForm({ initial, onSave, onCancel, saving }) {
       module_access: f.module_access.includes(mod)
         ? f.module_access.filter(m => m !== mod)
         : [...f.module_access, mod],
+    }));
+  };
+
+  const togglePageAccess = (pageKey) => {
+    setForm(f => ({
+      ...f,
+      page_access: f.page_access?.includes(pageKey)
+        ? f.page_access.filter(p => p !== pageKey)
+        : [...(f.page_access || []), pageKey],
     }));
   };
 
@@ -88,28 +99,61 @@ function RoleForm({ initial, onSave, onCancel, saving }) {
       </div>
 
       <div>
-        <Label>Module Access</Label>
-        <p className="text-xs text-slate-400 mb-2">Select which modules this role can access. Admin always has full access.</p>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {ALL_MODULE_KEYS.filter(m => m !== 'ADMIN').map(mod => (
-            <label key={mod} className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-all text-sm ${
-              form.module_access.includes(mod)
-                ? 'bg-slate-900 text-white border-slate-900'
-                : 'bg-white text-slate-700 border-slate-200 hover:border-slate-400'
-            }`}>
-              <input type="checkbox" className="hidden"
-                checked={form.module_access.includes(mod)}
-                onChange={() => toggleModule(mod)} />
-              <span className={`w-3.5 h-3.5 rounded border-2 flex items-center justify-center shrink-0 ${
-                form.module_access.includes(mod) ? 'bg-white border-white' : 'border-slate-300'
-              }`}>
-                {form.module_access.includes(mod) && <span className="block w-2 h-2 bg-slate-900 rounded-sm" />}
-              </span>
-              {MODULE_LABELS[mod] || mod}
-            </label>
-          ))}
-        </div>
-      </div>
+         <Label>Module Access</Label>
+         <p className="text-xs text-slate-400 mb-2">Select modules and configure page-level access within each module</p>
+         <div className="space-y-2">
+           {ALL_MODULE_KEYS.filter(m => m !== 'ADMIN').map(mod => {
+             const isSelected = form.module_access.includes(mod);
+             const modulePages = getPagesInModule(mod);
+             return (
+               <div key={mod} className="border border-slate-200 rounded-lg overflow-hidden">
+                 <button
+                   onClick={() => {
+                     toggleModule(mod);
+                     if (!isSelected) setExpandedModule(mod);
+                   }}
+                   className={`w-full flex items-center gap-2 px-3 py-2.5 text-sm font-medium transition-all ${
+                     isSelected
+                       ? 'bg-slate-900 text-white'
+                       : 'bg-slate-50 text-slate-700 hover:bg-slate-100'
+                   }`}
+                 >
+                   <input
+                     type="checkbox"
+                     checked={isSelected}
+                     onChange={() => {}}
+                     className="cursor-pointer"
+                   />
+                   <span className="flex-1 text-left">{MODULE_LABELS[mod] || mod}</span>
+                   {isSelected && (
+                     <ChevronDown className={`w-4 h-4 transition-transform ${expandedModule === mod ? 'rotate-180' : ''}`} />
+                   )}
+                 </button>
+                 {isSelected && expandedModule === mod && (
+                   <div className="bg-slate-50 border-t border-slate-200 p-3 space-y-1.5 max-h-48 overflow-y-auto">
+                     <p className="text-xs text-slate-500 mb-2">Select pages this role can access:</p>
+                     {modulePages.length === 0 ? (
+                       <p className="text-xs text-slate-400 italic">No pages in this module</p>
+                     ) : (
+                       modulePages.map(page => (
+                         <label key={page.pageKey} className="flex items-center gap-2 px-2 py-1 hover:bg-white rounded cursor-pointer text-xs">
+                           <input
+                             type="checkbox"
+                             checked={form.page_access?.includes(page.pageKey) ?? true}
+                             onChange={() => togglePageAccess(page.pageKey)}
+                             className="cursor-pointer"
+                           />
+                           <span className="text-slate-600">{page.title}</span>
+                         </label>
+                       ))
+                     )}
+                   </div>
+                 )}
+               </div>
+             );
+           })}
+         </div>
+       </div>
 
       <div className="flex gap-2 justify-end pt-2">
         <Button variant="outline" onClick={onCancel}>Cancel</Button>
