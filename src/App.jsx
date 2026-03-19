@@ -7,12 +7,65 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
+import { getAllRoutablePages } from '@/lib/registryConfig';
+
+// Dynamic import for pages
+import AlertsPage from './pages/AlertsPage';
+import ApprovalsInbox from './pages/ApprovalsInbox';
+import AuditLogPage from './pages/AuditLogPage';
+import BoxLabelApprovals from './pages/BoxLabelApprovals';
+import BoxLabelPrint from './pages/BoxLabelPrint';
+import BoxPalletBuild from './pages/BoxPalletBuild';
+import BoxStockDashboard from './pages/BoxStockDashboard';
+import BoxTypeManager from './pages/BoxTypeManager';
+import ChamberStation from './pages/ChamberStation';
+import CustomizeDashboard from './pages/CustomizeDashboard';
+import Dashboard from './pages/Dashboard';
+import DispatchCrates from './pages/DispatchCrates';
+import FGPalletizing from './pages/FGPalletizing';
+import FGWarehouse from './pages/FGWarehouse';
+import FeederKiosk from './pages/FeederKiosk';
+import FillingStation from './pages/FillingStation';
+import GRNReceive from './pages/GRNReceive';
+import GateEntry from './pages/GateEntry';
+import GateInbox from './pages/GateInbox';
+import IngredientGroupManager from './pages/IngredientGroupManager';
+import IngredientManager from './pages/IngredientManager';
+import InvoiceCapture from './pages/InvoiceCapture';
+import LabelArtworkManager from './pages/LabelArtworkManager';
+import LabelRollManager from './pages/LabelRollManager';
+import LabellingLine from './pages/LabellingLine';
+import LiquidPlans from './pages/LiquidPlans';
+import MasterData from './pages/MasterData';
+import OpeningStockImport from './pages/OpeningStockImport';
+import PaymentRequests from './pages/PaymentRequests';
+import ProductTaxonomy from './pages/ProductTaxonomy';
+import ProductionControl from './pages/ProductionControl';
+import ProductionOrders from './pages/ProductionOrders';
+import PullLists from './pages/PullLists';
+import PurchaseGRNHub from './pages/PurchaseGRNHub';
+import PurchaseOps from './pages/PurchaseOps';
+import Putaway from './pages/Putaway';
+import QCInbox from './pages/QCInbox';
+import RecipeBuilder from './pages/RecipeBuilder';
+import RecipeStation from './pages/RecipeStation';
+import RyanTemplateManager from './pages/RyanTemplateManager';
+import SKUSetup from './pages/SKUSetup';
+import ShiftKPIDashboard from './pages/ShiftKPIDashboard';
+import StoresIssue from './pages/StoresIssue';
+import SupplierManager from './pages/SupplierManager';
+import TemplateMappingManager from './pages/TemplateMappingManager';
+import ThreeWayMatch from './pages/ThreeWayMatch';
+import TraceInvestigation from './pages/TraceInvestigation';
+import TransferReceiving from './pages/TransferReceiving';
+import UOMManager from './pages/UOMManager';
+import WarehouseBins from './pages/WarehouseBins';
+import WarehouseOps from './pages/WarehouseOps';
 import BarcodeOCRTest from './pages/BarcodeOCRTest';
 import FMSMyTasks from './pages/FMSMyTasks';
 import FMSProcesses from './pages/FMSProcesses';
 import FMSActiveRuns from './pages/FMSActiveRuns';
 import FMSMonitor from './pages/FMSMonitor';
-
 import UserManagement from './pages/UserManagement';
 import RoleManager from './pages/RoleManager';
 import ApprovalRulesManager from './pages/ApprovalRulesManager';
@@ -23,7 +76,21 @@ import AccessAuditLog from './pages/AccessAuditLog';
 import FMSHealthDashboard from './pages/FMSHealthDashboard';
 import OperatorDashboardMobile from './pages/OperatorDashboardMobile';
 import PermissionPolicyManager from './pages/PermissionPolicyManager';
-// Add page imports here
+import RoutesDiagnostics from './pages/RoutesDiagnostics';
+
+// Page component lookup table
+const PAGE_COMPONENTS = {
+  AlertsPage, ApprovalsInbox, AuditLogPage, BoxLabelApprovals, BoxLabelPrint, BoxPalletBuild, BoxStockDashboard, BoxTypeManager,
+  ChamberStation, CustomizeDashboard, Dashboard, DispatchCrates, FGPalletizing, FGWarehouse, FeederKiosk, FillingStation,
+  GRNReceive, GateEntry, GateInbox, IngredientGroupManager, IngredientManager, InvoiceCapture, LabelArtworkManager,
+  LabelRollManager, LabellingLine, LiquidPlans, MasterData, OpeningStockImport, PaymentRequests, ProductTaxonomy,
+  ProductionControl, ProductionOrders, PullLists, PurchaseGRNHub, PurchaseOps, Putaway, QCInbox, RecipeBuilder,
+  RecipeStation, RyanTemplateManager, SKUSetup, ShiftKPIDashboard, StoresIssue, SupplierManager, TemplateMappingManager,
+  ThreeWayMatch, TraceInvestigation, TransferReceiving, UOMManager, WarehouseBins, WarehouseOps,
+  BarcodeOCRTest, FMSMyTasks, FMSProcesses, FMSActiveRuns, FMSMonitor, UserManagement, RoleManager, ApprovalRulesManager,
+  PermissionMatrix, PermissionMatrixDashboard, ApprovalWorkflowHub, AccessAuditLog, FMSHealthDashboard,
+  OperatorDashboardMobile, PermissionPolicyManager, RoutesDiagnostics,
+};
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -56,7 +123,7 @@ const AuthenticatedApp = () => {
     }
   }
 
-  // Render the main app
+  // Render the main app with auto-generated routes from registry
   return (
     <Routes>
       <Route path="/" element={
@@ -64,33 +131,27 @@ const AuthenticatedApp = () => {
           <MainPage />
         </LayoutWrapper>
       } />
-      {Object.entries(Pages).map(([path, Page]) => (
-        <Route
-          key={path}
-          path={`/${path}`}
-          element={
-            <LayoutWrapper currentPageName={path}>
-              <Page />
-            </LayoutWrapper>
-          }
-        />
-      ))}
-      <Route path="/BarcodeOCRTest" element={<LayoutWrapper currentPageName="BarcodeOCRTest"><BarcodeOCRTest /></LayoutWrapper>} />
-      <Route path="/FMSMyTasks" element={<LayoutWrapper currentPageName="FMSMyTasks"><FMSMyTasks /></LayoutWrapper>} />
-      <Route path="/FMSProcesses" element={<LayoutWrapper currentPageName="FMSProcesses"><FMSProcesses /></LayoutWrapper>} />
-      <Route path="/FMSActiveRuns" element={<LayoutWrapper currentPageName="FMSActiveRuns"><FMSActiveRuns /></LayoutWrapper>} />
-      <Route path="/FMSMonitor" element={<LayoutWrapper currentPageName="FMSMonitor"><FMSMonitor /></LayoutWrapper>} />
-
-      <Route path="/UserManagement" element={<LayoutWrapper currentPageName="UserManagement"><UserManagement /></LayoutWrapper>} />
-      <Route path="/RoleManager" element={<LayoutWrapper currentPageName="RoleManager"><RoleManager /></LayoutWrapper>} />
-      <Route path="/ApprovalRulesManager" element={<LayoutWrapper currentPageName="ApprovalRulesManager"><ApprovalRulesManager /></LayoutWrapper>} />
-      <Route path="/PermissionMatrix" element={<LayoutWrapper currentPageName="PermissionMatrix"><PermissionMatrix /></LayoutWrapper>} />
-      <Route path="/PermissionMatrixDashboard" element={<LayoutWrapper currentPageName="PermissionMatrixDashboard"><PermissionMatrixDashboard /></LayoutWrapper>} />
-      <Route path="/ApprovalWorkflowHub" element={<LayoutWrapper currentPageName="ApprovalWorkflowHub"><ApprovalWorkflowHub /></LayoutWrapper>} />
-      <Route path="/AccessAuditLog" element={<LayoutWrapper currentPageName="AccessAuditLog"><AccessAuditLog /></LayoutWrapper>} />
-      <Route path="/FMSHealthDashboard" element={<LayoutWrapper currentPageName="FMSHealthDashboard"><FMSHealthDashboard /></LayoutWrapper>} />
-      <Route path="/OperatorDashboardMobile" element={<LayoutWrapper currentPageName="OperatorDashboardMobile"><OperatorDashboardMobile /></LayoutWrapper>} />
-      <Route path="/PermissionPolicyManager" element={<LayoutWrapper currentPageName="PermissionPolicyManager"><PermissionPolicyManager /></LayoutWrapper>} />
+      
+      {/* Auto-generated routes from unified registry */}
+      {getAllRoutablePages().map((pageEntry) => {
+        const Component = PAGE_COMPONENTS[pageEntry.pageKey];
+        if (!Component) {
+          console.warn(`Page component not found for ${pageEntry.pageKey}`);
+          return null;
+        }
+        return (
+          <Route
+            key={pageEntry.pageKey}
+            path={`/${pageEntry.pageKey}`}
+            element={
+              <LayoutWrapper currentPageName={pageEntry.pageKey}>
+                <Component />
+              </LayoutWrapper>
+            }
+          />
+        );
+      })}
+      
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
