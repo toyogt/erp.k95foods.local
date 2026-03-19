@@ -80,8 +80,6 @@ import ProductTaxonomy from './pages/ProductTaxonomy';
 import ProductionControl from './pages/ProductionControl';
 import ProductionOrders from './pages/ProductionOrders';
 import PullLists from './pages/PullLists';
-import PurchaseGRNHub from './pages/PurchaseGRNHub';
-import PurchaseOps from './pages/PurchaseOps';
 import Putaway from './pages/Putaway';
 import QCInbox from './pages/QCInbox';
 import RecipeBuilder from './pages/RecipeBuilder';
@@ -135,8 +133,6 @@ export const PAGES = {
     "ProductionControl": ProductionControl,
     "ProductionOrders": ProductionOrders,
     "PullLists": PullLists,
-    "PurchaseGRNHub": PurchaseGRNHub,
-    "PurchaseOps": PurchaseOps,
     "Putaway": Putaway,
     "QCInbox": QCInbox,
     "RecipeBuilder": RecipeBuilder,
