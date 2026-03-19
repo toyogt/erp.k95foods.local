@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Loader2 } from 'lucide-react';
+import { isOperatorLayout } from '@/lib/roleLayoutMap';
 import AdminDashboard from '@/components/dashboard/AdminDashboard.jsx';
 import OperatorDashboard from '@/components/dashboard/OperatorDashboard.jsx';
 
@@ -21,8 +22,8 @@ export default function Dashboard() {
     </div>
   );
 
-  // Use database-driven layout mapping instead of hardcoded roles
-  const isOperator = ['filling_operator', 'chamber_operator', 'labelling_supervisor', 'warehouse_ops', 'line_operator', 'dispatch_officer', 'labelling_receiver', 'store_receiver', 'security_guard', 'pallet_builder', 'recipe_operator', 'qc_inspector', 'label_operator'].includes(user?.role);
+  // Use centralized layout mapping from roleLayoutMap.js
+  const isOperator = isOperatorLayout(user?.role);
 
   if (isOperator) return <OperatorDashboard user={user} />;
   return <AdminDashboard user={user} />;
