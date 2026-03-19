@@ -67,8 +67,7 @@ export default function FMSActiveRuns() {
   const activeProcesses = processes.filter(p => p.is_active && p.trigger_type === 'manual');
 
   return (
-    <FMSLayout user={user}>
-      <div className="p-6">
+    <div className="p-6">
         <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
           <div>
             <h1 className="text-2xl font-bold text-slate-800">Active Runs</h1>
@@ -185,6 +184,6 @@ export default function FMSActiveRuns() {
           onUpdated={load}
         />
       )}
-    </FMSLayout>
+    </div>
   );
 }
