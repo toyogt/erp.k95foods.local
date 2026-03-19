@@ -5,7 +5,7 @@ import {
   Layers, BarChart3, Upload, ListChecks, Bell, ScrollText,
   Search, PlayCircle, MonitorDot, Users, FlaskConical,
   PackageSearch, Zap, Box, TestTube2, ShieldCheck,
-  Archive, FileText, GitMerge, ClipboardList,
+  Archive, FileText, ClipboardList,
 } from 'lucide-react';
 
 /**
@@ -113,7 +113,7 @@ export const MODULES = [
     bgColor: 'bg-indigo-50',
     pages: [
       { key: 'InvoiceCapture',  label: 'Invoice Capture',  icon: FileText,      roles: ['admin','accounts_user','accounts_manager','user'] },
-      { key: 'ThreeWayMatch',   label: '3-Way Match',      icon: GitMerge,      roles: ['admin','accounts_user','accounts_manager','user'] },
+      { key: 'ThreeWayMatch',   label: '3-Way Match',      icon: Search,        roles: ['admin','accounts_user','accounts_manager','user'] },
       { key: 'PaymentRequests', label: 'Payment Requests', icon: CreditCard,    roles: ['admin','accounts_manager','user'] },
     ],
   },
