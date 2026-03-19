@@ -1,5 +1,6 @@
-import { CheckCircle2, Circle, Clock, AlertCircle, SkipForward } from 'lucide-react';
+import { CheckCircle2, Circle, Clock, AlertCircle, SkipForward, Link2 } from 'lucide-react';
 import { formatDateTime, getTATBadgeClass } from '@/lib/fmsHelpers';
+import ChecklistReview from './ChecklistReview';
 
 const STATUS_CONFIG = {
   pending:   { icon: Circle,        color: 'text-slate-400', bg: 'bg-slate-100', label: 'Pending' },
@@ -9,7 +10,7 @@ const STATUS_CONFIG = {
   escalated: { icon: AlertCircle,   color: 'text-orange-500',bg: 'bg-orange-50', label: 'Escalated' },
 };
 
-export default function StepTimeline({ steps }) {
+export default function StepTimeline({ steps, refChain = [] }) {
   if (!steps || steps.length === 0) return <p className="text-slate-400 text-sm">No steps yet.</p>;
 
   const sorted = [...steps].sort((a, b) => a.step_order - b.step_order);
@@ -20,6 +21,8 @@ export default function StepTimeline({ steps }) {
         const cfg = STATUS_CONFIG[step.status] || STATUS_CONFIG.pending;
         const Icon = cfg.icon;
         const isLast = idx === sorted.length - 1;
+        const hasChecklist = step.step_checklist && step.step_checklist.length > 0;
+        const hasResponses = step.checklist_responses && Object.keys(step.checklist_responses).length > 0;
 
         return (
           <div key={step.id} className="flex gap-4">
@@ -32,7 +35,7 @@ export default function StepTimeline({ steps }) {
             </div>
 
             {/* Content */}
-            <div className={`pb-5 flex-1 ${isLast ? '' : ''}`}>
+            <div className={`pb-5 flex-1 min-w-0`}>
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <p className="font-semibold text-slate-800 text-sm">
@@ -51,17 +54,46 @@ export default function StepTimeline({ steps }) {
                   )}
                 </div>
               </div>
+
               {step.description && (
                 <p className="text-xs text-slate-500 mt-1 line-clamp-2">{step.description}</p>
               )}
+
+              {/* Completion info */}
               {step.status === 'completed' && step.completed_at && (
                 <p className="text-xs text-green-600 mt-1">
                   ✓ Completed by {step.completed_by || step.assignee_email} at {formatDateTime(step.completed_at)}
                   {step.completion_note && <span className="text-slate-500"> — "{step.completion_note}"</span>}
                 </p>
               )}
+
               {step.reassigned_from && (
                 <p className="text-xs text-orange-500 mt-1">↩ Reassigned from {step.reassigned_from}</p>
+              )}
+
+              {/* Checklist review — show if step has a checklist and is completed */}
+              {step.status === 'completed' && hasChecklist && (
+                <ChecklistReview
+                  checklist={step.step_checklist}
+                  responses={step.checklist_responses || {}}
+                />
+              )}
+
+              {/* Active step with checklist — show structure but no responses yet */}
+              {step.status === 'active' && hasChecklist && (
+                <div className="mt-2 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+                  <p className="text-xs text-blue-600 font-medium">
+                    📋 {step.step_checklist.length} checklist item{step.step_checklist.length !== 1 ? 's' : ''} required
+                  </p>
+                  <ul className="mt-1 space-y-0.5">
+                    {step.step_checklist.map(item => (
+                      <li key={item.id} className="text-xs text-blue-500 flex items-center gap-1">
+                        <span className="w-1 h-1 rounded-full bg-blue-400 shrink-0" />
+                        {item.label}{item.required ? ' *' : ''}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
             </div>
           </div>
