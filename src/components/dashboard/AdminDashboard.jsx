@@ -6,6 +6,7 @@ import { createPageUrl } from '@/utils';
 import LiveCounters from './LiveCounters';
 import LocationHeatmap from './LocationHeatmap';
 import RecentActivity from './RecentActivity';
+import MyTasksWidget from './MyTasksWidget';
 import StationCard from '@/components/StationCard';
 import { Droplets, Thermometer, Truck, Tag,
          ScrollText, Settings, ListChecks, Printer, Factory,

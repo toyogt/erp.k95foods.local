@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
-import { Loader2, ClipboardList, ShoppingCart, BarChart3, Plus } from 'lucide-react';
+import { Loader2, ClipboardList, ShoppingCart, BarChart3, Plus, LayoutGrid, ChevronRight,
+         Truck, PackageOpen, TestTube2, Archive, Upload, ShieldCheck, Inbox } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import MRWizard from '@/components/purchase/MRWizard';
 import MRList from '@/components/purchase/MRList';
@@ -8,7 +11,51 @@ import POForm from '@/components/purchase/POForm';
 import POList from '@/components/purchase/POList';
 import PurchaseReports from '@/components/purchase/PurchaseReports';
 
+const HUB_GROUPS = [
+  {
+    group: 'Purchase',
+    color: 'bg-blue-50 border-blue-200',
+    headerColor: 'bg-blue-600',
+    items: [
+      { label: 'Requisitions', desc: 'Create & manage material requests', icon: ClipboardList, tab: 'mr' },
+      { label: 'Purchase Orders', desc: 'Create & manage purchase orders', icon: ShoppingCart, tab: 'po' },
+      { label: 'Approvals Inbox', desc: 'Review and approve pending requests', icon: Inbox, page: 'ApprovalsInbox' },
+      { label: 'Suppliers', desc: 'Manage supplier master data', icon: Truck, page: 'SupplierManager' },
+    ],
+  },
+  {
+    group: 'Gate & Receiving',
+    color: 'bg-green-50 border-green-200',
+    headerColor: 'bg-green-600',
+    items: [
+      { label: 'Gate Entry', desc: 'Record vehicle & invoice on arrival', icon: ShieldCheck, page: 'GateEntry' },
+      { label: 'Gate Inbox', desc: 'Review open gate entries & link to PO', icon: Truck, page: 'GateInbox' },
+      { label: 'GRN Receive', desc: 'Receive goods and record quantities', icon: PackageOpen, page: 'GRNReceive' },
+    ],
+  },
+  {
+    group: 'Quality & Putaway',
+    color: 'bg-purple-50 border-purple-200',
+    headerColor: 'bg-purple-600',
+    items: [
+      { label: 'QC Inbox', desc: 'Inspect and approve or hold received items', icon: TestTube2, page: 'QCInbox' },
+      { label: 'Putaway', desc: 'Move QC-passed stock to bins', icon: Archive, page: 'Putaway' },
+    ],
+  },
+  {
+    group: 'Accounts',
+    color: 'bg-orange-50 border-orange-200',
+    headerColor: 'bg-orange-600',
+    items: [
+      { label: 'Invoice Capture', desc: 'Upload and process supplier invoices', icon: Upload, page: 'InvoiceCapture' },
+      { label: '3-Way Match', desc: 'Match invoices against PO and GRN', icon: ClipboardList, page: 'ThreeWayMatch' },
+      { label: 'Payment Requests', desc: 'Create and approve payment requests', icon: ShoppingCart, page: 'PaymentRequests' },
+    ],
+  },
+];
+
 const TABS = [
+  { id: 'hub', label: 'Hub', Icon: LayoutGrid },
   { id: 'mr', label: 'Requisitions', Icon: ClipboardList },
   { id: 'po', label: 'Purchase Orders', Icon: ShoppingCart },
   { id: 'reports', label: 'Reports', Icon: BarChart3 },
