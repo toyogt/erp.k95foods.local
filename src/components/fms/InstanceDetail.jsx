@@ -153,7 +153,7 @@ export default function InstanceDetail({ instanceId, user, users, onClose, onUpd
           {/* Timeline */}
           <div>
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Steps Progress</p>
-            <StepTimeline steps={steps} />
+            <StepTimeline steps={steps} refChain={instance.ref_chain || []} />
           </div>
 
           {/* Audit log */}
