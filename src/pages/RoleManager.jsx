@@ -238,7 +238,7 @@ export default function RoleManager() {
                   </Button>
                   {!role.is_system && (
                     <Button size="icon" variant="ghost" className="h-9 w-9 text-red-400 hover:text-red-600 hover:bg-red-50"
-                      onClick={() => setDeleteTarget(role)}>
+                      onClick={() => setDeactivateTarget(role)}>
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   )}
