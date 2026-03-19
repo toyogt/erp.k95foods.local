@@ -42,6 +42,7 @@ export default function UserManagement() {
     setInviting(true);
     try {
       await base44.users.inviteUser(inviteEmail.trim(), inviteRole);
+      await auditUserInvited(user, inviteEmail.trim(), inviteRole);
       setInviteEmail('');
       setInviteRole('user');
       setShowInvite(false);
@@ -54,9 +55,14 @@ export default function UserManagement() {
 
   const updateRole = async (u, newRole) => {
     setSavingRole(u.id);
-    await base44.entities.User.update(u.id, { role: newRole });
+    try {
+      await base44.entities.User.update(u.id, { role: newRole });
+      await auditUserRoleChanged(user, u.email, u.role, newRole);
+      load();
+    } catch (e) {
+      console.error('Error updating role:', e);
+    }
     setSavingRole(null);
-    load();
   };
 
   // Access control handled by Layout.jsx — if user isn't admin, they won't reach this page
