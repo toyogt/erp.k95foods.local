@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, Trash2, Plus } from 'lucide-react';
 import { ALL_MODULE_KEYS } from '@/lib/approvalEngine';
+import { pageRegistry, getPageByKey } from '@/lib/registryConfig';
 
 const EMPTY_POLICY = {
   role_key: '',
@@ -19,9 +20,17 @@ const EMPTY_POLICY = {
   is_active: true,
 };
 
+// Get available pages from registry
+const getAllPages = () => pageRegistry.map(p => ({ key: p.pageKey, title: p.title }));
+const getAllEntities = () => ['Batch', 'Crate', 'Pallet', 'PurchaseOrder', 'GRNHeader', 'Invoice', 'PaymentRequest', 'PackingWO'];
+const getAvailableActions = () => ['Create', 'Edit', 'Delete', 'Approve', 'Receive', 'Dispatch', 'Cancel'];
+
 export default function PermissionPolicyForm({ initial, availableRoles, onSave, onCancel, saving }) {
   const [form, setForm] = useState(initial || EMPTY_POLICY);
   const [error, setError] = useState('');
+  const [allPages] = useState(getAllPages());
+  const [allEntities] = useState(getAllEntities());
+  const [availableActions] = useState(getAvailableActions());
 
   const toggleModule = (mod) => {
     setForm(f => ({
@@ -69,6 +78,16 @@ export default function PermissionPolicyForm({ initial, availableRoles, onSave, 
       setError('Select at least one module');
       return;
     }
+    // Validate page overrides
+    if (form.page_overrides?.some(p => !p.page_key)) {
+      setError('Page overrides must have a page selected');
+      return;
+    }
+    // Validate action permissions
+    if (form.action_permissions?.some(a => !a.action_key || !a.entity_type)) {
+      setError('All action permissions must have Action and Entity selected');
+      return;
+    }
     setError('');
     onSave(form);
   };
@@ -108,84 +127,114 @@ export default function PermissionPolicyForm({ initial, availableRoles, onSave, 
       </div>
 
       <div>
-        <div className="flex items-center justify-between mb-2">
-          <Label>Page Overrides (Optional)</Label>
-          <Button size="sm" variant="outline" onClick={addPageOverride} className="h-8 gap-1">
-            <Plus className="w-3 h-3" /> Add
-          </Button>
-        </div>
-        <div className="space-y-2">
-          {form.page_overrides?.map((override, idx) => (
-            <div key={idx} className="flex gap-2 items-end">
-              <div className="flex-1">
-                <Input
-                  placeholder="Page key"
-                  value={override.page_key}
-                  onChange={e => {
-                    const newOverrides = [...form.page_overrides];
-                    newOverrides[idx].page_key = e.target.value;
-                    setForm(f => ({ ...f, page_overrides: newOverrides }));
-                  }}
-                  className="text-sm"
-                />
-              </div>
-              <select
-                value={override.allow ? 'allow' : 'deny'}
-                onChange={e => {
-                  const newOverrides = [...form.page_overrides];
-                  newOverrides[idx].allow = e.target.value === 'allow';
-                  setForm(f => ({ ...f, page_overrides: newOverrides }));
-                }}
-                className="px-2 py-2 border border-slate-200 rounded text-sm"
-              >
-                <option value="allow">Allow</option>
-                <option value="deny">Deny</option>
-              </select>
-              <Button size="icon" variant="ghost" onClick={() => removePageOverride(idx)} className="text-red-500 h-9 w-9">
-                <Trash2 className="w-4 h-4" />
-              </Button>
-            </div>
-          ))}
-        </div>
-      </div>
+         <div className="flex items-center justify-between mb-2">
+           <Label>Page Access (Optional)</Label>
+           <Button size="sm" variant="outline" onClick={addPageOverride} className="h-8 gap-1">
+             <Plus className="w-3 h-3" /> Add
+           </Button>
+         </div>
+         <p className="text-xs text-slate-500 mb-2">Override page access beyond module defaults</p>
+         <div className="space-y-2">
+           {form.page_overrides?.map((override, idx) => (
+             <div key={idx} className="flex gap-2 items-end border border-slate-200 p-2 rounded-lg">
+               <div className="flex-1">
+                 <select
+                   value={override.page_key}
+                   onChange={e => {
+                     const newOverrides = [...form.page_overrides];
+                     newOverrides[idx].page_key = e.target.value;
+                     setForm(f => ({ ...f, page_overrides: newOverrides }));
+                   }}
+                   className="w-full px-2 py-2 border border-slate-200 rounded text-sm"
+                 >
+                   <option value="">Select Page...</option>
+                   {allPages.map(p => (
+                     <option key={p.key} value={p.key}>{p.title}</option>
+                   ))}
+                 </select>
+               </div>
+               <select
+                 value={override.allow ? 'allow' : 'deny'}
+                 onChange={e => {
+                   const newOverrides = [...form.page_overrides];
+                   newOverrides[idx].allow = e.target.value === 'allow';
+                   setForm(f => ({ ...f, page_overrides: newOverrides }));
+                 }}
+                 className="px-2 py-2 border border-slate-200 rounded text-sm w-28"
+               >
+                 <option value="allow">Allow</option>
+                 <option value="deny">Deny</option>
+               </select>
+               <Button size="icon" variant="ghost" onClick={() => removePageOverride(idx)} className="text-red-500 h-9 w-9 shrink-0">
+                 <Trash2 className="w-4 h-4" />
+               </Button>
+             </div>
+           ))}
+         </div>
+       </div>
 
       <div>
-        <div className="flex items-center justify-between mb-2">
-          <Label>Action Permissions (Optional)</Label>
-          <Button size="sm" variant="outline" onClick={addActionPermission} className="h-8 gap-1">
-            <Plus className="w-3 h-3" /> Add
-          </Button>
-        </div>
-        <div className="space-y-2">
-          {form.action_permissions?.map((action, idx) => (
-            <div key={idx} className="grid grid-cols-1 sm:grid-cols-3 gap-2 items-end border border-slate-200 p-2 rounded-lg">
-              <Input
-                placeholder="Action key"
-                value={action.action_key}
-                onChange={e => {
-                  const newActions = [...form.action_permissions];
-                  newActions[idx].action_key = e.target.value;
-                  setForm(f => ({ ...f, action_permissions: newActions }));
-                }}
-                className="text-sm"
-              />
-              <Input
-                placeholder="Entity type"
-                value={action.entity_type}
-                onChange={e => {
-                  const newActions = [...form.action_permissions];
-                  newActions[idx].entity_type = e.target.value;
-                  setForm(f => ({ ...f, action_permissions: newActions }));
-                }}
-                className="text-sm"
-              />
-              <Button size="icon" variant="ghost" onClick={() => removeActionPermission(idx)} className="text-red-500">
-                <Trash2 className="w-4 h-4" />
-              </Button>
-            </div>
-          ))}
-        </div>
-      </div>
+         <div className="flex items-center justify-between mb-2">
+           <Label>Action Permissions (Optional)</Label>
+           <Button size="sm" variant="outline" onClick={addActionPermission} className="h-8 gap-1">
+             <Plus className="w-3 h-3" /> Add
+           </Button>
+         </div>
+         <p className="text-xs text-slate-500 mb-2">Grant or restrict specific actions on documents</p>
+         <div className="space-y-2">
+           {form.action_permissions?.map((action, idx) => (
+             <div key={idx} className="grid grid-cols-1 md:grid-cols-4 gap-2 items-end border border-slate-200 p-2 rounded-lg">
+               <div>
+                 <select
+                   value={action.action_key}
+                   onChange={e => {
+                     const newActions = [...form.action_permissions];
+                     newActions[idx].action_key = e.target.value;
+                     setForm(f => ({ ...f, action_permissions: newActions }));
+                   }}
+                   className="w-full px-2 py-2 border border-slate-200 rounded text-sm"
+                 >
+                   <option value="">Select Action...</option>
+                   {availableActions.map(a => (
+                     <option key={a} value={a}>{a}</option>
+                   ))}
+                 </select>
+               </div>
+               <div>
+                 <select
+                   value={action.entity_type}
+                   onChange={e => {
+                     const newActions = [...form.action_permissions];
+                     newActions[idx].entity_type = e.target.value;
+                     setForm(f => ({ ...f, action_permissions: newActions }));
+                   }}
+                   className="w-full px-2 py-2 border border-slate-200 rounded text-sm"
+                 >
+                   <option value="">Select Entity...</option>
+                   {allEntities.map(e => (
+                     <option key={e} value={e}>{e}</option>
+                   ))}
+                 </select>
+               </div>
+               <select
+                 value={action.allow ? 'allow' : 'deny'}
+                 onChange={e => {
+                   const newActions = [...form.action_permissions];
+                   newActions[idx].allow = e.target.value === 'allow';
+                   setForm(f => ({ ...f, action_permissions: newActions }));
+                 }}
+                 className="px-2 py-2 border border-slate-200 rounded text-sm"
+               >
+                 <option value="allow">Allow</option>
+                 <option value="deny">Deny</option>
+               </select>
+               <Button size="icon" variant="ghost" onClick={() => removeActionPermission(idx)} className="text-red-500 h-9 w-9 shrink-0">
+                 <Trash2 className="w-4 h-4" />
+               </Button>
+             </div>
+           ))}
+         </div>
+       </div>
 
       {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded">{error}</p>}
 
