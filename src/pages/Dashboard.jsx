@@ -21,8 +21,9 @@ export default function Dashboard() {
     </div>
   );
 
-  const isManager = user?.role === 'admin' || user?.role === 'production_manager';
+  // Use database-driven layout mapping instead of hardcoded roles
+  const isOperator = ['filling_operator', 'chamber_operator', 'labelling_supervisor', 'warehouse_ops', 'line_operator', 'dispatch_officer', 'labelling_receiver', 'store_receiver', 'security_guard', 'pallet_builder', 'recipe_operator', 'qc_inspector', 'label_operator'].includes(user?.role);
 
-  if (isManager) return <AdminDashboard user={user} />;
-  return <OperatorDashboard user={user} />;
+  if (isOperator) return <OperatorDashboard user={user} />;
+  return <AdminDashboard user={user} />;
 }
