@@ -82,6 +82,7 @@ import RulesManager from './pages/RulesManager';
 import BlockedAttemptsViewer from './pages/BlockedAttemptsViewer';
 import TraceabilityExplorer from './pages/TraceabilityExplorer';
 import ReconciliationDashboard from './pages/ReconciliationDashboard';
+import AuditLogViewer from './pages/AuditLogViewer';
 
 // Page component lookup table
 const PAGE_COMPONENTS = {
@@ -137,6 +138,16 @@ const AuthenticatedApp = () => {
         </LayoutWrapper>
       } />
       
+      {/* Explicit route for Audit Log Viewer */}
+      <Route
+        path="/AuditLogViewer"
+        element={
+          <LayoutWrapper currentPageName="AuditLogViewer">
+            <AuditLogViewer />
+          </LayoutWrapper>
+        }
+      />
+
       {/* Auto-generated routes from unified registry */}
       {getAllRoutablePages().map((pageEntry) => {
         const Component = PAGE_COMPONENTS[pageEntry.pageKey];
