@@ -70,17 +70,14 @@ export default function FMSUsers() {
 
   if (!isAdmin(user) && !loading) {
     return (
-      <FMSLayout user={user}>
-        <div className="flex items-center justify-center h-64">
-          <p className="text-slate-400">Admin access required.</p>
-        </div>
-      </FMSLayout>
+      <div className="flex items-center justify-center h-64">
+        <p className="text-slate-400">Admin access required.</p>
+      </div>
     );
   }
 
   return (
-    <FMSLayout user={user}>
-      <div className="p-6">
+    <div className="p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold text-slate-800">User Management</h1>
@@ -206,6 +203,6 @@ export default function FMSUsers() {
           </DialogContent>
         </Dialog>
       )}
-    </FMSLayout>
+    </div>
   );
 }
