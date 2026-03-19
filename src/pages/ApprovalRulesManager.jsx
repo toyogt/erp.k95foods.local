@@ -212,6 +212,10 @@ export default function ApprovalRulesManager() {
     return roleKeys.map(k => roles.find(r => r.role_key === k)?.label || k).join(', ');
   };
 
+  const getDocTypeLabel = (docTypeValue) => {
+    return docTypes.find(d => d.value === docTypeValue)?.label || docTypeValue;
+  };
+
   const ACTION_STYLE_BADGE = {
     approve: 'bg-green-100 text-green-700',
     reject:  'bg-red-100 text-red-600',
