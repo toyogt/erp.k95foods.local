@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import PermissionPolicyForm from '@/components/admin/PermissionPolicyForm';
 import { clearPermissionCache } from '@/lib/permissionResolver';
+import { auditPolicyCreated, auditPolicyUpdated, auditPolicyDeleted } from '@/lib/permissionAudit';
 
 export default function PermissionPolicyManager() {
   const [user, setUser] = useState(null);
@@ -42,8 +43,10 @@ export default function PermissionPolicyManager() {
     try {
       if (modal.mode === 'create') {
         await base44.entities.PermissionPolicy.create(policyData);
+        await auditPolicyCreated(user, policyData.role_key, policyData.module_access);
       } else {
         await base44.entities.PermissionPolicy.update(modal.policy.id, policyData);
+        await auditPolicyUpdated(user, policyData.role_key, { modules: policyData.module_access });
       }
       clearPermissionCache(policyData.role_key);
       setModal(null);
@@ -59,6 +62,7 @@ export default function PermissionPolicyManager() {
     if (!confirm(`Delete policy for ${policy.role_key}?`)) return;
     try {
       await base44.entities.PermissionPolicy.delete(policy.id);
+      await auditPolicyDeleted(user, policy.role_key);
       clearPermissionCache(policy.role_key);
       load();
     } catch (e) {
