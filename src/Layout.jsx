@@ -45,24 +45,14 @@ export default function Layout({ children, currentPageName }) {
 
   const role = user?.role || 'user';
   const isAdmin = role === 'admin';
-  const isFGOnly = role === 'warehouse';
-
-  useEffect(() => {
-    if (!userLoading && isFGOnly && currentPageName !== 'FGWarehouse') {
-      window.location.replace(createPageUrl('FGWarehouse'));
-    }
-  }, [userLoading, isFGOnly, currentPageName]);
+  const isOperator = isOperatorLayout(role);
 
   if (userLoading) return null;
 
-  if (isFGOnly) return (
-    <OfflineProvider>
-      <div className="min-h-screen bg-slate-50">
-        <OfflineBanner />
-        <main className="max-w-screen-2xl mx-auto px-4 py-5 pb-24">{children}</main>
-      </div>
-    </OfflineProvider>
-  );
+  // Operator roles (shop floor) get app-like layout, not sidebar
+  if (isOperator) {
+    return <OperatorLayout currentPageName={currentPageName} user={user}>{children}</OperatorLayout>;
+  }
 
   const visibleModules = getVisibleModules(role, roleModuleAccess);
   const activeModule = getModuleForPage(currentPageName);
