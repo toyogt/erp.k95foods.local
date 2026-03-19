@@ -147,7 +147,7 @@ function RoleForm({ initial, onSave, onCancel, saving }) {
                            <input
                              type="checkbox"
                              checked={form.page_access?.includes(page.pageKey) ?? true}
-                             onChange={() => togglePageAccess(page.pageKey)}
+                             onChange={() => togglePageAccess(page.pageKey, mod)}
                              className="cursor-pointer"
                            />
                            <span className="text-slate-600">{page.title}</span>
