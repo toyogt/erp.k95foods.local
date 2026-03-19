@@ -94,7 +94,7 @@ function calculateDeadlineSafe(anchorTime, step) {
 }
 
 // Complete a step and activate the next one
-async function completeStepAndAdvance(base44, stepInst, completedBy, completionNote, now) {
+async function completeStepAndAdvance(base44, stepInst, completedBy, completionNote, now, checklist_responses) {
   const completionUpdate = {
     status: 'completed',
     completed_at: now,
