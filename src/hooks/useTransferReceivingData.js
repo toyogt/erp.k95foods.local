@@ -39,6 +39,8 @@ export function useTransferReceivingData(transferId = null) {
             500
           );
           setLines(lineItems || []);
+        } else {
+          setError('Transfer not found');
         }
       } else {
         // New transfer
