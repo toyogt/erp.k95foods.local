@@ -175,6 +175,18 @@ export default function PermissionPolicyManager() {
           </DialogContent>
         </Dialog>
       )}
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Delete Permission Policy?"
+        description={`Delete the policy for role "${deleteTarget?.role_key}"? This will immediately revoke the permissions granted to this role.`}
+        confirmLabel="Delete Policy"
+        cancelLabel="Cancel"
+        onConfirm={handleDelete}
+        isDestructive={true}
+        isLoading={deleting}
+      />
     </div>
   );
 }
