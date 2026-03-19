@@ -57,12 +57,24 @@ function RoleForm({ initial, onSave, onCancel, saving }) {
   const [expandedModule, setExpandedModule] = useState(null);
 
   const toggleModule = (mod) => {
-    setForm(f => ({
-      ...f,
-      module_access: f.module_access.includes(mod)
-        ? f.module_access.filter(m => m !== mod)
-        : [...f.module_access, mod],
-    }));
+    const isCurrentlySelected = form.module_access.includes(mod);
+    const modulePages = getPagesInModule(mod).map(p => p.pageKey);
+    
+    setForm(f => {
+      let newPages = f.page_access || [];
+      if (isCurrentlySelected) {
+        // Deselecting module: remove all pages from this module
+        newPages = newPages.filter(p => !modulePages.includes(p));
+      }
+      
+      return {
+        ...f,
+        module_access: isCurrentlySelected
+          ? f.module_access.filter(m => m !== mod)
+          : [...f.module_access, mod],
+        page_access: newPages,
+      };
+    });
   };
 
   const togglePageAccess = (pageKey) => {
