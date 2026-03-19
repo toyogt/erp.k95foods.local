@@ -8,6 +8,8 @@ import { isOperatorLayout } from '@/lib/roleLayoutMap';
 import OperatorLayout from '@/components/layouts/OperatorLayout';
 import AccessDenied from '@/components/AccessDenied';
 import { getAllowedPagesFromDB } from '@/lib/accessControl';
+import { canAccessPage } from '@/lib/permissionResolver';
+import PermissionDebugPanel from '@/components/admin/PermissionDebugPanel';
 import {
   Factory, LogOut, X, ChevronDown, LayoutDashboard, Menu, ChevronRight
 } from 'lucide-react';
@@ -57,8 +59,8 @@ export default function Layout({ children, currentPageName }) {
   const isOperator = isOperatorLayout(role);
   const isDashboard = currentPageName === 'Dashboard';
   
-  // Check if user has access to current page
-  const hasAccess = allowedPages.includes('*') || allowedPages.includes(currentPageName) || isDashboard;
+  // Check if user has access to current page using unified resolver
+  const hasAccess = isDashboard || allowedPages.includes('*') || allowedPages.includes(currentPageName);
 
   if (userLoading) return null;
   
@@ -256,6 +258,9 @@ export default function Layout({ children, currentPageName }) {
           </main>
         </div>
       </div>
+
+      {/* Permission Debug Panel (super admin only) */}
+      {isAdmin && <PermissionDebugPanel />}
     </OfflineProvider>
   );
 }
