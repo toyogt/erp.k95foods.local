@@ -46,6 +46,7 @@ import PullLists from './pages/PullLists';
 import MaterialRequest from './pages/MaterialRequest';
 import PurchaseOrders from './pages/PurchaseOrders';
 import PurchaseReports from './pages/PurchaseReports';
+import TemplateMappingManager from './pages/TemplateMappingManager';
 import Putaway from './pages/Putaway';
 import QCInbox from './pages/QCInbox';
 import RecipeBuilder from './pages/RecipeBuilder';
