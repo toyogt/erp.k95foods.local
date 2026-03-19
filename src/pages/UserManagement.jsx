@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Users, Loader2, UserPlus, Mail, Search } from 'lucide-react';
+import { auditUserInvited, auditUserRoleChanged } from '@/lib/auditAdminActions';
 
 export default function UserManagement() {
   const [user, setUser] = useState(null);
