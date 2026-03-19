@@ -61,7 +61,7 @@ export default function StepForm({ step, processId, nextOrder, users, onClose, o
   };
 
   const unitOptions = form.tat_type === 'hours'
-    ? [{ k: 'hours', v: 'Hours' }]
+    ? [['hours', 'Hours']]
     : Object.entries(TAT_UNIT_LABELS).filter(([k]) => k !== 'hours');
 
   return (
