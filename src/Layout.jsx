@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import OfflineProvider, { OfflineBanner } from '@/components/OfflineProvider';
 import { MODULES, getModuleForPage, getVisibleModules, getVisiblePages } from '@/components/nav/moduleConfig';
+import { isOperatorLayout } from '@/lib/roleLayoutMap';
+import OperatorLayout from '@/components/layouts/OperatorLayout';
 import {
   Factory, LogOut, X, ChevronDown, LayoutDashboard, Menu, ChevronRight
 } from 'lucide-react';
