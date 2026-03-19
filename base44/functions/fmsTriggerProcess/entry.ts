@@ -190,7 +190,8 @@ Deno.serve(async (req) => {
       });
 
       const step1 = allSteps[0];
-      const deadline = calculateDeadline(now, step1.tat_type, step1.tat_value, step1.tat_time);
+      // Anchor: step_start or run_start — both equal `now` for the first step
+      const deadline = calculateDeadlineSafe(now, step1);
 
       await base44.asServiceRole.entities.FMSStepInstance.create({
         instance_id: instance.id,
@@ -207,8 +208,10 @@ Deno.serve(async (req) => {
         deadline,
         completion_mode: step1.completion_mode || 'manual',
         tat_type: step1.tat_type,
+        tat_unit: step1.tat_unit || 'day',
         tat_value: step1.tat_value,
-        tat_time: step1.tat_time || '',
+        tat_anchor_type: step1.tat_anchor_type || 'step_start',
+        fixed_due_time: step1.fixed_due_time || '',
       });
 
       return Response.json({ success: true, instance_id: instance.id, message: 'Process started' });
