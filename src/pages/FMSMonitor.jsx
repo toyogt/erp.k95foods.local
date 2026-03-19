@@ -89,6 +89,7 @@ export default function FMSMonitor() {
   };
 
   return (
+    <>
     <div className="p-6">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-slate-800">Process Monitor</h1>
@@ -204,6 +205,6 @@ export default function FMSMonitor() {
           onUpdated={load}
         />
       )}
-    </div>
+    </>
   );
 }
