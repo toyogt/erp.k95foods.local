@@ -34,9 +34,10 @@ export default function ApprovalActionPanel({ docType, doc, user, onDone }) {
       entity_id: doc[idField], user,
     });
 
-    // FMS: fire approval event using doc.id (in ref_chain)
-    const eventKey = docType === 'MR' ? 'purchase_request_created' : 'purchase_order_approved';
-    await fireFMSEvent(eventKey, doc.id);
+    // FMS: PO approval fires auto-complete event; MR has no dedicated FMS event (manual step)
+    if (docType === 'PO') {
+      await fireFMSEvent('purchase_order_approved', doc.id);
+    }
 
     setActing(false);
     onDone();
