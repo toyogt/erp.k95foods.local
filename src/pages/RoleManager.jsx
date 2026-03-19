@@ -21,7 +21,39 @@ const MODULE_LABELS = {
 const EMPTY_FORM = { role_key: '', label: '', description: '', module_access: [], page_access: [], is_active: true, is_system: false };
 
 function RoleForm({ initial, onSave, onCancel, saving }) {
-  const [form, setForm] = useState(initial || EMPTY_FORM);
+  // Infer modules from page_access if module_access is empty
+  const inferModulesFromPages = (pages) => {
+    if (!pages?.length) return [];
+    const modules = new Set();
+    pages.forEach(pageKey => {
+      const allPages = getPagesInModule('PRODUCTION')
+        .concat(getPagesInModule('LABELLING'))
+        .concat(getPagesInModule('WAREHOUSE'))
+        .concat(getPagesInModule('PURCHASE'))
+        .concat(getPagesInModule('GRN'))
+        .concat(getPagesInModule('QUALITY'))
+        .concat(getPagesInModule('ACCOUNTS'))
+        .concat(getPagesInModule('FMS'))
+        .concat(getPagesInModule('DASHBOARD'));
+      const page = allPages.find(p => p.pageKey === pageKey);
+      if (page) {
+        // Find which module this page belongs to
+        ALL_MODULE_KEYS.forEach(mod => {
+          if (getPagesInModule(mod).find(p => p.pageKey === pageKey)) {
+            modules.add(mod);
+          }
+        });
+      }
+    });
+    return Array.from(modules);
+  };
+
+  const initialData = initial ? {
+    ...initial,
+    module_access: initial.module_access?.length > 0 ? initial.module_access : inferModulesFromPages(initial.page_access)
+  } : EMPTY_FORM;
+
+  const [form, setForm] = useState(initialData);
   const [expandedModule, setExpandedModule] = useState(null);
 
   const toggleModule = (mod) => {
