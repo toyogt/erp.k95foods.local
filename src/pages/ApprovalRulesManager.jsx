@@ -27,7 +27,7 @@ const EMPTY_FORM = {
   action_style: 'approve', allowed_roles: [], require_reason: false, is_active: true, sort_order: 10,
 };
 
-function RuleForm({ initial, roles, onSave, onCancel, saving }) {
+function RuleForm({ initial, roles, docTypes, onSave, onCancel, saving }) {
   const [form, setForm] = useState(initial || EMPTY_FORM);
 
   const toggleRole = (rk) => {
@@ -48,7 +48,7 @@ function RuleForm({ initial, roles, onSave, onCancel, saving }) {
         <Select value={form.doc_type} onValueChange={v => setForm(f => ({ ...f, doc_type: v }))}>
           <SelectTrigger className="mt-1"><SelectValue placeholder="Select document type" /></SelectTrigger>
           <SelectContent>
-            {DOC_TYPES.map(d => <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>)}
+            {docTypes.map(d => <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
@@ -317,7 +317,7 @@ export default function ApprovalRulesManager() {
             <DialogHeader>
               <DialogTitle>{modal.mode === 'create' ? 'Create Approval Rule' : 'Edit Approval Rule'}</DialogTitle>
             </DialogHeader>
-            <RuleForm initial={modal.rule} roles={roles} onSave={handleSave} onCancel={() => setModal(null)} saving={saving} />
+            <RuleForm initial={modal.rule} roles={roles} docTypes={docTypes} onSave={handleSave} onCancel={() => setModal(null)} saving={saving} />
           </DialogContent>
         </Dialog>
       )}
