@@ -62,7 +62,7 @@ export default function Layout({ children, currentPageName }) {
     </OfflineProvider>
   );
 
-  const visibleModules = getVisibleModules(role);
+  const visibleModules = getVisibleModules(role, roleModuleAccess);
   const activeModule = getModuleForPage(currentPageName);
   const isDashboard = currentPageName === 'Dashboard';
 
