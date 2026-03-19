@@ -140,12 +140,14 @@ async function completeStepAndAdvance(base44, stepInst, completedBy, completionN
     activated_at: now,
     deadline,
     completion_mode: nextStepTemplate.completion_mode || 'manual',
+    completion_submode: nextStepTemplate.completion_submode || 'mark_done',
+    step_checklist: nextStepTemplate.step_checklist || [],
     tat_type: nextStepTemplate.tat_type,
     tat_unit: nextStepTemplate.tat_unit || 'day',
     tat_value: nextStepTemplate.tat_value,
     tat_anchor_type: nextStepTemplate.tat_anchor_type || 'step_start',
     fixed_due_time: nextStepTemplate.fixed_due_time || '',
-  });
+    });
 
   await base44.asServiceRole.entities.FMSProcessInstance.update(instance.id, {
     current_step_order: nextStepTemplate.step_order,
@@ -214,6 +216,8 @@ Deno.serve(async (req) => {
         activated_at: now,
         deadline,
         completion_mode: step1.completion_mode || 'manual',
+        completion_submode: step1.completion_submode || 'mark_done',
+        step_checklist: step1.step_checklist || [],
         tat_type: step1.tat_type,
         tat_unit: step1.tat_unit || 'day',
         tat_value: step1.tat_value,
