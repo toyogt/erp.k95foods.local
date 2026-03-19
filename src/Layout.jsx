@@ -74,7 +74,6 @@ export default function Layout({ children, currentPageName }) {
 
   const visibleModules = getVisibleModules(role, roleModuleAccess);
   const activeModule = getModuleForPage(currentPageName);
-  const isDashboard = currentPageName === 'Dashboard';
 
   const toggleModule = (key) => {
     setExpandedModules(prev => ({ ...prev, [key]: !prev[key] }));
