@@ -192,14 +192,14 @@ export default function RoleManager() {
         <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>
       ) : (
         <div className="space-y-3">
-          {roles.length === 0 && (
+          {roles.filter(r => !r.is_system).length === 0 && (
             <div className="text-center py-16 text-slate-400">
               <Shield className="w-10 h-10 mx-auto mb-2 opacity-30" />
-              <p className="font-semibold">No roles yet</p>
-              <p className="text-xs mt-1">Click "New Role" to create your first role.</p>
+              <p className="font-semibold">No custom roles yet</p>
+              <p className="text-xs mt-1">Click "New Role" to create your first role. (System roles Admin & User are not shown)</p>
             </div>
           )}
-          {roles.map(role => (
+          {roles.filter(r => !r.is_system).map(role => (
             <div key={role.id} className="bg-white rounded-2xl border border-slate-200 p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
