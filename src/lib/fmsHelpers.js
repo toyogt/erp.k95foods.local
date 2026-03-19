@@ -98,9 +98,8 @@ export const TAT_UNIT_LABELS = {
 };
 
 export const TAT_ANCHOR_LABELS = {
-  run_start: 'Run Start',
-  step_start: 'Step Start',
-  predecessor_completion: 'Previous Step Completion',
+  run_start: 'Process Start (when the whole run began)',
+  step_start: 'When this step becomes active',
 };
 
 export function formatTATSummary(step) {
