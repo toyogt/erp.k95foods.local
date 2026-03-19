@@ -218,41 +218,54 @@ Deno.serve(async (req) => {
 
       const now = new Date().toISOString();
 
-      // Get all active step instances with completion_mode = auto
-      const allActive = await base44.asServiceRole.entities.FMSStepInstance.filter({ status: 'active' });
-      const autoSteps = allActive.filter(s => s.completion_mode === 'auto');
+      // 1. Find step templates that match the event key — one query, not N
+      const matchingTemplates = await base44.asServiceRole.entities.FMSProcessStep.filter({
+        auto_complete_event,
+        completion_mode: 'auto',
+      });
+      if (matchingTemplates.length === 0) {
+        return Response.json({ success: true, auto_completed: 0, step_ids: [] });
+      }
+      const matchingStepIds = new Set(matchingTemplates.map(t => t.id));
+
+      // 2. Get active auto-complete step instances
+      const autoSteps = await base44.asServiceRole.entities.FMSStepInstance.filter({
+        status: 'active',
+        completion_mode: 'auto',
+      });
+
+      // Filter to only those whose step_id is in the matching templates
+      const candidates = autoSteps.filter(s => s.step_id && matchingStepIds.has(s.step_id));
+      if (candidates.length === 0) {
+        return Response.json({ success: true, auto_completed: 0, step_ids: [] });
+      }
 
       const results = [];
 
-      for (const stepInst of autoSteps) {
-        if (!stepInst.step_id) continue;
-
-        // Check step template has matching event
-        const stepTemplates = await base44.asServiceRole.entities.FMSProcessStep.filter({ id: stepInst.step_id });
-        const stepTemplate = stepTemplates[0];
-        if (!stepTemplate || stepTemplate.auto_complete_event !== auto_complete_event) continue;
-
-        // If trigger_ref_id provided, match against the instance's ref_chain
-        if (trigger_ref_id) {
-          const instances = await base44.asServiceRole.entities.FMSProcessInstance.filter({ id: stepInst.instance_id });
-          const inst = instances[0];
-          if (!inst) continue;
-
-          const chain = Array.isArray(inst.ref_chain) ? inst.ref_chain : [inst.trigger_ref_id].filter(Boolean);
-
-          // Only proceed if this ref is in the chain for this instance
-          if (!chain.includes(trigger_ref_id)) continue;
-        }
-
-        // Complete this step and advance
-        await completeStepAndAdvance(
-          base44,
-          stepInst,
-          'system (auto)',
-          `Auto-completed by event: ${auto_complete_event}`,
-          now
+      // 3. If ref filtering needed, batch-load instances once
+      if (trigger_ref_id) {
+        const instanceIds = [...new Set(candidates.map(s => s.instance_id))];
+        const instancesList = await Promise.all(
+          instanceIds.map(id => base44.asServiceRole.entities.FMSProcessInstance.filter({ id }))
         );
-        results.push(stepInst.id);
+        const instanceMap = {};
+        instancesList.flat().forEach(inst => { instanceMap[inst.id] = inst; });
+
+        for (const stepInst of candidates) {
+          const inst = instanceMap[stepInst.instance_id];
+          if (!inst) continue;
+          const chain = Array.isArray(inst.ref_chain) ? inst.ref_chain : [inst.trigger_ref_id].filter(Boolean);
+          if (!chain.includes(trigger_ref_id)) continue;
+
+          await completeStepAndAdvance(base44, stepInst, 'system (auto)', `Auto-completed by event: ${auto_complete_event}`, now);
+          results.push(stepInst.id);
+        }
+      } else {
+        // No ref filter — complete all matching
+        for (const stepInst of candidates) {
+          await completeStepAndAdvance(base44, stepInst, 'system (auto)', `Auto-completed by event: ${auto_complete_event}`, now);
+          results.push(stepInst.id);
+        }
       }
 
       return Response.json({ success: true, auto_completed: results.length, step_ids: results });
