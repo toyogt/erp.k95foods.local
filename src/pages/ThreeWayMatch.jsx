@@ -114,6 +114,9 @@ export default function ThreeWayMatch() {
         user,
       });
 
+      // FMS: fire three_way_match_done using invoice's id (in chain)
+      await fireFMSEvent('three_way_match_done', selected.id);
+
       setSelected({ ...selected, status });
       setError('');
     } catch (err) {

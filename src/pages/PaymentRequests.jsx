@@ -51,7 +51,7 @@ export default function PaymentRequests() {
     try {
       const inv = invoices.find(i => i.id === selectedInv);
       const payId = genId('PAY');
-      await base44.entities.PaymentRequest.create({
+      const payReqRecord = await base44.entities.PaymentRequest.create({
         payreq_id: payId,
         inv_id: inv.inv_id,
         supplier_id: inv.supplier_id,
@@ -69,6 +69,13 @@ export default function PaymentRequests() {
         details: { inv_id: inv.inv_id },
         user,
       });
+
+      // FMS: fire payment_request_created using invoice.id (in chain), then link payment req
+      await fireFMSEvent('payment_request_created', inv.id);
+      const instances = await findFMSInstanceByRef(inv.id);
+      for (const inst of instances) {
+        await linkFMSRef(inst.id, payReqRecord.id);
+      }
 
       setShowNew(false);
       setSelectedInv('');

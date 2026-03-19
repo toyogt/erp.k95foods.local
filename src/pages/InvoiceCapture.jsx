@@ -150,7 +150,7 @@ export default function InvoiceCapture() {
     setSubmitLoading(true);
     try {
       const id = genId('PINV');
-      await base44.entities.SupplierInvoice.create({
+      const inv = await base44.entities.SupplierInvoice.create({
         inv_id: id,
         supplier_id: supplierId,
         supplier_name: supplierName,
