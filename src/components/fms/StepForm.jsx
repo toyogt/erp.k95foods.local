@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { base44 } from '@/api/base44Client';
 import { TAT_TYPE_LABELS } from '@/lib/fmsHelpers';
+import { COMPLETE_EVENTS, groupEventsByCategory } from '@/lib/fmsAppEvents';
 
 export default function StepForm({ step, processId, nextOrder, users, onClose, onSaved }) {
   const [form, setForm] = useState({

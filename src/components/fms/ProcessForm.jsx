@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { base44 } from '@/api/base44Client';
+import { TRIGGER_EVENTS, groupEventsByCategory } from '@/lib/fmsAppEvents';
 
 export default function ProcessForm({ process, onClose, onSaved }) {
   const [form, setForm] = useState({
