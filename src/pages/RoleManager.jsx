@@ -106,7 +106,9 @@ function RoleForm({ initial, onSave, onCancel, saving }) {
       <div>
         <Label>Description</Label>
         <Input className="mt-1" placeholder="What can this role do?"
-          value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
+          value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+          disabled={initial?.is_system}
+        />
       </div>
 
       <div>
