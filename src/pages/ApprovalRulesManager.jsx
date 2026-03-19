@@ -240,7 +240,7 @@ export default function ApprovalRulesManager() {
           className={`px-3 py-1.5 rounded-xl text-sm font-semibold border transition-all ${filterDoc === 'all' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-slate-200 text-slate-600 hover:border-slate-400'}`}>
           All
         </button>
-        {DOC_TYPES.map(d => (
+        {docTypes.map(d => (
           <button key={d.value} onClick={() => setFilterDoc(d.value)}
             className={`px-3 py-1.5 rounded-xl text-sm font-semibold border transition-all ${filterDoc === d.value ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-slate-200 text-slate-600 hover:border-slate-400'}`}>
             {d.label}
