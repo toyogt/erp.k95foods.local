@@ -16,6 +16,7 @@ import FMSMonitor from './pages/FMSMonitor';
 import UserManagement from './pages/UserManagement';
 import RoleManager from './pages/RoleManager';
 import ApprovalRulesManager from './pages/ApprovalRulesManager';
+import PermissionMatrix from './pages/PermissionMatrix';
 // Add page imports here
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -77,6 +78,7 @@ const AuthenticatedApp = () => {
       <Route path="/UserManagement" element={<LayoutWrapper currentPageName="UserManagement"><UserManagement /></LayoutWrapper>} />
       <Route path="/RoleManager" element={<LayoutWrapper currentPageName="RoleManager"><RoleManager /></LayoutWrapper>} />
       <Route path="/ApprovalRulesManager" element={<LayoutWrapper currentPageName="ApprovalRulesManager"><ApprovalRulesManager /></LayoutWrapper>} />
+      <Route path="/PermissionMatrix" element={<LayoutWrapper currentPageName="PermissionMatrix"><PermissionMatrix /></LayoutWrapper>} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
