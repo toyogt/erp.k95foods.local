@@ -151,6 +151,16 @@ const AuthenticatedApp = () => {
         }
       />
 
+      {/* Transfer Receiving with params */}
+      <Route
+        path="/TransferReceiving/:transferId"
+        element={
+          <LayoutWrapper currentPageName="TransferReceiving">
+            <TransferReceiving />
+          </LayoutWrapper>
+        }
+      />
+
       {/* SLA Routes */}
       <Route
         path="/SLAConfigManager"
