@@ -1,7 +1,9 @@
 import { base44 } from '@/api/base44Client';
+import { getPagesInModule, ALL_MODULE_KEYS } from '@/lib/registryConfig';
 
 /**
  * Get allowed pages for a user from database AppRole
+ * Returns actual page names, not just modules
  * Falls back to hardcoded ACCESS_MAP for legacy roles
  */
 export async function getAllowedPagesFromDB(user) {
@@ -19,9 +21,25 @@ export async function getAllowedPagesFromDB(user) {
       is_active: true 
     });
 
-    if (roles?.[0]?.module_access?.length > 0) {
-      // New system: use database module_access
-      return roles[0].module_access;
+    const role = roles?.[0];
+    if (role?.module_access?.length > 0) {
+      // New system: convert module_access to page names
+      const allowedPages = new Set();
+      
+      // Add all pages from allowed modules
+      role.module_access.forEach(mod => {
+        const pages = getPagesInModule(mod);
+        pages.forEach(p => allowedPages.add(p.pageKey));
+      });
+      
+      // Apply page_access overrides: REMOVE specific pages if listed
+      if (role.page_access?.length > 0) {
+        role.page_access.forEach(pageKey => {
+          allowedPages.delete(pageKey);
+        });
+      }
+      
+      return Array.from(allowedPages);
     }
   } catch (err) {
     console.warn('Failed to fetch role permissions:', err);
