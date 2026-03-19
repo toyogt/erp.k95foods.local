@@ -73,6 +73,13 @@ function RoleForm({ initial, onSave, onCancel, saving }) {
         newModuleAccess = [...newModuleAccess, moduleKey];
       }
 
+      // If no pages left in module, auto-deselect the module
+      const modulePages = getPagesInModule(moduleKey).map(p => p.pageKey);
+      const hasAnyPageInModule = newPageAccess.some(p => modulePages.includes(p));
+      if (isCurrentlySelected && !hasAnyPageInModule && newModuleAccess.includes(moduleKey)) {
+        newModuleAccess = newModuleAccess.filter(m => m !== moduleKey);
+      }
+
       return {
         ...f,
         module_access: newModuleAccess,
