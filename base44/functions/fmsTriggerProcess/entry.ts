@@ -119,7 +119,12 @@ async function completeStepAndAdvance(base44, stepInst, completedBy, completionN
     return { process_completed: true };
   }
 
-  const deadline = calculateDeadline(now, nextStepTemplate.tat_type, nextStepTemplate.tat_value, nextStepTemplate.tat_time);
+  // Determine anchor time based on tat_anchor_type
+  let anchorTime = now; // default: step_start / predecessor_completion
+  if (nextStepTemplate.tat_anchor_type === 'run_start') {
+    anchorTime = instance.triggered_at || now;
+  }
+  const deadline = calculateDeadlineSafe(anchorTime, nextStepTemplate);
 
   await base44.asServiceRole.entities.FMSStepInstance.create({
     instance_id: instance.id,
@@ -136,8 +141,10 @@ async function completeStepAndAdvance(base44, stepInst, completedBy, completionN
     deadline,
     completion_mode: nextStepTemplate.completion_mode || 'manual',
     tat_type: nextStepTemplate.tat_type,
+    tat_unit: nextStepTemplate.tat_unit || 'day',
     tat_value: nextStepTemplate.tat_value,
-    tat_time: nextStepTemplate.tat_time || '',
+    tat_anchor_type: nextStepTemplate.tat_anchor_type || 'step_start',
+    fixed_due_time: nextStepTemplate.fixed_due_time || '',
   });
 
   await base44.asServiceRole.entities.FMSProcessInstance.update(instance.id, {
