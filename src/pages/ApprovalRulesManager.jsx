@@ -166,22 +166,33 @@ export default function ApprovalRulesManager() {
 
   const handleSave = async (form) => {
     setSaving(true);
-    if (modal.mode === 'create') {
-      await base44.entities.DocumentApprovalRule.create(form);
-    } else {
-      await base44.entities.DocumentApprovalRule.update(modal.rule.id, form);
+    try {
+      if (modal.mode === 'create') {
+        await base44.entities.DocumentApprovalRule.create(form);
+        await auditApprovalRuleCreated(user, form.doc_type, form.from_state, form.to_state, form.action_label);
+      } else {
+        await base44.entities.DocumentApprovalRule.update(modal.rule.id, form);
+        await auditApprovalRuleUpdated(user, form.doc_type, form.from_state, form.to_state);
+      }
+      setModal(null);
+      load();
+    } catch (e) {
+      console.error('Error saving rule:', e);
     }
     setSaving(false);
-    setModal(null);
-    load();
   };
 
   const handleDelete = async () => {
     setDeleting(true);
-    await base44.entities.DocumentApprovalRule.delete(deleteTarget.id);
+    try {
+      await base44.entities.DocumentApprovalRule.delete(deleteTarget.id);
+      await auditApprovalRuleDeleted(user, deleteTarget.doc_type, deleteTarget.action_label);
+      setDeleteTarget(null);
+      load();
+    } catch (e) {
+      console.error('Error deleting rule:', e);
+    }
     setDeleting(false);
-    setDeleteTarget(null);
-    load();
   };
 
   if (!loading && user?.role !== 'admin') {
