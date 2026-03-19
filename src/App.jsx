@@ -95,7 +95,7 @@ const PAGE_COMPONENTS = {
   ThreeWayMatch, TraceInvestigation, TransferReceiving, UOMManager, WarehouseBins, WarehouseOps,
   BarcodeOCRTest, FMSMyTasks, FMSProcesses, FMSActiveRuns, FMSMonitor, UserManagement, RoleManager, ApprovalRulesManager,
   PermissionMatrix, PermissionMatrixDashboard, ApprovalWorkflowHub, AccessAuditLog, FMSHealthDashboard,
-  OperatorDashboardMobile, PermissionPolicyManager, SyncCenter, RulesManager, BlockedAttemptsViewer, TraceabilityExplorer, ReconciliationDashboard, RoutesDiagnostics,
+  OperatorDashboardMobile, PermissionPolicyManager, SyncCenter, RulesManager, BlockedAttemptsViewer, TraceabilityExplorer, ReconciliationDashboard, RoutesDiagnostics, AuditLogViewer,
 };
 
 const { Pages, Layout, mainPage } = pagesConfig;
