@@ -43,8 +43,9 @@ import ProductTaxonomy from './pages/ProductTaxonomy';
 import ProductionControl from './pages/ProductionControl';
 import ProductionOrders from './pages/ProductionOrders';
 import PullLists from './pages/PullLists';
-import PurchaseGRNHub from './pages/PurchaseGRNHub';
-import PurchaseOps from './pages/PurchaseOps';
+import MaterialRequest from './pages/MaterialRequest';
+import PurchaseOrders from './pages/PurchaseOrders';
+import PurchaseReports from './pages/PurchaseReports';
 import Putaway from './pages/Putaway';
 import QCInbox from './pages/QCInbox';
 import RecipeBuilder from './pages/RecipeBuilder';
@@ -92,7 +93,8 @@ const PAGE_COMPONENTS = {
   ChamberStation, CustomizeDashboard, Dashboard, DispatchCrates, FGPalletizing, FGWarehouse, FeederKiosk, FillingStation,
   GRNReceive, GateEntry, GateInbox, IngredientGroupManager, IngredientManager, InvoiceCapture, LabelArtworkManager,
   LabelRollManager, LabellingLine, LiquidPlans, MasterData, OpeningStockImport, PaymentRequests, ProductTaxonomy,
-  ProductionControl, ProductionOrders, PullLists, PurchaseGRNHub, PurchaseOps, Putaway, QCInbox, RecipeBuilder,
+  ProductionControl, ProductionOrders, PullLists, Putaway, QCInbox, RecipeBuilder,
+  MaterialRequest, PurchaseOrders, PurchaseReports,
   RecipeStation, RyanTemplateManager, SKUSetup, ShiftKPIDashboard, StoresIssue, SupplierManager, TemplateMappingManager,
   ThreeWayMatch, TraceInvestigation, TransferReceiving, UOMManager, WarehouseBins, WarehouseOps,
   BarcodeOCRTest, FMSMyTasks, FMSProcesses, FMSActiveRuns, FMSMonitor, UserManagement, RoleManager, ApprovalRulesManager,
