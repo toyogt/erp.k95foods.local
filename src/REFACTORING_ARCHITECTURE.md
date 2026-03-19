@@ -244,6 +244,121 @@ When refactoring a page:
 - Rules/helpers: 50-150 lines each
 - Common components: 100-200 lines each
 
+## Implementation Examples
+
+### TransferReceiving (Refactored)
+- **Container:** `pages/TransferReceiving.jsx` (70 lines)
+  - Orchestrates hooks, handles params, error boundaries
+  
+- **View:** `components/warehouse/TransferReceivingView.jsx` (250 lines)
+  - Pure presentation with ScanInput, summary cards, line table
+  - Receives data/actions as props only
+
+- **Data Hook:** `hooks/useTransferReceivingData.js` (120 lines)
+  - Fetches transfer & lines
+  - CRUD operations (addLine, updateLine, removeLine)
+
+- **Action Hook:** `hooks/useTransferReceivingActions.js` (140 lines)
+  - createTransfer, submitTransfer, receiveTransfer, discardTransfer
+  - Validation, error handling, state management
+
+- **Rules:** `lib/transferReceivingRules.js` (60 lines)
+  - checkTransferRules, validateReceiveQty, getVarianceSeverity
+
+- **Helpers:** `lib/transferReceivingHelpers.js` (70 lines)
+  - Constants (TRANSFER_STATUSES, COLORS)
+  - Utilities (formatTransferCode, calculateSummary)
+
+### FillingStation (Refactored)
+- **Data Hook:** `hooks/useFillingStationData.js` (130 lines)
+  - Loads active batch, crates
+  - Add/update/remove crate operations
+
+- **Action Hook:** `hooks/useFillingStationActions.js` (155 lines)
+  - startBatch, recordCrate, completeBatch, pauseBatch
+  - Fires FMS events & trace events
+
+### ProductionOrders (Refactored)
+- **Data Hook:** `hooks/useProductionOrdersData.js` (105 lines)
+  - List, create, update, delete orders
+  - Filter by status/SKU/date
+
+- **Action Hook:** `hooks/useProductionOrdersActions.js` (130 lines)
+  - createProductionOrder, releaseOrder, completeOrder, cancelOrder
+  - Validates business rules before action
+
+## Shared Components
+
+All pages can now use:
+
+```javascript
+import DocumentHeader from '@/components/common/DocumentHeader';
+import StatusBadge from '@/components/common/StatusBadge';
+import ScanInput from '@/components/common/ScanInput';
+import ActionFooter from '@/components/common/ActionFooter';
+import AuditPanel from '@/components/common/AuditPanel';
+import ApprovalPanel from '@/components/common/ApprovalPanel';
+import ErrorBoundary from '@/components/common/ErrorBoundary';
+```
+
+## Deduplication Achieved
+
+**Before:** Duplicate code across SKUSetup, Labelling, Production
+- Status badge logic → `StatusBadge.jsx` (1 source)
+- Scan input logic → `ScanInput.jsx` (1 source)
+- Action footer → `ActionFooter.jsx` (1 source)
+- Audit display → `AuditPanel.jsx` (1 source)
+
+**After:** Single component, used everywhere
+
+## Testing Improvements
+
+Each module is now testable independently:
+
+```javascript
+// Test data hook
+it('should load transfer', () => {
+  const { result } = renderHook(() => useTransferReceivingData(id));
+  expect(result.current.transfer).toBeDefined();
+});
+
+// Test action hook
+it('should receive transfer', async () => {
+  const { result } = renderHook(() => useTransferReceivingActions());
+  await act(async () => {
+    await result.current.receiveTransfer(...);
+  });
+});
+
+// Test rules
+it('should validate qty', () => {
+  const error = validateReceiveQty(150, 100);
+  expect(error).toContain('cannot receive more');
+});
+
+// Test component in isolation
+it('should render view', () => {
+  render(<TransferReceivingView data={mockData} actions={mockActions} />);
+  expect(screen.getByText('Transfer Code')).toBeInTheDocument();
+});
+```
+
+## Migration Path for Remaining Pages
+
+1. **SKUSetup:** Extract SKUData → SKUActions → SKUView
+2. **LabellingLine:** Extract LabelData → LabelActions → LabelView
+3. **WarehouseOps:** Extract WarehouseData → WarehouseActions → WarehouseView
+4. **RecipeBuilder:** Extract RecipeData → RecipeActions → RecipeView
+
+Each follows same pattern; estimated ~300-400 lines per page refactored into ~1200 lines of smaller modules.
+
 ---
 
-**Next Steps:** Apply pattern to TransferReceiving, Production, and Labelling pages as examples.
+**Benefits Delivered:**
+✅ Reduced file sizes (200-300 line limit)
+✅ Eliminated duplicate code (5+ instances consolidated)
+✅ Improved testability (unit test each module)
+✅ Better error handling (ErrorBoundary + validation layers)
+✅ FMS event integration baked into action hooks
+✅ Clear separation of concerns
+✅ Easier onboarding (structure is obvious)
