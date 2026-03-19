@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { Menu, LogOut, Home, ChevronLeft } from 'lucide-react';
-import { OfflineProvider, OfflineBanner } from '@/components/OfflineProvider';
+import OfflineProvider, { OfflineBanner } from '@/components/OfflineProvider';
 
 /**
  * OperatorLayout — Full-screen, app-like layout for shop floor workers
