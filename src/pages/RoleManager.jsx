@@ -146,23 +146,34 @@ export default function RoleManager() {
 
   const handleSave = async (form) => {
     setSaving(true);
-    if (modal.mode === 'create') {
-      await base44.entities.AppRole.create(form);
-    } else {
-      await base44.entities.AppRole.update(modal.role.id, form);
+    try {
+      if (modal.mode === 'create') {
+        await base44.entities.AppRole.create(form);
+        await auditRoleCreated(user, form.role_key, form.label, form.module_access);
+      } else {
+        await base44.entities.AppRole.update(modal.role.id, form);
+        await auditRoleUpdated(user, form.role_key, form.label, form.module_access);
+      }
+      setModal(null);
+      load();
+    } catch (e) {
+      console.error('Error saving role:', e);
     }
     setSaving(false);
-    setModal(null);
-    load();
   };
 
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    setDeleting(true);
-    await base44.entities.AppRole.delete(deleteTarget.id);
-    setDeleting(false);
-    setDeleteTarget(null);
-    load();
+  const handleDeactivate = async () => {
+    if (!deactivateTarget) return;
+    setDeactivating(true);
+    try {
+      await base44.entities.AppRole.update(deactivateTarget.id, { is_active: false });
+      await auditRoleDeactivated(user, deactivateTarget.role_key, deactivateTarget.label);
+      setDeactivateTarget(null);
+      load();
+    } catch (e) {
+      console.error('Error deactivating role:', e);
+    }
+    setDeactivating(false);
   };
 
   // Access control handled by Layout.jsx — if user isn't admin, they won't reach this page
