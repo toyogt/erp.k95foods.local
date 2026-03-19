@@ -79,7 +79,7 @@ export const MODULES = [
       { key: 'PurchaseOps',    label: 'Purchase Requests & Orders', icon: ShoppingCart, roles: ['admin','purchase_user','purchase_manager','production_manager','user'] },
       { key: 'SupplierManager',label: 'Suppliers',                  icon: Truck,        roles: ['admin','purchase_manager'], adminOnly: true },
       { key: 'ApprovalsInbox', label: 'Approvals Inbox',            icon: ClipboardCheck, roles: ['admin','purchase_manager','accounts_manager','production_manager','user'] },
-      { key: 'PurchaseGRNHub', label: 'Purchase & GRN Hub',        icon: BarChart2,    roles: ['admin','purchase_user','purchase_manager','user'] },
+      { key: 'PurchaseGRNHub', label: 'Purchase & GRN Hub',        icon: BarChart3,    roles: ['admin','purchase_user','purchase_manager','user'] },
     ],
   },
   {
