@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { AlertCircle, Upload, Plus, X, Loader2, Zap, Check } from 'lucide-react';
 import { genId, logAccountsAudit, findCandidatePOs } from '@/components/accounts/accountsHelpers';
+import { fireFMSEvent, findFMSInstanceByRef, linkFMSRef } from '@/lib/useFMSAutoComplete';
 import ItemSelector from '@/components/accounts/ItemSelector';
 
 export default function InvoiceCapture() {

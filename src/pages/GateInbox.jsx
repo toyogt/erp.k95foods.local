@@ -3,6 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Loader2, RefreshCw, Search, Link2, Package } from 'lucide-react';
 import { GATE_STATUS_COLOR, logGrnAudit, genId } from '@/components/grn/grnHelpers';
+import { fireFMSEvent, findFMSInstanceByRef, linkFMSRef } from '@/lib/useFMSAutoComplete';
 import { createPageUrl } from '@/utils';
 import { Link } from 'react-router-dom';
 

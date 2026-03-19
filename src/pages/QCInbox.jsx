@@ -3,6 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Loader2, RefreshCw, FlaskConical, Search, CheckCircle2, XCircle, AlertCircle, Camera } from 'lucide-react';
 import { GRN_STATUS_COLOR, logGrnAudit, getChecklistTemplate } from '@/components/grn/grnHelpers';
+import { fireFMSEvent, findFMSInstanceByRef, linkFMSRef } from '@/lib/useFMSAutoComplete';
 import { getWorkflowBin, moveAfterQC } from '@/components/grn/stockLedger';
 import ChecklistGate from '@/components/grn/ChecklistGate';
 

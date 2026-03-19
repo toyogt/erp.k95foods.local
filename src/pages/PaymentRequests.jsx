@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { AlertCircle, Plus, CheckCircle2, X, Loader2 } from 'lucide-react';
 import { genId, logAccountsAudit, INVOICE_STATUS_COLOR, PAYMENT_STATUS_COLOR } from '@/components/accounts/accountsHelpers';
+import { fireFMSEvent, findFMSInstanceByRef, linkFMSRef } from '@/lib/useFMSAutoComplete';
 
 export default function PaymentRequests() {
   const [user, setUser] = useState(null);

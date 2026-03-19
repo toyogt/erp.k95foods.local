@@ -3,6 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Loader2, ClipboardCheck } from 'lucide-react';
 import { logPurchaseAudit } from './purchaseHelpers';
+import { fireFMSEvent, findFMSInstanceByRef, linkFMSRef } from '@/lib/useFMSAutoComplete';
 
 /**
  * Reusable approve/reject panel used in both Inbox and detail views.

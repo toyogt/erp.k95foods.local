@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { AlertCircle, CheckCircle2, X, Loader2 } from 'lucide-react';
 import { perform3WayMatch, genId, logAccountsAudit, createAlertEvent, INVOICE_STATUS_COLOR } from '@/components/accounts/accountsHelpers';
+import { fireFMSEvent, findFMSInstanceByRef } from '@/lib/useFMSAutoComplete';
 
 export default function ThreeWayMatch() {
   const [user, setUser] = useState(null);

@@ -3,6 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Loader2, RefreshCw, CheckCircle2, Camera, Search } from 'lucide-react';
 import { GRN_STATUS_COLOR, logGrnAudit, getChecklistTemplate } from '@/components/grn/grnHelpers';
+import { fireFMSEvent, findFMSInstanceByRef, linkFMSRef } from '@/lib/useFMSAutoComplete';
 import { postGRNtoQCHold } from '@/components/grn/stockLedger';
 import ChecklistGate from '@/components/grn/ChecklistGate';
 

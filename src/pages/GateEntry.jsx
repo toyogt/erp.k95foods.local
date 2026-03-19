@@ -5,6 +5,7 @@ import { Loader2, CheckCircle2, Truck, Camera, FileText, Zap, AlertCircle, Check
 import PhotoUploader from '@/components/grn/PhotoUploader';
 import ChecklistGate from '@/components/grn/ChecklistGate';
 import { genId, logGrnAudit, getChecklistTemplate } from '@/components/grn/grnHelpers';
+import { fireFMSEvent } from '@/lib/useFMSAutoComplete';
 
 const STEPS = ['Capture Photos', 'Confirm Details', 'Review & Submit'];
 
