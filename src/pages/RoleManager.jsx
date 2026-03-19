@@ -90,23 +90,17 @@ function RoleForm({ initial, onSave, onCancel, saving }) {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <Label>Role Key <span className="text-red-500">*</span></Label>
-          <Input
-            className="mt-1 font-mono text-sm"
-            placeholder="e.g. purchase_manager"
-            value={form.role_key}
-            onChange={e => setForm(f => ({ ...f, role_key: e.target.value.toLowerCase().replace(/\s+/g, '_') }))}
-            disabled={initial?.is_system}
-          />
-          <p className="text-xs text-slate-400 mt-0.5">Unique identifier — no spaces, use underscores</p>
-        </div>
-        <div>
-          <Label>Display Label <span className="text-red-500">*</span></Label>
-          <Input className="mt-1" placeholder="e.g. Purchase Manager"
-            value={form.label} onChange={e => setForm(f => ({ ...f, label: e.target.value }))} />
-        </div>
+      <div>
+        <Label>Role Name <span className="text-red-500">*</span></Label>
+        <Input className="mt-1" placeholder="e.g. Purchase Manager"
+          value={form.label} 
+          onChange={e => {
+            const newLabel = e.target.value;
+            const newRoleKey = newLabel.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+            setForm(f => ({ ...f, label: newLabel, role_key: newRoleKey }));
+          }}
+          disabled={initial?.is_system}
+        />
       </div>
 
       <div>
