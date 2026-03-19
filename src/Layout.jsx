@@ -127,7 +127,7 @@ export default function Layout({ children, currentPageName }) {
               {/* Sub-pages */}
               {!sidebarCollapsed && isExpanded && (
                 <div className="ml-3 pl-3 border-l-2 border-slate-100 mt-0.5 space-y-0.5">
-                  {getVisiblePages(mod, role, roleModuleAccess).map(page => {
+                  {pages.map(page => {
                     const PIcon = page.icon;
                     const pageActive = currentPageName === page.key;
                     return (
