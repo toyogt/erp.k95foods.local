@@ -54,6 +54,10 @@ export const FMS_APP_EVENTS = [
   { key: 'label_approved',            label: 'Label Approved',              category: 'Labels',         canTrigger: false, canComplete: true  },
   { key: 'label_rejected',            label: 'Label Rejected',              category: 'Labels',         canTrigger: false, canComplete: true  },
 
+  // ── Access & Approvals ──────────────────────────────────────────────────────
+  { key: 'approval_rule_changed',     label: 'Approval Rule Changed',       category: 'Admin',          canTrigger: false, canComplete: true  },
+  { key: 'user_role_changed',         label: 'User Role Changed',           category: 'Admin',          canTrigger: false, canComplete: true  },
+
   // ── General / Manual ────────────────────────────────────────────────────────
   { key: 'custom_event_1',            label: 'Custom Event 1',              category: 'Custom',         canTrigger: true,  canComplete: true  },
   { key: 'custom_event_2',            label: 'Custom Event 2',              category: 'Custom',         canTrigger: true,  canComplete: true  },
