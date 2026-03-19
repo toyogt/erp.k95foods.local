@@ -89,8 +89,7 @@ export default function FMSMonitor() {
   };
 
   return (
-    <FMSLayout user={user}>
-      <div className="p-6">
+    <div className="p-6">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-slate-800">Process Monitor</h1>
           <p className="text-slate-500 text-sm mt-1">Real-time view of all active process instances</p>
@@ -205,6 +204,6 @@ export default function FMSMonitor() {
           onUpdated={load}
         />
       )}
-    </FMSLayout>
+    </div>
   );
 }
