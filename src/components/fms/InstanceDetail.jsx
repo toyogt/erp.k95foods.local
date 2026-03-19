@@ -91,6 +91,35 @@ export default function InstanceDetail({ instanceId, user, users, onClose, onUpd
         </div>
 
         <div className="p-6 space-y-6">
+          {/* Ref Chain — linked document IDs */}
+          {(instance.trigger_ref_id || (instance.ref_chain && instance.ref_chain.length > 0)) && (
+            <div className="bg-slate-50 rounded-xl p-4">
+              <div className="flex items-center gap-1.5 mb-3">
+                <Link2 className="w-3.5 h-3.5 text-slate-400" />
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Linked Documents</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {(instance.ref_chain && instance.ref_chain.length > 0
+                  ? instance.ref_chain
+                  : [instance.trigger_ref_id]
+                ).map((refId, i) => (
+                  <button
+                    key={refId}
+                    onClick={() => copyId(refId)}
+                    className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg px-3 py-1.5 hover:border-blue-300 hover:bg-blue-50 transition group"
+                  >
+                    <span className="text-xs text-slate-400 font-mono">#{i + 1}</span>
+                    <span className="text-xs font-medium text-slate-700 font-mono max-w-[180px] truncate">{refId}</span>
+                    {copiedId === refId
+                      ? <CheckCheck className="w-3 h-3 text-green-500 shrink-0" />
+                      : <Copy className="w-3 h-3 text-slate-300 group-hover:text-slate-500 shrink-0" />
+                    }
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Trigger data */}
           {Object.keys(triggerData).length > 0 && (
             <div className="bg-slate-50 rounded-xl p-4">
