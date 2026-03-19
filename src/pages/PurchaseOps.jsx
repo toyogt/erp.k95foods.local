@@ -112,6 +112,51 @@ export default function PurchaseOps() {
         ))}
       </div>
 
+      {/* Hub Tab */}
+      {tab === 'hub' && (
+        <div className="space-y-4">
+          {/* Workflow flow indicator */}
+          <div className="flex items-center gap-1 text-xs overflow-x-auto pb-1">
+            {['Purchase', 'Gate', 'GRN', 'QC', 'Putaway', 'Invoice'].map((s, i, arr) => (
+              <div key={s} className="flex items-center gap-1 shrink-0">
+                <span className="bg-slate-800 text-white px-2 py-0.5 rounded-full font-medium">{s}</span>
+                {i < arr.length - 1 && <span className="text-slate-400">→</span>}
+              </div>
+            ))}
+          </div>
+
+          {HUB_GROUPS.map(({ group, color, headerColor, items }) => (
+            <div key={group} className={`rounded-2xl border ${color} overflow-hidden`}>
+              <div className={`${headerColor} px-4 py-2`}>
+                <h2 className="text-sm font-bold text-white">{group}</h2>
+              </div>
+              <div className="divide-y divide-slate-100">
+                {items.map(({ label, desc, icon: Icon, page, tab: targetTab }) => {
+                  const inner = (
+                    <div className="flex items-center gap-3 px-4 py-3.5 bg-white hover:bg-slate-50 active:bg-slate-100 transition-colors cursor-pointer">
+                      <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
+                        <Icon className="w-4 h-4 text-slate-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-sm text-slate-900">{label}</div>
+                        <div className="text-xs text-slate-500 truncate">{desc}</div>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+                    </div>
+                  );
+                  if (targetTab) return (
+                    <div key={label} onClick={() => setTab(targetTab)}>{inner}</div>
+                  );
+                  return (
+                    <Link key={label} to={createPageUrl(`${page}?from=PurchaseOps`)}>{inner}</Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* MR Tab */}
       {tab === 'mr' && (
         <div className="space-y-4">
