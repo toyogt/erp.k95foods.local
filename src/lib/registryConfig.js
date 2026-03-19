@@ -62,9 +62,11 @@ export const pageRegistry = [
   { pageKey: 'OpeningStockImport', title: 'Opening Stock Import', moduleKey: 'WAREHOUSE', icon: Upload, roles: ['admin', 'warehouse_ops', 'user'] },
 
   // ─── PURCHASE ───
-  { pageKey: 'PurchaseOps', title: 'Purchase & GRN Hub', moduleKey: 'PURCHASE', icon: ShoppingCart, roles: ['admin', 'purchase_user', 'purchase_manager', 'production_manager', 'user'] },
-  { pageKey: 'SupplierManager', title: 'Suppliers', moduleKey: 'PURCHASE', icon: Truck, roles: ['admin', 'purchase_manager'], adminOnly: true },
-  { pageKey: 'ApprovalsInbox', title: 'Approvals Inbox', moduleKey: 'PURCHASE', icon: ClipboardCheck, roles: ['admin', 'purchase_manager', 'accounts_manager', 'production_manager', 'user'] },
+   { pageKey: 'MaterialRequest', title: 'Material Requests', moduleKey: 'PURCHASE', icon: ClipboardList, roles: ['admin', 'purchase_user', 'purchase_manager', 'production_manager', 'user'] },
+   { pageKey: 'PurchaseOrders', title: 'Purchase Orders', moduleKey: 'PURCHASE', icon: ShoppingCart, roles: ['admin', 'purchase_user', 'purchase_manager', 'production_manager', 'user'] },
+   { pageKey: 'PurchaseReports', title: 'Purchase Reports', moduleKey: 'PURCHASE', icon: BarChart3, roles: ['admin', 'purchase_manager', 'production_manager', 'user'] },
+   { pageKey: 'SupplierManager', title: 'Suppliers', moduleKey: 'PURCHASE', icon: Truck, roles: ['admin', 'purchase_manager'], adminOnly: true },
+   { pageKey: 'ApprovalsInbox', title: 'Approvals Inbox', moduleKey: 'PURCHASE', icon: ClipboardCheck, roles: ['admin', 'purchase_manager', 'accounts_manager', 'production_manager', 'user'] },
 
   // ─── GOODS RECEIPT (GRN) ───
   { pageKey: 'GateEntry', title: 'Gate Entry', moduleKey: 'GRN', icon: ShieldCheck, roles: ['admin', 'security_guard', 'purchase_manager', 'user'] },
