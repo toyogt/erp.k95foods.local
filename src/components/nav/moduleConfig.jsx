@@ -76,10 +76,9 @@ export const MODULES = [
     color: 'text-violet-600',
     bgColor: 'bg-violet-50',
     pages: [
-      { key: 'PurchaseOps',    label: 'Purchase Requests & Orders', icon: ShoppingCart, roles: ['admin','purchase_user','purchase_manager','production_manager','user'] },
+      { key: 'PurchaseOps',    label: 'Purchase & GRN Hub',         icon: ShoppingCart, roles: ['admin','purchase_user','purchase_manager','production_manager','user'] },
       { key: 'SupplierManager',label: 'Suppliers',                  icon: Truck,        roles: ['admin','purchase_manager'], adminOnly: true },
       { key: 'ApprovalsInbox', label: 'Approvals Inbox',            icon: ClipboardCheck, roles: ['admin','purchase_manager','accounts_manager','production_manager','user'] },
-      { key: 'PurchaseGRNHub', label: 'Purchase & GRN Hub',        icon: BarChart3,    roles: ['admin','purchase_user','purchase_manager','user'] },
     ],
   },
   {
