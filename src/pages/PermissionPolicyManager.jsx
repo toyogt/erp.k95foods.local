@@ -145,7 +145,7 @@ export default function PermissionPolicyManager() {
                       size="icon"
                       variant="ghost"
                       className="text-red-500 hover:text-red-700"
-                      onClick={() => handleDelete(policy)}
+                      onClick={() => setDeleteTarget(policy)}
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
