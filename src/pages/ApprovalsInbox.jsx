@@ -98,7 +98,10 @@ export default function ApprovalsInbox() {
 
   useEffect(() => { load(); }, []);
 
-  const isManager = user?.role === 'admin' || user?.role === 'purchase_manager' || user?.role === 'production_manager' || user?.role === 'accounts_manager';
+  // A user "can act" if they have any approval rules that match MR or PO SUBMITTED state.
+  // We determine this dynamically — if ApprovalActionPanel shows no buttons for them, they'll see an info message there.
+  // For the warning below, we check if admin or has at least one approval rule available.
+  const isManager = user?.role === 'admin' || ['purchase_manager','production_manager','accounts_manager','store_receiver','qc_inspector','accounts_user'].includes(user?.role);
 
   const totalPending = mrs.length + pos.length;
 
