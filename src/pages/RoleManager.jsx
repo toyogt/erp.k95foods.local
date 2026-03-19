@@ -274,6 +274,9 @@ export default function RoleManager() {
                       ))}
                     </div>
                   )}
+                  {role.page_access?.length > 0 && (
+                    <p className="text-xs text-slate-500 mt-2">+ {role.page_access.length} custom page access overrides</p>
+                  )}
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
                   <Button size="icon" variant="ghost" className="h-9 w-9"
