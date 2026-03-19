@@ -55,8 +55,17 @@ export default function Layout({ children, currentPageName }) {
   const role = user?.role || 'user';
   const isAdmin = role === 'admin';
   const isOperator = isOperatorLayout(role);
+  const isDashboard = currentPageName === 'Dashboard';
+  
+  // Check if user has access to current page
+  const hasAccess = allowedPages.includes('*') || allowedPages.includes(currentPageName) || isDashboard;
 
   if (userLoading) return null;
+  
+  // Block access to unauthorized pages
+  if (!hasAccess && !isOperator) {
+    return <AccessDenied page={currentPageName} />;
+  }
 
   // Operator roles (shop floor) get app-like layout, not sidebar
   if (isOperator) {
