@@ -33,6 +33,11 @@ export default function ApprovalActionPanel({ docType, doc, user, onDone }) {
       entity_type: docType === 'MR' ? 'PurchaseRequest' : 'PurchaseOrder',
       entity_id: doc[idField], user,
     });
+
+    // FMS: fire approval event using doc.id (in ref_chain)
+    const eventKey = docType === 'MR' ? 'purchase_request_created' : 'purchase_order_approved';
+    await fireFMSEvent(eventKey, doc.id);
+
     setActing(false);
     onDone();
   }

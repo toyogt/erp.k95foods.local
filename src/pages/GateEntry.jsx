@@ -102,7 +102,7 @@ export default function GateEntryPage() {
   async function handleSubmit() {
     setSubmitting(true);
     const gate_id = genId('GE');
-    await base44.entities.GateEntry.create({
+    const gateEntry = await base44.entities.GateEntry.create({
       gate_id,
       arrived_at: new Date().toISOString(),
       vehicle_number: form.vehicle_number.trim(),
@@ -115,6 +115,7 @@ export default function GateEntryPage() {
       status: 'OPEN',
     });
     await logGrnAudit({ action: 'GATE_ENTRY_CREATED', entity_type: 'GateEntry', entity_id: gate_id, details: { vehicle: form.vehicle_number }, user });
+    await fireFMSEvent('gate_entry_created', gateEntry.id);
 
     setLoadingCL(true);
     const tmpl = await getChecklistTemplate('GATE_ENTRY', 'CREATE');
