@@ -5,7 +5,7 @@ import {
   Layers, BarChart3, Upload, ListChecks, Bell, ScrollText,
   Search, PlayCircle, MonitorDot, Users, FlaskConical,
   PackageSearch, Zap, Box, TestTube2, ShieldCheck,
-  Archive, FileText, ClipboardList,
+  Archive, FileText, ClipboardList, Shield,
 } from 'lucide-react';
 
 /**
@@ -127,7 +127,7 @@ export const MODULES = [
       { key: 'FMSActiveRuns',label: 'Active Runs',  icon: PlayCircle,    roles: ['admin','process_controller','process_designer','user'] },
       { key: 'FMSMonitor',   label: 'Monitor',      icon: MonitorDot,    roles: ['admin','process_controller','user'] },
       { key: 'FMSProcesses', label: 'Processes',    icon: GitBranch,     roles: ['admin','process_designer'], adminOnly: true },
-      { key: 'FMSUsers',     label: 'FMS Users',    icon: Users,         roles: ['admin'], adminOnly: true },
+      { key: 'FMSUsers',     label: 'FMS Users (Legacy)', icon: Users,   roles: ['admin'], adminOnly: true },
     ],
   },
   {
@@ -152,6 +152,9 @@ export const MODULES = [
       { key: 'TraceInvestigation',   label: 'Trace Investigation',icon: Search,        roles: ['admin','production_manager','user'] },
       { key: 'AlertsPage',           label: 'Alerts',             icon: Bell,          roles: ['admin','production_manager','label_supervisor','labelling_supervisor','user'] },
       { key: 'AuditLogPage',         label: 'Audit Log',          icon: ScrollText,    roles: ['admin','production_manager','qa','user'] },
+      { key: 'UserManagement',       label: 'User Management',    icon: Users,         roles: ['admin'], adminOnly: true },
+      { key: 'RoleManager',          label: 'Role Manager',       icon: Shield,        roles: ['admin'], adminOnly: true },
+      { key: 'ApprovalRulesManager', label: 'Approval Rules',     icon: GitBranch,     roles: ['admin'], adminOnly: true },
     ],
   },
 ];
