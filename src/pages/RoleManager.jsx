@@ -6,6 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Loader2, Plus, Pencil, Trash2, Shield, ChevronDown, ChevronUp } from 'lucide-react';
 import { ALL_MODULE_KEYS } from '@/lib/approvalEngine';
+import ConfirmDialog from '@/components/common/ConfirmDialog';
+import { auditRoleCreated, auditRoleUpdated, auditRoleDeactivated } from '@/lib/auditAdminActions';
 
 const COLOR_OPTIONS = [
   { value: 'slate',  label: 'Slate',   cls: 'bg-slate-100 text-slate-700' },
