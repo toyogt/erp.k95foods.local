@@ -4,24 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Loader2, Plus, Pencil, Trash2, Shield, ChevronDown, ChevronUp } from 'lucide-react';
+import { Loader2, Plus, Pencil, Shield, ChevronDown, ChevronUp, ToggleLeft, ToggleRight } from 'lucide-react';
 import { ALL_MODULE_KEYS } from '@/lib/approvalEngine';
 import { getPagesInModule, getVisiblePagesInModule } from '@/lib/registryConfig';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { auditRoleCreated, auditRoleUpdated, auditRoleDeactivated } from '@/lib/auditAdminActions';
 
-const COLOR_OPTIONS = [
-  { value: 'slate',  label: 'Slate',   cls: 'bg-slate-100 text-slate-700' },
-  { value: 'blue',   label: 'Blue',    cls: 'bg-blue-100 text-blue-700' },
-  { value: 'purple', label: 'Purple',  cls: 'bg-purple-100 text-purple-700' },
-  { value: 'green',  label: 'Green',   cls: 'bg-green-100 text-green-700' },
-  { value: 'orange', label: 'Orange',  cls: 'bg-orange-100 text-orange-700' },
-  { value: 'red',    label: 'Red',     cls: 'bg-red-100 text-red-700' },
-  { value: 'pink',   label: 'Pink',    cls: 'bg-pink-100 text-pink-700' },
-  { value: 'teal',   label: 'Teal',    cls: 'bg-teal-100 text-teal-700' },
-  { value: 'indigo', label: 'Indigo',  cls: 'bg-indigo-100 text-indigo-700' },
-  { value: 'yellow', label: 'Yellow',  cls: 'bg-yellow-100 text-yellow-700' },
-];
+
 
 const MODULE_LABELS = {
   DASHBOARD: 'Dashboard', PRODUCTION: 'Production', LABELLING: 'Labelling & Packing',
@@ -29,7 +18,7 @@ const MODULE_LABELS = {
   QUALITY: 'Quality', ACCOUNTS: 'Accounts', FMS: 'Process Flow', ADMIN: 'Admin',
 };
 
-const EMPTY_FORM = { role_key: '', label: '', description: '', color: 'slate', module_access: [], page_access: [], is_active: true, is_system: false };
+const EMPTY_FORM = { role_key: '', label: '', description: '', module_access: [], page_access: [], is_active: true, is_system: false };
 
 function RoleForm({ initial, onSave, onCancel, saving }) {
   const [form, setForm] = useState(initial || EMPTY_FORM);
@@ -52,8 +41,6 @@ function RoleForm({ initial, onSave, onCancel, saving }) {
         : [...(f.page_access || []), pageKey],
     }));
   };
-
-  const colorCls = COLOR_OPTIONS.find(c => c.value === form.color)?.cls || 'bg-slate-100 text-slate-700';
 
   return (
     <div className="space-y-4">
@@ -80,22 +67,6 @@ function RoleForm({ initial, onSave, onCancel, saving }) {
         <Label>Description</Label>
         <Input className="mt-1" placeholder="What can this role do?"
           value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
-      </div>
-
-      <div>
-        <Label>Badge Color</Label>
-        <div className="flex flex-wrap gap-2 mt-1.5">
-          {COLOR_OPTIONS.map(c => (
-            <button key={c.value}
-              onClick={() => setForm(f => ({ ...f, color: c.value }))}
-              className={`px-2.5 py-1 rounded-full text-xs font-semibold border-2 transition-all ${c.cls} ${form.color === c.value ? 'border-slate-800 scale-105' : 'border-transparent'}`}>
-              {c.label}
-            </button>
-          ))}
-        </div>
-        <div className="mt-2">
-          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${colorCls}`}>Preview: {form.label || 'Role Name'}</span>
-        </div>
       </div>
 
       <div>
@@ -206,26 +177,25 @@ export default function RoleManager() {
     setSaving(false);
   };
 
-  const handleDeactivate = async () => {
-    if (!deactivateTarget) return;
+  const handleToggleActive = async (role) => {
     setDeactivating(true);
     try {
-      await base44.entities.AppRole.update(deactivateTarget.id, { is_active: false });
-      await auditRoleDeactivated(user, deactivateTarget.role_key, deactivateTarget.label);
+      const newActiveState = !role.is_active;
+      await base44.entities.AppRole.update(role.id, { is_active: newActiveState });
+      if (!newActiveState) {
+        await auditRoleDeactivated(user, role.role_key, role.label);
+      }
       setDeactivateTarget(null);
       load();
     } catch (e) {
-      console.error('Error deactivating role:', e);
+      console.error('Error toggling role active state:', e);
     }
     setDeactivating(false);
   };
 
   // Access control handled by Layout.jsx — if user isn't admin, they won't reach this page
 
-  const getColorCls = (color) => {
-    const c = COLOR_OPTIONS.find(c => c.value === color);
-    return c?.cls || 'bg-slate-100 text-slate-700';
-  };
+
 
   return (
     <div className="max-w-4xl mx-auto space-y-5 pb-12">
@@ -257,13 +227,13 @@ export default function RoleManager() {
           {roles.filter(r => !r.is_system).map(role => (
             <div key={role.id} className="bg-white rounded-2xl border border-slate-200 p-4">
               <div className="flex items-start justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${getColorCls(role.color)}`}>{role.label}</span>
-                    <code className="text-xs text-slate-400 font-mono">{role.role_key}</code>
-                    {role.is_system && <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-semibold">SYSTEM</span>}
-                    {!role.is_active && <span className="text-xs bg-red-100 text-red-600 px-1.5 py-0.5 rounded font-semibold">INACTIVE</span>}
-                  </div>
+               <div className="flex-1 min-w-0">
+                 <div className="flex items-center gap-2 flex-wrap">
+                   <span className="text-sm font-bold text-slate-900">{role.label}</span>
+                   <code className="text-xs text-slate-400 font-mono">{role.role_key}</code>
+                   {role.is_system && <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-semibold">SYSTEM</span>}
+                   {!role.is_active && <span className="text-xs bg-red-100 text-red-600 px-1.5 py-0.5 rounded font-semibold">INACTIVE</span>}
+                 </div>
                   {role.description && (
                     <p className="text-sm text-slate-500 mt-1">{role.description}</p>
                   )}
@@ -279,17 +249,18 @@ export default function RoleManager() {
                   )}
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                  <Button size="icon" variant="ghost" className="h-9 w-9"
-                    onClick={() => setModal({ mode: 'edit', role })}>
-                    <Pencil className="w-4 h-4" />
-                  </Button>
-                  {!role.is_system && (
-                    <Button size="icon" variant="ghost" className="h-9 w-9 text-red-400 hover:text-red-600 hover:bg-red-50"
-                      onClick={() => setDeactivateTarget(role)}>
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  )}
-                </div>
+                   <Button size="icon" variant="ghost" className="h-9 w-9"
+                     onClick={() => setModal({ mode: 'edit', role })}>
+                     <Pencil className="w-4 h-4" />
+                   </Button>
+                   {!role.is_system && (
+                     <Button size="icon" variant="ghost" className={`h-9 w-9 ${role.is_active ? 'text-red-400 hover:text-red-600 hover:bg-red-50' : 'text-green-600 hover:text-green-700 hover:bg-green-50'}`}
+                       onClick={() => handleToggleActive(role)}
+                       disabled={deactivating}>
+                       {role.is_active ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
+                     </Button>
+                   )}
+                 </div>
               </div>
             </div>
           ))}
@@ -308,18 +279,7 @@ export default function RoleManager() {
         </Dialog>
       )}
 
-      {/* Deactivate confirm */}
-      <ConfirmDialog
-        open={!!deactivateTarget}
-        onOpenChange={(open) => !open && setDeactivateTarget(null)}
-        title="Deactivate Role?"
-        description={`Deactivate "${deactivateTarget?.label}"? Users with this role will lose access, but the role record and history are preserved.`}
-        confirmLabel="Deactivate"
-        cancelLabel="Cancel"
-        onConfirm={handleDeactivate}
-        isDestructive={true}
-        isLoading={deactivating}
-      />
+
     </div>
   );
 }
