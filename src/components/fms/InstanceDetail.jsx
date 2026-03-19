@@ -6,7 +6,7 @@ import ReassignModal from './ReassignModal';
 import EscalateModal from './EscalateModal';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { X, UserCheck, Bell, Ban } from 'lucide-react';
+import { X, UserCheck, Bell, Ban, Link2, Copy, CheckCheck } from 'lucide-react';
 
 const STATUS_COLORS = {
   active: 'bg-blue-100 text-blue-700',
