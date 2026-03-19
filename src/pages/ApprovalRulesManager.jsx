@@ -6,16 +6,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Loader2, Plus, Pencil, Trash2, GitMerge, ChevronDown } from 'lucide-react';
-
-const DOC_TYPES = [
-  { value: 'PurchaseRequest',  label: 'Material Request (MR)' },
-  { value: 'PurchaseOrder',    label: 'Purchase Order (PO)' },
-  { value: 'GRNHeader',        label: 'GRN Receipt' },
-  { value: 'QCInspection',     label: 'QC Inspection' },
-  { value: 'SupplierInvoice',  label: 'Supplier Invoice' },
-  { value: 'PaymentRequest',   label: 'Payment Request' },
-  { value: 'BoxLabel',         label: 'Box Label' },
-];
+import ConfirmDialog from '@/components/common/ConfirmDialog';
+import { getDocumentTypes } from '@/lib/documentTypeRegistry';
+import { auditApprovalRuleCreated, auditApprovalRuleUpdated, auditApprovalRuleDeleted } from '@/lib/auditAdminActions';
 
 const ACTION_STYLES = [
   { value: 'approve',  label: 'Approve (Green)' },
