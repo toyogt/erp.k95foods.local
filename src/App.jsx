@@ -81,6 +81,7 @@ import SyncCenter from './pages/SyncCenter';
 import RulesManager from './pages/RulesManager';
 import BlockedAttemptsViewer from './pages/BlockedAttemptsViewer';
 import TraceabilityExplorer from './pages/TraceabilityExplorer';
+import ReconciliationDashboard from './pages/ReconciliationDashboard';
 
 // Page component lookup table
 const PAGE_COMPONENTS = {
@@ -93,7 +94,7 @@ const PAGE_COMPONENTS = {
   ThreeWayMatch, TraceInvestigation, TransferReceiving, UOMManager, WarehouseBins, WarehouseOps,
   BarcodeOCRTest, FMSMyTasks, FMSProcesses, FMSActiveRuns, FMSMonitor, UserManagement, RoleManager, ApprovalRulesManager,
   PermissionMatrix, PermissionMatrixDashboard, ApprovalWorkflowHub, AccessAuditLog, FMSHealthDashboard,
-  OperatorDashboardMobile, PermissionPolicyManager, SyncCenter, RulesManager, BlockedAttemptsViewer, TraceabilityExplorer, RoutesDiagnostics,
+  OperatorDashboardMobile, PermissionPolicyManager, SyncCenter, RulesManager, BlockedAttemptsViewer, TraceabilityExplorer, ReconciliationDashboard, RoutesDiagnostics,
 };
 
 const { Pages, Layout, mainPage } = pagesConfig;
