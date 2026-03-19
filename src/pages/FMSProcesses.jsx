@@ -71,16 +71,13 @@ export default function FMSProcesses() {
   const canEdit = isProcessDesigner(user);
 
   if (loading) return (
-    <FMSLayout user={user}>
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
-      </div>
-    </FMSLayout>
+    <div className="flex items-center justify-center h-64">
+      <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+    </div>
   );
 
   return (
-    <FMSLayout user={user}>
-      <div className="p-6">
+    <div className="p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold text-slate-800">Process Templates</h1>
@@ -224,6 +221,6 @@ export default function FMSProcesses() {
           }}
         />
       )}
-    </FMSLayout>
+    </div>
   );
 }
