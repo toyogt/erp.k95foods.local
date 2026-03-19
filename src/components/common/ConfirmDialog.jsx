@@ -1,9 +1,3 @@
-/**
- * Styled Confirmation Dialog
- * Replaces browser confirm() with consistent, branded dialogs
- * Usage: <ConfirmDialog open={open} onOpenChange={setOpen} ... />
- */
-
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 
@@ -35,14 +29,8 @@ export default function ConfirmDialog({
             disabled={isLoading}
             className={isDestructive ? 'bg-red-600 hover:bg-red-700 h-11 px-4' : 'h-11 px-4'}
           >
-            {isLoading ? (
-              <>
-                <span className="inline-block w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
-                {confirmLabel}…
-              </>
-            ) : (
-              confirmLabel
-            )}
+            {isLoading ? <span className="inline-block w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" /> : null}
+            {confirmLabel}
           </Button>
         </div>
       </DialogContent>
