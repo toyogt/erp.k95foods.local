@@ -64,7 +64,7 @@ const TABS = [
 export default function PurchaseOps() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState('mr');
+  const [tab, setTab] = useState('hub');
   const [showMRWizard, setShowMRWizard] = useState(false);
   const [showPOForm, setShowPOForm] = useState(false);
   const [poSourceMR, setPoSourceMR] = useState(null);

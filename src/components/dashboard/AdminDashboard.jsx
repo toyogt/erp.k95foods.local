@@ -159,6 +159,8 @@ export default function AdminDashboard({ user }) {
         </div>
       )}
 
+      <MyTasksWidget user={user} />
+
       <LocationHeatmap cratesByLocation={cratesByLocation} />
 
       {/* All Stations */}
