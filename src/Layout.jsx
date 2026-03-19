@@ -33,18 +33,18 @@ export default function Layout({ children, currentPageName }) {
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
-  if (userLoading) return null;
-
   const role = user?.role || 'user';
   const isAdmin = role === 'admin';
   const isFGOnly = role === 'warehouse';
 
   // Redirect FG-only users to FGWarehouse
   useEffect(() => {
-    if (isFGOnly && currentPageName !== 'FGWarehouse') {
+    if (!userLoading && isFGOnly && currentPageName !== 'FGWarehouse') {
       window.location.replace(createPageUrl('FGWarehouse'));
     }
-  }, [isFGOnly, currentPageName]);
+  }, [userLoading, isFGOnly, currentPageName]);
+
+  if (userLoading) return null;
 
   if (isFGOnly) return (
     <OfflineProvider>
