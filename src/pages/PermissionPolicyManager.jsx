@@ -10,8 +10,9 @@ import { Loader2, Shield, Plus, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import PermissionPolicyForm from '@/components/admin/PermissionPolicyForm';
+import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { clearPermissionCache } from '@/lib/permissionResolver';
-import { auditPolicyCreated, auditPolicyUpdated, auditPolicyDeleted } from '@/lib/permissionAudit';
+import { auditPermissionPolicyCreated, auditPermissionPolicyUpdated, auditPermissionPolicyDeleted } from '@/lib/auditAdminActions';
 
 export default function PermissionPolicyManager() {
   const [user, setUser] = useState(null);
