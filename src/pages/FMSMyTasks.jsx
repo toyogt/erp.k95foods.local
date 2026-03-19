@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
-import FMSLayout from '@/components/fms/FMSLayout';
 import TATBadge from '@/components/fms/TATBadge';
 import StepChecklistRunner from '@/components/fms/StepChecklistRunner';
 import { Button } from '@/components/ui/button';

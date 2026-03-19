@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
-import FMSLayout from '@/components/fms/FMSLayout';
 import ProcessForm from '@/components/fms/ProcessForm';
 import StepForm from '@/components/fms/StepForm';
 import { Button } from '@/components/ui/button';
