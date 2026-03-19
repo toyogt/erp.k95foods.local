@@ -143,9 +143,23 @@ export default function StepForm({ step, processId, nextOrder, users, onClose, o
           </div>
           {form.completion_mode === 'auto' && (
             <div>
-              <Label>Auto-Complete Event Key</Label>
-              <Input value={form.auto_complete_event} onChange={e => set('auto_complete_event', e.target.value)} placeholder="e.g. grn_received, po_approved" className="mt-1" />
-              <p className="text-xs text-slate-500 mt-1">App fires this event to auto-complete this step</p>
+              <Label>Auto-Complete Event</Label>
+              <Select value={form.auto_complete_event} onValueChange={v => set('auto_complete_event', v)}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Select the app event that completes this step…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(groupEventsByCategory(COMPLETE_EVENTS)).map(([cat, events]) => (
+                    <div key={cat}>
+                      <div className="px-2 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wide">{cat}</div>
+                      {events.map(e => (
+                        <SelectItem key={e.key} value={e.key}>{e.label}</SelectItem>
+                      ))}
+                    </div>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-slate-500 mt-1">This step auto-completes when the selected app event fires</p>
             </div>
           )}
           <div className="flex gap-2 pt-2 justify-end">

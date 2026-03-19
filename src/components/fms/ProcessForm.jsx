@@ -69,9 +69,23 @@ export default function ProcessForm({ process, onClose, onSaved }) {
           </div>
           {form.trigger_type === 'auto' && (
             <div>
-              <Label>Trigger Source Key</Label>
-              <Input value={form.trigger_source} onChange={e => set('trigger_source', e.target.value)} placeholder="e.g. gate_entry, purchase_po" className="mt-1" />
-              <p className="text-xs text-slate-500 mt-1">Used by app events to auto-start this process</p>
+              <Label>Trigger Source Event</Label>
+              <Select value={form.trigger_source} onValueChange={v => set('trigger_source', v)}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Select the app event that starts this process…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(groupEventsByCategory(TRIGGER_EVENTS)).map(([cat, events]) => (
+                    <div key={cat}>
+                      <div className="px-2 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wide">{cat}</div>
+                      {events.map(e => (
+                        <SelectItem key={e.key} value={e.key}>{e.label}</SelectItem>
+                      ))}
+                    </div>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-slate-500 mt-1">This process will auto-start when this app event fires</p>
             </div>
           )}
           <div className="flex items-center gap-3 pt-1">
