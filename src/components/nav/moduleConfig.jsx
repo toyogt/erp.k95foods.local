@@ -171,12 +171,18 @@ export function getModuleForPage(pageKey) {
 
 /**
  * Filter MODULES to only those containing pages accessible by this role.
+ * roleModuleAccess: optional array of module keys granted by AppRole (from DB).
  */
-export function getVisibleModules(role) {
+export function getVisibleModules(role, roleModuleAccess = null) {
   const isAdmin = role === 'admin';
   return MODULES.filter(mod => {
     if (mod.adminOnly && !isAdmin) return false;
     if (mod.key === 'DASHBOARD') return true;
+    // If DB-driven module access is provided, use it
+    if (roleModuleAccess !== null) {
+      return isAdmin || roleModuleAccess.includes(mod.key);
+    }
+    // Fallback: legacy hardcoded roles[] check
     const visiblePages = mod.pages.filter(p => {
       if (p.adminOnly && !isAdmin) return false;
       return p.roles.includes(role) || p.roles.includes('user');
@@ -187,11 +193,18 @@ export function getVisibleModules(role) {
 
 /**
  * Get visible pages within a module for a role.
+ * roleModuleAccess: optional array of module keys granted by AppRole (from DB).
  */
-export function getVisiblePages(mod, role) {
+export function getVisiblePages(mod, role, roleModuleAccess = null) {
   const isAdmin = role === 'admin';
   return mod.pages.filter(p => {
     if (p.adminOnly && !isAdmin) return false;
-    return p.roles.includes(role) || isAdmin;
+    if (isAdmin) return true;
+    // If DB-driven module access is provided, use it for module-level access
+    if (roleModuleAccess !== null) {
+      return roleModuleAccess.includes(mod.key);
+    }
+    // Fallback: legacy hardcoded roles[] check
+    return p.roles.includes(role);
   });
 }
