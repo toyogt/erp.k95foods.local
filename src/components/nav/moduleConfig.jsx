@@ -127,7 +127,6 @@ export const MODULES = [
       { key: 'FMSActiveRuns',label: 'Active Runs',  icon: PlayCircle,    roles: ['admin','process_controller','process_designer','user'] },
       { key: 'FMSMonitor',   label: 'Monitor',      icon: MonitorDot,    roles: ['admin','process_controller','user'] },
       { key: 'FMSProcesses', label: 'Processes',    icon: GitBranch,     roles: ['admin','process_designer'], adminOnly: true },
-      { key: 'FMSUsers',     label: 'FMS Users (Legacy)', icon: Users,   roles: ['admin'], adminOnly: true },
     ],
   },
   {

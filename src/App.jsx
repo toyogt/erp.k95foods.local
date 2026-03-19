@@ -12,7 +12,7 @@ import FMSMyTasks from './pages/FMSMyTasks';
 import FMSProcesses from './pages/FMSProcesses';
 import FMSActiveRuns from './pages/FMSActiveRuns';
 import FMSMonitor from './pages/FMSMonitor';
-import FMSUsers from './pages/FMSUsers';
+
 import UserManagement from './pages/UserManagement';
 import RoleManager from './pages/RoleManager';
 import ApprovalRulesManager from './pages/ApprovalRulesManager';
@@ -73,7 +73,7 @@ const AuthenticatedApp = () => {
       <Route path="/FMSProcesses" element={<LayoutWrapper currentPageName="FMSProcesses"><FMSProcesses /></LayoutWrapper>} />
       <Route path="/FMSActiveRuns" element={<LayoutWrapper currentPageName="FMSActiveRuns"><FMSActiveRuns /></LayoutWrapper>} />
       <Route path="/FMSMonitor" element={<LayoutWrapper currentPageName="FMSMonitor"><FMSMonitor /></LayoutWrapper>} />
-      <Route path="/FMSUsers" element={<LayoutWrapper currentPageName="FMSUsers"><FMSUsers /></LayoutWrapper>} />
+
       <Route path="/UserManagement" element={<LayoutWrapper currentPageName="UserManagement"><UserManagement /></LayoutWrapper>} />
       <Route path="/RoleManager" element={<LayoutWrapper currentPageName="RoleManager"><RoleManager /></LayoutWrapper>} />
       <Route path="/ApprovalRulesManager" element={<LayoutWrapper currentPageName="ApprovalRulesManager"><ApprovalRulesManager /></LayoutWrapper>} />
