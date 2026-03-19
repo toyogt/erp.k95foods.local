@@ -13,6 +13,7 @@ import FMSProcesses from './pages/FMSProcesses';
 import FMSActiveRuns from './pages/FMSActiveRuns';
 import FMSMonitor from './pages/FMSMonitor';
 import FMSUsers from './pages/FMSUsers';
+// Add page imports here
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -65,11 +66,11 @@ const AuthenticatedApp = () => {
         />
       ))}
       <Route path="/BarcodeOCRTest" element={<LayoutWrapper currentPageName="BarcodeOCRTest"><BarcodeOCRTest /></LayoutWrapper>} />
-      <Route path="/FMSMyTasks" element={<FMSMyTasks />} />
-      <Route path="/FMSProcesses" element={<FMSProcesses />} />
-      <Route path="/FMSActiveRuns" element={<FMSActiveRuns />} />
-      <Route path="/FMSMonitor" element={<FMSMonitor />} />
-      <Route path="/FMSUsers" element={<FMSUsers />} />
+      <Route path="/FMSMyTasks" element={<LayoutWrapper currentPageName="FMSMyTasks"><FMSMyTasks /></LayoutWrapper>} />
+      <Route path="/FMSProcesses" element={<LayoutWrapper currentPageName="FMSProcesses"><FMSProcesses /></LayoutWrapper>} />
+      <Route path="/FMSActiveRuns" element={<LayoutWrapper currentPageName="FMSActiveRuns"><FMSActiveRuns /></LayoutWrapper>} />
+      <Route path="/FMSMonitor" element={<LayoutWrapper currentPageName="FMSMonitor"><FMSMonitor /></LayoutWrapper>} />
+      <Route path="/FMSUsers" element={<LayoutWrapper currentPageName="FMSUsers"><FMSUsers /></LayoutWrapper>} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
