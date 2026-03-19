@@ -1,68 +1,48 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Check, X, Loader2, Plus, Pencil, Trash2, Info } from 'lucide-react';
+import { Check, X, Loader2, Plus, Pencil, Trash2, Info, Lock } from 'lucide-react';
 
 export default function PermissionMatrix() {
   const [user, setUser] = useState(null);
   const [roles, setRoles] = useState([]);
-  const [docTypes, setDocTypes] = useState([]);
   const [accessRules, setAccessRules] = useState([]);
-  const [approvalRules, setApprovalRules] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('access'); // 'access' or 'approval'
   const [editingRule, setEditingRule] = useState(null);
   const [formOpen, setFormOpen] = useState(false);
+  const [savingRule, setSavingRule] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => {
-    base44.auth.me().then(u => {
-      setUser(u);
-      if (u?.role === 'admin') loadData();
-    });
-  }, []);
-
-  const loadData = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
-    const [rls, rules, appRules] = await Promise.all([
-      base44.entities.AppRole.filter({ is_active: true }, '-created_date', 100),
+    const [me, rls, rules] = await Promise.all([
+      base44.auth.me(),
+      base44.entities.AppRole.filter({ is_active: true }, 'label'),
       base44.entities.DocumentAccessRule.filter({ is_active: true }, '-created_date', 500),
-      base44.entities.DocumentApprovalRule.filter({ is_active: true }, '-created_date', 500),
     ]);
+    setUser(me);
     setRoles(rls);
     setAccessRules(rules);
-    setApprovalRules(appRules);
-
-    // Extract unique doc types
-    const docTypeSet = new Set();
-    rules.forEach(r => docTypeSet.add(r.doc_type));
-    appRules.forEach(r => docTypeSet.add(r.doc_type));
-    setDocTypes(Array.from(docTypeSet).sort());
-
     setLoading(false);
-  };
+  }, []);
 
-  const getRuleForDocTypeAndRole = (docType, roleKey) => {
-    return accessRules.find(r => r.doc_type === docType && r.allowed_roles?.includes(roleKey));
-  };
+  useEffect(() => { load(); }, [load]);
 
-  const getApprovalRulesForDocType = (docType, roleKey) => {
-    return approvalRules.filter(r => r.doc_type === docType && r.allowed_roles?.includes(roleKey));
-  };
-
-  const handleEditRule = (docType, roleKey) => {
-    const existing = getRuleForDocTypeAndRole(docType, roleKey);
-    setEditingRule(existing || {
-      doc_type: docType,
-      allowed_roles: [roleKey],
+  const handleEditRule = (rule) => {
+    setEditingRule(rule ? { ...rule } : {
+      doc_type: '',
+      allowed_roles: [],
       workflow_stages: [],
-      can_view: false,
+      can_view: true,
       can_edit: false,
       can_create: false,
       can_approve: false,
       can_reject: false,
+      can_delete: false,
       is_active: true,
     });
     setFormOpen(true);
@@ -73,20 +53,31 @@ export default function PermissionMatrix() {
       alert('Document type and role are required');
       return;
     }
-
-    if (editingRule.id) {
-      await base44.entities.DocumentAccessRule.update(editingRule.id, editingRule);
-    } else {
-      await base44.entities.DocumentAccessRule.create(editingRule);
+    setSavingRule(true);
+    try {
+      if (editingRule.id) {
+        await base44.entities.DocumentAccessRule.update(editingRule.id, editingRule);
+      } else {
+        await base44.entities.DocumentAccessRule.create(editingRule);
+      }
+      setFormOpen(false);
+      setEditingRule(null);
+      load();
+    } finally {
+      setSavingRule(false);
     }
-    setFormOpen(false);
-    loadData();
   };
 
-  const handleDeleteRule = async (ruleId) => {
-    if (!confirm('Delete this permission rule?')) return;
-    await base44.entities.DocumentAccessRule.delete(ruleId);
-    loadData();
+  const handleDeleteRule = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await base44.entities.DocumentAccessRule.delete(deleteTarget.id);
+      setDeleteTarget(null);
+      load();
+    } finally {
+      setDeleting(false);
+    }
   };
 
   if (!user) return <div className="text-center py-12 text-slate-500">Unauthorized</div>;
@@ -254,34 +245,34 @@ export default function PermissionMatrix() {
         </div>
       )}
 
-      {/* Edit Rule Dialog */}
-      <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>{editingRule?.id ? 'Edit' : 'New'} Access Rule</DialogTitle>
-          </DialogHeader>
-          {editingRule && (
+      {/* Edit Dialog */}
+      {formOpen && editingRule && (
+        <Dialog open onOpenChange={setFormOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{editingRule.id ? 'Edit Access Rule' : 'New Access Rule'}</DialogTitle>
+            </DialogHeader>
             <div className="space-y-4 py-4">
               <div>
-                <Label className="text-xs">Document Type *</Label>
+                <Label>Document Type *</Label>
                 <select
                   value={editingRule.doc_type || ''}
                   onChange={e => setEditingRule({ ...editingRule, doc_type: e.target.value })}
-                  className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm bg-white h-9"
+                  className="w-full h-10 border border-slate-200 rounded-md px-3 text-sm bg-white mt-1"
                   disabled={!!editingRule.id}
                 >
-                  <option value="">— Select —</option>
-                  {['PurchaseRequest', 'PurchaseOrder', 'GRNHeader', 'QCInspection', 'SupplierInvoice', 'PaymentRequest', 'Job', 'Batch', 'Crate', 'Pallet', 'BoxLabelPrintLog'].map(dt => (
+                  <option value="">— Select Document Type —</option>
+                  {['PurchaseRequest', 'PurchaseOrder', 'GRNHeader', 'QCInspection', 'SupplierInvoice', 'PaymentRequest', 'Job', 'Batch', 'Crate', 'Pallet', 'BoxLabel'].map(dt => (
                     <option key={dt} value={dt}>{dt}</option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <Label className="text-xs">Allowed Roles *</Label>
-                <div className="space-y-2 max-h-40 overflow-y-auto">
-                  {roles.map(role => (
-                    <label key={role.id} className="flex items-center gap-2 p-2 hover:bg-slate-50 rounded cursor-pointer">
+                <Label>Allowed Roles * (Select all roles that get this permission)</Label>
+                <div className="grid grid-cols-2 gap-2 mt-2 max-h-48 overflow-y-auto p-2 border border-slate-200 rounded-lg bg-slate-50">
+                  {roles.filter(r => r.role_key !== 'admin').map(role => (
+                    <label key={role.id} className="flex items-center gap-2 cursor-pointer p-2 hover:bg-white rounded transition-colors">
                       <input
                         type="checkbox"
                         checked={editingRule.allowed_roles?.includes(role.role_key) || false}
@@ -294,69 +285,68 @@ export default function PermissionMatrix() {
                               : arr.filter(r => r !== role.role_key),
                           });
                         }}
-                        className="w-4 h-4"
+                        className="w-4 h-4 rounded"
                       />
-                      <span className="text-sm text-slate-700">{role.label}</span>
+                      <span className="text-sm text-slate-700 font-medium">{role.label}</span>
                     </label>
                   ))}
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
-                <label className="flex items-center gap-2 p-2 border border-slate-200 rounded cursor-pointer hover:bg-slate-50">
-                  <input
-                    type="checkbox"
-                    checked={editingRule.can_view || false}
-                    onChange={e => setEditingRule({ ...editingRule, can_view: e.target.checked })}
-                    className="w-4 h-4"
-                  />
-                  <span className="text-sm text-slate-700">Can View</span>
-                </label>
-                <label className="flex items-center gap-2 p-2 border border-slate-200 rounded cursor-pointer hover:bg-slate-50">
-                  <input
-                    type="checkbox"
-                    checked={editingRule.can_create || false}
-                    onChange={e => setEditingRule({ ...editingRule, can_create: e.target.checked })}
-                    className="w-4 h-4"
-                  />
-                  <span className="text-sm text-slate-700">Can Create</span>
-                </label>
-                <label className="flex items-center gap-2 p-2 border border-slate-200 rounded cursor-pointer hover:bg-slate-50">
-                  <input
-                    type="checkbox"
-                    checked={editingRule.can_edit || false}
-                    onChange={e => setEditingRule({ ...editingRule, can_edit: e.target.checked })}
-                    className="w-4 h-4"
-                  />
-                  <span className="text-sm text-slate-700">Can Edit</span>
-                </label>
-                <label className="flex items-center gap-2 p-2 border border-slate-200 rounded cursor-pointer hover:bg-slate-50">
-                  <input
-                    type="checkbox"
-                    checked={editingRule.can_approve || false}
-                    onChange={e => setEditingRule({ ...editingRule, can_approve: e.target.checked })}
-                    className="w-4 h-4"
-                  />
-                  <span className="text-sm text-slate-700">Can Approve</span>
-                </label>
-                <label className="flex items-center gap-2 p-2 border border-slate-200 rounded cursor-pointer hover:bg-slate-50">
-                  <input
-                    type="checkbox"
-                    checked={editingRule.can_reject || false}
-                    onChange={e => setEditingRule({ ...editingRule, can_reject: e.target.checked })}
-                    className="w-4 h-4"
-                  />
-                  <span className="text-sm text-slate-700">Can Reject</span>
-                </label>
+              <div className="space-y-3 border-t border-slate-200 pt-4">
+                <Label className="font-semibold">Permissions</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { key: 'can_view', label: 'Can View' },
+                    { key: 'can_create', label: 'Can Create' },
+                    { key: 'can_edit', label: 'Can Edit' },
+                    { key: 'can_delete', label: 'Can Delete' },
+                    { key: 'can_approve', label: 'Can Approve' },
+                    { key: 'can_reject', label: 'Can Reject' },
+                  ].map(perm => (
+                    <label key={perm.key} className="flex items-center gap-2 p-2 border border-slate-200 rounded cursor-pointer hover:bg-slate-50 transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={editingRule[perm.key] || false}
+                        onChange={e => setEditingRule({ ...editingRule, [perm.key]: e.target.checked })}
+                        className="w-4 h-4 rounded"
+                      />
+                      <span className="text-sm text-slate-700">{perm.label}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
             </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setFormOpen(false)}>Cancel</Button>
-            <Button onClick={handleSaveRule}>Save Rule</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter className="gap-2">
+              <Button variant="outline" onClick={() => { setFormOpen(false); setEditingRule(null); }}>Cancel</Button>
+              <Button onClick={handleSaveRule} disabled={savingRule || !editingRule.doc_type} className="min-h-[44px]">
+                {savingRule ? <Loader2 className="w-4 h-4 animate-spin" /> : (editingRule.id ? 'Save Changes' : 'Create Rule')}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Delete Confirmation */}
+      {deleteTarget && (
+        <Dialog open onOpenChange={() => setDeleteTarget(null)}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Delete Rule?</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-slate-600">
+              Delete access rule for <strong>{deleteTarget.doc_type}</strong>?
+              Users with these roles will lose this permission.
+            </p>
+            <DialogFooter className="gap-2">
+              <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+              <Button className="bg-red-600 hover:bg-red-700 min-h-[44px]" onClick={handleDeleteRule} disabled={deleting}>
+                {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Delete Rule'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
