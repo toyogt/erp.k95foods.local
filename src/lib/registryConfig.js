@@ -103,16 +103,17 @@ export const pageRegistry = [
   { pageKey: 'AuditLogPage', title: 'Audit Log', moduleKey: 'ADMIN', icon: ScrollText, roles: ['admin', 'production_manager', 'qa', 'user'] },
 
   // ─── ADMIN / SYSTEM ───
-  { pageKey: 'UserManagement', title: 'User Management', moduleKey: 'ADMIN', icon: Users, roles: ['admin'], adminOnly: true },
-  { pageKey: 'RoleManager', title: 'Role Manager', moduleKey: 'ADMIN', icon: Shield, roles: ['admin'], adminOnly: true },
-  { pageKey: 'PermissionMatrix', title: 'Permission Matrix', moduleKey: 'ADMIN', icon: ShieldCheck, roles: ['admin'], adminOnly: true },
-  { pageKey: 'PermissionMatrixDashboard', title: 'Permission Dashboard', moduleKey: 'ADMIN', icon: ShieldCheck, roles: ['admin'], adminOnly: true },
-  { pageKey: 'ApprovalRulesManager', title: 'Approval Rules', moduleKey: 'ADMIN', icon: GitBranch, roles: ['admin'], adminOnly: true },
-  { pageKey: 'ApprovalWorkflowHub', title: 'Approval Workflow Hub', moduleKey: 'ADMIN', icon: ClipboardCheck, roles: ['admin'], adminOnly: true },
-  { pageKey: 'AccessAuditLog', title: 'Access Audit Log', moduleKey: 'ADMIN', icon: ScrollText, roles: ['admin'], adminOnly: true },
-  { pageKey: 'PermissionPolicyManager', title: 'Permission Policies', moduleKey: 'ADMIN', icon: Shield, roles: ['admin'], adminOnly: true },
-  { pageKey: 'FMSHealthDashboard', title: 'FMS Health', moduleKey: 'ADMIN', icon: BarChart4, roles: ['admin'], adminOnly: true },
-  { pageKey: 'RoutesDiagnostics', title: 'Routes Diagnostics', moduleKey: 'ADMIN', icon: Activity, roles: ['admin'], adminOnly: true, system: true, mobileVisible: false },
+   { pageKey: 'UserManagement', title: 'User Management', moduleKey: 'ADMIN', icon: Users, roles: ['admin'], adminOnly: true },
+   { pageKey: 'RoleManager', title: 'Role Manager', moduleKey: 'ADMIN', icon: Shield, roles: ['admin'], adminOnly: true },
+   { pageKey: 'PermissionMatrix', title: 'Permission Matrix', moduleKey: 'ADMIN', icon: ShieldCheck, roles: ['admin'], adminOnly: true },
+   { pageKey: 'PermissionMatrixDashboard', title: 'Permission Dashboard', moduleKey: 'ADMIN', icon: ShieldCheck, roles: ['admin'], adminOnly: true },
+   { pageKey: 'ApprovalRulesManager', title: 'Approval Rules', moduleKey: 'ADMIN', icon: GitBranch, roles: ['admin'], adminOnly: true },
+   { pageKey: 'ApprovalWorkflowHub', title: 'Approval Workflow Hub', moduleKey: 'ADMIN', icon: ClipboardCheck, roles: ['admin'], adminOnly: true },
+   { pageKey: 'AccessAuditLog', title: 'Access Audit Log', moduleKey: 'ADMIN', icon: ScrollText, roles: ['admin'], adminOnly: true },
+   { pageKey: 'PermissionPolicyManager', title: 'Permission Policies', moduleKey: 'ADMIN', icon: Shield, roles: ['admin'], adminOnly: true },
+   { pageKey: 'FMSHealthDashboard', title: 'FMS Health', moduleKey: 'ADMIN', icon: BarChart4, roles: ['admin'], adminOnly: true },
+   { pageKey: 'SyncCenter', title: 'Sync Center', moduleKey: 'ADMIN', icon: Activity, roles: ['admin'], adminOnly: true },
+   { pageKey: 'RoutesDiagnostics', title: 'Routes Diagnostics', moduleKey: 'ADMIN', icon: Activity, roles: ['admin'], adminOnly: true, system: true, mobileVisible: false },
 ];
 
 /**
