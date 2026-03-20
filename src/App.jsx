@@ -28,6 +28,7 @@ import FillingStation from './pages/FillingStation';
 import GRNReceive from './pages/GRNReceive';
 import GateEntry from './pages/GateEntry';
 import GateInbox from './pages/GateInbox';
+import ItemMasterManager from './pages/ItemMasterManager';
 import IngredientGroupManager from './pages/IngredientGroupManager';
 import IngredientManager from './pages/IngredientManager';
 import InvoiceCapture from './pages/InvoiceCapture';
@@ -87,7 +88,7 @@ import SLAEscalationDashboard from './pages/SLAEscalationDashboard';
 const PAGE_COMPONENTS = {
   AlertsPage, ApprovalsInbox, AuditLogPage, BoxLabelApprovals, BoxLabelPrint, BoxPalletBuild, BoxTypeManager,
   ChamberStation, CustomizeDashboard, Dashboard, DispatchCrates, FGPalletizing, FGWarehouse, FeederKiosk, FillingStation,
-  GRNReceive, GateEntry, GateInbox, IngredientGroupManager, IngredientManager, InvoiceCapture, LabelArtworkManager,
+  GRNReceive, GateEntry, GateInbox, ItemMasterManager, IngredientGroupManager, IngredientManager, InvoiceCapture, LabelArtworkManager,
   LabelRollManager, LabellingLine, LiquidPlans, MasterData, PaymentRequests, ProductTaxonomy,
   ProductionControl, ProductionOrders, PullLists, Putaway, QCInbox, RecipeBuilder,
   MaterialRequest, PurchaseOrders, PurchaseReports,

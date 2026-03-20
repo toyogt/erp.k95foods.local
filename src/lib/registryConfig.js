@@ -90,6 +90,7 @@ export const pageRegistry = [
   { pageKey: 'MasterData', title: 'Master Data', moduleKey: 'ADMIN', icon: Settings, roles: ['admin', 'production_manager', 'user'] },
   { pageKey: 'SKUSetup', title: 'SKU Setup', moduleKey: 'ADMIN', icon: PackageSearch, roles: ['admin'], adminOnly: true },
   { pageKey: 'RecipeBuilder', title: 'Recipe Builder', moduleKey: 'ADMIN', icon: FlaskConical, roles: ['admin'], adminOnly: true },
+  { pageKey: 'ItemMasterManager', title: 'Item Master', moduleKey: 'ADMIN', icon: PackageSearch, roles: ['admin'], adminOnly: true },
   { pageKey: 'IngredientManager', title: 'Ingredients', moduleKey: 'ADMIN', icon: Zap, roles: ['admin'], adminOnly: true },
   { pageKey: 'IngredientGroupManager', title: 'Ingredient Groups', moduleKey: 'ADMIN', icon: Zap, roles: ['admin'], adminOnly: true },
   { pageKey: 'UOMManager', title: 'UOMs', moduleKey: 'ADMIN', icon: Tag, roles: ['admin'], adminOnly: true },
