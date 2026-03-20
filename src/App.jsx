@@ -59,7 +59,6 @@ import TraceInvestigation from './pages/TraceInvestigation';
 import TransferReceiving from './pages/TransferReceiving';
 import UOMManager from './pages/UOMManager';
 import WarehouseBins from './pages/WarehouseBins';
-import BarcodeOCRTest from './pages/BarcodeOCRTest';
 import FMSMyTasks from './pages/FMSMyTasks';
 import FMSProcesses from './pages/FMSProcesses';
 import FMSActiveRuns from './pages/FMSActiveRuns';
@@ -94,7 +93,7 @@ const PAGE_COMPONENTS = {
   MaterialRequest, PurchaseOrders, PurchaseReports,
   RecipeStation, RyanTemplateManager, SKUSetup, ShiftKPIDashboard, StoresIssue, SupplierManager, TemplateMappingManager,
   ThreeWayMatch, TraceInvestigation, TransferReceiving, UOMManager, WarehouseBins,
-  BarcodeOCRTest, FMSMyTasks, FMSProcesses, FMSActiveRuns, FMSMonitor, UserManagement, RoleManager, ApprovalRulesManager,
+  FMSMyTasks, FMSProcesses, FMSActiveRuns, FMSMonitor, UserManagement, RoleManager, ApprovalRulesManager,
   PermissionMatrix, PermissionMatrixDashboard, ApprovalWorkflowHub, AccessAuditLog, FMSHealthDashboard,
   OperatorDashboardMobile, PermissionPolicyManager, SyncCenter, RulesManager, BlockedAttemptsViewer, TraceabilityExplorer, ReconciliationDashboard, RoutesDiagnostics, AuditLogViewer,
   SLAConfigManager, SLAEscalationDashboard,

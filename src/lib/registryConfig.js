@@ -232,7 +232,6 @@ export const moduleRegistry = [
  * System pages not shown in navigation but still routable
  */
 export const specialPages = [
-  { pageKey: 'BarcodeOCRTest', title: 'Barcode OCR Test', roles: ['admin'], system: true },
   { pageKey: 'CustomizeDashboard', title: 'Customize Dashboard', roles: ['admin'], system: true },
   { pageKey: 'OperatorDashboardMobile', title: 'Operator Dashboard', roles: ['admin', 'user'], system: true },
 ];
