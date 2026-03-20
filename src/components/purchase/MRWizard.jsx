@@ -18,7 +18,7 @@ export default function MRWizard({ user, onDone, onCancel }) {
 
   useEffect(() => {
     base44.entities.UOMMaster.list('uom_name', 200).then(setUoms).catch(() => {});
-    base44.entities.IngredientMaster.filter({ is_active: true }, 'ingredient_name', 500).then(setIngredients).catch(() => {});
+    base44.entities.ItemMaster.filter({ is_active: true }, 'item_name', 500).then(setIngredients).catch(() => {});
   }, []);
 
   function addItem() {
@@ -39,7 +39,7 @@ export default function MRWizard({ user, onDone, onCancel }) {
 
   function selectIngredient(i, ing) {
     setItems(prev => prev.map((it, idx) =>
-      idx === i ? { ...it, item_code: ing.short_code || ing.ingredient_id, item_name: ing.ingredient_name } : it
+      idx === i ? { ...it, item_code: ing.item_code, item_name: ing.item_name } : it
     ));
     setSearch(i, '');
   }
@@ -48,8 +48,8 @@ export default function MRWizard({ user, onDone, onCancel }) {
     const q = searches[i] || '';
     if (!q) return ingredients.slice(0, 10);
     return ingredients.filter(g =>
-      g.ingredient_name?.toLowerCase().includes(q.toLowerCase()) ||
-      g.short_code?.toLowerCase().includes(q.toLowerCase())
+      g.item_name?.toLowerCase().includes(q.toLowerCase()) ||
+      g.item_code?.toLowerCase().includes(q.toLowerCase())
     ).slice(0, 10);
   }
 
@@ -139,8 +139,8 @@ export default function MRWizard({ user, onDone, onCancel }) {
                         {filtered.map(ing => (
                           <button key={ing.id} onMouseDown={() => selectIngredient(i, ing)}
                             className="w-full text-left px-3 py-2.5 text-sm hover:bg-blue-50 flex justify-between items-center border-b border-slate-50 last:border-0">
-                            <span className="font-medium">{ing.ingredient_name}</span>
-                            <span className="text-slate-400 font-mono text-xs">{ing.short_code}</span>
+                            <span className="font-medium">{ing.item_name}</span>
+                            <span className="text-slate-400 font-mono text-xs">{ing.item_code}</span>
                           </button>
                         ))}
                       </div>

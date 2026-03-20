@@ -19,7 +19,7 @@ export default function POForm({ user, isAdmin, sourceMR, sourceItems, onDone, o
 
   useEffect(() => {
     base44.entities.Supplier.list('supplier_name', 200).then(setSuppliers).catch(() => {});
-    base44.entities.IngredientMaster.filter({ is_active: true }, 'ingredient_name', 500).then(setIngredients).catch(() => {});
+    base44.entities.ItemMaster.filter({ is_active: true }, 'item_name', 500).then(setIngredients).catch(() => {});
     base44.entities.UOMMaster.list('uom_name', 200).then(setUoms).catch(() => {});
     if (sourceItems?.length) {
       setLines(sourceItems.map(it => ({
@@ -43,13 +43,13 @@ export default function POForm({ user, isAdmin, sourceMR, sourceItems, onDone, o
     const q = searches[i] || '';
     if (!q) return ingredients.slice(0, 10);
     return ingredients.filter(g =>
-      g.ingredient_name?.toLowerCase().includes(q.toLowerCase()) ||
-      g.short_code?.toLowerCase().includes(q.toLowerCase())
+      g.item_name?.toLowerCase().includes(q.toLowerCase()) ||
+      g.item_code?.toLowerCase().includes(q.toLowerCase())
     ).slice(0, 10);
   }
 
   function selectIngredient(i, ing) {
-    setLines(prev => prev.map((l, idx) => idx === i ? { ...l, item_code: ing.short_code || ing.ingredient_id, item_name: ing.ingredient_name } : l));
+    setLines(prev => prev.map((l, idx) => idx === i ? { ...l, item_code: ing.item_code, item_name: ing.item_name } : l));
     setSearch(i, '');
   }
 
@@ -195,8 +195,8 @@ export default function POForm({ user, isAdmin, sourceMR, sourceItems, onDone, o
                       {filtered.map(ing => (
                         <button key={ing.id} onMouseDown={() => selectIngredient(i, ing)}
                           className="w-full text-left px-3 py-2.5 text-sm hover:bg-blue-50 flex justify-between items-center border-b border-slate-50 last:border-0">
-                          <span className="font-medium">{ing.ingredient_name}</span>
-                          <span className="text-slate-400 font-mono text-xs">{ing.short_code}</span>
+                          <span className="font-medium">{ing.item_name}</span>
+                          <span className="text-slate-400 font-mono text-xs">{ing.item_code}</span>
                         </button>
                       ))}
                     </div>
