@@ -53,7 +53,6 @@ import AuditLogPage from './pages/AuditLogPage';
 import BoxLabelApprovals from './pages/BoxLabelApprovals';
 import BoxLabelPrint from './pages/BoxLabelPrint';
 import BoxPalletBuild from './pages/BoxPalletBuild';
-import BoxStockDashboard from './pages/BoxStockDashboard';
 import BoxTypeManager from './pages/BoxTypeManager';
 import ChamberStation from './pages/ChamberStation';
 import CustomizeDashboard from './pages/CustomizeDashboard';
@@ -74,7 +73,6 @@ import LabelRollManager from './pages/LabelRollManager';
 import LabellingLine from './pages/LabellingLine';
 import LiquidPlans from './pages/LiquidPlans';
 import MasterData from './pages/MasterData';
-import OpeningStockImport from './pages/OpeningStockImport';
 import PaymentRequests from './pages/PaymentRequests';
 import ProductTaxonomy from './pages/ProductTaxonomy';
 import ProductionControl from './pages/ProductionControl';
@@ -95,7 +93,6 @@ import TraceInvestigation from './pages/TraceInvestigation';
 import TransferReceiving from './pages/TransferReceiving';
 import UOMManager from './pages/UOMManager';
 import WarehouseBins from './pages/WarehouseBins';
-import WarehouseOps from './pages/WarehouseOps';
 import __Layout from './Layout.jsx';
 
 
@@ -106,7 +103,6 @@ export const PAGES = {
     "BoxLabelApprovals": BoxLabelApprovals,
     "BoxLabelPrint": BoxLabelPrint,
     "BoxPalletBuild": BoxPalletBuild,
-    "BoxStockDashboard": BoxStockDashboard,
     "BoxTypeManager": BoxTypeManager,
     "ChamberStation": ChamberStation,
     "CustomizeDashboard": CustomizeDashboard,
@@ -127,7 +123,6 @@ export const PAGES = {
     "LabellingLine": LabellingLine,
     "LiquidPlans": LiquidPlans,
     "MasterData": MasterData,
-    "OpeningStockImport": OpeningStockImport,
     "PaymentRequests": PaymentRequests,
     "ProductTaxonomy": ProductTaxonomy,
     "ProductionControl": ProductionControl,
@@ -148,7 +143,6 @@ export const PAGES = {
     "TransferReceiving": TransferReceiving,
     "UOMManager": UOMManager,
     "WarehouseBins": WarehouseBins,
-    "WarehouseOps": WarehouseOps,
 }
 
 export const pagesConfig = {

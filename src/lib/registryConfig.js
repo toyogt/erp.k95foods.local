@@ -57,9 +57,6 @@ export const pageRegistry = [
   { pageKey: 'TransferReceiving', title: 'Transfer / Receiving', moduleKey: 'WAREHOUSE', icon: Truck, roles: ['admin', 'labelling_receiver', 'labelling_supervisor', 'warehouse_ops', 'user'] },
   { pageKey: 'DispatchCrates', title: 'Dispatch Crates', moduleKey: 'WAREHOUSE', icon: Truck, roles: ['admin', 'dispatch_officer', 'user'] },
   { pageKey: 'FGWarehouse', title: 'FG Warehouse', moduleKey: 'WAREHOUSE', icon: Warehouse, roles: ['admin', 'warehouse_ops', 'warehouse', 'user'] },
-  { pageKey: 'WarehouseOps', title: 'Warehouse Ops', moduleKey: 'WAREHOUSE', icon: Warehouse, roles: ['admin', 'warehouse_ops', 'user'] },
-  { pageKey: 'BoxStockDashboard', title: 'Box Stock', moduleKey: 'WAREHOUSE', icon: BarChart3, roles: ['admin', 'pallet_builder', 'warehouse_ops', 'user'] },
-  { pageKey: 'OpeningStockImport', title: 'Opening Stock Import', moduleKey: 'WAREHOUSE', icon: Upload, roles: ['admin', 'warehouse_ops', 'user'] },
 
   // ─── PURCHASE ───
    { pageKey: 'MaterialRequest', title: 'Material Requests', moduleKey: 'PURCHASE', icon: ClipboardList, roles: ['admin', 'purchase_user', 'purchase_manager', 'production_manager', 'user'] },

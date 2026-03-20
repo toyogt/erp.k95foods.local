@@ -16,7 +16,6 @@ import AuditLogPage from './pages/AuditLogPage';
 import BoxLabelApprovals from './pages/BoxLabelApprovals';
 import BoxLabelPrint from './pages/BoxLabelPrint';
 import BoxPalletBuild from './pages/BoxPalletBuild';
-import BoxStockDashboard from './pages/BoxStockDashboard';
 import BoxTypeManager from './pages/BoxTypeManager';
 import ChamberStation from './pages/ChamberStation';
 import CustomizeDashboard from './pages/CustomizeDashboard';
@@ -37,7 +36,6 @@ import LabelRollManager from './pages/LabelRollManager';
 import LabellingLine from './pages/LabellingLine';
 import LiquidPlans from './pages/LiquidPlans';
 import MasterData from './pages/MasterData';
-import OpeningStockImport from './pages/OpeningStockImport';
 import PaymentRequests from './pages/PaymentRequests';
 import ProductTaxonomy from './pages/ProductTaxonomy';
 import ProductionControl from './pages/ProductionControl';
@@ -61,7 +59,6 @@ import TraceInvestigation from './pages/TraceInvestigation';
 import TransferReceiving from './pages/TransferReceiving';
 import UOMManager from './pages/UOMManager';
 import WarehouseBins from './pages/WarehouseBins';
-import WarehouseOps from './pages/WarehouseOps';
 import BarcodeOCRTest from './pages/BarcodeOCRTest';
 import FMSMyTasks from './pages/FMSMyTasks';
 import FMSProcesses from './pages/FMSProcesses';
@@ -89,14 +86,14 @@ import SLAEscalationDashboard from './pages/SLAEscalationDashboard';
 
 // Page component lookup table
 const PAGE_COMPONENTS = {
-  AlertsPage, ApprovalsInbox, AuditLogPage, BoxLabelApprovals, BoxLabelPrint, BoxPalletBuild, BoxStockDashboard, BoxTypeManager,
+  AlertsPage, ApprovalsInbox, AuditLogPage, BoxLabelApprovals, BoxLabelPrint, BoxPalletBuild, BoxTypeManager,
   ChamberStation, CustomizeDashboard, Dashboard, DispatchCrates, FGPalletizing, FGWarehouse, FeederKiosk, FillingStation,
   GRNReceive, GateEntry, GateInbox, IngredientGroupManager, IngredientManager, InvoiceCapture, LabelArtworkManager,
-  LabelRollManager, LabellingLine, LiquidPlans, MasterData, OpeningStockImport, PaymentRequests, ProductTaxonomy,
+  LabelRollManager, LabellingLine, LiquidPlans, MasterData, PaymentRequests, ProductTaxonomy,
   ProductionControl, ProductionOrders, PullLists, Putaway, QCInbox, RecipeBuilder,
   MaterialRequest, PurchaseOrders, PurchaseReports,
   RecipeStation, RyanTemplateManager, SKUSetup, ShiftKPIDashboard, StoresIssue, SupplierManager, TemplateMappingManager,
-  ThreeWayMatch, TraceInvestigation, TransferReceiving, UOMManager, WarehouseBins, WarehouseOps,
+  ThreeWayMatch, TraceInvestigation, TransferReceiving, UOMManager, WarehouseBins,
   BarcodeOCRTest, FMSMyTasks, FMSProcesses, FMSActiveRuns, FMSMonitor, UserManagement, RoleManager, ApprovalRulesManager,
   PermissionMatrix, PermissionMatrixDashboard, ApprovalWorkflowHub, AccessAuditLog, FMSHealthDashboard,
   OperatorDashboardMobile, PermissionPolicyManager, SyncCenter, RulesManager, BlockedAttemptsViewer, TraceabilityExplorer, ReconciliationDashboard, RoutesDiagnostics, AuditLogViewer,
