@@ -70,9 +70,9 @@ export default function SKUSetup() {
       base44.entities.ProductMaster.list('-created_date', 500),
       base44.entities.SKUPrintMapping.list('-created_date', 500).catch(() => []),
       base44.entities.RecipeGroup.filter({ is_active: true }, '-created_date', 200).catch(() => []),
-      base44.entities.ItemMaster.filter({ is_active: true, category: 'CONTAINER' }, '-created_date', 100).catch(() => []),
-      base44.entities.ItemMaster.filter({ is_active: true, category: 'CAP' }, '-created_date', 100).catch(() => []),
-      base44.entities.ItemMaster.filter({ is_active: true, category: 'PACKAGING_BOX' }, '-created_date', 200).catch(() => []),
+      base44.entities.ContainerType.list('-created_date', 100).catch(() => []),
+      base44.entities.CapType.filter({ is_active: true }, '-created_date', 100).catch(() => []),
+      base44.entities.BoxType.filter({ is_active: true }, '-created_date', 200).catch(() => []),
       base44.entities.RecipeOption.list('-created_date', 500).catch(() => []),
       base44.entities.RyanTemplate.filter({ is_active: true }, '-created_date', 200).catch(() => []),
       base44.entities.BatchFormatRule.filter({ is_active: true }, '-created_date', 200).catch(() => []),
@@ -128,8 +128,8 @@ export default function SKUSetup() {
 
   // Derive bottles_per_box when box_type_id changes
   const handleBoxTypeChange = (box_type_id) => {
-    const bt = boxTypes.find(b => b.item_code === box_type_id);
-    setSkuForm(f => ({ ...f, box_type_id, bottles_per_box: bt?.specifications?.bottles_per_box || '' }));
+    const bt = boxTypes.find(b => b.box_type_id === box_type_id);
+    setSkuForm(f => ({ ...f, box_type_id, bottles_per_box: bt ? bt.bottles_per_box : '' }));
   };
 
   // Auto-fill ML when container type changes
@@ -138,12 +138,12 @@ export default function SKUSetup() {
       setSkuForm(f => ({ ...f, bottle_type: '', ml_per_bottle: '' }));
       return;
     }
-    const container = containerTypes.find(c => c.item_code === container_code);
+    const container = containerTypes.find(c => c.container_code === container_code);
     if (container) {
       setSkuForm(f => ({ 
         ...f, 
-        bottle_type: container.item_name,
-        ml_per_bottle: container.specifications?.capacity_ml || '' 
+        bottle_type: container.auto_generated_name,
+        ml_per_bottle: container.ml_per_container 
       }));
     }
   };
@@ -236,7 +236,7 @@ export default function SKUSetup() {
 
     // Build SKU payload
     const skuPayload = { ...skuForm };
-    if (bt) skuPayload.bottles_per_box = bt.specifications?.bottles_per_box || 0;
+    if (bt) skuPayload.bottles_per_box = bt.bottles_per_box;
     ['ml_per_bottle','bottles_per_box','mrp','mrp_box','shelf_life_days'].forEach(k => {
       if (skuPayload[k] !== '' && skuPayload[k] !== undefined && !isNaN(skuPayload[k])) skuPayload[k] = Number(skuPayload[k]);
       else if (skuPayload[k] === '') delete skuPayload[k];
@@ -289,7 +289,7 @@ export default function SKUSetup() {
     </div>
   );
 
-  const selectedBoxType = boxTypes.find(b => b.item_code === skuForm.box_type_id);
+  const selectedBoxType = boxTypes.find(b => b.box_type_id === skuForm.box_type_id);
 
   return (
     <div className="h-[calc(100vh-80px)] flex flex-col lg:flex-row gap-0 overflow-hidden rounded-xl border border-slate-200 bg-white">
@@ -469,20 +469,20 @@ export default function SKUSetup() {
                       <Field label="Container Type *">
                         {containerTypes.length > 0 ? (
                           <select
-                            value={containerTypes.find(c => c.item_name === skuForm.bottle_type)?.item_code || ''}
+                            value={containerTypes.find(c => c.auto_generated_name === skuForm.bottle_type)?.container_code || ''}
                             onChange={e => handleContainerTypeChange(e.target.value)}
                             className="w-full border border-slate-200 rounded-lg px-4 py-3 text-base h-12 bg-white"
                           >
                             <option value="">— Select Container Type —</option>
                             {containerTypes.map(c => (
-                              <option key={c.id} value={c.item_code}>
-                                {c.item_name}
+                              <option key={c.id} value={c.container_code}>
+                                {c.auto_generated_name}
                               </option>
                             ))}
                           </select>
                         ) : (
                           <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
-                            <p className="text-xs text-amber-700">No container types defined. Add in Item Master first.</p>
+                            <p className="text-xs text-amber-700">No container types defined. Add in Master Data first.</p>
                           </div>
                         )}
                       </Field>
@@ -491,7 +491,7 @@ export default function SKUSetup() {
                         <Input 
                           type="text" 
                           value={
-                            containerTypes.find(c => c.item_name === skuForm.bottle_type)?.specifications?.capacity_ml || ''
+                            containerTypes.find(c => c.auto_generated_name === skuForm.bottle_type)?.ml_per_container || ''
                           } 
                           readOnly 
                           placeholder="Select container type first" 
@@ -508,14 +508,14 @@ export default function SKUSetup() {
                           >
                             <option value="">— Select Cap Type —</option>
                             {capTypes.map(c => (
-                              <option key={c.id} value={c.item_code}>
-                                {c.item_name}
+                              <option key={c.id} value={c.cap_sku_code}>
+                                {c.cap_name}
                               </option>
                             ))}
                           </select>
                         ) : (
                           <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
-                            <p className="text-xs text-amber-700">No cap types defined. Add in Item Master first.</p>
+                            <p className="text-xs text-amber-700">No cap types defined. Add in Master Data first.</p>
                           </div>
                         )}
                       </Field>
@@ -530,14 +530,14 @@ export default function SKUSetup() {
                     >
                       <option value="">— Select Box Type —</option>
                       {boxTypes.map(b => (
-                        <option key={b.id} value={b.item_code}>
-                          {b.item_name} — {b.specifications?.bottles_per_box || 0} bottles/box
+                        <option key={b.box_type_id} value={b.box_type_id}>
+                          {b.box_name} — {b.bottles_per_box} bottles/box
                         </option>
                       ))}
                     </select>
                     {boxTypes.length === 0 && (
                       <p className="text-xs text-amber-600 mt-1 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                        No box types — add in Item Master first
+                        No box types — add in Box Types page first
                       </p>
                     )}
                   </Field>
@@ -545,11 +545,11 @@ export default function SKUSetup() {
                   {selectedBoxType && (
                     <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
                       <div className="flex flex-wrap gap-4 text-sm text-blue-900">
-                        <span>📦 <strong>{selectedBoxType.specifications?.bottles_per_box || 0}</strong> bottles/box</span>
-                        {selectedBoxType.specifications?.dimensions && (
-                          <span>📐 {selectedBoxType.specifications.dimensions}</span>
+                        <span>📦 <strong>{selectedBoxType.bottles_per_box}</strong> bottles/box</span>
+                        {selectedBoxType.length_mm && (
+                          <span>📐 {selectedBoxType.length_mm} × {selectedBoxType.width_mm} × {selectedBoxType.height_mm} mm</span>
                         )}
-                        {selectedBoxType.specifications?.weight_kg && <span>⚖️ {selectedBoxType.specifications.weight_kg} kg</span>}
+                        {selectedBoxType.empty_weight_kg && <span>⚖️ {selectedBoxType.empty_weight_kg} kg</span>}
                       </div>
                     </div>
                   )}
