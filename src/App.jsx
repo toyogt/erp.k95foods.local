@@ -82,6 +82,7 @@ import ReconciliationDashboard from './pages/ReconciliationDashboard';
 import AuditLogViewer from './pages/AuditLogViewer';
 import SLAConfigManager from './pages/SLAConfigManager';
 import SLAEscalationDashboard from './pages/SLAEscalationDashboard';
+import ItemMaster from './pages/ItemMaster';
 
 // Page component lookup table
 const PAGE_COMPONENTS = {
@@ -96,7 +97,7 @@ const PAGE_COMPONENTS = {
   FMSMyTasks, FMSProcesses, FMSActiveRuns, FMSMonitor, UserManagement, RoleManager, ApprovalRulesManager,
   PermissionMatrix, PermissionMatrixDashboard, ApprovalWorkflowHub, AccessAuditLog, FMSHealthDashboard,
   OperatorDashboardMobile, PermissionPolicyManager, SyncCenter, RulesManager, BlockedAttemptsViewer, TraceabilityExplorer, ReconciliationDashboard, RoutesDiagnostics, AuditLogViewer,
-  SLAConfigManager, SLAEscalationDashboard,
+  SLAConfigManager, SLAEscalationDashboard, ItemMaster,
 };
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -173,6 +174,14 @@ const AuthenticatedApp = () => {
         element={
           <LayoutWrapper currentPageName="SLAEscalationDashboard">
             <SLAEscalationDashboard />
+          </LayoutWrapper>
+        }
+      />
+      <Route
+        path="/ItemMaster"
+        element={
+          <LayoutWrapper currentPageName="ItemMaster">
+            <ItemMaster />
           </LayoutWrapper>
         }
       />

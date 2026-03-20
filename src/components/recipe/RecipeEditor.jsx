@@ -26,8 +26,15 @@ export default function RecipeEditor({ group, specs, uoms, brandItems, user, onG
   const [editingGroup, setEditingGroup] = useState(false);
   const [groupForm, setGroupForm] = useState({ recipe_name: group.recipe_name, notes: group.notes || '', is_active: group.is_active !== false });
   const [savingGroup, setSavingGroup] = useState(false);
+  const [ingredients, setIngredients] = useState([]);
 
   const isAdmin = user?.role === 'admin';
+
+  useEffect(() => {
+    base44.entities.ItemMaster.filter({ is_active: true, category: 'INGREDIENT' }, 'item_name', 500).then(itms => {
+      setIngredients(itms.map(it => ({ ...it, ingredient_id: it.item_code, ingredient_name: it.item_name, short_code: it.item_code })));
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     setGroupForm({ recipe_name: group.recipe_name, notes: group.notes || '', is_active: group.is_active !== false });
@@ -403,7 +410,7 @@ export default function RecipeEditor({ group, specs, uoms, brandItems, user, onG
           <IngredientGrid
             rows={draftRows}
             onChange={rows => { setDraftRows(rows); setIsDirty(true); }}
-            specs={specs.filter(s => s.is_active)}
+            specs={ingredients}
             uoms={uoms}
             brandItems={brandItems}
             isAdmin={isAdmin}
