@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { AlertCircle, Upload, Plus, X, Loader2, Zap, Check } from 'lucide-react';
+import { AlertCircle, Upload, Plus, X, Loader2, Check } from 'lucide-react';
 import { genId, logAccountsAudit, findCandidatePOs } from '@/components/accounts/accountsHelpers';
 import { fireFMSEvent, findFMSInstanceByRef, linkFMSRef } from '@/lib/useFMSAutoComplete';
 import ItemSelector from '@/components/accounts/ItemSelector';
@@ -26,9 +26,7 @@ export default function InvoiceCapture() {
   const [notes, setNotes] = useState('');
 
   const [fileLoading, setFileLoading] = useState(false);
-  const [aiLoading, setAiLoading] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
-  const [aiResult, setAiResult] = useState(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -76,47 +74,7 @@ export default function InvoiceCapture() {
     setCandidates(cand);
   };
 
-  const handleAIExtract = async () => {
-    if (!invoiceFile) {
-      setError('Upload invoice file first');
-      return;
-    }
-    setAiLoading(true);
-    try {
-      const res = await base44.functions.invoke('aiExtractInvoice', {
-        invoice_file: invoiceFile,
-        supplier_name: supplierName,
-        po_id: poId,
-      });
-      const extracted = res.data;
-      setAiResult(extracted);
-      setError('');
-    } catch (err) {
-      setError(`AI extraction failed: ${err.message}`);
-    } finally {
-      setAiLoading(false);
-    }
-  };
 
-  const applyAIExtraction = () => {
-    if (!aiResult) return;
-    setInvoiceNumber(aiResult.invoice_number || '');
-    setInvoiceDate(aiResult.invoice_date || '');
-    setInvoiceAmount(aiResult.total_amount || '');
-
-    const newItems = (aiResult.items || []).map((it, i) => ({
-      key: `item-${i}`,
-      item_code: '',
-      item_name: it.description || '',
-      uom_code: it.uom || '',
-      qty: it.qty || 0,
-      rate: it.rate || 0,
-      amount: it.amount || 0,
-      remarks: '',
-    }));
-    setItems(newItems);
-    setAiResult(null);
-  };
 
   const addItem = () => {
     setItems(prev => [...prev, {
@@ -356,12 +314,8 @@ export default function InvoiceCapture() {
                 {/* PO Linking Section */}
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
                   <h3 className="font-medium text-slate-900 mb-4">Link Purchase Order (Optional)</h3>
-                  <div className="flex gap-3 mb-4">
-                    <Button onClick={handleFindPO} variant="outline" className="flex-1">Find PO by Supplier</Button>
-                    <Button onClick={handleAIExtract} disabled={aiLoading} variant="outline" className="flex-1 gap-2">
-                      {aiLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-                      AI Extract
-                    </Button>
+                  <div className="mb-4">
+                    <Button onClick={handleFindPO} variant="outline" className="w-full">Find PO by Supplier</Button>
                   </div>
 
                   {candidates.length > 0 && (
@@ -389,22 +343,6 @@ export default function InvoiceCapture() {
                     </div>
                   )}
                 </div>
-
-                {/* AI Results */}
-                {aiResult && (
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-6">
-                    <div className="flex justify-between items-start mb-3">
-                      <h3 className="font-medium text-amber-900">AI Extracted Data (Preview)</h3>
-                      <Button onClick={applyAIExtraction} size="sm" className="bg-amber-600 hover:bg-amber-700">Apply</Button>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3 text-sm text-amber-900">
-                      <div><strong>Number:</strong> {aiResult.invoice_number}</div>
-                      <div><strong>Date:</strong> {aiResult.invoice_date}</div>
-                      <div><strong>Amount:</strong> ₹{aiResult.total_amount}</div>
-                      <div><strong>Items:</strong> {aiResult.items?.length || 0}</div>
-                    </div>
-                  </div>
-                )}
 
                 {/* Notes */}
                 <div>
