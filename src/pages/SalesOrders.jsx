@@ -2,14 +2,16 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
-import { Plus, Upload, Users, Package, TrendingUp, Clock, CheckCircle2, AlertTriangle, Filter, Search } from 'lucide-react';
+import { Plus, Upload, Users, Package, TrendingUp, Clock, CheckCircle2, AlertTriangle, Filter, Search, Inbox } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import SalesOrderStatusBadge from '@/components/sales/SalesOrderStatusBadge';
 import CreateSalesOrderModal from '@/components/sales/CreateSalesOrderModal';
+import DistributorRequestsTab from '@/components/sales/DistributorRequestsTab';
 
 const STATUS_TABS = [
+  { key: 'distributor_requests', label: 'Distributor Requests', icon: Inbox },
   { key: 'all', label: 'All Orders' },
   { key: 'draft', label: 'Draft' },
   { key: 'confirmed', label: 'Confirmed' },
@@ -34,6 +36,12 @@ export default function SalesOrders() {
   const [createType, setCreateType] = useState('manual');
   const [filterPlatform, setFilterPlatform] = useState('');
   const [filterExpiryAlert, setFilterExpiryAlert] = useState(false);
+
+  const { data: distRequests = [] } = useQuery({
+    queryKey: ['distributor_requests_all'],
+    queryFn: () => base44.entities.DistributorRequest.list('-created_date', 100),
+  });
+  const openRequestsCount = distRequests.filter(r => r.status === 'pending' || r.status === 'reviewing').length;
 
   const { data: orders = [], isLoading, refetch } = useQuery({
     queryKey: ['sales_orders'],
@@ -126,22 +134,27 @@ export default function SalesOrders() {
             <button
               key={t.key}
               onClick={() => setActiveTab(t.key)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-1.5 ${
                 activeTab === t.key
                   ? 'bg-slate-900 text-white'
                   : 'text-slate-600 hover:bg-slate-100'
               }`}
             >
+              {t.icon && <t.icon className="w-3.5 h-3.5" />}
               {t.label}
-              {t.key !== 'all' && (
-                <span className="ml-1.5 text-xs opacity-70">
-                  {orders.filter(o => o.status === t.key).length}
-                </span>
+              {t.key === 'distributor_requests' && openRequestsCount > 0 && (
+                <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${
+                  activeTab === t.key ? 'bg-white text-slate-900' : 'bg-amber-100 text-amber-700'
+                }`}>{openRequestsCount}</span>
+              )}
+              {t.key !== 'all' && t.key !== 'distributor_requests' && (
+                <span className="text-xs opacity-70">{orders.filter(o => o.status === t.key).length}</span>
               )}
             </button>
           ))}
         </div>
 
+        {activeTab !== 'distributor_requests' && (
         <div className="p-3 border-b border-slate-100 space-y-2">
           <div className="flex gap-2 flex-wrap">
             <div className="relative flex-1 min-w-[180px]">
@@ -181,9 +194,13 @@ export default function SalesOrders() {
             )}
           </div>
         </div>
+        )}
 
-        {/* Orders Table */}
-        {isLoading ? (
+        {activeTab === 'distributor_requests' ? (
+          <div className="p-4">
+            <DistributorRequestsTab onSOCreated={refetch} />
+          </div>
+        ) : isLoading ? (
           <div className="p-8 text-center text-slate-400 text-sm">Loading orders...</div>
         ) : filtered.length === 0 ? (
           <div className="p-8 text-center">
@@ -198,8 +215,8 @@ export default function SalesOrders() {
                   <th className="px-4 py-3 text-left">Order Number</th>
                   <th className="px-4 py-3 text-left">Customer</th>
                   <th className="px-4 py-3 text-left">Platform</th>
-                  <th className="px-4 py-3 text-left">PO Number</th>
-                  <th className="px-4 py-3 text-left">PO Expiry</th>
+                  <th className="px-4 py-3 text-left">Purchase Order Number</th>
+                  <th className="px-4 py-3 text-left">Purchase Order Expiry</th>
                   <th className="px-4 py-3 text-right">Total (INR)</th>
                   <th className="px-4 py-3 text-left">Status</th>
                   <th className="px-4 py-3 text-left">Action</th>
@@ -211,9 +228,7 @@ export default function SalesOrders() {
                     && !['paid', 'closed', 'cancelled'].includes(order.status);
                   return (
                     <tr key={order.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-4 py-3 font-medium text-slate-900">
-                        {order.so_number || '—'}
-                      </td>
+                      <td className="px-4 py-3 font-medium text-slate-900">{order.so_number || '—'}</td>
                       <td className="px-4 py-3 text-slate-700">{order.customer_name}</td>
                       <td className="px-4 py-3">
                         {order.platform && (
@@ -234,16 +249,9 @@ export default function SalesOrders() {
                       <td className="px-4 py-3 text-right font-medium">
                         {order.total_amount ? `₹${order.total_amount.toLocaleString('en-IN')}` : '—'}
                       </td>
+                      <td className="px-4 py-3"><SalesOrderStatusBadge status={order.status} /></td>
                       <td className="px-4 py-3">
-                        <SalesOrderStatusBadge status={order.status} />
-                      </td>
-                      <td className="px-4 py-3">
-                        <Link
-                          to={`/SalesOrderDetail?id=${order.id}`}
-                          className="text-blue-600 hover:underline text-xs font-medium"
-                        >
-                          Open →
-                        </Link>
+                        <a href={`/SalesOrderDetail?id=${order.id}`} className="text-blue-600 hover:underline text-xs font-medium">Open →</a>
                       </td>
                     </tr>
                   );
