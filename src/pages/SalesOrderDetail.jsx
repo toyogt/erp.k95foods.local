@@ -8,8 +8,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import SalesOrderStatusBadge from '@/components/sales/SalesOrderStatusBadge';
 import SOItemsTable from '@/components/sales/SOItemsTable';
-import SOStockValidation from '@/components/sales/SOStockValidation';
-import SOPicklistPanel from '@/components/sales/SOPicklistPanel';
+import SOStockPicklistPanel from '@/components/sales/SOStockPicklistPanel';
 import SODispatchPanel from '@/components/sales/SODispatchPanel';
 import SOInvoicePanel from '@/components/sales/SOInvoicePanel';
 import SOPaymentPanel from '@/components/sales/SOPaymentPanel';
@@ -88,14 +87,13 @@ export default function SalesOrderDetail() {
     && !['paid', 'closed', 'cancelled'].includes(order.status);
 
   const PANELS = [
-    { key: 'items',      label: 'Items',     icon: Package },
-    { key: 'stock',      label: 'Stock',     icon: CheckCircle2 },
-    { key: 'picklist',   label: 'Picklist',  icon: Package },
-    { key: 'dispatch',   label: 'Dispatch',  icon: Truck },
-    { key: 'invoice',    label: 'Invoice',   icon: FileText },
-    { key: 'payment',    label: 'Payment',   icon: CreditCard },
-    { key: 'returns',    label: 'Returns',   icon: RotateCcw },
-    { key: 'timeline',   label: 'Timeline',  icon: Clock },
+    { key: 'items',      label: 'Items',          icon: Package },
+    { key: 'stock_pick', label: 'Stock & Pick',   icon: CheckCircle2 },
+    { key: 'dispatch',   label: 'Dispatch',       icon: Truck },
+    { key: 'invoice',    label: 'Invoice',        icon: FileText },
+    { key: 'payment',    label: 'Payment',        icon: CreditCard },
+    { key: 'returns',    label: 'Returns',        icon: RotateCcw },
+    { key: 'timeline',   label: 'Timeline',       icon: Clock },
   ];
 
   return (
@@ -119,14 +117,9 @@ export default function SalesOrderDetail() {
         </div>
 
         {/* Quick action button */}
-        {order.status === 'confirmed' && (
-          <Button className="h-11 bg-slate-900 text-white text-sm" onClick={() => setActivePanel('stock')}>
-            Validate Stock
-          </Button>
-        )}
-        {order.status === 'stock_validated' && (
-          <Button className="h-11 bg-slate-900 text-white text-sm" onClick={() => { moveToStatus('picking', 'sales_picking_started'); setActivePanel('picklist'); }}>
-            Start Picking
+        {(order.status === 'confirmed' || order.status === 'stock_validated' || order.status === 'picking') && (
+          <Button className="h-11 bg-slate-900 text-white text-sm" onClick={() => setActivePanel('stock_pick')}>
+            Stock &amp; Pick
           </Button>
         )}
       </div>
@@ -197,8 +190,7 @@ export default function SalesOrderDetail() {
 
         <div className="p-4">
           {activePanel === 'items' && <SOItemsTable items={items} order={order} />}
-          {activePanel === 'stock' && <SOStockValidation order={order} items={items} onUpdated={refetch} />}
-          {activePanel === 'picklist' && <SOPicklistPanel order={order} items={items} onUpdated={refetch} />}
+          {activePanel === 'stock_pick' && <SOStockPicklistPanel order={order} items={items} onUpdated={refetch} />}
           {activePanel === 'dispatch' && <SODispatchPanel order={order} onUpdated={refetch} />}
           {activePanel === 'invoice' && <SOInvoicePanel order={order} items={items} onUpdated={refetch} />}
           {activePanel === 'payment' && <SOPaymentPanel order={order} onUpdated={refetch} />}

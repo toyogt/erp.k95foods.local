@@ -72,6 +72,7 @@ export default function AdminDashboard({ user }) {
         base44.entities.Pallet.list('-created_date', 200),
         base44.entities.Batch.filter({ status: 'IN_PROGRESS' }, '-created_date', 50),
         base44.entities.Job.filter({ status: 'IN_PROGRESS' }),
+        base44.entities.AuditLog.filter({ module: 'SALES' }, '-created_date', 10).then(r => []).catch(() => []),
         base44.entities.AuditLog.list('-created_date', 10),
         base44.entities.LineSession.list('-started_at', 20).catch(() => []),
         base44.entities.AlertEvent.filter({ status: 'OPEN' }, '-created_at', 50).catch(() => []),
@@ -100,7 +101,11 @@ export default function AdminDashboard({ user }) {
       const locMap = {};
       activeCrates.forEach(c => { const loc = c.current_location || 'UNKNOWN'; locMap[loc] = (locMap[loc] || 0) + 1; });
       setCratesByLocation(Object.entries(locMap).map(([code, count]) => ({ code, count })).sort((a, b) => b.count - a.count));
-      setRecentLogs(logs);
+      const filteredLogs = logs.filter(l =>
+        !l.entity_type?.startsWith('Sales') &&
+        !l.module?.startsWith('SALES')
+      );
+      setRecentLogs(filteredLogs);
       setOpenAlertCount(alerts.length);
       setOfflineQueue(JSON.parse(localStorage.getItem('factory_offline_queue') || '[]').length);
     } catch (e) { console.error(e); }
