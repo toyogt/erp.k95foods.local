@@ -38,7 +38,7 @@ export default function SalesOrderDetail() {
 
   const { data: order, isLoading, refetch } = useQuery({
     queryKey: ['sales_order', soId],
-    queryFn: () => base44.entities.SalesOrder.filter({ id: soId }).then(r => r[0]),
+    queryFn: () => base44.entities.SalesOrder.list('-created_date', 500).then(list => list.find(o => o.id === soId)),
     enabled: !!soId,
   });
 

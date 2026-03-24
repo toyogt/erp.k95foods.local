@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
 import { Plus, X, Save, Loader2 } from 'lucide-react';
+import MOQConfigManager from '@/components/sales/MOQConfigManager';
 
 const DEFAULT_SETTINGS = [
   { setting_key: 'transporters', setting_label: 'Transporter Names', values: ['DTDC', 'Local', 'Bluedart', 'Prakash Parcel Services Ltd', 'Delhivery'], description: 'Transporter options for dispatch' },
@@ -72,7 +73,7 @@ export default function SalesSettingsPage() {
     <div className="p-3 md:p-6 max-w-2xl mx-auto space-y-6">
       <div>
         <h1 className="text-xl font-bold text-slate-900">Sales Settings</h1>
-        <p className="text-sm text-slate-500">Manage dropdown options for dispatch and packing</p>
+        <p className="text-sm text-slate-500">Manage dispatch options, packing types, and minimum order quantities</p>
       </div>
 
       {settings.map(setting => (
@@ -106,6 +107,18 @@ export default function SalesSettingsPage() {
           </div>
         </div>
       ))}
+    </div>
+
+      {/* MOQ Section */}
+      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+        <div className="bg-slate-50 px-4 py-3 border-b border-slate-100">
+          <p className="text-sm font-semibold text-slate-900">Minimum Order Configuration</p>
+          <p className="text-xs text-slate-500 mt-0.5">Set minimum order quantity and box rules per product and distributor</p>
+        </div>
+        <div className="p-4">
+          <MOQConfigManager />
+        </div>
+      </div>
     </div>
   );
 }
