@@ -136,14 +136,19 @@ export default function SODispatchPanel({ order, onUpdated }) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
           <Label className="text-xs font-medium text-slate-700">Transporter Name *</Label>
-          <Input className="h-9 text-sm mt-1" value={form.transporter_name}
-            onChange={e => setForm(f => ({ ...f, transporter_name: e.target.value }))} />
+          <select className="mt-1 h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+            value={form.transporter_name} onChange={e => setForm(f => ({ ...f, transporter_name: e.target.value }))}>
+            <option value="">Select transporter...</option>
+            {transporters.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
         </div>
         <div>
           <Label className="text-xs font-medium text-slate-700">Packing / Box Type *</Label>
-          <Input className="h-9 text-sm mt-1" placeholder="e.g. Master Carton 24-pcs"
-            value={form.packing_type}
-            onChange={e => setForm(f => ({ ...f, packing_type: e.target.value }))} />
+          <select className="mt-1 h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+            value={form.packing_type} onChange={e => setForm(f => ({ ...f, packing_type: e.target.value }))}>
+            <option value="">Select packing type...</option>
+            {packingTypes.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
         </div>
         <div>
           <Label className="text-xs font-medium text-slate-700">Vehicle Number</Label>

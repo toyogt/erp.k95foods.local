@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -10,10 +11,31 @@ import { fireFMSEvent } from '@/lib/useFMSAutoComplete';
 export default function SOStockValidation({ order, items, onUpdated }) {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [stocks, setStocks] = useState(() =>
-    Object.fromEntries(items.map(i => [i.id, i.available_stock ?? '']))
-  );
   const [saving, setSaving] = useState(false);
+
+  // Pull real FG Warehouse stock
+  const { data: warehouseLots = [] } = useQuery({
+    queryKey: ['warehouse_lots_active'],
+    queryFn: () => base44.entities.WarehouseLot.filter({ status: 'ACTIVE' }, '-created_date', 300),
+  });
+
+  // Build stock map by sku_code -> total bottles (boxes*packing_unit + loose)
+  function getWarehouseStock(item) {
+    const skuCode = item.item_code || item.sku_code;
+    if (!skuCode) return null;
+    const matching = warehouseLots.filter(l =>
+      l.sku_code === skuCode || l.sku_code?.includes(skuCode) || skuCode?.includes(l.sku_code)
+    );
+    if (!matching.length) return null;
+    return matching.reduce((s, l) => s + (l.boxes_balance || 0) * 12 + (l.loose_bottles_balance || 0), 0);
+  }
+
+  const [stocks, setStocks] = useState(() =>
+    Object.fromEntries(items.map(i => {
+      const wStock = null; // will be populated from warehouse
+      return [i.id, i.available_stock ?? ''];
+    }))
+  );
 
   if (items.length === 0) return <div className="text-sm text-slate-400 py-4">No items to validate.</div>;
 
