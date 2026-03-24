@@ -67,7 +67,7 @@ export default function AdminDashboard({ user }) {
 
   async function loadData() {
     try {
-      const [crates, pallets, batches, jobs, logs, sessions, alerts] = await Promise.all([
+      const [crates, pallets, batches, jobs, allLogs, sessions, alerts] = await Promise.all([
         base44.entities.Crate.list('-created_date', 500),
         base44.entities.Pallet.list('-created_date', 200),
         base44.entities.Batch.filter({ status: 'IN_PROGRESS' }, '-created_date', 50),
@@ -100,7 +100,7 @@ export default function AdminDashboard({ user }) {
       const locMap = {};
       activeCrates.forEach(c => { const loc = c.current_location || 'UNKNOWN'; locMap[loc] = (locMap[loc] || 0) + 1; });
       setCratesByLocation(Object.entries(locMap).map(([code, count]) => ({ code, count })).sort((a, b) => b.count - a.count));
-      const filteredLogs = logs.filter(l =>
+      const filteredLogs = allLogs.filter(l =>
         !l.entity_type?.startsWith('Sales') &&
         !l.module?.startsWith('SALES')
       );
