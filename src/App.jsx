@@ -88,6 +88,7 @@ import SalesOrderDetail from './pages/SalesOrderDetail';
 import SalesDistributors from './pages/SalesDistributors';
 import SalesRateListManager from './pages/SalesRateListManager';
 import SalesSettingsPage from './pages/SalesSettingsPage';
+import DistributorPortal from './pages/DistributorPortal';
 
 // Page component lookup table
 const PAGE_COMPONENTS = {
@@ -103,7 +104,7 @@ const PAGE_COMPONENTS = {
   PermissionMatrix, PermissionMatrixDashboard, ApprovalWorkflowHub, AccessAuditLog, FMSHealthDashboard,
   OperatorDashboardMobile, PermissionPolicyManager, SyncCenter, RulesManager, BlockedAttemptsViewer, TraceabilityExplorer, ReconciliationDashboard, RoutesDiagnostics, AuditLogViewer,
   SLAConfigManager, SLAEscalationDashboard,
-  SalesOrders, SalesDistributors, SalesRateListManager, SalesSettingsPage,
+  SalesOrders, SalesDistributors, SalesRateListManager, SalesSettingsPage, DistributorPortal,
 };
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -180,6 +181,16 @@ const AuthenticatedApp = () => {
         element={
           <LayoutWrapper currentPageName="SLAEscalationDashboard">
             <SLAEscalationDashboard />
+          </LayoutWrapper>
+        }
+      />
+
+      {/* Distributor Portal */}
+      <Route
+        path="/DistributorPortal"
+        element={
+          <LayoutWrapper currentPageName="DistributorPortal">
+            <DistributorPortal />
           </LayoutWrapper>
         }
       />
