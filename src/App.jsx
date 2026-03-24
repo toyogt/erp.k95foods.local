@@ -83,6 +83,9 @@ import ReconciliationDashboard from './pages/ReconciliationDashboard';
 import AuditLogViewer from './pages/AuditLogViewer';
 import SLAConfigManager from './pages/SLAConfigManager';
 import SLAEscalationDashboard from './pages/SLAEscalationDashboard';
+import SalesOrders from './pages/SalesOrders';
+import SalesOrderDetail from './pages/SalesOrderDetail';
+import SalesDistributors from './pages/SalesDistributors';
 
 // Page component lookup table
 const PAGE_COMPONENTS = {
@@ -98,6 +101,7 @@ const PAGE_COMPONENTS = {
   PermissionMatrix, PermissionMatrixDashboard, ApprovalWorkflowHub, AccessAuditLog, FMSHealthDashboard,
   OperatorDashboardMobile, PermissionPolicyManager, SyncCenter, RulesManager, BlockedAttemptsViewer, TraceabilityExplorer, ReconciliationDashboard, RoutesDiagnostics, AuditLogViewer,
   SLAConfigManager, SLAEscalationDashboard,
+  SalesOrders, SalesDistributors,
 };
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -174,6 +178,16 @@ const AuthenticatedApp = () => {
         element={
           <LayoutWrapper currentPageName="SLAEscalationDashboard">
             <SLAEscalationDashboard />
+          </LayoutWrapper>
+        }
+      />
+
+      {/* Sales Order Detail — not in auto-registry loop */}
+      <Route
+        path="/SalesOrderDetail"
+        element={
+          <LayoutWrapper currentPageName="SalesOrderDetail">
+            <SalesOrderDetail />
           </LayoutWrapper>
         }
       />

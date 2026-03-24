@@ -58,6 +58,17 @@ export const FMS_APP_EVENTS = [
   { key: 'approval_rule_changed',     label: 'Approval Rule Changed',       category: 'Admin',          canTrigger: false, canComplete: true  },
   { key: 'user_role_changed',         label: 'User Role Changed',           category: 'Admin',          canTrigger: false, canComplete: true  },
 
+  // ── Sales ─────────────────────────────────────────────────────────────────────
+  { key: 'sales_order_created',      label: 'Sales Order Created',         category: 'Sales', canTrigger: true,  canComplete: true  },
+  { key: 'sales_stock_validated',    label: 'Sales Stock Validated',        category: 'Sales', canTrigger: false, canComplete: true  },
+  { key: 'sales_picking_started',    label: 'Sales Picking Started',        category: 'Sales', canTrigger: false, canComplete: true  },
+  { key: 'sales_picklist_created',   label: 'Sales Picklist Created',       category: 'Sales', canTrigger: false, canComplete: true  },
+  { key: 'sales_picklist_completed', label: 'Sales Picklist Completed',     category: 'Sales', canTrigger: false, canComplete: true  },
+  { key: 'sales_dispatched',         label: 'Sales Dispatched',             category: 'Sales', canTrigger: false, canComplete: true  },
+  { key: 'sales_invoiced',           label: 'Sales Invoice Created',        category: 'Sales', canTrigger: false, canComplete: true  },
+  { key: 'sales_payment_received',   label: 'Sales Payment Received',       category: 'Sales', canTrigger: false, canComplete: true  },
+  { key: 'sales_return_initiated',   label: 'Sales Return Initiated',       category: 'Sales', canTrigger: true,  canComplete: true  },
+
   // ── General / Manual ────────────────────────────────────────────────────────
   { key: 'custom_event_1',            label: 'Custom Event 1',              category: 'Custom',         canTrigger: true,  canComplete: true  },
   { key: 'custom_event_2',            label: 'Custom Event 2',              category: 'Custom',         canTrigger: true,  canComplete: true  },

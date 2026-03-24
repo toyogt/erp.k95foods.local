@@ -105,6 +105,10 @@ export const pageRegistry = [
   { pageKey: 'TraceabilityExplorer', title: 'Traceability Explorer', moduleKey: 'ADMIN', icon: Search, roles: ['admin', 'production_manager', 'qa', 'warehouse_ops', 'user'] },
   { pageKey: 'ReconciliationDashboard', title: 'Reconciliation Dashboard', moduleKey: 'ADMIN', icon: AlertTriangle, roles: ['admin', 'production_manager', 'warehouse_ops', 'supervisor'] },
 
+  // ─── SALES ───
+  { pageKey: 'SalesOrders',      title: 'Sales Orders',   moduleKey: 'SALES', icon: ShoppingCart, roles: ['admin', 'sales_manager', 'sales_user', 'user'] },
+  { pageKey: 'SalesDistributors', title: 'Distributors',   moduleKey: 'SALES', icon: Users,         roles: ['admin', 'sales_manager'], adminOnly: false },
+
   // ─── USER MANAGEMENT ───
   { pageKey: 'UserManagement', title: 'Users', moduleKey: 'USER_MANAGEMENT', icon: Users, roles: ['admin'], adminOnly: true },
   { pageKey: 'RoleManager', title: 'Roles', moduleKey: 'USER_MANAGEMENT', icon: Shield, roles: ['admin'], adminOnly: true },
@@ -216,6 +220,15 @@ export const moduleRegistry = [
     bgColor: 'bg-indigo-50',
     adminOnly: true,
     sortOrder: 99,
+  },
+  {
+    moduleKey: 'SALES',
+    label: 'Sales',
+    icon: ShoppingCart,
+    color: 'text-rose-600',
+    bgColor: 'bg-rose-50',
+    adminOnly: false,
+    sortOrder: 4,
   },
   {
     moduleKey: 'ADMIN',
