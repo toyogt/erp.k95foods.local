@@ -16,13 +16,13 @@ export default function SalesSettingsPage() {
   const { toast } = useToast();
   const qc = useQueryClient();
   const [saving, setSaving] = useState({});
+  const [localValues, setLocalValues] = useState({});
 
   const { data: settings = [], isLoading } = useQuery({
     queryKey: ['sales_settings'],
     queryFn: async () => {
       const existing = await base44.entities.SalesSettings.list();
       if (existing.length === 0) {
-        // Seed defaults
         for (const s of DEFAULT_SETTINGS) {
           await base44.entities.SalesSettings.create(s);
         }
@@ -31,9 +31,6 @@ export default function SalesSettingsPage() {
       return existing;
     },
   });
-
-  // Local editable state per setting
-  const [localValues, setLocalValues] = useState({});
 
   function getValues(setting) {
     return localValues[setting.id] ?? setting.values ?? [];
@@ -107,9 +104,7 @@ export default function SalesSettingsPage() {
           </div>
         </div>
       ))}
-    </div>
 
-      {/* MOQ Section */}
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
         <div className="bg-slate-50 px-4 py-3 border-b border-slate-100">
           <p className="text-sm font-semibold text-slate-900">Minimum Order Configuration</p>
