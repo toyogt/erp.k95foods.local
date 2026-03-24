@@ -72,8 +72,7 @@ export default function AdminDashboard({ user }) {
         base44.entities.Pallet.list('-created_date', 200),
         base44.entities.Batch.filter({ status: 'IN_PROGRESS' }, '-created_date', 50),
         base44.entities.Job.filter({ status: 'IN_PROGRESS' }),
-        base44.entities.AuditLog.filter({ module: 'SALES' }, '-created_date', 10).then(r => []).catch(() => []),
-        base44.entities.AuditLog.list('-created_date', 10),
+        base44.entities.AuditLog.list('-created_date', 20),
         base44.entities.LineSession.list('-started_at', 20).catch(() => []),
         base44.entities.AlertEvent.filter({ status: 'OPEN' }, '-created_at', 50).catch(() => []),
       ]);
