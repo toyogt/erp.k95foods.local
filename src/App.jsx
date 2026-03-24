@@ -86,6 +86,8 @@ import SLAEscalationDashboard from './pages/SLAEscalationDashboard';
 import SalesOrders from './pages/SalesOrders';
 import SalesOrderDetail from './pages/SalesOrderDetail';
 import SalesDistributors from './pages/SalesDistributors';
+import SalesRateListManager from './pages/SalesRateListManager';
+import SalesSettingsPage from './pages/SalesSettingsPage';
 
 // Page component lookup table
 const PAGE_COMPONENTS = {
@@ -101,7 +103,7 @@ const PAGE_COMPONENTS = {
   PermissionMatrix, PermissionMatrixDashboard, ApprovalWorkflowHub, AccessAuditLog, FMSHealthDashboard,
   OperatorDashboardMobile, PermissionPolicyManager, SyncCenter, RulesManager, BlockedAttemptsViewer, TraceabilityExplorer, ReconciliationDashboard, RoutesDiagnostics, AuditLogViewer,
   SLAConfigManager, SLAEscalationDashboard,
-  SalesOrders, SalesDistributors,
+  SalesOrders, SalesDistributors, SalesRateListManager, SalesSettingsPage,
 };
 
 const { Pages, Layout, mainPage } = pagesConfig;

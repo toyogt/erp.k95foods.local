@@ -164,6 +164,11 @@ export default function CreateSalesOrderModal({ defaultType = 'manual', onClose,
             ))}
           </div>
 
+          {/* Excel Import */}
+          {type === 'excel_upload' && (
+            <ExcelSOImport onCreated={(so) => { onCreated(so); }} />
+          )}
+
           {/* PDF Upload */}
           {type === 'pdf_upload' && step === 'form' && (
             <div>
