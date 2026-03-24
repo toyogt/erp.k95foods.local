@@ -1,7 +1,8 @@
 import { useState, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
-import { X, Upload, FileText, Loader2, Edit2, Check, AlertTriangle } from 'lucide-react';
+import { X, Upload, FileText, Loader2, Edit2, Check, AlertTriangle, FileSpreadsheet } from 'lucide-react';
+import ExcelSOImport from '@/components/sales/ExcelSOImport';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,6 +12,7 @@ import { triggerFMSProcess } from '@/lib/useFMSAutoComplete';
 const CREATION_TYPES = [
   { key: 'manual', label: 'Manual Entry', icon: Edit2 },
   { key: 'pdf_upload', label: 'Upload PDF', icon: Upload },
+  { key: 'excel_upload', label: 'Excel Import', icon: FileSpreadsheet },
 ];
 
 export default function CreateSalesOrderModal({ defaultType = 'manual', onClose, onCreated }) {

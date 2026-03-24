@@ -118,13 +118,24 @@ export default function SOStockValidation({ order, items, onUpdated }) {
                   <td className="px-3 py-2 text-slate-800">{item.description}</td>
                   <td className="px-3 py-2 text-right font-medium">{item.quantity}</td>
                   <td className="px-3 py-2 text-right">
-                    <Input
-                      type="number"
-                      min="0"
-                      className="h-8 w-24 text-sm text-right ml-auto"
-                      value={stocks[item.id]}
-                      onChange={e => setStocks(s => ({ ...s, [item.id]: e.target.value }))}
-                    />
+                    <div className="flex flex-col items-end gap-1">
+                      {(() => {
+                        const ws = getWarehouseStock(item);
+                        return ws !== null ? (
+                          <button
+                            className="text-xs text-blue-600 underline"
+                            onClick={() => setStocks(s => ({ ...s, [item.id]: ws }))}
+                          >FG: {ws} (auto-fill)</button>
+                        ) : null;
+                      })()}
+                      <Input
+                        type="number"
+                        min="0"
+                        className="h-8 w-24 text-sm text-right"
+                        value={stocks[item.id]}
+                        onChange={e => setStocks(s => ({ ...s, [item.id]: e.target.value }))}
+                      />
+                    </div>
                   </td>
                   <td className="px-3 py-2 text-right text-red-600 font-medium">{shortfall}</td>
                   <td className="px-3 py-2 text-center">
