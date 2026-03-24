@@ -110,7 +110,7 @@ export const pageRegistry = [
   { pageKey: 'SalesDistributors',   title: 'Distributors',    moduleKey: 'SALES', icon: Users,        roles: ['admin', 'sales_manager'] },
   { pageKey: 'SalesRateListManager',title: 'Rate List',        moduleKey: 'SALES', icon: Tag,          roles: ['admin', 'sales_manager'], adminOnly: false },
   { pageKey: 'SalesSettingsPage',   title: 'Sales Settings',  moduleKey: 'SALES', icon: Settings,     roles: ['admin'], adminOnly: true },
-  { pageKey: 'DistributorPortal',    title: 'Distributor Portal', moduleKey: 'SALES', icon: Users,       roles: ['admin', 'user', 'sales_manager', 'sales_user'] },
+  { pageKey: 'DistributorPortal',    title: 'Distributor Portal', moduleKey: 'SALES', icon: Users,       roles: ['admin', 'user', 'distributor', 'sales_manager', 'sales_user'] },
 
   // ─── USER MANAGEMENT ───
   { pageKey: 'UserManagement', title: 'Users', moduleKey: 'USER_MANAGEMENT', icon: Users, roles: ['admin'], adminOnly: true },
