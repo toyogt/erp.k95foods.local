@@ -55,6 +55,7 @@ Return ONLY valid JSON. No explanation.`;
 
     const result = await base44.asServiceRole.integrations.Core.InvokeLLM({
       prompt,
+      model: 'gemini_3_flash',
       file_urls: [pdf_url],
       response_json_schema: {
         type: 'object',
