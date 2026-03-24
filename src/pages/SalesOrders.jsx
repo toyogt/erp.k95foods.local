@@ -32,6 +32,8 @@ export default function SalesOrders() {
   const [search, setSearch] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createType, setCreateType] = useState('manual');
+  const [filterPlatform, setFilterPlatform] = useState('');
+  const [filterExpiryAlert, setFilterExpiryAlert] = useState(false);
 
   const { data: orders = [], isLoading, refetch } = useQuery({
     queryKey: ['sales_orders'],
@@ -44,7 +46,11 @@ export default function SalesOrders() {
       o.so_number?.toLowerCase().includes(search.toLowerCase()) ||
       o.customer_name?.toLowerCase().includes(search.toLowerCase()) ||
       o.po_number?.toLowerCase().includes(search.toLowerCase());
-    return matchesTab && matchesSearch;
+    const matchesPlatform = !filterPlatform || o.platform === filterPlatform;
+    const matchesExpiry = !filterExpiryAlert || (
+      o.po_expiry_date && new Date(o.po_expiry_date) < new Date() && !['paid','closed','cancelled'].includes(o.status)
+    );
+    return matchesTab && matchesSearch && matchesPlatform && matchesExpiry;
   });
 
   // KPI counts
