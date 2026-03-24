@@ -228,7 +228,7 @@ export const moduleRegistry = [
     color: 'text-rose-600',
     bgColor: 'bg-rose-50',
     adminOnly: false,
-    sortOrder: 4,
+    sortOrder: 45,
   },
   {
     moduleKey: 'ADMIN',
