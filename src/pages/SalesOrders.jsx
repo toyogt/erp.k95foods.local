@@ -142,15 +142,43 @@ export default function SalesOrders() {
           ))}
         </div>
 
-        <div className="p-3 border-b border-slate-100">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <Input
-              placeholder="Search by order number, customer, PO number..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="pl-9 h-9 text-sm"
-            />
+        <div className="p-3 border-b border-slate-100 space-y-2">
+          <div className="flex gap-2 flex-wrap">
+            <div className="relative flex-1 min-w-[180px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Input
+                placeholder="Search order, customer, PO..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="pl-9 h-9 text-sm"
+              />
+            </div>
+            <select
+              className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+              value={filterPlatform}
+              onChange={e => setFilterPlatform(e.target.value)}
+            >
+              <option value="">All Platforms</option>
+              <option value="blinkit">Blinkit</option>
+              <option value="swiggy">Swiggy</option>
+              <option value="zepto">Zepto</option>
+              <option value="direct">Direct</option>
+            </select>
+            <button
+              onClick={() => setFilterExpiryAlert(v => !v)}
+              className={`h-9 px-3 rounded-md border text-sm font-medium transition-colors ${
+                filterExpiryAlert ? 'bg-red-100 border-red-300 text-red-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              <AlertTriangle className="w-3.5 h-3.5 inline mr-1" />
+              Expiry Alerts
+            </button>
+            {(search || filterPlatform || filterExpiryAlert) && (
+              <button
+                onClick={() => { setSearch(''); setFilterPlatform(''); setFilterExpiryAlert(false); }}
+                className="h-9 px-3 text-sm text-slate-500 hover:text-slate-900 border border-slate-200 rounded-md"
+              >Clear</button>
+            )}
           </div>
         </div>
 
