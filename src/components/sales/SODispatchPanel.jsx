@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+
 import { useAuth } from '@/lib/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,6 +25,14 @@ export default function SODispatchPanel({ order, onUpdated }) {
     total_weight_kg: '',
     notes: '',
   });
+
+  const { data: settingsList = [] } = useQuery({
+    queryKey: ['sales_settings'],
+    queryFn: () => base44.entities.SalesSettings.list(),
+  });
+
+  const transporters = settingsList.find(s => s.setting_key === 'transporters')?.values || ['DTDC', 'Local', 'Bluedart'];
+  const packingTypes = settingsList.find(s => s.setting_key === 'packing_types')?.values || ['Master Carton 12-pcs', 'Master Carton 24-pcs'];
   const [error, setError] = useState('');
 
   const { data: dispatches = [], refetch } = useQuery({

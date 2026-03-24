@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
-import { Loader2, FileText, CheckCircle2 } from 'lucide-react';
+import { Loader2, FileText, Printer } from 'lucide-react';
 import { fireFMSEvent, linkFMSRef, findFMSInstanceByRef } from '@/lib/useFMSAutoComplete';
+import K95InvoiceTemplate from '@/components/sales/K95InvoiceTemplate';
 
 export default function SOInvoicePanel({ order, items, onUpdated }) {
   const { user } = useAuth();
@@ -26,6 +27,11 @@ export default function SOInvoicePanel({ order, items, onUpdated }) {
   });
 
   const existingInvoice = invoices[0];
+
+  const { data: dispatches = [] } = useQuery({
+    queryKey: ['dispatches_inv', order.id],
+    queryFn: () => base44.entities.SalesDispatch.filter({ sales_order_id: order.id }),
+  });
 
   async function createInvoice() {
     setSaving(true);
@@ -67,56 +73,29 @@ export default function SOInvoicePanel({ order, items, onUpdated }) {
   if (existingInvoice) {
     return (
       <div className="space-y-4">
-        <div className="flex items-center gap-2 p-3 bg-violet-50 rounded-lg">
-          <FileText className="w-4 h-4 text-violet-600" />
-          <span className="text-sm font-medium text-violet-700">Invoice: {existingInvoice.invoice_number}</span>
-          <span className={`ml-auto text-xs px-2 py-0.5 rounded-full font-medium ${
-            existingInvoice.status === 'paid' ? 'bg-green-100 text-green-700' :
-            existingInvoice.status === 'overdue' ? 'bg-red-100 text-red-700' :
-            'bg-violet-100 text-violet-700'
-          }`}>{existingInvoice.status}</span>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
-          {[
-            ['Customer', existingInvoice.customer_name],
-            ['Invoice Date', existingInvoice.invoice_date],
-            ['Due Date', existingInvoice.due_date || '—'],
-            ['Taxable Amount', `₹${existingInvoice.taxable_amount?.toLocaleString('en-IN') || 0}`],
-            ['Tax Amount', `₹${existingInvoice.tax_amount?.toLocaleString('en-IN') || 0}`],
-            ['Total Amount', `₹${existingInvoice.total_amount?.toLocaleString('en-IN') || 0}`],
-          ].map(([k, v]) => (
-            <div key={k} className="bg-white border border-slate-200 rounded-lg p-3">
-              <p className="text-xs text-slate-500 mb-1">{k}</p>
-              <p className="font-medium text-slate-900">{v}</p>
-            </div>
-          ))}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 p-3 bg-violet-50 rounded-lg flex-1">
+            <FileText className="w-4 h-4 text-violet-600" />
+            <span className="text-sm font-medium text-violet-700">Invoice: {existingInvoice.invoice_number}</span>
+            <span className={`ml-auto text-xs px-2 py-0.5 rounded-full font-medium ${
+              existingInvoice.status === 'paid' ? 'bg-green-100 text-green-700' :
+              existingInvoice.status === 'overdue' ? 'bg-red-100 text-red-700' :
+              'bg-violet-100 text-violet-700'
+            }`}>{existingInvoice.status}</span>
+          </div>
+          <Button variant="outline" className="ml-3 h-9 text-xs" onClick={() => window.print()}>
+            <Printer className="w-3 h-3 mr-1" /> Print
+          </Button>
         </div>
 
-        {/* Line items preview */}
+        {/* K95 Invoice Preview */}
         <div className="border border-slate-200 rounded-xl overflow-hidden">
-          <div className="bg-slate-50 px-4 py-2 text-xs font-medium text-slate-700">Invoice Items</div>
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-xs text-slate-600 border-b border-slate-100">
-                <th className="px-3 py-2 text-left">Description</th>
-                <th className="px-3 py-2 text-right">Qty</th>
-                <th className="px-3 py-2 text-right">Taxable</th>
-                <th className="px-3 py-2 text-right">Tax</th>
-                <th className="px-3 py-2 text-right">Total</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {items.map(item => (
-                <tr key={item.id}>
-                  <td className="px-3 py-2 text-slate-800">{item.description}</td>
-                  <td className="px-3 py-2 text-right">{item.quantity}</td>
-                  <td className="px-3 py-2 text-right">₹{item.taxable_value?.toLocaleString('en-IN') || '—'}</td>
-                  <td className="px-3 py-2 text-right">₹{item.igst_amount?.toLocaleString('en-IN') || '—'}</td>
-                  <td className="px-3 py-2 text-right font-medium">₹{item.total_amount?.toLocaleString('en-IN') || '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <K95InvoiceTemplate
+            invoice={existingInvoice}
+            items={items}
+            dispatch={dispatches[0]}
+            order={order}
+          />
         </div>
       </div>
     );
