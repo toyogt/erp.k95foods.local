@@ -1,10 +1,10 @@
 const STATUS_CONFIG = {
   draft:            { label: 'Draft',              cls: 'bg-slate-100 text-slate-600' },
   confirmed:        { label: 'Confirmed',          cls: 'bg-blue-100 text-blue-700' },
-  logistics_review: { label: 'Logistics Review',   cls: 'bg-purple-100 text-purple-700' },
+  logistics_review: { label: 'Under Logistics Review', cls: 'bg-purple-100 text-purple-700' },
   stock_validated:  { label: 'Stock Validated',    cls: 'bg-cyan-100 text-cyan-700' },
-  picking:          { label: 'Pick & Pack',        cls: 'bg-amber-100 text-amber-700' },
-  packing:          { label: 'Packing',            cls: 'bg-orange-100 text-orange-700' },
+  picking:          { label: 'Ready to Pick & Pack', cls: 'bg-amber-100 text-amber-700' },
+  packing:          { label: 'Pick & Packed',      cls: 'bg-orange-100 text-orange-700' },
   dispatched:       { label: 'Dispatched',         cls: 'bg-indigo-100 text-indigo-700' },
   delivered:        { label: 'Delivered',           cls: 'bg-teal-100 text-teal-700' },
   invoiced:         { label: 'Invoiced',           cls: 'bg-violet-100 text-violet-700' },
