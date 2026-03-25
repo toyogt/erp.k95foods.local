@@ -52,6 +52,7 @@ export default function SOInvoicePanel({ order, items, onUpdated, deliveryNote }
       tax_amount: taxAmount,
       total_amount: totalAmount,
       status: 'sent',
+      workflow_state: 'pending',
     });
 
     await base44.entities.SalesOrder.update(order.id, { status: 'invoiced' });

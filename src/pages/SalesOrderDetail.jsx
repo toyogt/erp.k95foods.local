@@ -19,16 +19,17 @@ import EInvoicePanel from '@/components/sales/EInvoicePanel';
 import { fireFMSEvent } from '@/lib/useFMSAutoComplete';
 
 const FLOW_STEPS = [
-  { key: 'confirmed',       label: 'Confirmed',        icon: CheckCircle2 },
+  { key: 'confirmed',       label: 'Confirmed',         icon: CheckCircle2 },
   { key: 'logistics_review',label: 'Logistics Review',  icon: Package },
-  { key: 'picking',         label: 'Pick & Pack',      icon: Package },
-  { key: 'packing',         label: 'Delivery Note',    icon: Truck },
-  { key: 'dispatched',      label: 'Dispatched',       icon: Truck },
-  { key: 'invoiced',        label: 'Invoiced',         icon: FileText },
-  { key: 'paid',            label: 'Paid',             icon: CreditCard },
+  { key: 'picking',         label: 'Pick List',         icon: Package },
+  { key: 'packing',         label: 'Delivery Note',     icon: Truck },
+  { key: 'dispatched',      label: 'Dispatched',        icon: Truck },
+  { key: 'invoiced',        label: 'Invoiced',          icon: FileText },
+  { key: 'delivered',       label: 'Delivered',         icon: Truck },
+  { key: 'paid',            label: 'Paid',              icon: CreditCard },
 ];
 
-const STATUS_ORDER = ['draft', 'confirmed', 'logistics_review', 'picking', 'packing', 'dispatched', 'delivered', 'invoiced', 'paid', 'closed'];
+const STATUS_ORDER = ['draft', 'confirmed', 'logistics_review', 'picking', 'packing', 'dispatched', 'invoiced', 'delivered', 'paid', 'closed'];
 
 export default function SalesOrderDetail() {
   const params = new URLSearchParams(window.location.search);
@@ -220,7 +221,7 @@ export default function SalesOrderDetail() {
           {activePanel === 'delivery_note' && <SODeliveryNotePanel order={order} items={items} onUpdated={refetch} />}
           {activePanel === 'dispatch' && <SODispatchPanel order={order} onUpdated={refetch} />}
           {activePanel === 'invoice' && <SOInvoicePanel order={order} items={items} onUpdated={refetch} deliveryNote={deliveryNotes[0]} />}
-          {activePanel === 'einvoice' && <EInvoicePanel invoice={invoices[0]} order={order} />}
+          {activePanel === 'einvoice' && <EInvoicePanel invoice={invoices[0]} order={order} onUpdated={() => { refetch(); qc.invalidateQueries(['invoices_detail', soId]); }} />}
           {activePanel === 'payment' && <SOPaymentPanel order={order} onUpdated={refetch} />}
           {activePanel === 'returns' && <SOReturnPanel order={order} items={items} onUpdated={refetch} />}
           {activePanel === 'timeline' && <SOTimeline logs={auditLogs} />}
