@@ -9,24 +9,26 @@ import { useToast } from '@/components/ui/use-toast';
 import SalesOrderStatusBadge from '@/components/sales/SalesOrderStatusBadge';
 import SOItemsTable from '@/components/sales/SOItemsTable';
 import SOStockPicklistPanel from '@/components/sales/SOStockPicklistPanel';
+import SODeliveryNotePanel from '@/components/sales/SODeliveryNotePanel';
 import SODispatchPanel from '@/components/sales/SODispatchPanel';
 import SOInvoicePanel from '@/components/sales/SOInvoicePanel';
 import SOPaymentPanel from '@/components/sales/SOPaymentPanel';
 import SOReturnPanel from '@/components/sales/SOReturnPanel';
 import SOTimeline from '@/components/sales/SOTimeline';
+import EInvoicePanel from '@/components/sales/EInvoicePanel';
 import { fireFMSEvent } from '@/lib/useFMSAutoComplete';
 
 const FLOW_STEPS = [
-  { key: 'confirmed',       label: 'Confirmed',       icon: CheckCircle2 },
-  { key: 'stock_validated', label: 'Stock Check',      icon: Package },
-  { key: 'picking',         label: 'Picking',          icon: Package },
-  { key: 'packing',         label: 'Packing',          icon: Package },
+  { key: 'confirmed',       label: 'Confirmed',        icon: CheckCircle2 },
+  { key: 'logistics_review',label: 'Logistics Review',  icon: Package },
+  { key: 'picking',         label: 'Pick & Pack',      icon: Package },
+  { key: 'packing',         label: 'Delivery Note',    icon: Truck },
   { key: 'dispatched',      label: 'Dispatched',       icon: Truck },
   { key: 'invoiced',        label: 'Invoiced',         icon: FileText },
   { key: 'paid',            label: 'Paid',             icon: CreditCard },
 ];
 
-const STATUS_ORDER = ['draft', 'confirmed', 'stock_validated', 'picking', 'packing', 'dispatched', 'delivered', 'invoiced', 'paid', 'closed'];
+const STATUS_ORDER = ['draft', 'confirmed', 'logistics_review', 'picking', 'packing', 'dispatched', 'delivered', 'invoiced', 'paid', 'closed'];
 
 export default function SalesOrderDetail() {
   const params = new URLSearchParams(window.location.search);
@@ -38,7 +40,21 @@ export default function SalesOrderDetail() {
 
   const { data: order, isLoading, refetch } = useQuery({
     queryKey: ['sales_order', soId],
-    queryFn: () => base44.entities.SalesOrder.list('-created_date', 500).then(list => list.find(o => o.id === soId)),
+    queryFn: () => base44.entities.SalesOrder.filter({ id: soId }).then(list => list[0]),
+    enabled: !!soId,
+  });
+
+  // Fetch delivery notes for invoice template
+  const { data: deliveryNotes = [] } = useQuery({
+    queryKey: ['delivery_notes_detail', soId],
+    queryFn: () => base44.entities.SalesDeliveryNote.filter({ sales_order_id: soId }),
+    enabled: !!soId,
+  });
+
+  // Fetch invoices for e-invoice panel
+  const { data: invoices = [] } = useQuery({
+    queryKey: ['invoices_detail', soId],
+    queryFn: () => base44.entities.SalesInvoice.filter({ sales_order_id: soId }),
     enabled: !!soId,
   });
 
@@ -87,13 +103,15 @@ export default function SalesOrderDetail() {
     && !['paid', 'closed', 'cancelled'].includes(order.status);
 
   const PANELS = [
-    { key: 'items',      label: 'Items',          icon: Package },
-    { key: 'stock_pick', label: 'Stock & Pick',   icon: CheckCircle2 },
-    { key: 'dispatch',   label: 'Dispatch',       icon: Truck },
-    { key: 'invoice',    label: 'Invoice',        icon: FileText },
-    { key: 'payment',    label: 'Payment',        icon: CreditCard },
-    { key: 'returns',    label: 'Returns',        icon: RotateCcw },
-    { key: 'timeline',   label: 'Timeline',       icon: Clock },
+    { key: 'items',         label: 'Items',             icon: Package },
+    { key: 'stock_pick',    label: 'Logistics Review',  icon: CheckCircle2 },
+    { key: 'delivery_note', label: 'Delivery Note',     icon: Truck },
+    { key: 'dispatch',      label: 'Dispatch',          icon: Truck },
+    { key: 'invoice',       label: 'Invoice',           icon: FileText },
+    { key: 'einvoice',      label: 'E-Invoice & Tally', icon: FileText },
+    { key: 'payment',       label: 'Payment',           icon: CreditCard },
+    { key: 'returns',       label: 'Returns',           icon: RotateCcw },
+    { key: 'timeline',      label: 'Timeline',          icon: Clock },
   ];
 
   return (
@@ -116,8 +134,16 @@ export default function SalesOrderDetail() {
           <p className="text-sm text-slate-500 mt-0.5">{order.customer_name} · PO: {order.po_number || 'N/A'}</p>
         </div>
 
-        {/* Quick action button */}
-        {(order.status === 'confirmed' || order.status === 'stock_validated' || order.status === 'picking') && (
+        {/* Quick action buttons */}
+        {order.status === 'confirmed' && (
+          <Button className="h-11 bg-slate-900 text-white text-sm" onClick={() => {
+            moveToStatus('logistics_review', 'sales_logistics_review');
+            setActivePanel('stock_pick');
+          }}>
+            Send for Logistics Review
+          </Button>
+        )}
+        {(order.status === 'logistics_review' || order.status === 'picking') && (
           <Button className="h-11 bg-slate-900 text-white text-sm" onClick={() => setActivePanel('stock_pick')}>
             Stock &amp; Pick
           </Button>
@@ -191,8 +217,10 @@ export default function SalesOrderDetail() {
         <div className="p-4">
           {activePanel === 'items' && <SOItemsTable items={items} order={order} />}
           {activePanel === 'stock_pick' && <SOStockPicklistPanel order={order} items={items} onUpdated={refetch} />}
+          {activePanel === 'delivery_note' && <SODeliveryNotePanel order={order} items={items} onUpdated={refetch} />}
           {activePanel === 'dispatch' && <SODispatchPanel order={order} onUpdated={refetch} />}
-          {activePanel === 'invoice' && <SOInvoicePanel order={order} items={items} onUpdated={refetch} />}
+          {activePanel === 'invoice' && <SOInvoicePanel order={order} items={items} onUpdated={refetch} deliveryNote={deliveryNotes[0]} />}
+          {activePanel === 'einvoice' && <EInvoicePanel invoice={invoices[0]} order={order} />}
           {activePanel === 'payment' && <SOPaymentPanel order={order} onUpdated={refetch} />}
           {activePanel === 'returns' && <SOReturnPanel order={order} items={items} onUpdated={refetch} />}
           {activePanel === 'timeline' && <SOTimeline logs={auditLogs} />}

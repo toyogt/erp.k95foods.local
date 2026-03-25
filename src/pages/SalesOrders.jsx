@@ -15,6 +15,7 @@ const STATUS_TABS = [
   { key: 'all', label: 'All Orders' },
   { key: 'draft', label: 'Draft' },
   { key: 'confirmed', label: 'Confirmed' },
+  { key: 'logistics_review', label: 'Logistics Review' },
   { key: 'picking', label: 'Picking' },
   { key: 'dispatched', label: 'Dispatched' },
   { key: 'invoiced', label: 'Invoiced' },
@@ -45,7 +46,8 @@ export default function SalesOrders() {
 
   const { data: orders = [], isLoading, refetch } = useQuery({
     queryKey: ['sales_orders'],
-    queryFn: () => base44.entities.SalesOrder.list('-created_date', 100),
+    queryFn: () => base44.entities.SalesOrder.list('-created_date', 200),
+    staleTime: 30000,
   });
 
   const filtered = orders.filter(o => {

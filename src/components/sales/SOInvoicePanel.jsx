@@ -10,7 +10,7 @@ import { Loader2, FileText, Printer } from 'lucide-react';
 import { fireFMSEvent, linkFMSRef, findFMSInstanceByRef } from '@/lib/useFMSAutoComplete';
 import K95InvoiceTemplate from '@/components/sales/K95InvoiceTemplate';
 
-export default function SOInvoicePanel({ order, items, onUpdated }) {
+export default function SOInvoicePanel({ order, items, onUpdated, deliveryNote }) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
@@ -95,6 +95,7 @@ export default function SOInvoicePanel({ order, items, onUpdated }) {
             items={items}
             dispatch={dispatches[0]}
             order={order}
+            deliveryNote={deliveryNote}
           />
         </div>
       </div>

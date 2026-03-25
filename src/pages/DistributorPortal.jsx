@@ -49,6 +49,16 @@ export default function DistributorPortal() {
     queryFn: () => base44.entities.StockBalance.list('-updated_date', 500),
   });
 
+  // My distributor record (for credit limit display)
+  const { data: myDistributor } = useQuery({
+    queryKey: ['my_distributor', user?.email],
+    queryFn: async () => {
+      const all = await base44.entities.Distributor.filter({ email: user?.email });
+      return all[0] || null;
+    },
+    enabled: !!user?.email,
+  });
+
   // My requests
   const { data: myRequests = [], isLoading, refetch } = useQuery({
     queryKey: ['distributor_requests_mine', user?.email],
@@ -181,7 +191,7 @@ export default function DistributorPortal() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="bg-white border border-slate-200 rounded-xl p-4 text-center">
           <p className="text-2xl font-bold text-slate-900">{displayRequests.length}</p>
           <p className="text-xs text-slate-500 mt-0.5">Total Requests</p>
@@ -196,6 +206,14 @@ export default function DistributorPortal() {
           </p>
           <p className="text-xs text-green-600 mt-0.5">Converted to Orders</p>
         </div>
+        {/* Credit Limit Card */}
+        {myDistributor && (
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-center">
+            <p className="text-lg font-bold text-blue-800">₹{((myDistributor.credit_limit || 0) - (myDistributor.utilized_limit || 0)).toLocaleString('en-IN')}</p>
+            <p className="text-xs text-blue-600 mt-0.5">Available Credit</p>
+            <p className="text-xs text-slate-400 mt-1">of ₹{(myDistributor.credit_limit || 0).toLocaleString('en-IN')}</p>
+          </div>
+        )}
       </div>
 
       {/* Requests list */}
