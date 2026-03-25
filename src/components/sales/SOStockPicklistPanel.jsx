@@ -1,11 +1,23 @@
 /**
- * Pick List Panel — mirrors PL Minimal Workflow:
- *   Draft → Dispatch Scheduled → Pick & Packed → Delivered
- * 
- * Conditions from ERP:
- *   - "Dispatch Date Confirmed" requires dispatch_date set
- *   - "Pick & Packing Done" requires picking completion
- *   - "Delivered" maps to final state
+ * Logistics Review → Picklist Panel
+ *
+ * Mirrors ERP flow exactly:
+ *   Step 1 (logistics_review): Set transporter + packaging_type + review stock
+ *              → "Approve for Picking" (condition: transporter AND packaging_type must be set)
+ *              → SO moves to "picking" (Ready to Pick & Pack)
+ *
+ *   Step 2 (picking, no picklist): Edit pick quantities
+ *              → "Generate Picklist" → PL created in Draft, SO stays in picking
+ *
+ *   Step 3 (PL Draft): Confirm dispatch date
+ *              → "Dispatch Date Confirmed" (condition: dispatch_date must be set)
+ *              → PL moves to dispatch_scheduled
+ *
+ *   Step 4 (PL dispatch_scheduled): Pick & pack the order
+ *              → "Pick & Packing Done" → PL moves to pick_packed
+ *
+ *   Step 5 (PL pick_packed): Mark delivered
+ *              → "Mark Delivered" → PL moves to delivered
  */
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -15,27 +27,27 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
-import { CheckCircle2, AlertTriangle, Loader2, Package, Calendar, Truck } from 'lucide-react';
-import { fireFMSEvent, linkFMSRef, findFMSInstanceByRef } from '@/lib/useFMSAutoComplete';
+import { CheckCircle2, AlertTriangle, Loader2, Package, Calendar, Truck, ClipboardList } from 'lucide-react';
+import { fireFMSEvent, findFMSInstanceByRef, linkFMSRef } from '@/lib/useFMSAutoComplete';
 
-const PL_WORKFLOW_STEPS = [
-  { key: 'draft',              label: 'Draft',              icon: Package },
-  { key: 'dispatch_scheduled', label: 'Dispatch Scheduled', icon: Calendar },
-  { key: 'picking',            label: 'Pick & Pack',        icon: Package },
-  { key: 'pick_packed',        label: 'Pick & Packed',      icon: CheckCircle2 },
-  { key: 'delivered',          label: 'Delivered',          icon: Truck },
+const PL_STEPS = [
+  { key: 'draft',              label: 'Draft' },
+  { key: 'dispatch_scheduled', label: 'Dispatch Scheduled' },
+  { key: 'pick_packed',        label: 'Pick & Packed' },
+  { key: 'delivered',          label: 'Delivered' },
 ];
 
-const PL_TRANSITIONS = [
-  { from: 'draft',              action: 'Dispatch Date Confirmed', next: 'dispatch_scheduled', condition: 'dispatch_date' },
-  { from: 'dispatch_scheduled', action: 'Pick & Packing Done',    next: 'pick_packed',         condition: null },
-  { from: 'pick_packed',        action: 'Mark Delivered',          next: 'delivered',           condition: null },
-];
+const STOCK_STYLE = { ok: 'text-green-600', short: 'text-amber-600', none: 'text-red-600', unknown: 'text-slate-400' };
+const STOCK_LABEL = { ok: 'Available', short: 'Short', none: 'Out of Stock', unknown: 'Not on Record' };
 
 export default function SOStockPicklistPanel({ order, items, onUpdated }) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
+  const [logisticsForm, setLogisticsForm] = useState({
+    transporter: order?.transporter || '',
+    packaging_type: order?.packaging_type || '',
+  });
   const [pickQtys, setPickQtys] = useState(() =>
     Object.fromEntries(items.map(i => [i.id, i.quantity ?? '']))
   );
@@ -43,9 +55,14 @@ export default function SOStockPicklistPanel({ order, items, onUpdated }) {
     dispatch_date: '',
     appointment_date: '',
     expiry_date: order?.po_expiry_date || '',
-    transporter: '',
-    packaging_type: '',
   });
+
+  const { data: settingsList = [] } = useQuery({
+    queryKey: ['sales_settings'],
+    queryFn: () => base44.entities.SalesSettings.list(),
+  });
+  const transporters = settingsList.find(s => s.setting_key === 'transporters')?.values || [];
+  const packingTypes = settingsList.find(s => s.setting_key === 'packing_types')?.values || [];
 
   const { data: warehouseLots = [] } = useQuery({
     queryKey: ['warehouse_lots_active'],
@@ -57,17 +74,10 @@ export default function SOStockPicklistPanel({ order, items, onUpdated }) {
     queryFn: () => base44.entities.SalesPicklist.filter({ sales_order_id: order.id }, '-created_date'),
   });
 
-  const { data: settingsList = [] } = useQuery({
-    queryKey: ['sales_settings'],
-    queryFn: () => base44.entities.SalesSettings.list(),
-  });
-
-  const transporters = settingsList.find(s => s.setting_key === 'transporters')?.values || [];
-  const packingTypes = settingsList.find(s => s.setting_key === 'packing_types')?.values || [];
-
   const activePicklist = picklists[0] ?? null;
   const plStatus = activePicklist?.status || null;
 
+  // ── Stock helpers ──────────────────────────────────────────────────────────
   function getWarehouseStock(item) {
     const code = item.item_code || item.sku_code;
     if (!code) return null;
@@ -78,62 +88,88 @@ export default function SOStockPicklistPanel({ order, items, onUpdated }) {
     return matching.reduce((s, l) => s + (l.boxes_balance || 0) * (item.packing_unit || 12) + (l.loose_bottles_balance || 0), 0);
   }
 
-  function getStatus(item) {
+  function getStockStatus(item) {
     const stock = getWarehouseStock(item);
-    const pick = parseFloat(pickQtys[item.id]) || 0;
+    const pick = parseFloat(pickQtys[item.id]) || item.quantity || 0;
     if (stock === null) return 'unknown';
     if (stock >= pick) return 'ok';
     if (stock > 0) return 'short';
     return 'none';
   }
 
-  const STATUS_STYLE = { ok: 'text-green-600', short: 'text-amber-600', none: 'text-red-600', unknown: 'text-slate-400' };
-  const STATUS_LABEL = { ok: 'Available', short: 'Short', none: 'Out of Stock', unknown: 'Not on Record' };
-
-  // Step 1: Create picklist in Draft (stock check + generate)
-  async function handleCreatePicklist() {
+  // ── Step 1: Approve for Picking ────────────────────────────────────────────
+  async function handleApproveForPicking() {
+    if (!logisticsForm.transporter || !logisticsForm.packaging_type) {
+      toast({ title: 'Transporter and packaging type are required before approving for picking', variant: 'destructive' });
+      return;
+    }
     setSaving(true);
+
+    // Save stock check to items
     for (const item of items) {
       const stock = getWarehouseStock(item);
-      const status = getStatus(item);
+      const status = getStockStatus(item);
       const stockStatus = status === 'ok' ? 'full' : status === 'short' ? 'partial' : 'unavailable';
       await base44.entities.SalesOrderItem.update(item.id, { available_stock: stock ?? 0, stock_status: stockStatus });
     }
-    const statuses = items.map(i => getStatus(i));
+    const statuses = items.map(i => getStockStatus(i));
     const overall = statuses.every(s => s === 'ok') ? 'full' : statuses.every(s => s === 'none') ? 'unavailable' : 'partial';
+
+    // Save transporter + packaging_type to SO + move to picking
     await base44.entities.SalesOrder.update(order.id, {
+      transporter: logisticsForm.transporter,
+      packaging_type: logisticsForm.packaging_type,
       stock_validation_status: overall,
       stock_validated_by: user?.email,
       stock_validated_at: new Date().toISOString(),
+      status: 'picking',
     });
 
+    await fireFMSEvent('sales_picking_started', order.id);
+    await base44.entities.SalesAuditLog.create({
+      entity_type: 'SalesOrder', entity_id: order.id,
+      reference_number: order.so_number, action: 'approved_for_picking',
+      new_value: `Transporter: ${logisticsForm.transporter}, Stock: ${overall}`,
+      user_email: user?.email,
+    });
+
+    setSaving(false);
+    toast({ title: 'Approved for Picking', description: `Stock: ${overall}` });
+    onUpdated();
+  }
+
+  // ── Step 2: Generate Picklist ──────────────────────────────────────────────
+  async function handleGeneratePicklist() {
+    setSaving(true);
     const plNumber = `PL-${Date.now().toString().slice(-7)}`;
     const picklistItems = items.map(i => ({
       sales_order_item_id: i.id, item_code: i.item_code, description: i.description,
-      location: i.location || 'Finished Goods', required_qty: parseFloat(pickQtys[i.id]) || i.quantity,
+      location: i.location || 'Finished Goods',
+      required_qty: parseFloat(pickQtys[i.id]) || i.quantity,
       picked_qty: 0, status: 'pending',
     }));
 
     const pl = await base44.entities.SalesPicklist.create({
       sales_order_id: order.id, so_number: order.so_number, picklist_number: plNumber,
-      status: 'draft', generated_by: user?.email, items: picklistItems,
+      status: 'draft', generated_by: user?.email,
+      transporter: order.transporter, packaging_type: order.packaging_type,
+      items: picklistItems,
     });
 
-    await base44.entities.SalesOrder.update(order.id, { status: 'picking' });
     const instances = await findFMSInstanceByRef(order.id);
     if (instances[0]) await linkFMSRef(instances[0].id, pl.id);
     await fireFMSEvent('sales_picklist_created', order.id);
     await base44.entities.SalesAuditLog.create({
       entity_type: 'SalesPicklist', entity_id: pl.id, reference_number: plNumber,
-      action: 'stock_checked_and_picklist_created', new_value: `Overall stock: ${overall}`, user_email: user?.email,
+      action: 'picklist_generated', user_email: user?.email,
     });
 
     setSaving(false);
-    toast({ title: 'Picklist created', description: plNumber });
+    toast({ title: 'Picklist generated', description: plNumber });
     refetchPicklists(); onUpdated();
   }
 
-  // Step 2: Confirm dispatch date → move to dispatch_scheduled
+  // ── Step 3: Confirm Dispatch Date ─────────────────────────────────────────
   async function handleConfirmDispatchDate() {
     if (!scheduleForm.dispatch_date) {
       toast({ title: 'Dispatch date is required', variant: 'destructive' }); return;
@@ -144,47 +180,49 @@ export default function SOStockPicklistPanel({ order, items, onUpdated }) {
       dispatch_date: scheduleForm.dispatch_date,
       appointment_date: scheduleForm.appointment_date,
       expiry_date: scheduleForm.expiry_date,
-      transporter: scheduleForm.transporter,
-      packaging_type: scheduleForm.packaging_type,
-    });
-    await base44.entities.SalesAuditLog.create({
-      entity_type: 'SalesPicklist', entity_id: activePicklist.id, reference_number: activePicklist.picklist_number,
-      action: 'dispatch_date_confirmed', new_value: scheduleForm.dispatch_date, user_email: user?.email,
     });
     await fireFMSEvent('sales_dispatch_scheduled', activePicklist.id);
+    await base44.entities.SalesAuditLog.create({
+      entity_type: 'SalesPicklist', entity_id: activePicklist.id,
+      reference_number: activePicklist.picklist_number,
+      action: 'dispatch_date_confirmed', new_value: scheduleForm.dispatch_date,
+      user_email: user?.email,
+    });
     setSaving(false);
     toast({ title: 'Dispatch date confirmed' });
     refetchPicklists(); onUpdated();
   }
 
-  // Step 3: Pick & Packing Done → move to pick_packed
+  // ── Step 4: Pick & Packing Done ───────────────────────────────────────────
   async function handlePickPackDone() {
     setSaving(true);
     const updatedItems = activePicklist.items.map(item => {
-      const picked = parseFloat(pickQtys[item.sales_order_item_id] ?? item.picked_qty ?? item.required_qty);
+      const picked = parseFloat(pickQtys[item.sales_order_item_id] ?? item.required_qty ?? 0);
       return { ...item, picked_qty: picked, status: picked >= item.required_qty ? 'picked' : picked > 0 ? 'short' : 'pending' };
     });
-
     await base44.entities.SalesPicklist.update(activePicklist.id, {
-      items: updatedItems, status: 'pick_packed', completed_by: user?.email, completed_at: new Date().toISOString(),
+      items: updatedItems, status: 'pick_packed',
+      completed_by: user?.email, completed_at: new Date().toISOString(),
     });
     await base44.entities.SalesOrder.update(order.id, { status: 'packing' });
     await fireFMSEvent('sales_picklist_completed', activePicklist.id);
     await base44.entities.SalesAuditLog.create({
-      entity_type: 'SalesPicklist', entity_id: activePicklist.id, reference_number: activePicklist.picklist_number,
+      entity_type: 'SalesPicklist', entity_id: activePicklist.id,
+      reference_number: activePicklist.picklist_number,
       action: 'pick_and_pack_done', user_email: user?.email,
     });
     setSaving(false);
-    toast({ title: 'Pick & Pack marked complete' });
+    toast({ title: 'Pick & Pack complete' });
     refetchPicklists(); onUpdated();
   }
 
-  // Step 4: Delivered
+  // ── Step 5: Delivered ─────────────────────────────────────────────────────
   async function handleDelivered() {
     setSaving(true);
     await base44.entities.SalesPicklist.update(activePicklist.id, { status: 'delivered' });
     await base44.entities.SalesAuditLog.create({
-      entity_type: 'SalesPicklist', entity_id: activePicklist.id, reference_number: activePicklist.picklist_number,
+      entity_type: 'SalesPicklist', entity_id: activePicklist.id,
+      reference_number: activePicklist.picklist_number,
       action: 'picklist_delivered', user_email: user?.email,
     });
     setSaving(false);
@@ -194,205 +232,313 @@ export default function SOStockPicklistPanel({ order, items, onUpdated }) {
 
   if (!items.length) return <div className="text-sm text-slate-400 py-4">No items on this order.</div>;
 
-  const currentStepIndex = PL_WORKFLOW_STEPS.findIndex(s => s.key === plStatus);
-  const nextTransition = PL_TRANSITIONS.find(t => t.from === plStatus);
-
-  return (
-    <div className="space-y-4">
-      {/* Workflow progress bar (only when picklist exists) */}
-      {activePicklist && (
-        <div className="bg-white border border-slate-200 rounded-xl p-4 overflow-x-auto">
-          <div className="flex items-center min-w-max gap-0">
-            {PL_WORKFLOW_STEPS.map((step, i) => {
-              const done = currentStepIndex > i;
-              const active = currentStepIndex === i;
-              return (
-                <div key={step.key} className="flex items-center">
-                  <div className="flex flex-col items-center gap-1 px-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      done ? 'bg-green-100 text-green-600' : active ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-400'
-                    }`}>
-                      {done ? <CheckCircle2 className="w-4 h-4" /> : <step.icon className="w-4 h-4" />}
-                    </div>
-                    <span className={`text-xs font-medium text-center max-w-[80px] ${active ? 'text-slate-900' : done ? 'text-green-700' : 'text-slate-400'}`}>
-                      {step.label}
-                    </span>
-                  </div>
-                  {i < PL_WORKFLOW_STEPS.length - 1 && (
-                    <div className={`w-8 h-0.5 mb-5 ${done ? 'bg-green-400' : 'bg-slate-200'}`} />
-                  )}
-                </div>
-              );
-            })}
-          </div>
+  // ── STEP 1 UI: Logistics Review (SO in logistics_review, no picklist) ──────
+  if (order.status === 'logistics_review' && !activePicklist) {
+    return (
+      <div className="space-y-4">
+        <div>
+          <h3 className="text-sm font-semibold text-slate-900">Logistics Review</h3>
+          <p className="text-xs text-slate-500 mt-0.5">Set transporter and packaging type, review stock availability, then approve for picking.</p>
         </div>
-      )}
 
-      {/* Picklist badge */}
-      {activePicklist && (
-        <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-xl text-sm">
-          <Package className="w-4 h-4 text-blue-600 flex-shrink-0" />
-          <span className="text-blue-800 font-medium">{activePicklist.picklist_number}</span>
-          <span className={`ml-auto px-2 py-0.5 rounded-full text-xs font-medium ${
-            plStatus === 'delivered' || plStatus === 'pick_packed' ? 'bg-green-100 text-green-700' :
-            plStatus === 'dispatch_scheduled' ? 'bg-indigo-100 text-indigo-700' :
-            'bg-slate-100 text-slate-600'
-          }`}>{PL_WORKFLOW_STEPS.find(s => s.key === plStatus)?.label || plStatus}</span>
-        </div>
-      )}
-
-      {/* Dispatch scheduling form (show when picklist is in Draft) */}
-      {plStatus === 'draft' && (
+        {/* Transporter + Packaging fields — required for Approve */}
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
-          <h4 className="text-sm font-semibold text-amber-900">Confirm Dispatch Date</h4>
-          <p className="text-xs text-amber-700">Set the dispatch date and logistics details to move to "Dispatch Scheduled" state.</p>
+          <h4 className="text-sm font-semibold text-amber-900">Logistics Details (required to approve)</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <Label className="text-xs font-medium text-slate-700">Dispatch Date *</Label>
-              <Input type="date" className="h-9 text-sm mt-1" value={scheduleForm.dispatch_date}
-                onChange={e => setScheduleForm(f => ({ ...f, dispatch_date: e.target.value }))} />
-            </div>
-            <div>
-              <Label className="text-xs font-medium text-slate-700">Appointment Date</Label>
-              <Input type="date" className="h-9 text-sm mt-1" value={scheduleForm.appointment_date}
-                onChange={e => setScheduleForm(f => ({ ...f, appointment_date: e.target.value }))} />
-            </div>
-            <div>
-              <Label className="text-xs font-medium text-slate-700">Expiry Date</Label>
-              <Input type="date" className="h-9 text-sm mt-1" value={scheduleForm.expiry_date}
-                onChange={e => setScheduleForm(f => ({ ...f, expiry_date: e.target.value }))} />
-            </div>
-            <div>
-              <Label className="text-xs font-medium text-slate-700">Transporter</Label>
+              <Label className="text-xs font-medium text-slate-700">Transporter *</Label>
               <select className="mt-1 h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                value={scheduleForm.transporter} onChange={e => setScheduleForm(f => ({ ...f, transporter: e.target.value }))}>
+                value={logisticsForm.transporter}
+                onChange={e => setLogisticsForm(f => ({ ...f, transporter: e.target.value }))}>
                 <option value="">Select transporter...</option>
                 {transporters.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
             <div>
-              <Label className="text-xs font-medium text-slate-700">Packaging Type</Label>
+              <Label className="text-xs font-medium text-slate-700">Packaging Type *</Label>
               <select className="mt-1 h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                value={scheduleForm.packaging_type} onChange={e => setScheduleForm(f => ({ ...f, packaging_type: e.target.value }))}>
+                value={logisticsForm.packaging_type}
+                onChange={e => setLogisticsForm(f => ({ ...f, packaging_type: e.target.value }))}>
                 <option value="">Select packaging...</option>
                 {packingTypes.map(p => <option key={p} value={p}>{p}</option>)}
               </select>
             </div>
           </div>
-          <Button className="h-11 bg-slate-900 text-white text-sm" onClick={handleConfirmDispatchDate} disabled={saving}>
-            {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Calendar className="w-4 h-4 mr-1" />}
-            Dispatch Date Confirmed
+        </div>
+
+        {/* Stock Review Table */}
+        <div className="overflow-x-auto border border-slate-200 rounded-xl">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-slate-50 text-xs text-slate-700">
+                <th className="px-3 py-2 text-left">Description</th>
+                <th className="px-3 py-2 text-right">Order Quantity</th>
+                <th className="px-3 py-2 text-right">Stock in Warehouse</th>
+                <th className="px-3 py-2 text-center">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {items.map(item => {
+                const stock = getWarehouseStock(item);
+                const status = getStockStatus(item);
+                return (
+                  <tr key={item.id} className="hover:bg-slate-50">
+                    <td className="px-3 py-2 text-slate-800">{item.description}</td>
+                    <td className="px-3 py-2 text-right font-medium text-slate-700">{item.quantity}</td>
+                    <td className="px-3 py-2 text-right">
+                      {stock !== null
+                        ? <span className={`font-semibold ${stock >= item.quantity ? 'text-green-700' : stock > 0 ? 'text-amber-700' : 'text-red-600'}`}>{stock}</span>
+                        : <span className="text-slate-400 text-xs">Not found</span>}
+                    </td>
+                    <td className="px-3 py-2 text-center">
+                      <span className={`text-xs font-semibold ${STOCK_STYLE[status]}`}>{STOCK_LABEL[status]}</span>
+                      {status === 'short' && stock !== null && <div className="text-xs text-red-400">Short by {item.quantity - stock}</div>}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="flex justify-end">
+          <Button className="h-11 bg-slate-900 text-white text-sm" onClick={handleApproveForPicking} disabled={saving}>
+            {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
+            Approve for Picking
           </Button>
         </div>
-      )}
+      </div>
+    );
+  }
 
-      {/* Picklist info when dispatch is scheduled */}
-      {plStatus === 'dispatch_scheduled' && activePicklist && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
-          {[
-            ['Dispatch Date', activePicklist.dispatch_date || '—'],
-            ['Appointment Date', activePicklist.appointment_date || '—'],
-            ['Transporter', activePicklist.transporter || '—'],
-            ['Packaging', activePicklist.packaging_type || '—'],
-          ].map(([k, v]) => (
-            <div key={k} className="bg-white border border-slate-200 rounded-lg p-3">
-              <p className="text-xs text-slate-500 mb-1">{k}</p>
-              <p className="font-medium text-slate-900">{v}</p>
+  // ── STEP 2 UI: Ready to Pick & Pack — generate picklist ───────────────────
+  if (order.status === 'picking' && !activePicklist) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-900">Generate Picklist</h3>
+            <p className="text-xs text-slate-500 mt-0.5">Adjust pick quantities if needed, then generate the picklist.</p>
+          </div>
+          <Button className="h-11 bg-slate-900 text-white text-sm" onClick={handleGeneratePicklist} disabled={saving}>
+            {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <ClipboardList className="w-4 h-4 mr-1" />}
+            Generate Picklist
+          </Button>
+        </div>
+
+        {/* Logistics summary */}
+        <div className="flex gap-3 flex-wrap">
+          {[['Transporter', order.transporter], ['Packaging', order.packaging_type], ['Stock', order.stock_validation_status]].map(([k, v]) => v && (
+            <div key={k} className="bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2 text-xs">
+              <span className="text-indigo-500">{k}: </span><span className="font-medium text-indigo-800">{v}</span>
             </div>
           ))}
         </div>
-      )}
 
-      {/* Header with action button */}
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <div>
-          <h3 className="text-sm font-semibold text-slate-900">Stock Check & Pick List</h3>
-          <p className="text-xs text-slate-500 mt-0.5">Stock pulled live from inventory. Set pick quantities and confirm.</p>
-        </div>
-        {!activePicklist && (
-          <Button className="h-11 bg-slate-900 text-white text-sm" onClick={handleCreatePicklist} disabled={saving}>
-            {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <CheckCircle2 className="w-4 h-4 mr-1" />}
-            Confirm & Generate Picklist
-          </Button>
-        )}
-        {plStatus === 'dispatch_scheduled' && (
-          <Button className="h-11 bg-green-600 hover:bg-green-700 text-white text-sm" onClick={handlePickPackDone} disabled={saving}>
-            {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Package className="w-4 h-4 mr-1" />}
-            Pick & Packing Done
-          </Button>
-        )}
-        {plStatus === 'pick_packed' && (
-          <Button className="h-11 bg-indigo-600 hover:bg-indigo-700 text-white text-sm" onClick={handleDelivered} disabled={saving}>
-            {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Truck className="w-4 h-4 mr-1" />}
-            Mark Delivered
-          </Button>
-        )}
-      </div>
-
-      {/* Main stock table */}
-      <div className="overflow-x-auto border border-slate-200 rounded-xl">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-slate-50 text-xs text-slate-700">
-              <th className="px-3 py-2 text-left">Description</th>
-              <th className="px-3 py-2 text-right">Order Quantity</th>
-              <th className="px-3 py-2 text-right">Current Stock</th>
-              <th className="px-3 py-2 text-right">{activePicklist ? 'Pick Quantity' : 'Pick Quantity to Send'}</th>
-              <th className="px-3 py-2 text-center">Status</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {items.map(item => {
-              const stock = getWarehouseStock(item);
-              const status = getStatus(item);
-              const plItem = activePicklist?.items?.find(pi => pi.sales_order_item_id === item.id);
-              const isEditable = !activePicklist || plStatus === 'dispatch_scheduled';
-              return (
-                <tr key={item.id} className="hover:bg-slate-50">
-                  <td className="px-3 py-2 text-slate-800">{item.description}</td>
-                  <td className="px-3 py-2 text-right font-medium text-slate-700">{item.quantity}</td>
-                  <td className="px-3 py-2 text-right">
-                    {stock !== null ? (
-                      <span className={`font-semibold ${stock >= item.quantity ? 'text-green-700' : stock > 0 ? 'text-amber-700' : 'text-red-600'}`}>
-                        {stock}
-                      </span>
-                    ) : <span className="text-slate-400 text-xs">Not found</span>}
-                  </td>
-                  <td className="px-3 py-2 text-right">
-                    {isEditable ? (
+        {/* Editable pick quantities */}
+        <div className="overflow-x-auto border border-slate-200 rounded-xl">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-slate-50 text-xs text-slate-700">
+                <th className="px-3 py-2 text-left">Description</th>
+                <th className="px-3 py-2 text-right">Order Quantity</th>
+                <th className="px-3 py-2 text-right">Stock in Warehouse</th>
+                <th className="px-3 py-2 text-right">Pick Quantity to Send</th>
+                <th className="px-3 py-2 text-center">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {items.map(item => {
+                const stock = getWarehouseStock(item);
+                const status = getStockStatus(item);
+                return (
+                  <tr key={item.id} className="hover:bg-slate-50">
+                    <td className="px-3 py-2 text-slate-800">{item.description}</td>
+                    <td className="px-3 py-2 text-right font-medium text-slate-700">{item.quantity}</td>
+                    <td className="px-3 py-2 text-right">
+                      {stock !== null
+                        ? <span className={`font-semibold ${stock >= item.quantity ? 'text-green-700' : stock > 0 ? 'text-amber-700' : 'text-red-600'}`}>{stock}</span>
+                        : <span className="text-slate-400 text-xs">Not found</span>}
+                    </td>
+                    <td className="px-3 py-2 text-right">
                       <Input type="number" min="0" max={item.quantity}
                         className="h-8 w-20 text-sm text-right ml-auto"
-                        value={activePicklist ? (pickQtys[item.sales_order_item_id] ?? plItem?.required_qty ?? '') : pickQtys[item.id]}
-                        onChange={e => setPickQtys(p => ({ ...p, [activePicklist ? item.sales_order_item_id : item.id]: e.target.value }))} />
-                    ) : (
-                      <span className="font-semibold text-slate-800">{plItem?.picked_qty ?? plItem?.required_qty ?? '—'}</span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2 text-center">
-                    <span className={`text-xs font-semibold ${STATUS_STYLE[status]}`}>{STATUS_LABEL[status]}</span>
-                    {status === 'short' && stock !== null && <div className="text-xs text-red-400">Short by {item.quantity - stock}</div>}
-                  </td>
-                </tr>
+                        value={pickQtys[item.id]}
+                        onChange={e => setPickQtys(p => ({ ...p, [item.id]: e.target.value }))} />
+                    </td>
+                    <td className="px-3 py-2 text-center">
+                      <span className={`text-xs font-semibold ${STOCK_STYLE[status]}`}>{STOCK_LABEL[status]}</span>
+                      {status === 'short' && stock !== null && <div className="text-xs text-red-400">Short by {item.quantity - stock}</div>}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  }
+
+  // ── STEPS 3-5 UI: Picklist workflow ───────────────────────────────────────
+  if (activePicklist) {
+    const currentStepIdx = PL_STEPS.findIndex(s => s.key === plStatus);
+    return (
+      <div className="space-y-4">
+        {/* Picklist number + status */}
+        <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-xl text-sm">
+          <Package className="w-4 h-4 text-blue-600 flex-shrink-0" />
+          <span className="text-blue-800 font-medium">{activePicklist.picklist_number}</span>
+          <span className={`ml-auto px-2 py-0.5 rounded-full text-xs font-medium ${
+            plStatus === 'delivered' || plStatus === 'pick_packed' ? 'bg-green-100 text-green-700' :
+            plStatus === 'dispatch_scheduled' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600'
+          }`}>{PL_STEPS.find(s => s.key === plStatus)?.label || plStatus}</span>
+        </div>
+
+        {/* Workflow progress */}
+        <div className="bg-white border border-slate-200 rounded-xl p-4 overflow-x-auto">
+          <div className="flex items-center min-w-max">
+            {PL_STEPS.map((step, i) => {
+              const done = currentStepIdx > i;
+              const active = currentStepIdx === i;
+              return (
+                <div key={step.key} className="flex items-center">
+                  <div className="flex flex-col items-center gap-1 px-3">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs ${
+                      done ? 'bg-green-100 text-green-600' : active ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-400'
+                    }`}>
+                      {done ? <CheckCircle2 className="w-4 h-4" /> : (i + 1)}
+                    </div>
+                    <span className={`text-xs font-medium text-center max-w-[80px] ${active ? 'text-slate-900' : done ? 'text-green-700' : 'text-slate-400'}`}>
+                      {step.label}
+                    </span>
+                  </div>
+                  {i < PL_STEPS.length - 1 && <div className={`w-8 h-0.5 mb-5 ${done ? 'bg-green-400' : 'bg-slate-200'}`} />}
+                </div>
               );
             })}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Overall stock summary */}
-      {order.stock_validation_status && order.stock_validation_status !== 'not_checked' && (
-        <div className={`flex items-center gap-2 p-3 rounded-xl text-sm font-medium ${
-          order.stock_validation_status === 'full' ? 'bg-green-50 border border-green-200 text-green-800' :
-          order.stock_validation_status === 'partial' ? 'bg-amber-50 border border-amber-200 text-amber-800' :
-          'bg-red-50 border border-red-200 text-red-800'
-        }`}>
-          {order.stock_validation_status === 'full'
-            ? <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-            : <AlertTriangle className="w-4 h-4 flex-shrink-0" />}
-          Overall stock: <strong className="ml-1">{order.stock_validation_status}</strong>
-          {order.stock_validated_by && <span className="ml-2 font-normal text-xs opacity-70">· Checked by {order.stock_validated_by}</span>}
+          </div>
         </div>
-      )}
+
+        {/* Step 3: Dispatch date scheduling (PL in Draft) */}
+        {plStatus === 'draft' && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
+            <h4 className="text-sm font-semibold text-amber-900">Confirm Dispatch Date</h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <Label className="text-xs font-medium text-slate-700">Dispatch Date *</Label>
+                <Input type="date" className="h-9 text-sm mt-1" value={scheduleForm.dispatch_date}
+                  onChange={e => setScheduleForm(f => ({ ...f, dispatch_date: e.target.value }))} />
+              </div>
+              <div>
+                <Label className="text-xs font-medium text-slate-700">Appointment Date</Label>
+                <Input type="date" className="h-9 text-sm mt-1" value={scheduleForm.appointment_date}
+                  onChange={e => setScheduleForm(f => ({ ...f, appointment_date: e.target.value }))} />
+              </div>
+              <div>
+                <Label className="text-xs font-medium text-slate-700">Expiry Date</Label>
+                <Input type="date" className="h-9 text-sm mt-1" value={scheduleForm.expiry_date}
+                  onChange={e => setScheduleForm(f => ({ ...f, expiry_date: e.target.value }))} />
+              </div>
+            </div>
+            <Button className="h-11 bg-slate-900 text-white text-sm" onClick={handleConfirmDispatchDate} disabled={saving}>
+              {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Calendar className="w-4 h-4 mr-1" />}
+              Dispatch Date Confirmed
+            </Button>
+          </div>
+        )}
+
+        {/* Step 4: Dispatch scheduled — pick quantities */}
+        {plStatus === 'dispatch_scheduled' && (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+              {[
+                ['Dispatch Date', activePicklist.dispatch_date],
+                ['Appointment Date', activePicklist.appointment_date || '—'],
+                ['Transporter', activePicklist.transporter || order.transporter || '—'],
+                ['Packaging', activePicklist.packaging_type || order.packaging_type || '—'],
+              ].map(([k, v]) => (
+                <div key={k} className="bg-white border border-slate-200 rounded-lg p-3">
+                  <p className="text-xs text-slate-500 mb-1">{k}</p>
+                  <p className="font-medium text-slate-900">{v}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="overflow-x-auto border border-slate-200 rounded-xl">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-slate-50 text-xs text-slate-700">
+                    <th className="px-3 py-2 text-left">Description</th>
+                    <th className="px-3 py-2 text-right">Required Quantity</th>
+                    <th className="px-3 py-2 text-right">Picked Quantity</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {activePicklist.items?.map(item => (
+                    <tr key={item.sales_order_item_id} className="hover:bg-slate-50">
+                      <td className="px-3 py-2 text-slate-800">{item.description}</td>
+                      <td className="px-3 py-2 text-right text-slate-700">{item.required_qty}</td>
+                      <td className="px-3 py-2 text-right">
+                        <Input type="number" min="0"
+                          className="h-8 w-20 text-sm text-right ml-auto"
+                          defaultValue={item.required_qty}
+                          onChange={e => setPickQtys(p => ({ ...p, [item.sales_order_item_id]: e.target.value }))} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex justify-end">
+              <Button className="h-11 bg-green-600 hover:bg-green-700 text-white text-sm" onClick={handlePickPackDone} disabled={saving}>
+                {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Package className="w-4 h-4 mr-1" />}
+                Pick & Packing Done
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 5: Pick & Packed → Mark Delivered */}
+        {plStatus === 'pick_packed' && (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+              {activePicklist.items?.map(item => (
+                <div key={item.sales_order_item_id} className="bg-white border border-slate-200 rounded-lg p-3">
+                  <p className="text-xs text-slate-500 mb-1">{item.description}</p>
+                  <p className="font-semibold text-slate-900">{item.picked_qty ?? item.required_qty} pcs</p>
+                  <span className={`text-xs font-medium ${item.status === 'picked' ? 'text-green-600' : item.status === 'short' ? 'text-amber-600' : 'text-slate-400'}`}>
+                    {item.status}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-end">
+              <Button className="h-11 bg-indigo-600 hover:bg-indigo-700 text-white text-sm" onClick={handleDelivered} disabled={saving}>
+                {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Truck className="w-4 h-4 mr-1" />}
+                Mark Delivered
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Delivered state */}
+        {plStatus === 'delivered' && (
+          <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-xl text-sm">
+            <CheckCircle2 className="w-4 h-4 text-green-600" />
+            <span className="text-green-800 font-medium">Picklist completed and delivered</span>
+            {activePicklist.completed_by && <span className="text-green-600 text-xs ml-2">by {activePicklist.completed_by}</span>}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Fallback
+  return (
+    <div className="text-sm text-slate-400 py-4 text-center">
+      Order must be in Logistics Review or Ready to Pick & Pack state to manage the picklist.
     </div>
   );
 }
