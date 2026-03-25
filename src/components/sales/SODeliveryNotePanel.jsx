@@ -39,8 +39,8 @@ const TRANSITIONS = [
   { from: 'bills_generated',         action: 'Submit',               next: 'submitted' },
 ];
 
-// Cancel is allowed from these states (per ERP workflow)
-const CANCELLABLE_STATES = ['waiting_for_transporter', 'waiting_for_loading'];
+// Cancel is allowed from these states (per ERP workflow — DN Minimal Workflow)
+const CANCELLABLE_STATES = ['waiting_for_transporter', 'waiting_for_loading', 'loading_completed'];
 
 export default function SODeliveryNotePanel({ order, items, onUpdated }) {
   const { user } = useAuth();

@@ -3,9 +3,11 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
-import { Plus, X, Save, Loader2 } from 'lucide-react';
+import { Plus, X, Save, Loader2, Zap } from 'lucide-react';
 import MOQConfigManager from '@/components/sales/MOQConfigManager';
+import ClearTaxSettings from '@/components/sales/ClearTaxSettings';
 
 const DEFAULT_SETTINGS = [
   { setting_key: 'transporters', setting_label: 'Transporter Names', values: ['DTDC', 'Local', 'Bluedart', 'Prakash Parcel Services Ltd', 'Delhivery'], description: 'Transporter options for dispatch' },
@@ -114,6 +116,8 @@ export default function SalesSettingsPage() {
           <MOQConfigManager />
         </div>
       </div>
+
+      <ClearTaxSettings />
     </div>
   );
 }
