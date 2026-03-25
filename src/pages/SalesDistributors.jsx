@@ -77,7 +77,7 @@ export default function SalesDistributors() {
       </div>
 
       {/* Summary */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         <div className="bg-white border border-slate-200 rounded-xl p-4">
           <p className="text-xs text-slate-500 mb-1">Total Distributors</p>
           <p className="text-2xl font-bold text-slate-900">{distributors.length}</p>
@@ -90,6 +90,18 @@ export default function SalesDistributors() {
           <p className="text-xs text-slate-500 mb-1">Total Credit Limit</p>
           <p className="text-xl font-bold text-slate-900">
             ₹{(distributors.reduce((s, d) => s + (d.credit_limit || 0), 0) / 100000).toFixed(1)}L
+          </p>
+        </div>
+        <div className="bg-white border border-slate-200 rounded-xl p-4">
+          <p className="text-xs text-slate-500 mb-1">Total Utilized</p>
+          <p className="text-xl font-bold text-amber-600">
+            ₹{(distributors.reduce((s, d) => s + (d.utilized_limit || 0), 0) / 100000).toFixed(1)}L
+          </p>
+        </div>
+        <div className="bg-white border border-slate-200 rounded-xl p-4">
+          <p className="text-xs text-slate-500 mb-1">Total Available</p>
+          <p className="text-xl font-bold text-green-600">
+            ₹{(distributors.reduce((s, d) => s + ((d.credit_limit || 0) - (d.utilized_limit || 0)), 0) / 100000).toFixed(1)}L
           </p>
         </div>
       </div>
