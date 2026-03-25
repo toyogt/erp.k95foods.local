@@ -9,6 +9,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { Loader2, FileText, Printer } from 'lucide-react';
 import { fireFMSEvent, linkFMSRef, findFMSInstanceByRef } from '@/lib/useFMSAutoComplete';
 import K95InvoiceTemplate from '@/components/sales/K95InvoiceTemplate';
+import EInvoicePanel from '@/components/sales/EInvoicePanel';
 
 export default function SOInvoicePanel({ order, items, onUpdated, deliveryNote }) {
   const { user } = useAuth();
@@ -27,11 +28,6 @@ export default function SOInvoicePanel({ order, items, onUpdated, deliveryNote }
   });
 
   const existingInvoice = invoices[0];
-
-  const { data: dispatches = [] } = useQuery({
-    queryKey: ['dispatches_inv', order.id],
-    queryFn: () => base44.entities.SalesDispatch.filter({ sales_order_id: order.id }),
-  });
 
   async function createInvoice() {
     setSaving(true);
@@ -94,10 +90,15 @@ export default function SOInvoicePanel({ order, items, onUpdated, deliveryNote }
           <K95InvoiceTemplate
             invoice={existingInvoice}
             items={items}
-            dispatch={dispatches[0]}
             order={order}
             deliveryNote={deliveryNote}
           />
+        </div>
+
+        {/* E-Invoice, E-Way Bill, Workflow & Tally — inline below invoice */}
+        <div className="border-t border-slate-200 pt-4">
+          <h3 className="text-sm font-semibold text-slate-900 mb-3">E-Invoice, E-Way Bill &amp; Tally</h3>
+          <EInvoicePanel invoice={existingInvoice} order={order} onUpdated={() => { refetch(); if (onUpdated) onUpdated(); }} />
         </div>
       </div>
     );
