@@ -638,3 +638,77 @@ IRN and E-Way Bill can also be entered manually if ClearTax is not configured.
 8. **All documents link into one FMS instance** — SO → PL → DN → SI all share the same `fms_instance_id`.
 9. **Audit log every action** — Every create/update/cancel must write to `SalesAuditLog`.
 10. **Stock check is advisory** — Logistics can approve even if stock is short (system shows warning, does not block).
+
+---
+
+## 17. BUSINESS VALIDATION RULES (from ERPNext Client/Server Scripts)
+
+### 17A. Credit Limit Check on SO Creation
+**Source:** ServerScript "Restrict Customer Outstanding" + ClientScript "Restrict Sale Order Creation"
+
+Logic:
+```
+Customer.check_outstanding = true → enforce check
+max_allowed = Customer.outstanding_limit + Customer.leverage_outstanding
+if Customer.current_outstanding > max_allowed → BLOCK SO creation
+```
+Fields on Customer entity:
+- `check_outstanding` (boolean) — toggle to enable/disable check
+- `outstanding_limit` (number) — base credit limit in INR
+- `leverage_outstanding` (number) — buffer/extra tolerance in INR
+- `current_outstanding` (number) — current unpaid amount in INR
+
+Implemented in: `CreateSalesOrderModal.jsx` → `checkCreditLimit()` function
+
+### 17B. Auto Planned Dispatch Date
+**Source:** ClientScript "Update Planned Dispatch Date"
+
+Logic:
+```
+planned_dispatch_date = transaction_date + 3 days (auto-set on new SO)
+```
+Field on SalesOrder entity: `planned_dispatch_date`
+Implemented in: `CreateSalesOrderModal.jsx` → default state initialized to today + 3 days
+Also shown in: `SOLogisticsReviewPanel.jsx`
+
+### 17C. Customer Creation Duplicate Check
+**Source:** ClientScript "Duplicate Customer In CCR" + ServerScript "Validate Duplicate Customer In CCR"
+
+Logic:
+```
+If customer_name + customer_id already exists in Customer master → block CCR creation
+```
+Implemented in: `SalesDistributors.jsx` (customer creation flow)
+
+### 17D. Shipping Address Required for DN Loading Completed
+**Source:** DN Minimal Workflow JSON condition: `doc.shipping_address`
+
+Logic:
+```
+Delivery Note → Loading Completed transition requires shipping_address to be filled
+```
+Implemented in: `SODeliveryNotePanel.jsx` and `SalesDeliveryNoteDetail.jsx`
+
+---
+
+## 18. CUSTOMER ENTITY KEY FIELDS
+
+```json
+{
+  "name": "Customer Name",
+  "code": "Customer Code / ID",
+  "gstin": "GSTIN",
+  "billing_address": "string",
+  "shipping_address": "string",
+  "place_of_supply": "State Code (e.g. 29-Karnataka)",
+  "gst_category": "Registered Regular | Unregistered | SEZ | ...",
+  "check_outstanding": false,
+  "outstanding_limit": 0,
+  "leverage_outstanding": 0,
+  "current_outstanding": 0,
+  "payment_terms": "string",
+  "status": "active | inactive | suspended"
+}
+```
+
+Note: `current_outstanding` should be updated whenever a payment is recorded or a new invoice is created (via SalesPayment and SalesInvoice automation). — Logistics can approve even if stock is short (system shows warning, does not block).

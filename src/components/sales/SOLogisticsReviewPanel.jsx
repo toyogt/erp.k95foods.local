@@ -22,7 +22,7 @@ export default function SOLogisticsReviewPanel({ order, onUpdated }) {
     transporter: order?.transporter || '',
     packaging_type: order?.packaging_type || '',
     appointment_date: order?.po_delivery_date || '',
-    dispatch_date: '',
+    dispatch_date: order?.planned_dispatch_date || '',
   });
 
   const { data: settingsList = [] } = useQuery({

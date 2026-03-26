@@ -29,16 +29,24 @@ export default function CreateSalesOrderModal({ defaultType = 'manual', onClose,
   const [expiryWarning, setExpiryWarning] = useState(false);
   const fileRef = useRef();
 
+  // Auto planned dispatch date = today + 3 days (mirrors ERPNext client script)
+  const defaultDispatchDate = new Date();
+  defaultDispatchDate.setDate(defaultDispatchDate.getDate() + 3);
+  const defaultDispatchDateStr = defaultDispatchDate.toISOString().split('T')[0];
+
   const [form, setForm] = useState({
     customer_name: '',
     po_number: '',
     po_date: '',
     po_expiry_date: '',
     po_delivery_date: '',
+    planned_dispatch_date: defaultDispatchDateStr,
     payment_terms: '',
     platform: 'direct',
     notes: '',
   });
+
+  const [creditWarning, setCreditWarning] = useState(null); // null | { current, limit, max_allowed }
 
   const soNumber = `SO-${Date.now().toString().slice(-8)}`;
 
@@ -82,12 +90,40 @@ export default function CreateSalesOrderModal({ defaultType = 'manual', onClose,
     }
   }
 
+  // Credit limit check — mirrors ERPNext "Restrict Customer Outstanding" server script
+  async function checkCreditLimit(customerName) {
+    const customers = await base44.entities.Customer.filter({ name: customerName });
+    const customer = customers[0];
+    if (!customer || !customer.check_outstanding) return null;
+    const limit = customer.outstanding_limit || 0;
+    const leverage = customer.leverage_outstanding || 0;
+    const current = customer.current_outstanding || 0;
+    const maxAllowed = limit + leverage;
+    if (current > maxAllowed) {
+      return { current, limit, leverage, maxAllowed, customerName };
+    }
+    return null;
+  }
+
   async function handleSave() {
     if (!form.customer_name) {
       toast({ title: 'Customer name is required', variant: 'destructive' });
       return;
     }
     setSaving(true);
+
+    // Credit limit check (mirrors server script Before Submit)
+    const creditBlock = await checkCreditLimit(form.customer_name);
+    if (creditBlock) {
+      setSaving(false);
+      setCreditWarning(creditBlock);
+      toast({
+        title: 'Credit Limit Exceeded',
+        description: `Current Outstanding: ₹${creditBlock.current.toLocaleString('en-IN')} exceeds limit of ₹${creditBlock.maxAllowed.toLocaleString('en-IN')}`,
+        variant: 'destructive',
+      });
+      return;
+    }
 
     const soData = {
       ...form,
@@ -206,13 +242,27 @@ export default function CreateSalesOrderModal({ defaultType = 'manual', onClose,
           {(type === 'manual' || step === 'preview') && (
             <>
               {expiryWarning && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
-                  <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="text-sm font-medium text-red-700">PO Expiry Date has passed</p>
-                    <p className="text-xs text-red-600">This order requires override approval before dispatch.</p>
-                  </div>
-                </div>
+               <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
+                 <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+                 <div>
+                   <p className="text-sm font-medium text-red-700">PO Expiry Date has passed</p>
+                   <p className="text-xs text-red-600">This order requires override approval before dispatch.</p>
+                 </div>
+               </div>
+              )}
+              {creditWarning && (
+               <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
+                 <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+                 <div>
+                   <p className="text-sm font-medium text-red-700">Credit Limit Exceeded — Cannot Create Order</p>
+                   <p className="text-xs text-red-600 mt-0.5">
+                     Current Outstanding: <strong>₹{creditWarning.current?.toLocaleString('en-IN')}</strong> &nbsp;·&nbsp;
+                     Allowed Limit: <strong>₹{creditWarning.maxAllowed?.toLocaleString('en-IN')}</strong>
+                     {creditWarning.leverage > 0 && ` (Limit ₹${creditWarning.limit?.toLocaleString('en-IN')} + Buffer ₹${creditWarning.leverage?.toLocaleString('en-IN')})`}
+                   </p>
+                   <p className="text-xs text-red-500 mt-0.5">Please clear outstanding dues before placing a new order.</p>
+                 </div>
+               </div>
               )}
 
               {step === 'preview' && pdfUrl && (
@@ -277,6 +327,12 @@ export default function CreateSalesOrderModal({ defaultType = 'manual', onClose,
                     <Label className="text-xs font-medium text-slate-700">Delivery Date</Label>
                     <Input type="date" className="h-9 text-sm mt-1" value={form.po_delivery_date}
                       onChange={e => setForm(f => ({ ...f, po_delivery_date: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-medium text-slate-700">Planned Dispatch Date</Label>
+                    <Input type="date" className="h-9 text-sm mt-1" value={form.planned_dispatch_date}
+                      onChange={e => setForm(f => ({ ...f, planned_dispatch_date: e.target.value }))} />
+                    <p className="text-xs text-slate-400 mt-0.5">Auto-set to today + 3 days</p>
                   </div>
                 </div>
 
