@@ -4,6 +4,7 @@ import { useAuth } from '@/lib/AuthContext';
 import { X, Upload, FileText, Loader2, Edit2, Check, AlertTriangle, FileSpreadsheet } from 'lucide-react';
 import ExcelSOImport from '@/components/sales/ExcelSOImport';
 import PDFPreviewPanel from '@/components/sales/PDFPreviewPanel';
+import PDFBulkUploadModal from '@/components/sales/PDFBulkUploadModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -250,36 +251,9 @@ export default function CreateSalesOrderModal({ defaultType = 'manual', onClose,
             <ExcelSOImport onCreated={(so) => { onCreated(so); }} />
           )}
 
-          {/* PDF Upload */}
-          {type === 'pdf_upload' && step === 'form' && (
-            <div className="space-y-3">
-              {uploading || parsing ? (
-                <div className="border-2 border-dashed border-slate-200 rounded-xl p-10 text-center">
-                  <Loader2 className="w-8 h-8 animate-spin text-slate-400 mx-auto mb-3" />
-                  <p className="text-sm text-slate-500">{uploading ? 'Uploading PDF...' : 'Extracting data from PDF...'}</p>
-                  <p className="text-xs text-slate-400 mt-1">Platform auto-detection: Blinkit / Swiggy / Zepto</p>
-                </div>
-              ) : (
-                <div
-                  className="border-2 border-dashed border-slate-200 rounded-xl p-10 text-center cursor-pointer hover:border-slate-400 transition-colors"
-                  onClick={() => fileRef.current?.click()}
-                  onDragOver={e => e.preventDefault()}
-                  onDrop={e => {
-                    e.preventDefault();
-                    const file = e.dataTransfer.files[0];
-                    if (file?.type === 'application/pdf') handlePDFUpload(file);
-                  }}
-                >
-                  <Upload className="w-8 h-8 text-slate-300 mx-auto mb-3" />
-                  <p className="text-sm font-medium text-slate-700">Drag & drop PDF here</p>
-                  <p className="text-xs text-slate-400 mt-1">Blinkit, Swiggy, Zepto Purchase Orders auto-detected</p>
-                  <input ref={fileRef} type="file" accept=".pdf" className="hidden"
-                    onChange={e => { if (e.target.files[0]) handlePDFUpload(e.target.files[0]); }} />
-                </div>
-              )}
-              {/* Show PDF preview after upload, even while parsing */}
-              {pdfUrl && <PDFPreviewPanel pdfUrl={pdfUrl} />}
-            </div>
+          {/* PDF Upload — opens dedicated bulk modal */}
+          {type === 'pdf_upload' && (
+            <PDFBulkUploadModal onClose={onClose} onCreated={onCreated} />
           )}
 
           {/* Form (manual or after PDF parse) */}
