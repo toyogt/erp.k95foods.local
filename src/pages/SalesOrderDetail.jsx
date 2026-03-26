@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, CheckCircle2, Clock, AlertTriangle, Package, Truck, FileText, CreditCard, RotateCcw } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Clock, AlertTriangle, Package, Truck, FileText, CreditCard, RotateCcw, MapPin, Link2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import SalesOrderStatusBadge from '@/components/sales/SalesOrderStatusBadge';
@@ -14,6 +14,9 @@ import SOInvoicePanel from '@/components/sales/SOInvoicePanel';
 import SOPaymentPanel from '@/components/sales/SOPaymentPanel';
 import SOReturnPanel from '@/components/sales/SOReturnPanel';
 import SOTimeline from '@/components/sales/SOTimeline';
+import SOAddressPanel from '@/components/sales/SOAddressPanel';
+import SOConnectionsPanel from '@/components/sales/SOConnectionsPanel';
+import SOLogisticsReviewPanel from '@/components/sales/SOLogisticsReviewPanel';
 import { fireFMSEvent } from '@/lib/useFMSAutoComplete';
 
 const FLOW_STEPS = [
@@ -101,13 +104,16 @@ export default function SalesOrderDetail() {
     && !['paid', 'closed', 'cancelled'].includes(order.status);
 
   const PANELS = [
-    { key: 'items',         label: 'Items',            icon: Package },
-    { key: 'stock_pick',    label: 'Logistics Review', icon: CheckCircle2 },
-    { key: 'delivery_note', label: 'Delivery Note',    icon: Truck },
-    { key: 'invoice',       label: 'Invoice',          icon: FileText },
-    { key: 'payment',       label: 'Payment',          icon: CreditCard },
-    { key: 'returns',       label: 'Returns',          icon: RotateCcw },
-    { key: 'timeline',      label: 'Timeline',         icon: Clock },
+    { key: 'items',            label: 'Details',           icon: Package },
+    { key: 'address',          label: 'Address & Contact',  icon: MapPin },
+    { key: 'connections',      label: 'Connections',        icon: Link2 },
+    { key: 'logistics_review', label: 'Logistics Review',   icon: CheckCircle2 },
+    { key: 'stock_pick',       label: 'Pick List',          icon: Package },
+    { key: 'delivery_note',    label: 'Delivery Note',      icon: Truck },
+    { key: 'invoice',          label: 'Invoice',            icon: FileText },
+    { key: 'payment',          label: 'Payment',            icon: CreditCard },
+    { key: 'returns',          label: 'Returns',            icon: RotateCcw },
+    { key: 'timeline',         label: 'Timeline',           icon: Clock },
   ];
 
   return (
@@ -212,6 +218,9 @@ export default function SalesOrderDetail() {
 
         <div className="p-4">
           {activePanel === 'items' && <SOItemsTable items={items} order={order} />}
+          {activePanel === 'address' && <SOAddressPanel order={order} />}
+          {activePanel === 'connections' && <SOConnectionsPanel order={order} />}
+          {activePanel === 'logistics_review' && <SOLogisticsReviewPanel order={order} onUpdated={refetch} />}
           {activePanel === 'stock_pick' && <SOStockPicklistPanel order={order} items={items} onUpdated={refetch} />}
           {activePanel === 'delivery_note' && <SODeliveryNotePanel order={order} items={items} onUpdated={refetch} />}
           {activePanel === 'invoice' && <SOInvoicePanel order={order} items={items} onUpdated={refetch} deliveryNote={deliveryNotes[0]} />}

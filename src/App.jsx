@@ -85,6 +85,9 @@ import SLAConfigManager from './pages/SLAConfigManager';
 import SLAEscalationDashboard from './pages/SLAEscalationDashboard';
 import SalesOrders from './pages/SalesOrders';
 import SalesOrderDetail from './pages/SalesOrderDetail';
+import SalesPicklistDetail from './pages/SalesPicklistDetail';
+import SalesDeliveryNoteDetail from './pages/SalesDeliveryNoteDetail';
+import SalesInvoiceDetail from './pages/SalesInvoiceDetail';
 import SalesDistributors from './pages/SalesDistributors';
 import SalesRateListManager from './pages/SalesRateListManager';
 import SalesSettingsPage from './pages/SalesSettingsPage';
@@ -105,6 +108,7 @@ const PAGE_COMPONENTS = {
   OperatorDashboardMobile, PermissionPolicyManager, SyncCenter, RulesManager, BlockedAttemptsViewer, TraceabilityExplorer, ReconciliationDashboard, RoutesDiagnostics, AuditLogViewer,
   SLAConfigManager, SLAEscalationDashboard,
   SalesOrders, SalesDistributors, SalesRateListManager, SalesSettingsPage, DistributorPortal,
+  SalesPicklistDetail, SalesDeliveryNoteDetail, SalesInvoiceDetail,
 };
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -201,6 +205,32 @@ const AuthenticatedApp = () => {
         element={
           <LayoutWrapper currentPageName="SalesOrderDetail">
             <SalesOrderDetail />
+          </LayoutWrapper>
+        }
+      />
+
+      {/* Sales document detail pages */}
+      <Route
+        path="/SalesPicklistDetail"
+        element={
+          <LayoutWrapper currentPageName="SalesPicklistDetail">
+            <SalesPicklistDetail />
+          </LayoutWrapper>
+        }
+      />
+      <Route
+        path="/SalesDeliveryNoteDetail"
+        element={
+          <LayoutWrapper currentPageName="SalesDeliveryNoteDetail">
+            <SalesDeliveryNoteDetail />
+          </LayoutWrapper>
+        }
+      />
+      <Route
+        path="/SalesInvoiceDetail"
+        element={
+          <LayoutWrapper currentPageName="SalesInvoiceDetail">
+            <SalesInvoiceDetail />
           </LayoutWrapper>
         }
       />
