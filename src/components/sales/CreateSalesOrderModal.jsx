@@ -282,33 +282,63 @@ export default function CreateSalesOrderModal({ defaultType = 'manual', onClose,
 
                 {/* Items preview for PDF */}
                 {step === 'preview' && extractedData?.items?.length > 0 && (
-                  <div>
-                    <p className="text-xs font-medium text-slate-700 mb-2">Line Items ({extractedData.items.length})</p>
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-slate-700">
+                      {extractedData.items.length} item{extractedData.items.length !== 1 ? 's' : ''} extracted
+                    </p>
                     <div className="border border-slate-200 rounded-lg overflow-hidden">
                       <table className="w-full text-xs">
-                        <thead className="bg-slate-50">
+                        <thead className="bg-slate-100">
                           <tr>
-                            <th className="px-3 py-2 text-left text-slate-600">Description</th>
-                            <th className="px-3 py-2 text-right text-slate-600">Qty</th>
-                            <th className="px-3 py-2 text-right text-slate-600">Total</th>
+                            <th className="px-3 py-2 text-left text-slate-600 font-medium">Description</th>
+                            <th className="px-3 py-2 text-right text-slate-600 font-medium">Qty</th>
+                            <th className="px-3 py-2 text-right text-slate-600 font-medium">Rate</th>
+                            <th className="px-3 py-2 text-right text-slate-600 font-medium">Total</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                           {extractedData.items.map((item, i) => (
-                            <tr key={i}>
-                              <td className="px-3 py-2 text-slate-700">{item.description}</td>
-                              <td className="px-3 py-2 text-right">{item.quantity}</td>
-                              <td className="px-3 py-2 text-right font-medium">₹{item.total_amount?.toLocaleString('en-IN')}</td>
+                            <tr key={i} className="hover:bg-slate-50">
+                              <td className="px-3 py-2 text-slate-700">
+                                <div>{item.description}</div>
+                                {item.item_code && <div className="text-slate-400 text-[10px] mt-0.5">{item.item_code}</div>}
+                              </td>
+                              <td className="px-3 py-2 text-right text-slate-700">{item.quantity}</td>
+                              <td className="px-3 py-2 text-right text-slate-700">
+                                {item.unit_base_cost || item.rate_snapshot
+                                  ? `₹${(item.unit_base_cost || item.rate_snapshot)?.toLocaleString('en-IN')}`
+                                  : <span className="text-slate-400">—</span>}
+                              </td>
+                              <td className="px-3 py-2 text-right font-medium text-slate-900">
+                                ₹{(item.total_amount || item.taxable_value || 0).toLocaleString('en-IN')}
+                              </td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
                     </div>
-                    {extractedData.total_amount && (
-                      <p className="text-right text-sm font-semibold text-slate-900 mt-2">
-                        Grand Total: ₹{extractedData.total_amount?.toLocaleString('en-IN')}
-                      </p>
-                    )}
+
+                    {/* Financial Summary */}
+                    <div className="border border-slate-200 rounded-lg divide-y divide-slate-100 bg-white">
+                      <div className="flex justify-between items-center px-4 py-2.5 text-sm">
+                        <span className="text-slate-600">Taxable</span>
+                        <span className="font-medium text-slate-900">
+                          ₹{(extractedData.taxable_amount || extractedData.items.reduce((s, i) => s + (i.taxable_value || i.total_amount || 0), 0)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center px-4 py-2.5 text-sm">
+                        <span className="text-slate-600">Tax (GST)</span>
+                        <span className="font-medium text-slate-900">
+                          ₹{(extractedData.tax_amount || extractedData.items.reduce((s, i) => s + (i.igst_amount || 0), 0)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center px-4 py-2.5 text-sm bg-slate-50 rounded-b-lg">
+                        <span className="font-semibold text-slate-900">Grand Total</span>
+                        <span className="font-bold text-emerald-700 text-base">
+                          ₹{(extractedData.total_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 1 })}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 )}
 
