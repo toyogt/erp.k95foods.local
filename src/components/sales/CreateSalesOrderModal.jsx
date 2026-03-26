@@ -105,11 +105,37 @@ export default function CreateSalesOrderModal({ defaultType = 'manual', onClose,
     return null;
   }
 
+  // Mirrors "Validate DD & TD" — delivery_date cannot be before po_date (order date)
+  function validateDates() {
+    if (form.po_delivery_date && form.po_date && form.po_delivery_date < form.po_date) {
+      toast({ title: 'Delivery Date cannot be before Purchase Order Date', variant: 'destructive' });
+      return false;
+    }
+    return true;
+  }
+
+  // Mirrors "Auto Fill GSTIN in QE SO" — auto-fill customer details when customer name matches a record
+  async function handleCustomerNameBlur(name) {
+    if (!name || name.length < 3) return;
+    const customers = await base44.entities.Customer.filter({ name });
+    if (customers[0]) {
+      const c = customers[0];
+      setForm(f => ({
+        ...f,
+        customer_gstin: f.customer_gstin || c.gstin || '',
+        billing_address: f.billing_address || c.billing_address || '',
+        shipping_address: f.shipping_address || c.shipping_address || '',
+        payment_terms: f.payment_terms || c.payment_terms || '',
+      }));
+    }
+  }
+
   async function handleSave() {
     if (!form.customer_name) {
       toast({ title: 'Customer name is required', variant: 'destructive' });
       return;
     }
+    if (!validateDates()) return;
     setSaving(true);
 
     // Credit limit check (mirrors server script Before Submit)
@@ -283,7 +309,9 @@ export default function CreateSalesOrderModal({ defaultType = 'manual', onClose,
                   <div>
                     <Label className="text-xs font-medium text-slate-700">Customer Name *</Label>
                     <Input className="h-9 text-sm mt-1" value={form.customer_name}
-                      onChange={e => setForm(f => ({ ...f, customer_name: e.target.value }))} />
+                      onChange={e => setForm(f => ({ ...f, customer_name: e.target.value }))}
+                      onBlur={e => handleCustomerNameBlur(e.target.value)} />
+                    <p className="text-xs text-slate-400 mt-0.5">GSTIN & address auto-filled if customer exists</p>
                   </div>
                   <div>
                     <Label className="text-xs font-medium text-slate-700">Platform</Label>

@@ -43,6 +43,7 @@ export default function SOStockPicklistPanel({ order, items, onUpdated }) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
+  const [shortageConfirm, setShortageConfirm] = useState(false); // mirrors "Partial Pick List" + "Checks & Validations"
   const [logisticsForm, setLogisticsForm] = useState({
     transporter: order?.transporter || '',
     packaging_type: order?.packaging_type || '',
@@ -97,6 +98,25 @@ export default function SOStockPicklistPanel({ order, items, onUpdated }) {
   }
 
   // ── Step 1: Approve for Picking ────────────────────────────────────────────
+  // Mirrors "Checks & Validations" + "Partial Pick List" client scripts:
+  // if shortages exist, confirm partial pick before proceeding
+  async function handleApproveForPickingWithCheck() {
+    if (!logisticsForm.transporter || !logisticsForm.packaging_type) {
+      toast({ title: 'Transporter and packaging type are required before approving for picking', variant: 'destructive' });
+      return;
+    }
+    const hasShortages = items.some(item => {
+      const s = getStockStatus(item);
+      return s === 'short' || s === 'none';
+    });
+    if (hasShortages && !shortageConfirm) {
+      setShortageConfirm(true);
+      return;
+    }
+    setShortageConfirm(false);
+    await handleApproveForPicking();
+  }
+
   async function handleApproveForPicking() {
     if (!logisticsForm.transporter || !logisticsForm.packaging_type) {
       toast({ title: 'Transporter and packaging type are required before approving for picking', variant: 'destructive' });
@@ -309,8 +329,28 @@ export default function SOStockPicklistPanel({ order, items, onUpdated }) {
           </table>
         </div>
 
+        {/* Shortage confirmation — mirrors ERPNext "Partial Pick List" confirm dialog */}
+        {shortageConfirm && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-amber-900">Some items have stock shortages</p>
+                <p className="text-xs text-amber-700 mt-0.5">Do you want to proceed and create a partial pick list for available items?</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" className="h-11 text-sm" onClick={() => setShortageConfirm(false)}>Cancel</Button>
+              <Button className="h-11 bg-amber-600 hover:bg-amber-700 text-white text-sm" onClick={handleApproveForPicking} disabled={saving}>
+                {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
+                Proceed with Partial Pick List
+              </Button>
+            </div>
+          </div>
+        )}
+
         <div className="flex justify-end">
-          <Button className="h-11 bg-slate-900 text-white text-sm" onClick={handleApproveForPicking} disabled={saving}>
+          <Button className="h-11 bg-slate-900 text-white text-sm" onClick={handleApproveForPickingWithCheck} disabled={saving}>
             {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
             Approve for Picking
           </Button>

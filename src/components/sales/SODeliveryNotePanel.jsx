@@ -101,11 +101,32 @@ export default function SODeliveryNotePanel({ order, items, onUpdated }) {
     refetch(); onUpdated();
   }
 
+  // Mirrors ERPNext "DN Mandatory" client script:
+  // Each workflow state transition requires specific fields to be filled
+  function validateMandatoryForTransition(nextState) {
+    const missing = [];
+    if (nextState === 'waiting_for_loading') {
+      // Transporter Arrived → requires transporter, vehicle number
+      if (!activeDN.transporter_name) missing.push('Transporter Name');
+      if (!activeDN.vehicle_number) missing.push('Vehicle Number');
+      if (!activeDN.lr_number) missing.push('Transport Receipt Number (LR)');
+    }
+    if (nextState === 'loading_completed') {
+      // Loading Completed → shipping_address (per DN Minimal Workflow JSON condition)
+      if (!activeDN.shipping_address && !order.shipping_address) missing.push('Shipping Address');
+    }
+    if (nextState === 'bills_generated') {
+      // Bills Generated → dispatch_date required
+      if (!activeDN.dispatch_date) missing.push('Dispatch Date');
+    }
+    return missing;
+  }
+
   async function advanceWorkflow(nextState) {
     if (!activeDN) return;
-    // DN condition: shipping_address required before Loading Completed (per DN Minimal Workflow JSON)
-    if (nextState === 'loading_completed' && !activeDN.shipping_address && !order.shipping_address) {
-      toast({ title: 'Shipping address is required before marking Loading Completed', variant: 'destructive' });
+    const missing = validateMandatoryForTransition(nextState);
+    if (missing.length > 0) {
+      toast({ title: `Required before proceeding: ${missing.join(', ')}`, variant: 'destructive' });
       return;
     }
     setAdvancing(true);
