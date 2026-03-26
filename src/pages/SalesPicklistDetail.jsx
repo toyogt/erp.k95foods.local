@@ -2,12 +2,13 @@
  * Pick List Detail Page — dedicated page for a single Pick List.
  * Shows full PL workflow: Draft → Dispatch Scheduled → Pick & Packed → Cancelled
  */
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Package, CheckCircle2, Calendar, Loader2, XCircle } from 'lucide-react';
+import { ArrowLeft, Package, CheckCircle2, Calendar, Loader2, XCircle, Printer } from 'lucide-react';
+import PicklistPrintTemplate from '@/components/sales/PicklistPrintTemplate';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -38,6 +39,22 @@ export default function SalesPicklistDetail() {
   const [cancelReason, setCancelReason] = useState('');
   const [dispatchDate, setDispatchDate] = useState('');
   const [pickQtys, setPickQtys] = useState({});
+  const [showPrint, setShowPrint] = useState(false);
+  const printRef = useRef();
+
+  function handlePrint() {
+    const content = printRef.current;
+    if (!content) return;
+    const win = window.open('', '_blank', 'width=900,height=700');
+    win.document.write(`
+      <html><head><title>${pl?.picklist_number || 'Picklist'} — K95 Foods</title>
+      <style>body{margin:0;padding:0;} @media print { body { margin: 0; } }</style>
+      </head><body>${content.innerHTML}</body></html>
+    `);
+    win.document.close();
+    win.focus();
+    win.print();
+  }
 
   const { data: pl, isLoading, refetch } = useQuery({
     queryKey: ['pl_detail', plId],
@@ -120,7 +137,27 @@ export default function SalesPicklistDetail() {
             Sales Order: <Link to={`/SalesOrderDetail?id=${pl.sales_order_id}`} className="text-blue-600 hover:underline">{pl.so_number}</Link>
           </p>
         </div>
+        <Button variant="outline" className="h-9 text-sm gap-1" onClick={() => setShowPrint(p => !p)}>
+          <Printer className="w-4 h-4" /> {showPrint ? 'Hide Print' : 'Print'}
+        </Button>
+        {showPrint && (
+          <Button variant="outline" className="h-9 text-sm gap-1 text-blue-700 border-blue-300" onClick={handlePrint}>
+            <Printer className="w-4 h-4" /> Send to Printer
+          </Button>
+        )}
       </div>
+
+      {/* Print Preview */}
+      {showPrint && (
+        <div className="border border-slate-200 rounded-xl overflow-hidden">
+          <div className="bg-slate-50 px-4 py-2 border-b border-slate-100 flex items-center justify-between">
+            <span className="text-xs font-medium text-slate-600">Print Preview</span>
+          </div>
+          <div ref={printRef} className="p-2 overflow-auto">
+            <PicklistPrintTemplate picklist={pl} soNumber={pl.so_number} customerName={''} />
+          </div>
+        </div>
+      )}
 
       {/* Workflow progress */}
       {pl.status !== 'cancelled' && (
