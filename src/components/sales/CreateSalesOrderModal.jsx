@@ -81,7 +81,7 @@ export default function CreateSalesOrderModal({ defaultType = 'manual', onClose,
         vendor_no: d.vendor_no || '',
       }));
 
-      if (d.po_expiry_date && new Date(d.po_expiry_date) < new Date()) {
+      if (d.po_expiry_date && new Date(d.po_expiry_date) < new Date() && (d.platform || 'direct') !== 'direct') {
         setExpiryWarning(true);
       }
       setStep('preview');
@@ -285,7 +285,7 @@ export default function CreateSalesOrderModal({ defaultType = 'manual', onClose,
           {/* Form (manual or after PDF parse) */}
           {(type === 'manual' || step === 'preview') && (
             <>
-              {expiryWarning && (
+              {expiryWarning && form.platform !== 'direct' && (
                <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
                  <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
                  <div>
@@ -341,7 +341,11 @@ export default function CreateSalesOrderModal({ defaultType = 'manual', onClose,
                   <div>
                     <Label className="text-xs font-medium text-slate-700">Platform</Label>
                     <select className="mt-1 h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                      value={form.platform} onChange={e => setForm(f => ({ ...f, platform: e.target.value }))}>
+                      value={form.platform} onChange={e => {
+                         const p = e.target.value;
+                         setForm(f => ({ ...f, platform: p }));
+                         if (p === 'direct') setExpiryWarning(false);
+                       }}>
                       <option value="direct">Direct</option>
                       <option value="blinkit">Blinkit</option>
                       <option value="swiggy">Swiggy</option>
@@ -365,17 +369,18 @@ export default function CreateSalesOrderModal({ defaultType = 'manual', onClose,
                       onChange={e => setForm(f => ({ ...f, po_date: e.target.value }))} />
                   </div>
                   <div>
-                    <Label className={`text-xs font-medium ${expiryWarning ? 'text-red-600' : 'text-slate-700'}`}>
-                      PO Expiry Date *
-                    </Label>
-                    <Input type="date" className={`h-9 text-sm mt-1 ${expiryWarning ? 'border-red-400' : ''}`}
-                      value={form.po_expiry_date}
-                      onChange={e => {
-                        const v = e.target.value;
-                        setForm(f => ({ ...f, po_expiry_date: v }));
-                        setExpiryWarning(v && new Date(v) < new Date());
-                      }} />
-                  </div>
+                     <Label className={`text-xs font-medium ${expiryWarning && form.platform !== 'direct' ? 'text-red-600' : 'text-slate-700'}`}>
+                       PO Expiry Date {form.platform !== 'direct' ? '*' : <span className="text-slate-400 font-normal">(optional)</span>}
+                     </Label>
+                     <Input type="date" className={`h-9 text-sm mt-1 ${expiryWarning && form.platform !== 'direct' ? 'border-red-400' : ''}`}
+                       value={form.po_expiry_date}
+                       onChange={e => {
+                         const v = e.target.value;
+                         setForm(f => ({ ...f, po_expiry_date: v }));
+                         setExpiryWarning(v && new Date(v) < new Date() && form.platform !== 'direct');
+                       }} />
+                     {form.platform === 'direct' && <p className="text-xs text-slate-400 mt-0.5">Not applicable for direct orders — no impact on workflow</p>}
+                   </div>
                   <div>
                     <Label className="text-xs font-medium text-slate-700">Delivery Date</Label>
                     <Input type="date" className="h-9 text-sm mt-1" value={form.po_delivery_date}
