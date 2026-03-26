@@ -115,6 +115,7 @@ export default function CreateSalesOrderModal({ defaultType = 'manual', onClose,
   }
 
   // Mirrors "Auto Fill GSTIN in QE SO" — auto-fill customer details when customer name matches a record
+  // Also stores customer's price_list for SO price list validation
   async function handleCustomerNameBlur(name) {
     if (!name || name.length < 3) return;
     const customers = await base44.entities.Customer.filter({ name });
@@ -126,6 +127,7 @@ export default function CreateSalesOrderModal({ defaultType = 'manual', onClose,
         billing_address: f.billing_address || c.billing_address || '',
         shipping_address: f.shipping_address || c.shipping_address || '',
         payment_terms: f.payment_terms || c.payment_terms || '',
+        _customer_payment_terms: c.payment_terms || '',
       }));
     }
   }
