@@ -114,8 +114,7 @@ export default function CreateSalesOrderModal({ defaultType = 'manual', onClose,
     return true;
   }
 
-  // Mirrors "Auto Fill GSTIN in QE SO" — auto-fill customer details when customer name matches a record
-  // Also stores customer's price_list for SO price list validation
+  // Mirrors "Auto Fill GSTIN in QE SO" + stores customer's default price list for validation
   async function handleCustomerNameBlur(name) {
     if (!name || name.length < 3) return;
     const customers = await base44.entities.Customer.filter({ name });
@@ -127,9 +126,23 @@ export default function CreateSalesOrderModal({ defaultType = 'manual', onClose,
         billing_address: f.billing_address || c.billing_address || '',
         shipping_address: f.shipping_address || c.shipping_address || '',
         payment_terms: f.payment_terms || c.payment_terms || '',
-        _customer_payment_terms: c.payment_terms || '',
+        price_list: f.price_list || c.price_list || '', // auto-fill price list from customer
+        _customer_price_list: c.price_list || '', // store for validation
       }));
     }
+  }
+
+  // Mirrors ERPNext "Validate Sales Order Price List" server script
+  function validatePriceList() {
+    if (!form._customer_price_list) return true; // no restriction if customer has no price list set
+    if (form.price_list && form.price_list !== form._customer_price_list) {
+      toast({
+        title: `Price List "${form.price_list}" is not assigned to this customer. Only "${form._customer_price_list}" is allowed.`,
+        variant: 'destructive'
+      });
+      return false;
+    }
+    return true;
   }
 
   async function handleSave() {
@@ -138,6 +151,7 @@ export default function CreateSalesOrderModal({ defaultType = 'manual', onClose,
       return;
     }
     if (!validateDates()) return;
+    if (!validatePriceList()) return;
     setSaving(true);
 
     // Credit limit check (mirrors server script Before Submit)
@@ -153,8 +167,10 @@ export default function CreateSalesOrderModal({ defaultType = 'manual', onClose,
       return;
     }
 
+    // Exclude internal keys prefixed with _ before saving
+    const { _customer_price_list, ...formData } = form;
     const soData = {
-      ...form,
+      ...formData,
       so_number: soNumber,
       source: type,
       status: 'confirmed',
@@ -309,11 +325,18 @@ export default function CreateSalesOrderModal({ defaultType = 'manual', onClose,
               <div className="space-y-3">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
-                    <Label className="text-xs font-medium text-slate-700">Customer Name *</Label>
-                    <Input className="h-9 text-sm mt-1" value={form.customer_name}
-                      onChange={e => setForm(f => ({ ...f, customer_name: e.target.value }))}
-                      onBlur={e => handleCustomerNameBlur(e.target.value)} />
-                    <p className="text-xs text-slate-400 mt-0.5">GSTIN & address auto-filled if customer exists</p>
+                  <Label className="text-xs font-medium text-slate-700">Customer Name *</Label>
+                  <Input className="h-9 text-sm mt-1" value={form.customer_name}
+                    onChange={e => setForm(f => ({ ...f, customer_name: e.target.value }))}
+                    onBlur={e => handleCustomerNameBlur(e.target.value)} />
+                  <p className="text-xs text-slate-400 mt-0.5">GSTIN, address & price list auto-filled if customer exists</p>
+                  </div>
+                  <div>
+                  <Label className="text-xs font-medium text-slate-700">Price List</Label>
+                  <Input className="h-9 text-sm mt-1" value={form.price_list || ''}
+                    onChange={e => setForm(f => ({ ...f, price_list: e.target.value }))}
+                    placeholder={form._customer_price_list ? `Default: ${form._customer_price_list}` : 'e.g. Standard Selling'} />
+                  {form._customer_price_list && <p className="text-xs text-slate-400 mt-0.5">Customer's assigned price list: {form._customer_price_list}</p>}
                   </div>
                   <div>
                     <Label className="text-xs font-medium text-slate-700">Platform</Label>
