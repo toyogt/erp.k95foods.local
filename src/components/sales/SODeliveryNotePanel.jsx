@@ -20,7 +20,6 @@ const WORKFLOW_STEPS = [
   { key: 'waiting_for_loading',     label: 'Waiting for Loading' },
   { key: 'loading_completed',       label: 'Loading Completed & Waiting for Bills' },
   { key: 'bills_generated',         label: 'Bills Generated' },
-  { key: 'submitted',               label: 'Submitted' },
 ];
 
 const WORKFLOW_COLORS = {
@@ -33,14 +32,18 @@ const WORKFLOW_COLORS = {
 };
 
 const TRANSITIONS = [
-  { from: 'waiting_for_transporter', action: 'Transporter Arrived',  next: 'waiting_for_loading' },
-  { from: 'waiting_for_loading',     action: 'Loading Completed',    next: 'loading_completed' },
-  { from: 'loading_completed',       action: 'Bills Generated',      next: 'bills_generated' },
-  { from: 'bills_generated',         action: 'Submit',               next: 'submitted' },
+  { from: 'waiting_for_transporter', action: 'Transporter Arrived', next: 'waiting_for_loading' },
+  { from: 'waiting_for_loading',     action: 'Loading Completed',   next: 'loading_completed' },
+  { from: 'loading_completed',       action: 'Bills Generated',     next: 'bills_generated' },
 ];
 
-// Cancel is allowed from these states (per ERP workflow — DN Minimal Workflow)
-const CANCELLABLE_STATES = ['waiting_for_transporter', 'waiting_for_loading', 'loading_completed'];
+// Bills Cancelled: revert bills_generated → loading_completed
+const REVERSE_TRANSITIONS = [
+  { from: 'bills_generated', action: 'Bills Cancelled', next: 'loading_completed' },
+];
+
+// Cancel allowed from loading_completed and bills_generated (per JSON)
+const CANCELLABLE_STATES = ['loading_completed', 'bills_generated'];
 
 export default function SODeliveryNotePanel({ order, items, onUpdated }) {
   const { user } = useAuth();
@@ -103,17 +106,12 @@ export default function SODeliveryNotePanel({ order, items, onUpdated }) {
     setAdvancing(true);
     const statusMap = {
       waiting_for_loading: 'loading', loading_completed: 'loaded',
-      bills_generated: 'dispatched', submitted: 'dispatched',
+      bills_generated: 'dispatched',
     };
     await base44.entities.SalesDeliveryNote.update(activeDN.id, {
       workflow_state: nextState, status: statusMap[nextState] || activeDN.status,
     });
-    // When bills generated or submitted, advance SO to dispatched
-    if (nextState === 'bills_generated' || nextState === 'submitted') {
-      await base44.entities.SalesOrder.update(order.id, { status: 'dispatched' });
-    }
-    const eventKey = nextState === 'submitted' ? 'sales_dn_submitted' : `sales_dn_${nextState}`;
-    await fireFMSEvent(eventKey, activeDN.id);
+    await fireFMSEvent('sales_dn_advanced', activeDN.id);
     await base44.entities.SalesAuditLog.create({
       entity_type: 'SalesDeliveryNote', entity_id: activeDN.id, reference_number: activeDN.dn_number,
       action: `workflow_${nextState}`, old_value: activeDN.workflow_state,
@@ -146,6 +144,7 @@ export default function SODeliveryNotePanel({ order, items, onUpdated }) {
   if (activeDN) {
     const isCancelled = activeDN.workflow_state === 'cancelled';
     const nextTransition = TRANSITIONS.find(t => t.from === activeDN.workflow_state);
+    const reverseTransition = REVERSE_TRANSITIONS.find(t => t.from === activeDN.workflow_state);
     const canCancel = CANCELLABLE_STATES.includes(activeDN.workflow_state);
 
     return (
@@ -159,11 +158,17 @@ export default function SODeliveryNotePanel({ order, items, onUpdated }) {
               {WORKFLOW_STEPS.find(s => s.key === activeDN.workflow_state)?.label || activeDN.workflow_state}
             </span>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             {canCancel && !showCancel && (
               <Button variant="outline" className="h-11 text-sm text-red-600 border-red-200 hover:bg-red-50"
                 onClick={() => setShowCancel(true)}>
                 <XCircle className="w-4 h-4 mr-1" /> Cancel
+              </Button>
+            )}
+            {reverseTransition && !isCancelled && (
+              <Button variant="outline" className="h-11 text-sm text-amber-700 border-amber-300 hover:bg-amber-50"
+                onClick={() => advanceWorkflow(reverseTransition.next)} disabled={advancing}>
+                <XCircle className="w-4 h-4 mr-1" /> {reverseTransition.action}
               </Button>
             )}
             {nextTransition && !isCancelled && (

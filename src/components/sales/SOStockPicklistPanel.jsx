@@ -34,7 +34,6 @@ const PL_STEPS = [
   { key: 'draft',              label: 'Draft' },
   { key: 'dispatch_scheduled', label: 'Dispatch Scheduled' },
   { key: 'pick_packed',        label: 'Pick & Packed' },
-  { key: 'delivered',          label: 'Delivered' },
 ];
 
 const STOCK_STYLE = { ok: 'text-green-600', short: 'text-amber-600', none: 'text-red-600', unknown: 'text-slate-400' };
@@ -216,17 +215,26 @@ export default function SOStockPicklistPanel({ order, items, onUpdated }) {
     refetchPicklists(); onUpdated();
   }
 
-  // ── Step 5: Delivered ─────────────────────────────────────────────────────
-  async function handleDelivered() {
+  // ── Cancel Picklist ──────────────────────────────────────────────────────
+  const [showCancelPL, setShowCancelPL] = useState(false);
+  const [cancelReasonPL, setCancelReasonPL] = useState('');
+
+  async function handleCancelPicklist() {
+    if (!cancelReasonPL.trim()) {
+      toast({ title: 'Cancellation reason is required', variant: 'destructive' }); return;
+    }
     setSaving(true);
-    await base44.entities.SalesPicklist.update(activePicklist.id, { status: 'delivered' });
+    await base44.entities.SalesPicklist.update(activePicklist.id, {
+      status: 'cancelled', notes: cancelReasonPL,
+    });
     await base44.entities.SalesAuditLog.create({
       entity_type: 'SalesPicklist', entity_id: activePicklist.id,
       reference_number: activePicklist.picklist_number,
-      action: 'picklist_delivered', user_email: user?.email,
+      action: 'cancelled', notes: cancelReasonPL, user_email: user?.email,
     });
     setSaving(false);
-    toast({ title: 'Picklist marked as Delivered' });
+    setShowCancelPL(false);
+    toast({ title: 'Picklist cancelled' });
     refetchPicklists(); onUpdated();
   }
 
@@ -500,9 +508,14 @@ export default function SOStockPicklistPanel({ order, items, onUpdated }) {
           </div>
         )}
 
-        {/* Step 5: Pick & Packed → Mark Delivered */}
+        {/* Pick & Packed — done state */}
         {plStatus === 'pick_packed' && (
           <div className="space-y-3">
+            <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-xl text-sm">
+              <CheckCircle2 className="w-4 h-4 text-green-600" />
+              <span className="text-green-800 font-medium">Pick & Pack completed</span>
+              {activePicklist.completed_by && <span className="text-green-600 text-xs ml-2">by {activePicklist.completed_by}</span>}
+            </div>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
               {activePicklist.items?.map(item => (
                 <div key={item.sales_order_item_id} className="bg-white border border-slate-200 rounded-lg p-3">
@@ -514,21 +527,37 @@ export default function SOStockPicklistPanel({ order, items, onUpdated }) {
                 </div>
               ))}
             </div>
-            <div className="flex justify-end">
-              <Button className="h-11 bg-indigo-600 hover:bg-indigo-700 text-white text-sm" onClick={handleDelivered} disabled={saving}>
-                {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Truck className="w-4 h-4 mr-1" />}
-                Mark Delivered
+          </div>
+        )}
+
+        {/* Cancel picklist (only from pick_packed per JSON) */}
+        {plStatus === 'pick_packed' && !showCancelPL && (
+          <div className="flex justify-end">
+            <Button variant="outline" className="h-11 text-sm text-red-600 border-red-200 hover:bg-red-50"
+              onClick={() => setShowCancelPL(true)} disabled={saving}>
+              Cancel Picklist
+            </Button>
+          </div>
+        )}
+        {showCancelPL && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 space-y-3">
+            <h4 className="text-sm font-semibold text-red-800">Cancel Picklist</h4>
+            <Input className="h-9 text-sm border-red-300" value={cancelReasonPL}
+              onChange={e => setCancelReasonPL(e.target.value)} placeholder="Reason for cancellation..." />
+            <div className="flex gap-2">
+              <Button variant="outline" className="h-11 text-sm" onClick={() => setShowCancelPL(false)}>Back</Button>
+              <Button className="h-11 bg-red-600 hover:bg-red-700 text-white text-sm" onClick={handleCancelPicklist} disabled={saving}>
+                {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null} Confirm Cancel
               </Button>
             </div>
           </div>
         )}
 
-        {/* Delivered state */}
-        {plStatus === 'delivered' && (
-          <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-xl text-sm">
-            <CheckCircle2 className="w-4 h-4 text-green-600" />
-            <span className="text-green-800 font-medium">Picklist completed and delivered</span>
-            {activePicklist.completed_by && <span className="text-green-600 text-xs ml-2">by {activePicklist.completed_by}</span>}
+        {/* Cancelled state */}
+        {plStatus === 'cancelled' && (
+          <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-sm">
+            <CheckCircle2 className="w-4 h-4 text-red-500" />
+            <span className="text-red-800 font-medium">Picklist cancelled</span>
           </div>
         )}
       </div>

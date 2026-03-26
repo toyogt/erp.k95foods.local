@@ -59,27 +59,31 @@ export const FMS_APP_EVENTS = [
   { key: 'user_role_changed',         label: 'User Role Changed',           category: 'Admin',          canTrigger: false, canComplete: true  },
 
   // ── Sales ─────────────────────────────────────────────────────────────────────
-  // Sales Order lifecycle
-  { key: 'sales_order_created',         label: 'Sales Order Created',           category: 'Sales', canTrigger: true,  canComplete: true  },
-  { key: 'sales_logistics_review',      label: 'Sales Under Logistics Review',  category: 'Sales', canTrigger: false, canComplete: true  },
-  { key: 'sales_stock_validated',       label: 'Sales Stock Validated',         category: 'Sales', canTrigger: false, canComplete: true  },
-  { key: 'sales_picking_started',       label: 'Sales Approved for Picking',    category: 'Sales', canTrigger: false, canComplete: true  },
-  // Pick List lifecycle
-  { key: 'sales_picklist_created',      label: 'Sales Picklist Created',        category: 'Sales', canTrigger: false, canComplete: true  },
-  { key: 'sales_dispatch_scheduled',    label: 'Sales Dispatch Date Confirmed', category: 'Sales', canTrigger: false, canComplete: true  },
-  { key: 'sales_picklist_completed',    label: 'Sales Pick & Pack Done',        category: 'Sales', canTrigger: false, canComplete: true  },
-  // Delivery Note lifecycle
-  { key: 'sales_dn_created',            label: 'Delivery Note Created',         category: 'Sales', canTrigger: false, canComplete: true  },
-  { key: 'sales_dn_submitted',          label: 'Delivery Note Submitted',       category: 'Sales', canTrigger: false, canComplete: true  },
-  // Invoice lifecycle
-  { key: 'sales_invoiced',              label: 'Sales Invoice Created',         category: 'Sales', canTrigger: false, canComplete: true  },
-  { key: 'sales_invoice_approved',      label: 'Sales Invoice Approved & Submitted', category: 'Sales', canTrigger: false, canComplete: true  },
-  { key: 'sales_return_initiated',      label: 'Sales Return Initiated',        category: 'Sales', canTrigger: true,  canComplete: true  },
-  // Tally & Accounting
-  { key: 'sales_send_for_tally',        label: 'Sales Send for Tally Posting',  category: 'Sales', canTrigger: false, canComplete: true  },
-  { key: 'sales_tally_posted',          label: 'Sales Posted to Tally',         category: 'Sales', canTrigger: false, canComplete: true  },
-  { key: 'sales_invoice_delivered',     label: 'Sales Invoice Delivered',       category: 'Sales', canTrigger: false, canComplete: true  },
-  { key: 'sales_payment_received',      label: 'Sales Payment Received',        category: 'Sales', canTrigger: false, canComplete: true  },
+  // SO Minimal Workflow: Draft → Under Logistics Review → Ready to Pick & Pack → Cancelled
+  { key: 'sales_order_created',           label: 'Sales Order Created',                category: 'Sales', canTrigger: true,  canComplete: true  },
+  { key: 'sales_logistics_review',        label: 'SO: Under Logistics Review',         category: 'Sales', canTrigger: false, canComplete: true  },
+  { key: 'sales_picking_started',         label: 'SO: Approved for Picking',           category: 'Sales', canTrigger: false, canComplete: true  },
+  // PL Minimal Workflow: Draft → Dispatch Scheduled → Pick & Packed → Cancelled
+  { key: 'sales_picklist_created',        label: 'Picklist Created',                   category: 'Sales', canTrigger: false, canComplete: true  },
+  { key: 'sales_dispatch_scheduled',      label: 'PL: Dispatch Date Confirmed',        category: 'Sales', canTrigger: false, canComplete: true  },
+  { key: 'sales_picklist_completed',      label: 'PL: Pick & Pack Done',               category: 'Sales', canTrigger: false, canComplete: true  },
+  // DN Minimal Workflow: Waiting for Transporter → Waiting for Loading → Loading Completed → Bills Generated → Cancelled
+  { key: 'sales_dn_created',              label: 'Delivery Note Created',              category: 'Sales', canTrigger: false, canComplete: true  },
+  { key: 'sales_dn_advanced',             label: 'Delivery Note Advanced',             category: 'Sales', canTrigger: false, canComplete: true  },
+  { key: 'sales_dn_bills_generated',      label: 'DN: Bills Generated',                category: 'Sales', canTrigger: false, canComplete: true  },
+  // SI Minimal Workflow: Draft → E-Invoice → Dispatch → Bilty → Deliver → Return
+  { key: 'sales_invoiced',                label: 'Sales Invoice Created',              category: 'Sales', canTrigger: false, canComplete: true  },
+  { key: 'sales_invoice_submitted',       label: 'SI: Submitted for E-Invoice',        category: 'Sales', canTrigger: false, canComplete: true  },
+  { key: 'sales_invoice_bills_generated', label: 'SI: E-Invoice & E-Way Bill Done',    category: 'Sales', canTrigger: false, canComplete: true  },
+  { key: 'sales_invoice_dispatched',      label: 'SI: Dispatched',                     category: 'Sales', canTrigger: false, canComplete: true  },
+  { key: 'sales_invoice_bilty_received',  label: 'SI: Bilty Received',                 category: 'Sales', canTrigger: false, canComplete: true  },
+  { key: 'sales_invoice_delivered',       label: 'SI: Delivered (POD Received)',       category: 'Sales', canTrigger: false, canComplete: true  },
+  { key: 'sales_return_initiated',        label: 'SI: Return Submitted',               category: 'Sales', canTrigger: true,  canComplete: true  },
+  { key: 'sales_return_approved',         label: 'SI: Return Approved',                category: 'Sales', canTrigger: false, canComplete: true  },
+  { key: 'sales_return_completed',        label: 'SI: Return Completed',               category: 'Sales', canTrigger: false, canComplete: true  },
+  // Tally (metadata, not a workflow state)
+  { key: 'sales_tally_posted',            label: 'Sales Posted to Tally',              category: 'Sales', canTrigger: false, canComplete: true  },
+  { key: 'sales_payment_received',        label: 'Sales Payment Received',             category: 'Sales', canTrigger: false, canComplete: true  },
 
   // ── General / Manual ────────────────────────────────────────────────────────
   { key: 'custom_event_1',            label: 'Custom Event 1',              category: 'Custom',         canTrigger: true,  canComplete: true  },
