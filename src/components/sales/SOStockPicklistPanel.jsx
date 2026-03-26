@@ -190,8 +190,10 @@ export default function SOStockPicklistPanel({ order, items, onUpdated }) {
 
   // ── Step 3: Confirm Dispatch Date ─────────────────────────────────────────
   async function handleConfirmDispatchDate() {
+    // Mirrors ERPNext "PL Mandatory" server script:
+    // dispatch_date required before Dispatch Scheduled / Pick & Packed
     if (!scheduleForm.dispatch_date) {
-      toast({ title: 'Dispatch date is required', variant: 'destructive' }); return;
+      toast({ title: 'Dispatch Date is required before confirming schedule', variant: 'destructive' }); return;
     }
     setSaving(true);
     await base44.entities.SalesPicklist.update(activePicklist.id, {

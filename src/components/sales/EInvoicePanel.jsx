@@ -121,7 +121,33 @@ export default function EInvoicePanel({ invoice, order, onUpdated }) {
   const activeSteps = isReturnPath ? SI_RETURN_STEPS : SI_STEPS;
   const activeIdx = activeSteps.findIndex(s => s.key === workflowState);
 
+  // Mirrors ERPNext server scripts:
+  // "SI Mandatory" (Before Save) + "E-Invoice & E-Way Bill Mandatory" (Before Save)
+  function validateMandatoryForSITransition(nextState) {
+    const missing = [];
+    if (nextState === 'waiting_for_dispatch') {
+      // Mirrors "E-Invoice & E-Way Bill Mandatory": IRN + E-Way Bill required before Bills Generated
+      if (!irn && !invoice?.irn) missing.push('IRN (E-Invoice)');
+      if (!ewayBill && !invoice?.eway_bill) missing.push('E-Way Bill Number');
+    }
+    if (nextState === 'wait_to_deliver') {
+      // Mirrors "SI Mandatory": dispatched_date required before Bilty Received
+      if (!lrNumber && !invoice?.lr_number) missing.push('LR / Bilty Number');
+      if (!lrDate && !invoice?.lr_date) missing.push('LR / Bilty Date');
+    }
+    if (nextState === 'delivered') {
+      // Mirrors "SI Mandatory": POD date required before Delivered
+      if (!podDate && !invoice?.pod_date) missing.push('POD Received Date');
+    }
+    return missing;
+  }
+
   async function advanceWorkflow(nextState) {
+    const missing = validateMandatoryForSITransition(nextState);
+    if (missing.length > 0) {
+      toast({ title: `Required before proceeding: ${missing.join(', ')}`, variant: 'destructive' });
+      return;
+    }
     setSaving(true);
     const updateData = { workflow_state: nextState };
 
@@ -138,7 +164,7 @@ export default function EInvoicePanel({ invoice, order, onUpdated }) {
     }
     if (nextState === 'delivered') {
       if (podDate) updateData.pod_date = podDate;
-      await base44.entities.SalesOrder.update(order.id, { status: 'delivered' });
+      await base44.entities.SalesOrder.update(order?.id, { status: 'delivered' });
     }
 
     await base44.entities.SalesInvoice.update(invoice.id, updateData);
