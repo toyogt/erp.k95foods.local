@@ -63,6 +63,11 @@ export default function SalesDeliveryNoteDetail() {
   const isCancelled = dn.workflow_state === 'cancelled';
 
   async function advance(nextState) {
+    // DN condition: shipping_address required before Loading Completed (per DN Minimal Workflow JSON)
+    if (nextState === 'loading_completed' && !dn.shipping_address) {
+      toast({ title: 'Shipping address is required before marking Loading Completed', variant: 'destructive' });
+      return;
+    }
     setSaving(true);
     const statusMap = { waiting_for_loading: 'loading', loading_completed: 'loaded', bills_generated: 'dispatched' };
     await base44.entities.SalesDeliveryNote.update(dnId, {
