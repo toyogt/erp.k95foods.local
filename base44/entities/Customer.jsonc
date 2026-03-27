@@ -1,0 +1,114 @@
+{
+  "name": "Customer",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "title": "Customer Name"
+    },
+    "code": {
+      "type": "string",
+      "title": "Customer Code / ID"
+    },
+    "customer_group": {
+      "type": "string",
+      "title": "Customer Group"
+    },
+    "contact_name": {
+      "type": "string",
+      "title": "Contact Name"
+    },
+    "phone": {
+      "type": "string",
+      "title": "Phone"
+    },
+    "email": {
+      "type": "string",
+      "title": "Email"
+    },
+    "gstin": {
+      "type": "string",
+      "title": "GSTIN"
+    },
+    "pan": {
+      "type": "string",
+      "title": "PAN"
+    },
+    "billing_address": {
+      "type": "string",
+      "title": "Billing Address"
+    },
+    "shipping_address": {
+      "type": "string",
+      "title": "Shipping Address"
+    },
+    "region": {
+      "type": "string",
+      "title": "Region / Territory"
+    },
+    "gst_category": {
+      "type": "string",
+      "title": "GST Category",
+      "enum": [
+        "Registered Regular",
+        "Registered Composition",
+        "Unregistered",
+        "SEZ",
+        "Overseas",
+        "UIN Holders"
+      ]
+    },
+    "place_of_supply": {
+      "type": "string",
+      "title": "Place of Supply (State Code)"
+    },
+    "payment_terms": {
+      "type": "string",
+      "title": "Payment Terms"
+    },
+    "price_list": {
+      "type": "string",
+      "title": "Default Price List"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "inactive",
+        "suspended"
+      ],
+      "title": "Status"
+    },
+    "notes": {
+      "type": "string",
+      "title": "Notes"
+    },
+    "check_outstanding": {
+      "type": "boolean",
+      "title": "Enable Credit Limit Check",
+      "default": false
+    },
+    "outstanding_limit": {
+      "type": "number",
+      "title": "Credit Limit (INR)"
+    },
+    "leverage_outstanding": {
+      "type": "number",
+      "title": "Leverage / Buffer on Limit (INR)",
+      "default": 0
+    },
+    "current_outstanding": {
+      "type": "number",
+      "title": "Current Outstanding (INR)",
+      "default": 0
+    },
+    "workflow_state": {
+      "type": "string",
+      "title": "Workflow State"
+    }
+  },
+  "required": [
+    "name",
+    "status"
+  ]
+}

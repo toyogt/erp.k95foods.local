@@ -115,22 +115,35 @@ export default function CreateSalesOrderModal({ defaultType = 'manual', onClose,
     return true;
   }
 
-  // Mirrors "Auto Fill GSTIN in QE SO" + stores customer's default price list for validation
+  // Auto-fill customer details + resolve price list (customer-specific → group fallback)
   async function handleCustomerNameBlur(name) {
     if (!name || name.length < 3) return;
-    const customers = await base44.entities.Customer.filter({ name });
-    if (customers[0]) {
-      const c = customers[0];
-      setForm(f => ({
-        ...f,
-        customer_gstin: f.customer_gstin || c.gstin || '',
-        billing_address: f.billing_address || c.billing_address || '',
-        shipping_address: f.shipping_address || c.shipping_address || '',
-        payment_terms: f.payment_terms || c.payment_terms || '',
-        price_list: f.price_list || c.price_list || '', // auto-fill price list from customer
-        _customer_price_list: c.price_list || '', // store for validation
-      }));
+    // Match by exact name or GSTIN-level search
+    const matches = await base44.entities.Customer.filter({ status: 'active' });
+    const c = matches.find(cu => cu.name?.toLowerCase() === name.toLowerCase())
+      || matches.find(cu => cu.name?.toLowerCase().includes(name.toLowerCase().slice(0, 20)));
+    if (!c) return;
+
+    // Resolve price list: customer-specific first, then group fallback
+    let resolvedPriceList = c.price_list || '';
+    if (!resolvedPriceList && c.customer_group) {
+      const allRates = await base44.entities.SalesRateList.list('-created_date', 500);
+      const groupName = c.customer_group.toLowerCase();
+      const groupList = [...new Set(allRates.map(r => r.price_list).filter(Boolean))]
+        .find(pl => pl.toLowerCase().includes(groupName) || groupName.includes(pl.toLowerCase()));
+      if (groupList) resolvedPriceList = groupList;
     }
+
+    setForm(f => ({
+      ...f,
+      customer_gstin: f.customer_gstin || c.gstin || '',
+      billing_address: f.billing_address || c.billing_address || '',
+      shipping_address: f.shipping_address || c.shipping_address || '',
+      payment_terms: f.payment_terms || c.payment_terms || '',
+      price_list: resolvedPriceList,
+      _customer_price_list: resolvedPriceList,
+      _customer_group: c.customer_group || '',
+    }));
   }
 
   // Mirrors ERPNext "Validate Sales Order Price List" server script

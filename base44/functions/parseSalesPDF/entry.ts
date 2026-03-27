@@ -105,17 +105,75 @@ Return ONLY valid JSON.`;
       }
     });
 
-    // Post-process: try to match items to rate list for rate enrichment
-    let enrichedData = result;
+    // Post-process: customer lookup → price list resolution → item rate enrichment
+    let enrichedData = { ...result };
+    let priceListUsed = null;
+    let customerFound = null;
+    let rateSource = 'none';
+
     try {
-      const rateList = await base44.asServiceRole.entities.SalesRateList.filter({ is_active: true });
+      // Step 1: Look up customer by name or GSTIN
+      const customers = await base44.asServiceRole.entities.Customer.filter({ status: 'active' });
+      const extractedName = (enrichedData.customer_name || '').toLowerCase().trim();
+      const extractedGstin = (enrichedData.customer_gstin || '').trim();
+
+      // Match by GSTIN first (most reliable), then by name (case-insensitive contains)
+      customerFound = customers.find(c =>
+        (extractedGstin && c.gstin && c.gstin.trim() === extractedGstin)
+      ) || customers.find(c =>
+        extractedName && c.name && c.name.toLowerCase().includes(extractedName.slice(0, 20))
+      ) || customers.find(c =>
+        extractedName && c.name && extractedName.includes(c.name.toLowerCase().slice(0, 15))
+      );
+
+      // Step 2: Resolve price list
+      // Priority 1: Customer has a specific price list assigned
+      if (customerFound?.price_list) {
+        priceListUsed = customerFound.price_list;
+        rateSource = `customer (${customerFound.name})`;
+      }
+      // Priority 2: Customer group — look for a price list that matches group name
+      else if (customerFound?.customer_group) {
+        const groupName = customerFound.customer_group.toLowerCase();
+        const allRates = await base44.asServiceRole.entities.SalesRateList.filter({ is_active: true });
+        const groupList = [...new Set(allRates.map(r => r.price_list).filter(Boolean))]
+          .find(pl => pl.toLowerCase().includes(groupName) || groupName.includes(pl.toLowerCase()));
+        if (groupList) {
+          priceListUsed = groupList;
+          rateSource = `customer group (${customerFound.customer_group})`;
+        }
+      }
+      // Priority 3: Try to match by platform — e.g. platform = blinkit → look for 'blinkit' price list
+      if (!priceListUsed && enrichedData.platform && enrichedData.platform !== 'direct') {
+        const allRates2 = await base44.asServiceRole.entities.SalesRateList.filter({ is_active: true });
+        const platformPl = [...new Set(allRates2.map(r => r.price_list).filter(Boolean))]
+          .find(pl => pl.toLowerCase().includes(enrichedData.platform.toLowerCase()));
+        if (platformPl) {
+          priceListUsed = platformPl;
+          rateSource = `platform (${enrichedData.platform})`;
+        }
+      }
+
+      // Step 3: Fetch rates for resolved price list (or all active if none found)
+      let rateList;
+      if (priceListUsed) {
+        rateList = await base44.asServiceRole.entities.SalesRateList.filter({ price_list: priceListUsed, is_active: true });
+      } else {
+        rateList = await base44.asServiceRole.entities.SalesRateList.filter({ is_active: true });
+        rateSource = 'general (no price list matched)';
+      }
+
+      // Step 4: Enrich items with rates from resolved price list
       if (rateList.length > 0 && enrichedData.items) {
         enrichedData.items = enrichedData.items.map(item => {
-          // Try to match by item_code or description similarity
           const match = rateList.find(r =>
-            (item.item_code && r.item_code === item.item_code) ||
-            (item.sku_code && r.item_code === item.sku_code) ||
-            (item.description && r.item_name && r.item_name.toLowerCase().includes(item.description.toLowerCase().split(' ').slice(0, 3).join(' ')))
+            (item.item_code && r.item_code && r.item_code === item.item_code) ||
+            (item.sku_code && r.item_code && r.item_code === item.sku_code) ||
+            (item.ean_number && r.item_code && r.item_code === item.ean_number) ||
+            (item.description && r.item_name && (
+              r.item_name.toLowerCase().includes(item.description.toLowerCase().split(' ').slice(0, 3).join(' ')) ||
+              item.description.toLowerCase().includes(r.item_name.toLowerCase().split(' ').slice(0, 3).join(' '))
+            ))
           );
           if (match) {
             return {
@@ -123,15 +181,34 @@ Return ONLY valid JSON.`;
               item_code: match.item_code || item.item_code,
               hsn_code: match.hsn_code || item.hsn_code || '22029990',
               packing_unit: match.packing_unit || item.packing_unit || 12,
-              rate_snapshot: match.rate || item.unit_base_cost,
+              rate_snapshot: match.rate,
+              unit_base_cost: match.rate || item.unit_base_cost,
               mrp: match.mrp || item.mrp,
+              igst_rate: match.igst_rate || item.igst_rate,
+              _rate_matched: true,
+              _price_list: priceListUsed,
             };
           }
-          return item;
+          return { ...item, _rate_matched: false };
         });
       }
+
+      // Store enrichment metadata on order level
+      if (customerFound) {
+        enrichedData._customer_id = customerFound.id;
+        enrichedData._customer_price_list = customerFound.price_list || '';
+        enrichedData._customer_group = customerFound.customer_group || '';
+        enrichedData.price_list = priceListUsed || '';
+        enrichedData.payment_terms = enrichedData.payment_terms || customerFound.payment_terms || '';
+        enrichedData.customer_gstin = enrichedData.customer_gstin || customerFound.gstin || '';
+        enrichedData.billing_address = enrichedData.billing_address || customerFound.billing_address || '';
+        enrichedData.shipping_address = enrichedData.shipping_address || customerFound.shipping_address || '';
+      }
+      enrichedData._rate_source = rateSource;
+      enrichedData._price_list_used = priceListUsed;
+      enrichedData._customer_found = !!customerFound;
     } catch (_e) {
-      // Rate list enrichment is best-effort, don't fail the parse
+      // Rate enrichment is best-effort, never fail the parse
     }
 
     return Response.json({ success: true, data: enrichedData });

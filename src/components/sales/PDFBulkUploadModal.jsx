@@ -1,7 +1,8 @@
 import { useState, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
-import { X, Upload, Loader2, ChevronLeft, ChevronRight, FileText, CheckCircle2, AlertCircle } from 'lucide-react';
+import { X, Upload, Loader2, FileText, CheckCircle2, AlertCircle } from 'lucide-react';
+import PDFProcessingSteps from './PDFProcessingSteps';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import PDFInvoiceSplitView from './PDFInvoiceSplitView';
@@ -32,8 +33,23 @@ export default function PDFBulkUploadModal({ onClose, onCreated }) {
   const { user } = useAuth();
   const { toast } = useToast();
   const fileRef = useRef();
-  const [entries, setEntries] = useState([]); // { id, filename, pdfUrl, status, data, error }
+  const [entries, setEntries] = useState([]); // { id, filename, pdfUrl, status, data, error, steps }
   const [activeId, setActiveId] = useState(null);
+
+  const INITIAL_STEPS = [
+    { key: 'upload', label: 'Uploading PDF', status: 'pending', detail: '' },
+    { key: 'parse', label: 'Extracting data from PDF', status: 'pending', detail: '' },
+    { key: 'customer', label: 'Looking up customer', status: 'pending', detail: '' },
+    { key: 'pricelist', label: 'Resolving price list', status: 'pending', detail: '' },
+    { key: 'rates', label: 'Fetching item rates', status: 'pending', detail: '' },
+  ];
+
+  function setStep(id, key, status, detail = '') {
+    setEntries(prev => prev.map(e => e.id !== id ? e : {
+      ...e,
+      steps: (e.steps || INITIAL_STEPS).map(s => s.key === key ? { ...s, status, detail } : s)
+    }));
+  }
 
   const activeEntry = entries.find(e => e.id === activeId);
   const successCount = entries.filter(e => e.status === 'confirmed').length;
@@ -43,19 +59,55 @@ export default function PDFBulkUploadModal({ onClose, onCreated }) {
     const id = `${Date.now()}-${Math.random()}`;
     const filename = file.name;
 
-    setEntries(prev => [...prev, { id, filename, pdfUrl: null, status: 'uploading', data: null }]);
+    setEntries(prev => [...prev, { id, filename, pdfUrl: null, status: 'uploading', data: null, steps: INITIAL_STEPS }]);
     setActiveId(id);
 
+    // Step 1: Upload
+    setStep(id, 'upload', 'active', 'Sending to server...');
     const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    setEntries(prev => prev.map(e => e.id === id ? { ...e, pdfUrl: file_url, status: 'parsing' } : e));
+    setStep(id, 'upload', 'done', 'Uploaded successfully');
+    setEntries(prev => prev.map(e => e.id === id ? { ...e, pdfUrl: file_url } : e));
 
+    // Step 2: Parse PDF
+    setStep(id, 'parse', 'active', 'Reading text and tables...');
+    setEntries(prev => prev.map(e => e.id === id ? { ...e, status: 'parsing' } : e));
     const res = await base44.functions.invoke('parseSalesPDF', { pdf_url: file_url });
 
-    if (res.data?.success) {
-      setEntries(prev => prev.map(e => e.id === id ? { ...e, status: 'done', data: res.data.data } : e));
-    } else {
+    if (!res.data?.success) {
+      setStep(id, 'parse', 'error', 'Could not extract data');
       setEntries(prev => prev.map(e => e.id === id ? { ...e, status: 'error', error: 'Parsing failed' } : e));
+      return;
     }
+
+    const d = res.data.data;
+    setStep(id, 'parse', 'done', `${d.items?.length || 0} items extracted`);
+
+    // Step 3: Customer lookup (already done server-side, show result)
+    setStep(id, 'customer', 'active', 'Matching customer record...');
+    await new Promise(r => setTimeout(r, 350));
+    if (d._customer_found) {
+      setStep(id, 'customer', 'done', `Matched: ${d.customer_name}`);
+    } else {
+      setStep(id, 'customer', 'done', 'Not found — please verify');
+    }
+
+    // Step 4: Price list
+    setStep(id, 'pricelist', 'active', 'Checking assigned price list...');
+    await new Promise(r => setTimeout(r, 300));
+    if (d._price_list_used) {
+      setStep(id, 'pricelist', 'done', `Using: ${d._price_list_used} (via ${d._rate_source || 'match'})`);
+    } else {
+      setStep(id, 'pricelist', 'done', 'No specific price list — using general rates');
+    }
+
+    // Step 5: Item rates
+    setStep(id, 'rates', 'active', 'Enriching line items...');
+    await new Promise(r => setTimeout(r, 300));
+    const matched = (d.items || []).filter(i => i._rate_matched).length;
+    const total = (d.items || []).length;
+    setStep(id, 'rates', 'done', `${matched} of ${total} items rate-matched`);
+
+    setEntries(prev => prev.map(e => e.id === id ? { ...e, status: 'done', data: d } : e));
   }
 
   async function handleFiles(files) {
@@ -191,10 +243,7 @@ export default function PDFBulkUploadModal({ onClose, onCreated }) {
             <div className="flex-1 overflow-hidden">
             {activeEntry ? (
               activeEntry.status === 'uploading' || activeEntry.status === 'parsing' ? (
-                <div className="flex-1 flex flex-col items-center justify-center h-full text-slate-400 gap-3">
-                  <Loader2 className="w-8 h-8 animate-spin" />
-                  <p className="text-sm">{activeEntry.status === 'uploading' ? 'Uploading...' : 'Extracting data from PDF...'}</p>
-                </div>
+                <PDFProcessingSteps steps={activeEntry.steps || []} filename={activeEntry.filename} />
               ) : activeEntry.status === 'error' ? (
                 <div className="flex-1 flex flex-col items-center justify-center h-full text-red-400 gap-3">
                   <AlertCircle className="w-8 h-8" />

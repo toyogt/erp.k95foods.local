@@ -191,6 +191,7 @@ export default function SalesCustomerManager() {
               {[
                 ['name', 'Customer Name *', 'text'],
                 ['code', 'Customer Code', 'text'],
+                ['customer_group', 'Customer Group', 'text'],
                 ['contact_name', 'Contact Name', 'text'],
                 ['phone', 'Phone', 'text'],
                 ['email', 'Email', 'email'],
