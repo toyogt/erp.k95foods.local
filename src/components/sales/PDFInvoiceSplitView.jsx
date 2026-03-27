@@ -59,6 +59,8 @@ export default function PDFInvoiceSplitView({ pdfEntry, onConfirm }) {
       });
   }, [customer, data?.price_list, pdfEntry.id]);
 
+  const priceList = customer?.price_list || data?.price_list || '';
+
   const hasMismatch = items.some(item => {
     const pdfRate = item._pdf_rate;
     const sys = sysRates[item.item_code];
@@ -71,8 +73,6 @@ export default function PDFInvoiceSplitView({ pdfEntry, onConfirm }) {
   const taxable = items.reduce((s, i) => s + (i.taxable_value || (i.unit_base_cost * i.quantity) || 0), 0);
   const tax = items.reduce((s, i) => s + (i.igst_amount || (taxable * 0.12) || 0), 0);
   const total = taxable + tax;
-
-  const priceList = customer?.price_list || data?.price_list || '';
 
   // No-rate block screen
   if (noRateBlocked) {
