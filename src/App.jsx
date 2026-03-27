@@ -84,6 +84,8 @@ import AuditLogViewer from './pages/AuditLogViewer';
 import SLAConfigManager from './pages/SLAConfigManager';
 import SLAEscalationDashboard from './pages/SLAEscalationDashboard';
 import SalesOrders from './pages/SalesOrders';
+import SalesCustomerManager from './pages/SalesCustomerManager';
+import SalesPriceListView from './pages/SalesPriceListView';
 import SalesOrderDetail from './pages/SalesOrderDetail';
 import SalesPicklistDetail from './pages/SalesPicklistDetail';
 import SalesDeliveryNoteDetail from './pages/SalesDeliveryNoteDetail';
@@ -109,6 +111,7 @@ const PAGE_COMPONENTS = {
   SLAConfigManager, SLAEscalationDashboard,
   SalesOrders, SalesDistributors, SalesRateListManager, SalesSettingsPage, DistributorPortal,
   SalesPicklistDetail, SalesDeliveryNoteDetail, SalesInvoiceDetail,
+  SalesCustomerManager, SalesPriceListView,
 };
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -210,6 +213,14 @@ const AuthenticatedApp = () => {
       />
 
       {/* Sales document detail pages */}
+      <Route
+        path="/SalesCustomerManager"
+        element={<LayoutWrapper currentPageName="SalesCustomerManager"><SalesCustomerManager /></LayoutWrapper>}
+      />
+      <Route
+        path="/SalesPriceListView"
+        element={<LayoutWrapper currentPageName="SalesPriceListView"><SalesPriceListView /></LayoutWrapper>}
+      />
       <Route
         path="/SalesPicklistDetail"
         element={

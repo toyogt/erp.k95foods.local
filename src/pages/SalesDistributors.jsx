@@ -6,7 +6,18 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
-import { Plus, Edit2, X, CheckCircle2, Users, Loader2 } from 'lucide-react';
+import { Plus, Edit2, X, CheckCircle2, Users, Loader2, Download } from 'lucide-react';
+
+function exportDistributorsCSV(rows) {
+  const headers = ['Name','Code','Contact','Phone','Email','GSTIN','PAN','Region','Credit Limit','Utilized','Status','Payment Terms'];
+  const lines = [headers.join(',')];
+  for (const d of rows) {
+    lines.push([d.name,d.code,d.contact_name,d.phone,d.email,d.gstin,d.pan,d.region,d.credit_limit,d.utilized_limit,d.status,d.payment_terms]
+      .map(v => `"${(v ?? '').toString().replace(/"/g,'""')}"`).join(','));
+  }
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'distributors.csv'; a.click();
+}
 
 const EMPTY_FORM = {
   name: '', code: '', contact_name: '', phone: '', email: '',
@@ -71,6 +82,9 @@ export default function SalesDistributors() {
           <h1 className="text-xl font-bold text-slate-900">Distributors</h1>
           <p className="text-sm text-slate-500">Manage distributor accounts and credit limits</p>
         </div>
+        <Button variant="outline" className="h-11 text-sm" onClick={() => exportDistributorsCSV(distributors)}>
+          <Download className="w-4 h-4 mr-2" /> Export CSV
+        </Button>
         <Button className="h-11 bg-slate-900 text-white text-sm" onClick={openNew}>
           <Plus className="w-4 h-4 mr-2" /> Add Distributor
         </Button>

@@ -6,7 +6,18 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
-import { Plus, Upload, Download, Edit2, X, Check, Loader2, Search } from 'lucide-react';
+import { Plus, Upload, Download, Edit2, X, Check, Loader2, Search, FileDown } from 'lucide-react';
+import { Link } from 'react-router-dom';
+
+function exportRatesCSV(rows) {
+  const headers = ['item_code','item_name','hsn_code','uom','price_list','rate','mrp','igst_rate','packing_unit','brand','valid_from','valid_upto'];
+  const lines = [headers.join(',')];
+  for (const r of rows) {
+    lines.push(headers.map(h => `"${(r[h] ?? '').toString().replace(/"/g,'""')}"`).join(','));
+  }
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'rate_list_export.csv'; a.click();
+}
 
 const SAMPLE_CSV = `item_code,item_name,hsn_code,uom,price_list,rate,mrp,igst_rate,packing_unit,brand,valid_from,valid_upto
 TK-GL-330,Toyo Kombucha Original Low Sugar Glass Bottle 330ML,22029990,Pcs,30% Margin,44.11,95,40,12,Toyo Kombucha,2026-01-01,2026-12-31`;
@@ -123,6 +134,12 @@ export default function SalesRateListManager() {
           <p className="text-sm text-slate-500">Manage product selling rates — changes apply to new orders only</p>
         </div>
         <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" className="h-11 text-sm" onClick={() => exportRatesCSV(filtered)}>
+            <FileDown className="w-4 h-4 mr-2" /> Export CSV
+          </Button>
+          <Link to="/SalesPriceListView">
+            <Button variant="outline" className="h-11 text-sm">Price List View</Button>
+          </Link>
           <Button variant="outline" className="h-11 text-sm" onClick={downloadSample}>
             <Download className="w-4 h-4 mr-2" /> Sample CSV
           </Button>
@@ -131,6 +148,7 @@ export default function SalesRateListManager() {
             Bulk Upload CSV
           </Button>
           <Button className="h-11 text-sm bg-slate-900 text-white" onClick={openNew}>
+
             <Plus className="w-4 h-4 mr-2" /> Add Rate
           </Button>
           <input ref={fileRef} type="file" accept=".csv" className="hidden"

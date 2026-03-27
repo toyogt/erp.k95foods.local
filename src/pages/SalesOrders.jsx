@@ -2,7 +2,20 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
-import { Plus, Upload, Users, Package, TrendingUp, Clock, CheckCircle2, AlertTriangle, Filter, Search, Inbox } from 'lucide-react';
+import { Plus, Upload, Users, Package, TrendingUp, Clock, CheckCircle2, AlertTriangle, Filter, Search, Inbox, Download } from 'lucide-react';
+
+function exportOrdersCSV(rows) {
+  const headers = ['SO Number','Customer','Platform','PO Number','PO Date','PO Expiry','Total Amount','Status','Source'];
+  const lines = [headers.join(',')];
+  for (const o of rows) {
+    lines.push([
+      o.so_number, o.customer_name, o.platform, o.po_number, o.po_date, o.po_expiry_date,
+      o.total_amount, o.status, o.source,
+    ].map(v => `"${(v ?? '').toString().replace(/"/g,'""')}"`).join(','));
+  }
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'sales_orders.csv'; a.click();
+}
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -81,6 +94,9 @@ export default function SalesOrders() {
           <p className="text-sm text-slate-500">Flow-driven order lifecycle management</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" className="h-11 px-4 text-sm" onClick={() => exportOrdersCSV(filtered)}>
+            <Download className="w-4 h-4 mr-2" /> Export
+          </Button>
           <Button
             variant="outline"
             className="h-11 px-4 text-sm"
