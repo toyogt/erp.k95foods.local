@@ -38,73 +38,74 @@ Deno.serve(async (req) => {
     if (customer_csv_url) {
       const csvText = await fetch(customer_csv_url).then(r => r.text());
       const rows = parseCSV(csvText);
+      const records = [];
 
       for (const row of rows) {
         const name = row['Customer Name'] || row['ID'] || '';
         if (!name) continue;
-        const priceList = row['Default Price List'] || '';
-        const gstin = row['GSTIN / UIN'] || '';
-        const pan = row['PAN'] || '';
-        const phone = row['Mobile No'] || '';
-        const email = row['Email Id'] || '';
-        const checkOutstanding = row['Check Outstanding'] === '1';
-        const outstandingLimit = parseFloat(row['Outstanding Limit']) || 0;
-        const currentOutstanding = parseFloat(row['Current Outstanding']) || 0;
-        const leverageOutstanding = parseFloat(row['Leverage Outstanding']) || 0;
-        const billingAddress = row['Customer Primary Address'] || '';
-        const gstCategory = row['GST Category'] || '';
+        records.push({
+          name,
+          price_list: row['Default Price List'] || '',
+          gstin: row['GSTIN / UIN'] || '',
+          pan: row['PAN'] || '',
+          phone: row['Mobile No'] || '',
+          email: row['Email Id'] || '',
+          check_outstanding: row['Check Outstanding'] === '1',
+          outstanding_limit: parseFloat(row['Outstanding Limit']) || 0,
+          current_outstanding: parseFloat(row['Current Outstanding']) || 0,
+          leverage_outstanding: parseFloat(row['Leverage Outstanding']) || 0,
+          billing_address: row['Customer Primary Address'] || '',
+          gst_category: row['GST Category'] || '',
+          status: 'active',
+        });
+      }
 
+      // Bulk insert in chunks of 50
+      const CHUNK = 50;
+      for (let i = 0; i < records.length; i += CHUNK) {
         try {
-          await base44.asServiceRole.entities.Customer.create({
-            name,
-            price_list: priceList,
-            gstin,
-            pan,
-            phone,
-            email,
-            check_outstanding: checkOutstanding,
-            outstanding_limit: outstandingLimit,
-            current_outstanding: currentOutstanding,
-            leverage_outstanding: leverageOutstanding,
-            billing_address: billingAddress,
-            gst_category: gstCategory,
-            status: 'active',
-          });
-          results.customers.success++;
+          await base44.asServiceRole.entities.Customer.bulkCreate(records.slice(i, i + CHUNK));
+          results.customers.success += Math.min(CHUNK, records.length - i);
         } catch {
-          results.customers.failed++;
+          results.customers.failed += Math.min(CHUNK, records.length - i);
         }
       }
     }
 
     // ---- IMPORT ITEM PRICES ----
     if (item_price_csv_url) {
+
       const csvText = await fetch(item_price_csv_url).then(r => r.text());
       const rows = parseCSV(csvText);
 
+      const records = [];
       for (const row of rows) {
         const itemCode = row['Item Code'] || '';
         const priceList = row['Price List'] || '';
         const rate = parseFloat(row['Rate']) || 0;
         if (!itemCode || !priceList || !rate) { results.rates.failed++; continue; }
+        records.push({
+          item_code: itemCode,
+          item_name: row['Item Name'] || '',
+          price_list: priceList,
+          rate,
+          uom: row['UOM'] || 'Pcs',
+          brand: row['Brand'] || '',
+          currency: row['Currency'] || 'INR',
+          valid_from: row['Valid From'] || '',
+          valid_upto: row['Valid Upto'] || '',
+          packing_unit: parseFloat(row['Packing Unit']) || 0,
+          is_active: true,
+        });
+      }
 
+      const CHUNK = 50;
+      for (let i = 0; i < records.length; i += CHUNK) {
         try {
-          await base44.asServiceRole.entities.SalesRateList.create({
-            item_code: itemCode,
-            item_name: row['Item Name'] || '',
-            price_list: priceList,
-            rate,
-            uom: row['UOM'] || 'Pcs',
-            brand: row['Brand'] || '',
-            currency: row['Currency'] || 'INR',
-            valid_from: row['Valid From'] || '',
-            valid_upto: row['Valid Upto'] || '',
-            packing_unit: parseFloat(row['Packing Unit']) || 0,
-            is_active: true,
-          });
-          results.rates.success++;
+          await base44.asServiceRole.entities.SalesRateList.bulkCreate(records.slice(i, i + CHUNK));
+          results.rates.success += Math.min(CHUNK, records.length - i);
         } catch {
-          results.rates.failed++;
+          results.rates.failed += Math.min(CHUNK, records.length - i);
         }
       }
     }
