@@ -84,6 +84,8 @@ export default function EInvoicePanel({ invoice, order, onUpdated }) {
   const [saving, setSaving] = useState(false);
   const [showCancel, setShowCancel] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
+  const [showDistancePrompt, setShowDistancePrompt] = useState(false);
+  const [distanceKm, setDistanceKm] = useState('');
 
   // E-Invoice manual fields
   const [irn, setIrn] = useState(invoice?.irn || '');
@@ -140,6 +142,70 @@ export default function EInvoicePanel({ invoice, order, onUpdated }) {
       if (!podDate && !invoice?.pod_date) missing.push('POD Received Date');
     }
     return missing;
+  }
+
+  // Auto-generate flow triggered by "Bills Generated" button — mirrors Frappe client script
+  async function handleBillsGenerated() {
+    setSaving(true);
+    try {
+      // Step 1: Generate IRN if missing
+      const currentIrn = irn || invoice?.irn;
+      if (!currentIrn) {
+        toast({ title: 'Generating E-Invoice (IRN)…' });
+        const resp = await base44.functions.invoke('cleartaxGenerate', { action: 'generate_irn', invoice_id: invoice.id });
+        if (!resp.data?.success) {
+          toast({ title: 'E-Invoice generation failed', description: resp.data?.error || 'Check ClearTax settings', variant: 'destructive' });
+          setSaving(false);
+          return;
+        }
+        setIrn(resp.data.irn || '');
+        setAckNo(resp.data.ack_number || '');
+        setAckDate(resp.data.ack_date || '');
+        if (onUpdated) onUpdated();
+      }
+
+      // Step 2: Generate E-Way Bill if missing
+      const currentEway = ewayBill || invoice?.eway_bill;
+      if (!currentEway) {
+        // Need distance — prompt user
+        setSaving(false);
+        setShowDistancePrompt(true);
+        return; // Resume after distance submitted via confirmEwayGeneration()
+      }
+
+      // Step 3: All docs present — advance workflow
+      await advanceWorkflow('waiting_for_dispatch');
+    } catch (err) {
+      toast({ title: 'Unexpected error', description: err.message, variant: 'destructive' });
+      setSaving(false);
+    }
+  }
+
+  async function confirmEwayGeneration() {
+    const km = parseInt(distanceKm, 10);
+    if (!km || km < 1 || km > 4000) {
+      toast({ title: 'Enter a distance between 1 and 4000 km', variant: 'destructive' });
+      return;
+    }
+    setShowDistancePrompt(false);
+    setSaving(true);
+    try {
+      toast({ title: 'Generating E-Way Bill…' });
+      const resp = await base44.functions.invoke('cleartaxGenerate', { action: 'generate_eway', invoice_id: invoice.id, distance_km: km });
+      if (!resp.data?.success) {
+        toast({ title: 'E-Way Bill generation failed', description: resp.data?.error || 'Check ClearTax settings', variant: 'destructive' });
+        setSaving(false);
+        return;
+      }
+      setEwayBill(resp.data.eway_bill || '');
+      setEwayBillDate(resp.data.eway_bill_date || '');
+      if (onUpdated) onUpdated();
+      // Now advance workflow
+      await advanceWorkflow('waiting_for_dispatch');
+    } catch (err) {
+      toast({ title: 'Unexpected error', description: err.message, variant: 'destructive' });
+      setSaving(false);
+    }
   }
 
   async function advanceWorkflow(nextState) {
@@ -298,7 +364,8 @@ export default function EInvoicePanel({ invoice, order, onUpdated }) {
             {nextTransition && !isCancelled && (
               <Button
                 className={`h-11 text-sm ${nextTransition.isReturn ? 'bg-orange-600 hover:bg-orange-700' : 'bg-slate-900 hover:bg-slate-800'} text-white`}
-                onClick={() => advanceWorkflow(nextTransition.next)} disabled={saving}>
+                onClick={() => nextTransition.action === 'Bills Generated' ? handleBillsGenerated() : advanceWorkflow(nextTransition.next)}
+                disabled={saving}>
                 {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> :
                   nextTransition.isReturn ? <RotateCcw className="w-4 h-4 mr-1" /> : <ArrowRight className="w-4 h-4 mr-1" />}
                 {nextTransition.action}
@@ -307,6 +374,30 @@ export default function EInvoicePanel({ invoice, order, onUpdated }) {
           </div>
         </div>
       </div>
+
+      {/* Distance prompt modal — appears before E-Way Bill generation */}
+      {showDistancePrompt && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-3">
+          <h4 className="text-sm font-semibold text-blue-900">Distance Required for E-Way Bill</h4>
+          <p className="text-xs text-blue-700">Enter the transport distance in kilometres (1–4000).</p>
+          <div>
+            <Label className="text-xs font-medium text-slate-700">Distance (km) *</Label>
+            <Input
+              type="number" min={1} max={4000}
+              className="h-9 text-sm mt-1 w-40"
+              value={distanceKm}
+              onChange={e => setDistanceKm(e.target.value)}
+              placeholder="e.g. 250"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" className="h-11 text-sm" onClick={() => setShowDistancePrompt(false)}>Cancel</Button>
+            <Button className="h-11 bg-slate-900 hover:bg-slate-800 text-white text-sm" onClick={confirmEwayGeneration}>
+              <Zap className="w-4 h-4 mr-2" /> Generate E-Way Bill
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Cancel form */}
       {showCancel && (

@@ -130,7 +130,7 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { action, invoice_id } = await req.json();
+    const { action, invoice_id, distance_km } = await req.json();
     if (!action || !invoice_id) {
       return Response.json({ error: 'action and invoice_id are required' }, { status: 400 });
     }
@@ -197,7 +197,7 @@ Deno.serve(async (req) => {
 
       const ewayPayload = {
         Irn: invoice.irn,
-        Distance: 0,
+        Distance: distance_km || 0,
         TransMode: '1',
         TransId: null,
         TransName: dn?.transporter_name || order?.transporter || '',
