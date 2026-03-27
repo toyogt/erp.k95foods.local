@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
-import { Edit2, Check, AlertTriangle, TrendingUp, TrendingDown, User, Tag } from 'lucide-react';
+import { Edit2, Check, AlertTriangle, TrendingUp, TrendingDown, User, Tag, Ban } from 'lucide-react';
 
 // Shows diff between system rate and PDF rate
 function RateDiff({ pdfRate, sysRate }) {
@@ -65,11 +65,42 @@ export default function PDFInvoiceSplitView({ pdfEntry, onConfirm }) {
     return pdfRate && sys && Math.abs(pdfRate - sys) > 0.01;
   });
 
+  // Block SO creation if no price list found and no rates matched
+  const noRateBlocked = !!(data?._no_rate || (!priceList && items.length > 0 && items.every(i => !i._rate_matched)));
+
   const taxable = items.reduce((s, i) => s + (i.taxable_value || (i.unit_base_cost * i.quantity) || 0), 0);
   const tax = items.reduce((s, i) => s + (i.igst_amount || (taxable * 0.12) || 0), 0);
   const total = taxable + tax;
 
   const priceList = customer?.price_list || data?.price_list || '';
+
+  // No-rate block screen
+  if (noRateBlocked) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-5 p-10 text-center">
+        <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center">
+          <Ban className="w-8 h-8 text-red-500" />
+        </div>
+        <div>
+          <h3 className="text-base font-semibold text-red-700 mb-1">Cannot Create Sales Order</h3>
+          <p className="text-sm text-slate-600 max-w-sm">
+            <strong>{data?.customer_name || 'This customer'}</strong> does not have a Price List assigned — and no matching rates were found in any price list.
+          </p>
+          <p className="text-xs text-slate-500 mt-3">
+            Please assign a Price List to this customer in Customer Master, or add rates to the Sales Rate List before processing this order.
+          </p>
+        </div>
+        <div className="flex gap-3">
+          <a href="/SalesCustomerManager" target="_blank" rel="noreferrer">
+            <Button variant="outline" size="sm" className="h-9 text-sm">Open Customer Master</Button>
+          </a>
+          <a href="/SalesPriceListView" target="_blank" rel="noreferrer">
+            <Button variant="outline" size="sm" className="h-9 text-sm">Open Price List</Button>
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-full min-h-[480px] gap-0">

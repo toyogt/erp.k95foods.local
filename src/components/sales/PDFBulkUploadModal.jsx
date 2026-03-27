@@ -111,9 +111,9 @@ export default function PDFBulkUploadModal({ onClose, onCreated }) {
   }
 
   async function handleFiles(files) {
-    for (const file of Array.from(files)) {
-      if (file.type === 'application/pdf') await processFile(file);
-    }
+    // Process all files in parallel for maximum speed
+    const pdfs = Array.from(files).filter(f => f.type === 'application/pdf');
+    await Promise.all(pdfs.map(f => processFile(f)));
   }
 
   async function handleConfirm(entryId, confirmedData) {
@@ -178,8 +178,8 @@ export default function PDFBulkUploadModal({ onClose, onCreated }) {
   const pendingCount = entries.filter(e => e.status === 'done').length;
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-3">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl flex flex-col" style={{ height: '90vh' }}>
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-2">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[96vw] flex flex-col" style={{ height: '94vh' }}>
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 flex-shrink-0">
