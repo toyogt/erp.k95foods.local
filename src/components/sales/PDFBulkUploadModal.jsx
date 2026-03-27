@@ -189,32 +189,32 @@ export default function PDFBulkUploadModal({ onClose, onCreated }) {
 
             {/* Right — split view */}
             <div className="flex-1 overflow-hidden">
-              {activeEntry ? (
-                activeEntry.status === 'uploading' || activeEntry.status === 'parsing' ? (
-                  <div className="flex-1 flex flex-col items-center justify-center h-full text-slate-400 gap-3">
-                    <Loader2 className="w-8 h-8 animate-spin" />
-                    <p className="text-sm">{activeEntry.status === 'uploading' ? 'Uploading...' : 'Extracting data from PDF...'}</p>
-                  </div>
-                ) : activeEntry.status === 'error' ? (
-                  <div className="flex-1 flex flex-col items-center justify-center h-full text-red-400 gap-3">
-                    <AlertCircle className="w-8 h-8" />
-                    <p className="text-sm">Could not extract data from this PDF</p>
-                  </div>
-                ) : activeEntry.status === 'confirmed' ? (
-                  <div className="flex-1 flex flex-col items-center justify-center h-full text-emerald-500 gap-3">
-                    <CheckCircle2 className="w-10 h-10" />
-                    <p className="text-sm font-medium">Sales Order created successfully</p>
-                  </div>
-                ) : (
-                  <PDFInvoiceSplitView
-                    pdfEntry={activeEntry}
-                    priceList={activeEntry.data?.price_list}
-                    onConfirm={(confirmedData) => handleConfirm(activeEntry.id, confirmedData)}
-                  />
-                )
+            {activeEntry ? (
+              activeEntry.status === 'uploading' || activeEntry.status === 'parsing' ? (
+                <div className="flex-1 flex flex-col items-center justify-center h-full text-slate-400 gap-3">
+                  <Loader2 className="w-8 h-8 animate-spin" />
+                  <p className="text-sm">{activeEntry.status === 'uploading' ? 'Uploading...' : 'Extracting data from PDF...'}</p>
+                </div>
+              ) : activeEntry.status === 'error' ? (
+                <div className="flex-1 flex flex-col items-center justify-center h-full text-red-400 gap-3">
+                  <AlertCircle className="w-8 h-8" />
+                  <p className="text-sm">Could not extract data from this PDF</p>
+                </div>
+              ) : activeEntry.status === 'confirmed' ? (
+                <div className="flex-1 flex flex-col items-center justify-center h-full text-emerald-500 gap-3">
+                  <CheckCircle2 className="w-10 h-10" />
+                  <p className="text-sm font-medium">Sales Order created successfully</p>
+                </div>
               ) : (
-                <div className="flex items-center justify-center h-full text-slate-400 text-sm">Select a file to preview</div>
-              )}
+                <PDFInvoiceSplitView
+                  key={activeEntry.id}
+                  pdfEntry={activeEntry}
+                  onConfirm={(confirmedData) => handleConfirm(activeEntry.id, confirmedData)}
+                />
+              )
+            ) : (
+              <div className="flex items-center justify-center h-full text-slate-400 text-sm">Select a file to preview</div>
+            )}
             </div>
           </div>
         )}
