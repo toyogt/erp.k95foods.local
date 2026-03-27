@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useToast } from '@/components/ui/use-toast';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Download, Tag, Users, ArrowLeft } from 'lucide-react';
+import { Search, Download, Tag, Users, ArrowLeft, Edit2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 function exportCSV(priceListName, rows) {
@@ -21,10 +22,13 @@ export default function SalesPriceListView() {
   const urlParams = new URLSearchParams(window.location.search);
   const defaultList = urlParams.get('list') || '';
 
+  const { toast } = useToast();
+  const qc = useQueryClient();
   const [selectedList, setSelectedList] = useState(defaultList);
   const [filterCustomer, setFilterCustomer] = useState('');
-  const [customerInput, setCustomerInput] = useState('');
   const [itemSearch, setItemSearch] = useState('');
+  const [editingRate, setEditingRate] = useState(null); // { id, rate, mrp, igst_rate, packing_unit }
+  const [savingRate, setSavingRate] = useState(false);
 
   const { data: allRates = [], isLoading: ratesLoading } = useQuery({
     queryKey: ['sales_rate_list_all'],
@@ -39,15 +43,27 @@ export default function SalesPriceListView() {
   // Unique price lists from master data
   const priceLists = [...new Set(allRates.map(r => r.price_list).filter(Boolean))].sort();
 
-  // When customer input matches a customer name, auto-select their price list
+  // When customer changes, auto-select their price list
   useEffect(() => {
-    if (!customerInput) return;
-    const cust = customers.find(c => c.name?.toLowerCase() === customerInput.toLowerCase());
-    if (cust) {
-      setFilterCustomer(cust.id);
-      if (cust.price_list) setSelectedList(cust.price_list);
-    }
-  }, [customerInput, customers]);
+    if (!filterCustomer) return;
+    const cust = customers.find(c => c.id === filterCustomer);
+    if (cust?.price_list) setSelectedList(cust.price_list);
+  }, [filterCustomer, customers]);
+
+  async function saveRate() {
+    if (!editingRate) return;
+    setSavingRate(true);
+    await base44.entities.SalesRateList.update(editingRate.id, {
+      rate: parseFloat(editingRate.rate) || 0,
+      mrp: parseFloat(editingRate.mrp) || 0,
+      igst_rate: parseFloat(editingRate.igst_rate) || 0,
+      packing_unit: parseFloat(editingRate.packing_unit) || 0,
+    });
+    qc.invalidateQueries(['sales_rate_list_all']);
+    setSavingRate(false);
+    setEditingRate(null);
+    toast({ title: 'Rate updated' });
+  }
 
   const selectedCustomer = customers.find(c => c.id === filterCustomer);
 
@@ -82,27 +98,25 @@ export default function SalesPriceListView() {
       {/* Filter Bar */}
       <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {/* Customer lookup with datalist */}
+          {/* Customer lookup */}
           <div>
             <label className="text-xs font-medium text-slate-700 mb-1 block">
               <Users className="w-3.5 h-3.5 inline mr-1" />
               Lookup by Customer (auto-selects their price list)
             </label>
-            <input
-              list="customer-datalist"
+            <select
               className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-              placeholder="Type customer name..."
-              value={customerInput}
-              onChange={e => {
-                setCustomerInput(e.target.value);
-                if (!e.target.value) { setFilterCustomer(''); }
-              }}
-            />
-            <datalist id="customer-datalist">
-              {customers.map(c => (
-                <option key={c.id} value={c.name}>{c.price_list ? `→ ${c.price_list}` : ''}</option>
+              value={filterCustomer}
+              onChange={e => { setFilterCustomer(e.target.value); if (!e.target.value) setSelectedList(''); }}
+            >
+              <option value="">— Select a customer —</option>
+              {customers.filter(c => c.price_list).map(c => (
+                <option key={c.id} value={c.id}>{c.name} ({c.price_list})</option>
               ))}
-            </datalist>
+            </select>
+            {customers.filter(c => !c.price_list).length > 0 && (
+              <p className="text-xs text-amber-600 mt-1">{customers.filter(c => !c.price_list).length} customers have no price list assigned — <a href="/SalesCustomerManager" className="underline">assign in Customer Master</a></p>
+            )}
           </div>
 
           {/* Price list selector */}
@@ -189,19 +203,39 @@ export default function SalesPriceListView() {
                     <th className="px-3 py-2.5 text-right">IGST %</th>
                     <th className="px-3 py-2.5 text-right">Pack Unit</th>
                     <th className="px-3 py-2.5 text-left">Valid Upto</th>
+                    <th className="px-3 py-2.5" />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {filteredItems.map(r => (
                     <tr key={r.id} className="hover:bg-slate-50">
-                      <td className="px-3 py-2 font-mono text-xs text-slate-700">{r.item_code}</td>
-                      <td className="px-3 py-2 text-slate-800">{r.item_name}</td>
-                      <td className="px-3 py-2 text-slate-500 text-xs">{r.brand || '—'}</td>
-                      <td className="px-3 py-2 text-right font-semibold text-slate-900">₹{r.rate}</td>
-                      <td className="px-3 py-2 text-right text-slate-600">₹{r.mrp || '—'}</td>
-                      <td className="px-3 py-2 text-right text-slate-600">{r.igst_rate || '—'}%</td>
-                      <td className="px-3 py-2 text-right text-slate-600">{r.packing_unit || '—'}</td>
-                      <td className="px-3 py-2 text-slate-500 text-xs">{r.valid_upto || '—'}</td>
+                    <td className="px-3 py-2 font-mono text-xs text-slate-700">{r.item_code}</td>
+                    <td className="px-3 py-2 text-slate-800">{r.item_name}</td>
+                    <td className="px-3 py-2 text-slate-500 text-xs">{r.brand || '—'}</td>
+                    {editingRate?.id === r.id ? (
+                    <>
+                     <td className="px-3 py-2"><input type="number" className="w-20 h-7 border border-blue-400 rounded px-2 text-sm" value={editingRate.rate} onChange={e => setEditingRate(v => ({...v, rate: e.target.value}))} /></td>
+                     <td className="px-3 py-2"><input type="number" className="w-20 h-7 border border-blue-400 rounded px-2 text-sm" value={editingRate.mrp} onChange={e => setEditingRate(v => ({...v, mrp: e.target.value}))} /></td>
+                     <td className="px-3 py-2"><input type="number" className="w-16 h-7 border border-blue-400 rounded px-2 text-sm" value={editingRate.igst_rate} onChange={e => setEditingRate(v => ({...v, igst_rate: e.target.value}))} /></td>
+                     <td className="px-3 py-2"><input type="number" className="w-16 h-7 border border-blue-400 rounded px-2 text-sm" value={editingRate.packing_unit} onChange={e => setEditingRate(v => ({...v, packing_unit: e.target.value}))} /></td>
+                     <td className="px-3 py-2 text-slate-500 text-xs">{r.valid_upto || '—'}</td>
+                     <td className="px-3 py-2 flex gap-1">
+                       <button onClick={saveRate} disabled={savingRate} className="text-xs bg-slate-900 text-white px-2 py-1 rounded hover:bg-slate-700">{savingRate ? '...' : 'Save'}</button>
+                       <button onClick={() => setEditingRate(null)} className="text-xs border border-slate-300 px-2 py-1 rounded text-slate-600 hover:bg-slate-50">Cancel</button>
+                     </td>
+                    </>
+                    ) : (
+                    <>
+                     <td className="px-3 py-2 text-right font-semibold text-slate-900">₹{r.rate}</td>
+                     <td className="px-3 py-2 text-right text-slate-600">₹{r.mrp || '—'}</td>
+                     <td className="px-3 py-2 text-right text-slate-600">{r.igst_rate || '—'}%</td>
+                     <td className="px-3 py-2 text-right text-slate-600">{r.packing_unit || '—'}</td>
+                     <td className="px-3 py-2 text-slate-500 text-xs">{r.valid_upto || '—'}</td>
+                     <td className="px-3 py-2">
+                       <button onClick={() => setEditingRate({ id: r.id, rate: r.rate, mrp: r.mrp || 0, igst_rate: r.igst_rate || 0, packing_unit: r.packing_unit || 0 })} className="text-slate-400 hover:text-slate-700"><Edit2 className="w-3.5 h-3.5" /></button>
+                     </td>
+                    </>
+                    )}
                     </tr>
                   ))}
                 </tbody>

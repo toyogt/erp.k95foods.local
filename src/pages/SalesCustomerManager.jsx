@@ -45,7 +45,13 @@ export default function SalesCustomerManager() {
     queryFn: () => base44.entities.Customer.list('-created_date', 500),
   });
 
-  const priceLists = [...new Set(customers.map(c => c.price_list).filter(Boolean))].sort();
+  const { data: allRates = [] } = useQuery({
+    queryKey: ['sales_rate_list_all'],
+    queryFn: () => base44.entities.SalesRateList.list('-created_date', 1000),
+  });
+
+  // Price lists from actual rate master (source of truth)
+  const priceLists = [...new Set(allRates.map(r => r.price_list).filter(Boolean))].sort();
 
   const filtered = customers.filter(c => {
     const s = search.toLowerCase();
@@ -190,7 +196,6 @@ export default function SalesCustomerManager() {
                 ['email', 'Email', 'email'],
                 ['gstin', 'GSTIN', 'text'],
                 ['pan', 'PAN', 'text'],
-                ['price_list', 'Default Price List', 'text'],
                 ['payment_terms', 'Payment Terms', 'text'],
                 ['region', 'Region / Territory', 'text'],
                 ['place_of_supply', 'Place of Supply (State Code)', 'text'],
@@ -198,15 +203,28 @@ export default function SalesCustomerManager() {
                 ['outstanding_limit', 'Credit Limit (INR)', 'number'],
                 ['leverage_outstanding', 'Leverage on Limit (INR)', 'number'],
                 ['current_outstanding', 'Current Outstanding (INR)', 'number'],
-              ].map(([key, label, type]) => (
+                ].map(([key, label, type]) => (
                 <div key={key}>
                   <Label className="text-xs font-medium text-slate-700">{label}</Label>
                   <Input type={type} className="h-9 text-sm mt-1" value={form[key] ?? ''}
                     onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} />
                 </div>
               ))}
+              {/* Price List Dropdown — linked to actual SalesRateList master */}
               <div>
-                <Label className="text-xs font-medium text-slate-700">GST Category</Label>
+                <Label className="text-xs font-medium text-slate-700">Default Price List</Label>
+                <select
+                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm mt-1"
+                  value={form.price_list || ''}
+                  onChange={e => setForm(f => ({ ...f, price_list: e.target.value }))}
+                >
+                  <option value="">— None / Select —</option>
+                  {priceLists.map(pl => <option key={pl} value={pl}>{pl}</option>)}
+                </select>
+                <p className="text-xs text-slate-500 mt-0.5">This will auto-apply when creating orders for this customer</p>
+              </div>
+              <div>
+                 <Label className="text-xs font-medium text-slate-700">GST Category</Label>
                 <select className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm mt-1" value={form.gst_category} onChange={e => setForm(f => ({ ...f, gst_category: e.target.value }))}>
                   {['Registered Regular', 'Registered Composition', 'Unregistered', 'SEZ', 'Overseas', 'UIN Holders'].map(g => <option key={g}>{g}</option>)}
                 </select>
