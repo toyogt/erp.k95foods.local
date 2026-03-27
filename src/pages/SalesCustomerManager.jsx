@@ -139,10 +139,11 @@ export default function SalesCustomerManager() {
               <thead>
                 <tr className="bg-slate-50 text-xs text-slate-700 font-medium">
                   <th className="px-3 py-2.5 text-left">Customer Name</th>
-                  <th className="px-3 py-2.5 text-left">Code</th>
-                  <th className="px-3 py-2.5 text-left">GSTIN</th>
-                  <th className="px-3 py-2.5 text-left">Price List</th>
-                  <th className="px-3 py-2.5 text-left">Payment Terms</th>
+                   <th className="px-3 py-2.5 text-left">Code</th>
+                   <th className="px-3 py-2.5 text-left">GSTIN</th>
+                   <th className="px-3 py-2.5 text-left">Group</th>
+                   <th className="px-3 py-2.5 text-left">Price List</th>
+                   <th className="px-3 py-2.5 text-left">Payment Terms</th>
                   <th className="px-3 py-2.5 text-right">Credit Limit</th>
                   <th className="px-3 py-2.5 text-right">Outstanding</th>
                   <th className="px-3 py-2.5 text-center">Status</th>
@@ -153,10 +154,15 @@ export default function SalesCustomerManager() {
                 {filtered.map(c => (
                   <tr key={c.id} className="hover:bg-slate-50">
                     <td className="px-3 py-2 font-medium text-slate-900">{c.name}</td>
-                    <td className="px-3 py-2 text-slate-500 text-xs font-mono">{c.code || '—'}</td>
-                    <td className="px-3 py-2 text-slate-600 text-xs font-mono">{c.gstin || '—'}</td>
-                    <td className="px-3 py-2">
-                      {c.price_list ? (
+                     <td className="px-3 py-2 text-slate-500 text-xs font-mono">{c.code || '—'}</td>
+                     <td className="px-3 py-2 text-slate-600 text-xs font-mono">{c.gstin || '—'}</td>
+                     <td className="px-3 py-2">
+                       {c.customer_group ? (
+                         <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium">{c.customer_group}</span>
+                       ) : <span className="text-slate-400 text-xs">—</span>}
+                     </td>
+                     <td className="px-3 py-2">
+                       {c.price_list ? (
                         <Link to={`/SalesPriceListView?list=${encodeURIComponent(c.price_list)}`} className="text-blue-600 hover:underline text-xs font-medium">{c.price_list}</Link>
                       ) : <span className="text-slate-400 text-xs">—</span>}
                     </td>
