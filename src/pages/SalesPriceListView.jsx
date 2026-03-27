@@ -23,6 +23,7 @@ export default function SalesPriceListView() {
 
   const [selectedList, setSelectedList] = useState(defaultList);
   const [filterCustomer, setFilterCustomer] = useState('');
+  const [customerInput, setCustomerInput] = useState('');
   const [itemSearch, setItemSearch] = useState('');
 
   const { data: allRates = [], isLoading: ratesLoading } = useQuery({
@@ -38,13 +39,15 @@ export default function SalesPriceListView() {
   // Unique price lists from master data
   const priceLists = [...new Set(allRates.map(r => r.price_list).filter(Boolean))].sort();
 
-  // When a customer is selected, auto-select their price list
+  // When customer input matches a customer name, auto-select their price list
   useEffect(() => {
-    if (filterCustomer) {
-      const cust = customers.find(c => c.id === filterCustomer);
-      if (cust?.price_list) setSelectedList(cust.price_list);
+    if (!customerInput) return;
+    const cust = customers.find(c => c.name?.toLowerCase() === customerInput.toLowerCase());
+    if (cust) {
+      setFilterCustomer(cust.id);
+      if (cust.price_list) setSelectedList(cust.price_list);
     }
-  }, [filterCustomer, customers]);
+  }, [customerInput, customers]);
 
   const selectedCustomer = customers.find(c => c.id === filterCustomer);
 
@@ -79,22 +82,27 @@ export default function SalesPriceListView() {
       {/* Filter Bar */}
       <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {/* Customer lookup */}
+          {/* Customer lookup with datalist */}
           <div>
             <label className="text-xs font-medium text-slate-700 mb-1 block">
               <Users className="w-3.5 h-3.5 inline mr-1" />
               Lookup by Customer (auto-selects their price list)
             </label>
-            <select
+            <input
+              list="customer-datalist"
               className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-              value={filterCustomer}
-              onChange={e => setFilterCustomer(e.target.value)}
-            >
-              <option value="">— Select a customer —</option>
-              {customers.filter(c => c.price_list).map(c => (
-                <option key={c.id} value={c.id}>{c.name} {c.price_list ? `(${c.price_list})` : ''}</option>
+              placeholder="Type customer name..."
+              value={customerInput}
+              onChange={e => {
+                setCustomerInput(e.target.value);
+                if (!e.target.value) { setFilterCustomer(''); }
+              }}
+            />
+            <datalist id="customer-datalist">
+              {customers.map(c => (
+                <option key={c.id} value={c.name}>{c.price_list ? `→ ${c.price_list}` : ''}</option>
               ))}
-            </select>
+            </datalist>
           </div>
 
           {/* Price list selector */}
