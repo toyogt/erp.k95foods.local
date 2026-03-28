@@ -30,6 +30,21 @@ function getStateCode(gstin) {
   return gstin?.substring(0, 2) || '07';
 }
 
+// Default representative PIN per state code
+const STATE_DEFAULT_PIN = {
+  '01':190001,'02':171001,'03':244001,'04':160017,'05':247001,'06':124001,
+  '07':110001,'08':302001,'09':226001,'10':800001,'11':194101,'12':160001,
+  '13':797001,'14':795001,'15':793001,'16':793001,'17':793001,'18':781001,
+  '19':700001,'20':834001,'21':751001,'22':492001,'23':462001,'24':380001,
+  '25':403001,'26':396001,'27':400001,'28':520001,'29':560001,'30':682001,
+  '31':600001,'32':695001,'33':600001,'34':605001,'35':744101,'36':500001,
+  '37':520001,'38':361001,'97':110001,
+};
+
+function getDefaultPin(stateCode) {
+  return STATE_DEFAULT_PIN[stateCode] || 110001;
+}
+
 function formatDate(dateStr) {
   const d = dateStr ? new Date(dateStr) : new Date();
   const dd   = String(d.getDate()).padStart(2, '0');
@@ -45,7 +60,7 @@ function generateRequestId() {
   return result;
 }
 
-function buildInvoicePayload(invoice, items, order) {
+function buildInvoicePayload(invoice, items, order, isSandbox = false) {
   const buyerGstin   = invoice.customer_gstin || order?.customer_gstin || 'URP';
   const buyerState   = getStateCode(buyerGstin);
   const isInterState = buyerState !== SELLER_STATE;
@@ -89,7 +104,6 @@ function buildInvoicePayload(invoice, items, order) {
       TaxSch:      'GST',
       SupTyp:      'B2B',
       RegRev:      'N',
-      EcmGstin:    null,
       IgstOnIntra: 'N',
     },
     DocDtls: {
@@ -111,12 +125,12 @@ function buildInvoicePayload(invoice, items, order) {
       TradNm: invoice.customer_name || order?.customer_name || '',
       LglNm:  invoice.customer_name || order?.customer_name || '',
       Pos:    buyerState,
-      Addr1:  invoice.billing_address || order?.billing_address || invoice.shipping_address || '',
-      Loc:    '',
-      Pin:    110001,
+      Addr1:  (invoice.billing_address || order?.billing_address || invoice.shipping_address || 'Address Not Available').substring(0, 100),
+      Loc:    (invoice.customer_name || order?.customer_name || 'NA').substring(0, 50),
+      Pin:    getDefaultPin(buyerState),
       Stcd:   buyerState,
-      Ph:     '',
-      Em:     '',
+      Ph:     '9999999999',
+      Em:     'accounts@buyer.com',
     },
     ItemList: itemList,
     ValDtls: {
@@ -136,12 +150,14 @@ function buildInvoicePayload(invoice, items, order) {
 }
 
 function buildAspHeaders(sandbox = false) {
+  // Sandbox mode uses the test endpoint URL but your REAL credentials
+  // (Adaequare public test creds are e-commerce GSTIN and won't work for B2B)
   return {
     'Content-Type': 'application/json',
     'x-api-key':    Deno.env.get('INDIA_COMPLIANCE_API_KEY') || '',
-    'gstin':        sandbox ? SANDBOX_GSTIN    : (Deno.env.get('ADAEQUARE_GSTIN') || SELLER_GSTIN),
-    'user_name':    sandbox ? SANDBOX_USERNAME : (Deno.env.get('ADAEQUARE_USERNAME') || ''),
-    'password':     sandbox ? SANDBOX_PASSWORD : (Deno.env.get('ADAEQUARE_PASSWORD') || ''),
+    'gstin':        Deno.env.get('ADAEQUARE_GSTIN') || SELLER_GSTIN,
+    'user_name':    Deno.env.get('ADAEQUARE_USERNAME') || '',
+    'password':     Deno.env.get('ADAEQUARE_PASSWORD') || '',
     'requestid':    generateRequestId(),
   };
 }
@@ -181,7 +197,7 @@ Deno.serve(async (req) => {
 
     // ── Generate IRN ────────────────────────────────────────────────────
     if (action === 'generate_irn') {
-      const payload = buildInvoicePayload(invoice, items, order);
+      const payload = buildInvoicePayload(invoice, items, order, isSandbox);
 
       const resp = await fetch(`${ASP_BASE_URL}/invoice`, {
         method:  'POST',
