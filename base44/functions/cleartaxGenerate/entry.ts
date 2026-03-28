@@ -18,7 +18,13 @@ const SELLER_CITY  = 'Bahadurgarh';
 const SELLER_PIN   = 124507;
 const SELLER_STATE = '06';
 
-const ASP_BASE_URL = 'https://asp.resilient.tech/ei/api';
+const ASP_BASE_URL_LIVE    = 'https://asp.resilient.tech/ei/api';
+const ASP_BASE_URL_SANDBOX = 'https://asp.resilient.tech/test/ei/api';
+
+// Adaequare GSP sandbox test credentials (public, used by India Compliance)
+const SANDBOX_GSTIN    = '02AMBPG7773M002';
+const SANDBOX_USERNAME = 'adqgsphpusr1';
+const SANDBOX_PASSWORD = 'Gsp@1234';
 
 function getStateCode(gstin) {
   return gstin?.substring(0, 2) || '07';
@@ -129,14 +135,14 @@ function buildInvoicePayload(invoice, items, order) {
   };
 }
 
-function buildAspHeaders() {
+function buildAspHeaders(sandbox = false) {
   return {
-    'Content-Type':  'application/json',
-    'x-api-key':     Deno.env.get('INDIA_COMPLIANCE_API_KEY') || '',
-    'gstin':         Deno.env.get('ADAEQUARE_GSTIN') || SELLER_GSTIN,
-    'user_name':     Deno.env.get('ADAEQUARE_USERNAME') || '',
-    'password':      Deno.env.get('ADAEQUARE_PASSWORD') || '',
-    'requestid':     generateRequestId(),
+    'Content-Type': 'application/json',
+    'x-api-key':    Deno.env.get('INDIA_COMPLIANCE_API_KEY') || '',
+    'gstin':        sandbox ? SANDBOX_GSTIN    : (Deno.env.get('ADAEQUARE_GSTIN') || SELLER_GSTIN),
+    'user_name':    sandbox ? SANDBOX_USERNAME : (Deno.env.get('ADAEQUARE_USERNAME') || ''),
+    'password':     sandbox ? SANDBOX_PASSWORD : (Deno.env.get('ADAEQUARE_PASSWORD') || ''),
+    'requestid':    generateRequestId(),
   };
 }
 
@@ -146,7 +152,9 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { action, invoice_id, distance_km } = await req.json();
+    const { action, invoice_id, distance_km, sandbox } = await req.json();
+    const isSandbox = sandbox === true;
+    const ASP_BASE_URL = isSandbox ? ASP_BASE_URL_SANDBOX : ASP_BASE_URL_LIVE;
     if (!action || !invoice_id) {
       return Response.json({ error: 'action and invoice_id are required' }, { status: 400 });
     }
@@ -177,7 +185,7 @@ Deno.serve(async (req) => {
 
       const resp = await fetch(`${ASP_BASE_URL}/invoice`, {
         method:  'POST',
-        headers: buildAspHeaders(),
+        headers: buildAspHeaders(isSandbox),
         body:    JSON.stringify(payload),
       });
 
@@ -195,13 +203,16 @@ Deno.serve(async (req) => {
       const ackNo   = result.AckNo   || result.ack_no;
       const ackDate = result.AckDt   || result.ack_dt;
 
-      await base44.asServiceRole.entities.SalesInvoice.update(invoice_id, {
-        irn,
-        ack_number: String(ackNo || ''),
-        ack_date:   ackDate || new Date().toISOString(),
-      });
+      // Only persist to DB if NOT sandbox
+      if (!isSandbox) {
+        await base44.asServiceRole.entities.SalesInvoice.update(invoice_id, {
+          irn,
+          ack_number: String(ackNo || ''),
+          ack_date:   ackDate || new Date().toISOString(),
+        });
+      }
 
-      return Response.json({ success: true, irn, ack_number: ackNo, ack_date: ackDate, raw: result });
+      return Response.json({ success: true, irn, ack_number: ackNo, ack_date: ackDate, sandbox: isSandbox, raw: result });
     }
 
     // ── Generate E-Way Bill ─────────────────────────────────────────────
@@ -228,7 +239,7 @@ Deno.serve(async (req) => {
 
       const resp = await fetch(`${ASP_BASE_URL}/ewaybill`, {
         method:  'POST',
-        headers: buildAspHeaders(),
+        headers: buildAspHeaders(isSandbox),
         body:    JSON.stringify(ewayPayload),
       });
 
@@ -243,12 +254,14 @@ Deno.serve(async (req) => {
       const ewayBillNo = result.EwbNo || result.ewb_no;
       const ewayDate   = result.EwbDt || new Date().toISOString().split('T')[0];
 
-      await base44.asServiceRole.entities.SalesInvoice.update(invoice_id, {
-        eway_bill:      String(ewayBillNo || ''),
-        eway_bill_date: ewayDate,
-      });
+      if (!isSandbox) {
+        await base44.asServiceRole.entities.SalesInvoice.update(invoice_id, {
+          eway_bill:      String(ewayBillNo || ''),
+          eway_bill_date: ewayDate,
+        });
+      }
 
-      return Response.json({ success: true, eway_bill: ewayBillNo, eway_bill_date: ewayDate, raw: result });
+      return Response.json({ success: true, eway_bill: ewayBillNo, eway_bill_date: ewayDate, sandbox: isSandbox, raw: result });
     }
 
     return Response.json({ error: `Unknown action: ${action}` }, { status: 400 });
