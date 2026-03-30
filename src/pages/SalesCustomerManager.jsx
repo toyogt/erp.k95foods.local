@@ -5,10 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
-import { Search, Download, Plus, Edit2, X, Check, Loader2, Users, Tag, Upload } from 'lucide-react';
+import { Search, Download, Plus, Edit2, X, Check, Loader2, Users, Tag, Upload, FileDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import BulkActionBar from '@/components/sales/BulkActionBar';
 import BulkCSVUploadModal from '@/components/sales/BulkCSVUploadModal';
+import CustomerImportModal from '@/components/sales/CustomerImportModal';
 
 function exportCSV(rows) {
   const headers = ['Name', 'Code', 'GSTIN', 'PAN', 'Phone', 'Email', 'Customer Group', 'Price List', 'GST Category', 'Place of Supply', 'Payment Terms', 'Status', 'Credit Limit', 'Current Outstanding'];
@@ -59,6 +60,7 @@ export default function SalesCustomerManager() {
   const [selected, setSelected] = useState(new Set());
   const [applying, setApplying] = useState(false);
   const [showCSVModal, setShowCSVModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
 
   const { data: customers = [], isLoading } = useQuery({
     queryKey: ['customers_all'],
@@ -233,6 +235,9 @@ export default function SalesCustomerManager() {
             {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Tag className="w-4 h-4 mr-2" />}
             Assign Codes
           </Button>
+          <Button variant="outline" className="h-11 text-sm" onClick={() => setShowImportModal(true)}>
+            <FileDown className="w-4 h-4 mr-2" /> Import Customers
+          </Button>
           <Button variant="outline" className="h-11 text-sm" onClick={() => setShowCSVModal(true)}>
             <Upload className="w-4 h-4 mr-2" /> Bulk Update CSV
           </Button>
@@ -349,6 +354,15 @@ export default function SalesCustomerManager() {
         onApply={handleBulkApply}
         applying={applying}
       />
+
+      {/* Import New Customers Modal */}
+      {showImportModal && (
+        <CustomerImportModal
+          existingCustomers={customers}
+          onClose={() => setShowImportModal(false)}
+          onImported={() => { setShowImportModal(false); qc.invalidateQueries(['customers_all']); }}
+        />
+      )}
 
       {/* CSV Bulk Update Modal */}
       {showCSVModal && (
