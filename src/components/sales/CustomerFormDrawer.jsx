@@ -50,7 +50,7 @@ function Toggle({ field, label, form, setForm }) {
 }
 
 export const BLANK_CUSTOMER = {
-  name: '', code: '', customer_type: 'Company', customer_group: '', salutation: '',
+  name: '', code: '', series: '', customer_type: 'Company', customer_group: '', salutation: '',
   first_name: '', last_name: '', gender: '', contact_name: '', mobile_no: '', phone: '',
   email: '', website: '', gstin: '', pan: '', tax_id: '', gst_category: 'Registered Regular',
   tax_withholding_category: '', billing_address: '', shipping_address: '', primary_address: '',
@@ -59,7 +59,8 @@ export const BLANK_CUSTOMER = {
   payment_terms: '', price_list: '', billing_currency: 'INR', default_bank_account: '',
   loyalty_program: '', loyalty_program_tier: '', print_language: '', customer_details: '',
   status: 'active', check_outstanding: false, outstanding_limit: 0, leverage_outstanding: 0,
-  current_outstanding: 0, is_internal_customer: false, allow_invoice_without_so: false,
+  current_outstanding: 0, bypass_credit_limit_check: false, represents_company: false,
+  is_internal_customer: false, allow_invoice_without_so: false,
   allow_invoice_without_dn: false, is_frozen: false, disabled: false,
   tally_synced: false, tally_sync_date: '', tally_sync_status: '', tally_parent_group: '', notes: '',
 };
@@ -125,11 +126,13 @@ export default function CustomerFormDrawer({ editing, form, setForm, priceLists,
             <>
               <Field label="Customer Name *"><TextInput field="name" form={form} setForm={setForm} /></Field>
               <Field label="Customer Code" help="Leave blank to auto-assign (e.g. CUST-001)"><TextInput field="code" form={form} setForm={setForm} /></Field>
+              <Field label="Series" help="e.g. CUST, DIST"><TextInput field="series" form={form} setForm={setForm} /></Field>
               <Field label="Customer Type"><Select field="customer_type" form={form} setForm={setForm} options={['Company', 'Individual']} /></Field>
               <Field label="Customer Group"><TextInput field="customer_group" form={form} setForm={setForm} /></Field>
               <Field label="Outlet ID"><TextInput field="outlet_id" form={form} setForm={setForm} /></Field>
               <Field label="Territory"><TextInput field="territory" form={form} setForm={setForm} /></Field>
               <Field label="Region"><TextInput field="region" form={form} setForm={setForm} /></Field>
+              <Toggle field="represents_company" label="Represents Company" form={form} setForm={setForm} />
               <Field label="Market Segment"><TextInput field="market_segment" form={form} setForm={setForm} /></Field>
               <Field label="Industry"><TextInput field="industry" form={form} setForm={setForm} /></Field>
               <Field label="Account Manager"><TextInput field="account_manager" form={form} setForm={setForm} /></Field>
@@ -178,6 +181,7 @@ export default function CustomerFormDrawer({ editing, form, setForm, priceLists,
               <Field label="PAN"><TextInput field="pan" form={form} setForm={setForm} /></Field>
               <Field label="Tax ID"><TextInput field="tax_id" form={form} setForm={setForm} /></Field>
               <Field label="GST Category"><Select field="gst_category" form={form} setForm={setForm} options={GST_CATEGORIES} /></Field>
+              <Field label="Tax Category" help="e.g. In-State, Out-of-State"><TextInput field="tax_category" form={form} setForm={setForm} /></Field>
               <Field label="Tax Withholding Category"><TextInput field="tax_withholding_category" form={form} setForm={setForm} /></Field>
             </>
           )}
@@ -196,6 +200,7 @@ export default function CustomerFormDrawer({ editing, form, setForm, priceLists,
               <Field label="Default Company Bank Account"><TextInput field="default_bank_account" form={form} setForm={setForm} /></Field>
               <Toggle field="check_outstanding" label="Check Credit Outstanding" form={form} setForm={setForm} />
               <Field label="Credit Limit (INR)"><TextInput field="outstanding_limit" form={form} setForm={setForm} type="number" /></Field>
+              <Toggle field="bypass_credit_limit_check" label="Bypass Credit Limit Check at Sales Order" form={form} setForm={setForm} />
               <Field label="Leverage on Credit Limit (INR)"><TextInput field="leverage_outstanding" form={form} setForm={setForm} type="number" /></Field>
               <Field label="Current Outstanding (INR)"><TextInput field="current_outstanding" form={form} setForm={setForm} type="number" /></Field>
               <Field label="Loyalty Program"><TextInput field="loyalty_program" form={form} setForm={setForm} /></Field>
