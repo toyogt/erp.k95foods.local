@@ -34,11 +34,18 @@ export default function GRNEntryModal({ open, onClose, onSaved, invoices = [] })
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
-  const handleInvoiceSelect = (invoiceId) => {
+  const handleInvoiceSelect = async (invoiceId) => {
     const inv = invoices.find(i => i.id === invoiceId);
-    if (inv) {
-      set('invoice_id', invoiceId);
-      setForm(p => ({ ...p, invoice_id: invoiceId, invoice_number: inv.invoice_number, customer_name: p.customer_name || inv.customer_name }));
+    if (!inv) return;
+    setForm(p => ({ ...p, invoice_id: invoiceId, invoice_number: inv.invoice_number, customer_name: p.customer_name || inv.customer_name }));
+    // Auto-populate PO number from the linked Sales Order
+    if (inv.sales_order_id) {
+      try {
+        const sos = await base44.entities.SalesOrder.filter({ id: inv.sales_order_id });
+        if (sos?.[0]?.po_number) {
+          setForm(p => ({ ...p, po_number: p.po_number || sos[0].po_number }));
+        }
+      } catch {}
     }
   };
 
@@ -92,14 +99,28 @@ export default function GRNEntryModal({ open, onClose, onSaved, invoices = [] })
         }
       });
 
+      // Try to auto-match invoice and pull PO number from SO
+      let autoPO = extracted.po_number || '';
+      const extractedInvNumber = extracted.invoice_number;
+      if (extractedInvNumber && !autoPO) {
+        try {
+          const matchedInv = invoices.find(i => i.invoice_number === extractedInvNumber);
+          if (matchedInv?.sales_order_id) {
+            const sos = await base44.entities.SalesOrder.filter({ id: matchedInv.sales_order_id });
+            if (sos?.[0]?.po_number) autoPO = sos[0].po_number;
+          }
+        } catch {}
+      }
+
       setForm(p => ({
         ...p,
         grn_number: extracted.grn_number || p.grn_number,
         grn_date: extracted.grn_date || p.grn_date,
-        po_number: extracted.po_number || p.po_number,
+        po_number: autoPO || p.po_number,
         asn_number: extracted.asn_number || p.asn_number,
         inbound_number: extracted.inbound_number || p.inbound_number,
-        invoice_number: extracted.invoice_number || p.invoice_number,
+        invoice_number: extractedInvNumber || p.invoice_number,
+        invoice_id: invoices.find(i => i.invoice_number === extractedInvNumber)?.id || p.invoice_id,
         customer_name: extracted.customer_name || p.customer_name,
         warehouse_location: extracted.warehouse_location || p.warehouse_location,
         grn_total_qty: extracted.grn_total_qty || p.grn_total_qty,
