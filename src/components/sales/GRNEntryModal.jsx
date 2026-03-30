@@ -33,48 +33,45 @@ function parseDDMMYYYY(str) {
 
 function parseScootsyGRN(text) {
   const grab = (pattern) => { const m = text.match(pattern); return m ? m[1].trim() : ''; };
-  const grabNum = (pattern) => { const m = text.match(pattern); return m ? parseFloat(m[1].replace(/,/g, '')) : 0; };
 
-  // Header fields — use \S+ to stop at next whitespace (fields are inline on same line)
+  // Header fields — \S+ stops at next whitespace (all on same line)
   const po_number      = grab(/PO\s+No\s*:-\s*(\S+)/i);
   const grn_number     = grab(/GRN\s+No\s*:-\s*(\S+)/i);
   const grn_date_raw   = grab(/GRN\s+Date\s*:-\s*(\S+)/i);
   const inbound_number = grab(/Inbound\s+No\s*:-\s*(\S+)/i);
   const invoice_number = grab(/Invoice\s+No\s*:-\s*(\S+)/i);
 
-  // Totals row: "Total: 216 216 15318.07 0.00 0.00 6127.23 0.00 0.00 21445.30"
-  // Last number on that line is the grand total
-  let grn_total_qty = 0;
-  let grn_total_amount = 0;
-  const totalsMatch = text.match(/Total:\s+([\d.]+)\s+[\d.]+\s+[\d.]+.*?([\d.]+)\s*$/);
-  if (totalsMatch) {
-    grn_total_qty = parseFloat(totalsMatch[1]) || 0;
-    grn_total_amount = parseFloat(totalsMatch[2]) || 0;
-  }
-  // Fallback: find the last number on the "Total:" line
-  if (!grn_total_amount) {
-    const totalLine = text.match(/Total:.*/);
-    if (totalLine) {
-      const nums = totalLine[0].match(/[\d]+\.[\d]+/g);
-      if (nums?.length) grn_total_amount = parseFloat(nums[nums.length - 1]);
-      if (nums?.length >= 2) grn_total_qty = parseFloat(nums[0]);
-    }
+  // Total row: "Total: 216 216 15318.07 ... 21445.30"
+  // Greedy .* then last decimal = grand total
+  let grn_total_qty = 0, grn_total_amount = 0;
+  const totalLine = text.match(/Total:\s*(\d+)\s+\d+\s+.*(\d+\.\d+)\s*$/m);
+  if (totalLine) {
+    grn_total_qty = parseFloat(totalLine[1]);
+    grn_total_amount = parseFloat(totalLine[2]);
   }
 
-  // Parse line items — each row starts with a number (Sr. No) followed by SKU code
+  // Line items — anchor on "<SKU> STAGING" which is always the data row.
+  // Each data row: <SKU> STAGING <LotNo> <MRP> <ExpQty> <RecvQty> <UnitPrice> <TaxableValue> <...zeros...> <Total>
+  // Use greedy .* to capture LAST decimal on the line as Total.
   const items = [];
-  // Pattern: line starting with digit, then SKU code (6 digits), then description, then numbers
-  const itemRegex = /^(\d+)\s+(\d{5,6})\s+(.*?)\s+(\d{5,6})\s+\S+\s+\S+\s+[\d.]+\s+([\d]+)\s+([\d]+)\s+([\d.]+)\s+([\d.]+).*?([\d.]+)\s*$/gm;
+  const dataRowRegex = /(\d{5,6})\s+STAGING\s+\S+\s+([\d.]+)\s+(\d+)\s+(\d+)\s+([\d.]+)\s+([\d.]+).*(\d+\.\d+)\s*$/gm;
   let m;
-  while ((m = itemRegex.exec(text)) !== null) {
+  while ((m = dataRowRegex.exec(text)) !== null) {
+    const sku_code = m[1];
+    // Description is text between "<SrNo> <SKU>" and "<SKU> STAGING" — may span multiple lines
+    const descMatch = text.match(new RegExp(`\\d+\\s+${sku_code}\\s+([\\s\\S]*?)\\s*${sku_code}\\s+STAGING`));
+    const description = descMatch ? descMatch[1].replace(/\s+/g, ' ').trim() : '';
     items.push({
-      sku_code: m[2],
-      description: m[3].trim(),
-      exp_qty: parseFloat(m[5]) || 0,
-      grn_qty: parseFloat(m[6]) || 0,
-      unit_price: parseFloat(m[7]) || 0,
-      taxable_value: parseFloat(m[8]) || 0,
-      total_amount: parseFloat(m[9]) || 0,
+      sku_code,
+      description,
+      mrp:          parseFloat(m[2]) || 0,
+      exp_qty:      parseFloat(m[3]) || 0,
+      grn_qty:      parseFloat(m[4]) || 0,
+      unit_price:   parseFloat(m[5]) || 0,
+      taxable_value: parseFloat(m[6]) || 0,
+      total_amount: parseFloat(m[7]) || 0,
+      dn_qty: 0,
+      igst_amount: 0,
     });
   }
 
