@@ -58,6 +58,9 @@ export default function SalesCustomerManager() {
   const [showCSVModal, setShowCSVModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [bulkPriceList, setBulkPriceList] = useState('');
+  const [bulkGroup, setBulkGroup] = useState('');
+  const [bulkGroupText, setBulkGroupText] = useState('');
   const [sortCol, setSortCol] = useState('name');
   const [sortDir, setSortDir] = useState('asc');
 
@@ -298,8 +301,69 @@ export default function SalesCustomerManager() {
         </div>
 
         {selected.size > 0 && (
-          <div className="px-3 py-2 bg-blue-50 border-b border-blue-100 text-xs text-blue-700 font-medium">
-            {selected.size} of {filtered.length} customers selected — use the action bar below to apply bulk changes
+          <div className="px-4 py-3 bg-slate-900 text-white border-b border-slate-700 flex flex-wrap items-center gap-3">
+            <span className="text-sm font-semibold shrink-0">{selected.size} selected</span>
+            <button onClick={() => setSelected(new Set())} className="text-slate-400 hover:text-white shrink-0 text-xs border border-slate-600 rounded px-2 py-1">Clear</button>
+
+            {/* Assign Price List */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-400 shrink-0">Price List:</span>
+              <select
+                className="h-8 rounded-md bg-slate-700 text-white text-xs border border-slate-600 px-2 min-w-[140px]"
+                value={bulkPriceList}
+                onChange={e => setBulkPriceList(e.target.value)}
+              >
+                <option value="">— Select —</option>
+                {priceLists.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+              <button
+                disabled={!bulkPriceList || applying}
+                onClick={() => { handleBulkApply('price_list', bulkPriceList); setBulkPriceList(''); }}
+                className="h-8 px-3 text-xs font-medium bg-blue-600 hover:bg-blue-500 disabled:opacity-40 rounded-md text-white"
+              >
+                {applying ? '...' : 'Apply'}
+              </button>
+            </div>
+
+            {/* Assign Group */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-400 shrink-0">Group:</span>
+              {customerGroups.length > 0 ? (
+                <select
+                  className="h-8 rounded-md bg-slate-700 text-white text-xs border border-slate-600 px-2 min-w-[140px]"
+                  value={bulkGroup}
+                  onChange={e => setBulkGroup(e.target.value)}
+                >
+                  <option value="">— Select —</option>
+                  {customerGroups.map(g => <option key={g} value={g}>{g}</option>)}
+                </select>
+              ) : (
+                <input
+                  type="text"
+                  placeholder="Type group name..."
+                  className="h-8 rounded-md bg-slate-700 text-white text-xs border border-slate-600 px-2 w-36"
+                  value={bulkGroupText}
+                  onChange={e => setBulkGroupText(e.target.value)}
+                />
+              )}
+              <button
+                disabled={!(bulkGroup || bulkGroupText) || applying}
+                onClick={() => { handleBulkApply('customer_group', bulkGroup || bulkGroupText); setBulkGroup(''); setBulkGroupText(''); }}
+                className="h-8 px-3 text-xs font-medium bg-blue-600 hover:bg-blue-500 disabled:opacity-40 rounded-md text-white"
+              >
+                {applying ? '...' : 'Apply'}
+              </button>
+            </div>
+
+            {/* Delete */}
+            <button
+              onClick={() => handleBulkApply('__delete__', true)}
+              disabled={deleting}
+              className="ml-auto h-8 px-3 text-xs font-medium bg-red-600 hover:bg-red-500 disabled:opacity-40 rounded-md text-white flex items-center gap-1.5"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              {deleting ? 'Deleting...' : `Delete ${selected.size}`}
+            </button>
           </div>
         )}
 
@@ -364,14 +428,7 @@ export default function SalesCustomerManager() {
         )}
       </div>
 
-      {/* Bulk Action Bar */}
-      <BulkActionBar
-        selectedCount={selected.size}
-        onClearSelection={() => setSelected(new Set())}
-        actions={BULK_ACTIONS}
-        onApply={handleBulkApply}
-        applying={applying}
-      />
+
 
       {/* Import New Customers Modal */}
       {showImportModal && (
