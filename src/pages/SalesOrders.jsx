@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
@@ -19,9 +20,12 @@ function exportOrdersCSV(rows) {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/components/ui/use-toast';
 import SalesOrderStatusBadge from '@/components/sales/SalesOrderStatusBadge';
 import CreateSalesOrderModal from '@/components/sales/CreateSalesOrderModal';
 import DistributorRequestsTab from '@/components/sales/DistributorRequestsTab';
+import BulkActionBar from '@/components/sales/BulkActionBar';
+import BulkCSVUploadModal from '@/components/sales/BulkCSVUploadModal';
 
 const STATUS_TABS = [
   { key: 'distributor_requests', label: 'Distributor Requests', icon: Inbox },
@@ -44,12 +48,26 @@ const PLATFORM_COLORS = {
 };
 
 export default function SalesOrders() {
-  const [activeTab, setActiveTab] = useState('all');
-  const [search, setSearch] = useState('');
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [createType, setCreateType] = useState('manual');
-  const [filterPlatform, setFilterPlatform] = useState('');
-  const [filterExpiryAlert, setFilterExpiryAlert] = useState(false);
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const [selected, setSelected] = useState(new Set());
+  const [applying, setApplying] = useState(false);
+  const [showCSVModal, setShowCSVModal] = useState(false);
+
+  const ORDER_BULK_ACTIONS = [
+    { key: 'status', label: 'Change Status', type: 'select', options: [
+      { value: 'draft', label: 'Draft' },
+      { value: 'confirmed', label: 'Confirmed' },
+      { value: 'cancelled', label: 'Cancelled' },
+      { value: 'closed', label: 'Closed' },
+    ]},
+    { key: 'platform', label: 'Set Platform', type: 'select', options: [
+      { value: 'blinkit', label: 'Blinkit' },
+      { value: 'swiggy', label: 'Swiggy' },
+      { value: 'zepto', label: 'Zepto' },
+      { value: 'direct', label: 'Direct' },
+    ]},
+  ];
 
   const { data: distRequests = [] } = useQuery({
     queryKey: ['distributor_requests_all'],
@@ -76,6 +94,42 @@ export default function SalesOrders() {
     return matchesTab && matchesSearch && matchesPlatform && matchesExpiry;
   });
 
+  const allFilteredIds = filtered.map(o => o.id);
+  const allSelected = allFilteredIds.length > 0 && allFilteredIds.every(id => selected.has(id));
+
+  function toggleAll() {
+    if (allSelected) setSelected(new Set());
+    else setSelected(new Set(allFilteredIds));
+  }
+  function toggleRow(id) {
+    setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  }
+
+  async function handleBulkApply(key, value) {
+    setApplying(true);
+    await Promise.all([...selected].map(id => base44.entities.SalesOrder.update(id, { [key]: value })));
+    toast({ title: 'Bulk update applied', description: `${selected.size} orders updated` });
+    setSelected(new Set());
+    setApplying(false);
+    qc.invalidateQueries(['sales_orders']);
+  }
+
+  async function handleCSVUpdate(rows) {
+    let count = 0;
+    for (const row of rows) {
+      const match = orders.find(o => o.so_number?.toLowerCase() === (row.so_number || row['so number'] || '').toLowerCase());
+      if (!match) continue;
+      const updates = {};
+      if (row.status) updates.status = row.status;
+      if (row.platform) updates.platform = row.platform;
+      if (row.payment_terms) updates.payment_terms = row.payment_terms;
+      if (row.transporter) updates.transporter = row.transporter;
+      if (Object.keys(updates).length > 0) { await base44.entities.SalesOrder.update(match.id, updates); count++; }
+    }
+    qc.invalidateQueries(['sales_orders']);
+    return count;
+  }
+
   // KPI counts
   const pending = orders.filter(o => ['draft', 'confirmed', 'stock_validated', 'picking', 'packing'].includes(o.status)).length;
   const dispatched = orders.filter(o => o.status === 'dispatched').length;
@@ -86,7 +140,7 @@ export default function SalesOrders() {
   const totalValue = orders.reduce((s, o) => s + (o.total_amount || 0), 0);
 
   return (
-    <div className="p-3 md:p-6 space-y-4 max-w-7xl mx-auto">
+    <div className="p-3 md:p-6 space-y-4 max-w-7xl mx-auto pb-32">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
@@ -94,6 +148,9 @@ export default function SalesOrders() {
           <p className="text-sm text-slate-500">Flow-driven order lifecycle management</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" className="h-11 px-4 text-sm" onClick={() => setShowCSVModal(true)}>
+            <Upload className="w-4 h-4 mr-2" /> Bulk Update
+          </Button>
           <Button variant="outline" className="h-11 px-4 text-sm" onClick={() => exportOrdersCSV(filtered)}>
             <Download className="w-4 h-4 mr-2" /> Export
           </Button>
@@ -178,7 +235,7 @@ export default function SalesOrders() {
             <div className="relative flex-1 min-w-[180px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <Input
-                placeholder="Search order, customer, PO..."
+                placeholder="Search order, customer, Purchase Order..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 className="pl-9 h-9 text-sm"
@@ -211,6 +268,11 @@ export default function SalesOrders() {
               >Clear</button>
             )}
           </div>
+          {selected.size > 0 && (
+            <div className="text-xs text-blue-700 font-medium bg-blue-50 px-3 py-1.5 rounded-md">
+              {selected.size} orders selected — use the action bar below to apply changes
+            </div>
+          )}
         </div>
         )}
 
@@ -228,9 +290,12 @@ export default function SalesOrders() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-slate-50 text-slate-700 text-xs font-medium">
-                  <th className="px-4 py-3 text-left">Order Number</th>
+            <thead>
+              <tr className="bg-slate-50 text-slate-700 text-xs font-medium">
+                <th className="px-4 py-3 w-10">
+                  <input type="checkbox" checked={allSelected} onChange={toggleAll} className="rounded" />
+                </th>
+                <th className="px-4 py-3 text-left">Order Number</th>
                   <th className="px-4 py-3 text-left">Customer</th>
                   <th className="px-4 py-3 text-left">Platform</th>
                   <th className="px-4 py-3 text-left">Purchase Order Number</th>
@@ -245,7 +310,10 @@ export default function SalesOrders() {
                   const isExpired = order.po_expiry_date && new Date(order.po_expiry_date) < new Date()
                     && !['paid', 'closed', 'cancelled'].includes(order.status);
                   return (
-                    <tr key={order.id} className="hover:bg-slate-50 transition-colors">
+                    <tr key={order.id} className={`hover:bg-slate-50 transition-colors ${selected.has(order.id) ? 'bg-blue-50' : ''}`}>
+                      <td className="px-4 py-3">
+                        <input type="checkbox" checked={selected.has(order.id)} onChange={() => toggleRow(order.id)} className="rounded" />
+                      </td>
                       <td className="px-4 py-3 font-medium text-slate-900">{order.so_number || '—'}</td>
                       <td className="px-4 py-3 text-slate-700">{order.customer_name}</td>
                       <td className="px-4 py-3">
@@ -279,6 +347,30 @@ export default function SalesOrders() {
           </div>
         )}
       </div>
+
+      <BulkActionBar
+        selectedCount={selected.size}
+        onClearSelection={() => setSelected(new Set())}
+        actions={ORDER_BULK_ACTIONS}
+        onApply={handleBulkApply}
+        applying={applying}
+      />
+
+      {showCSVModal && (
+        <BulkCSVUploadModal
+          entityName="Order"
+          templateColumns={[
+            { key: 'so_number', label: 'SO Number', example: 'SO-001' },
+            { key: 'status', label: 'Status', example: 'confirmed' },
+            { key: 'platform', label: 'Platform', example: 'swiggy' },
+            { key: 'payment_terms', label: 'Payment Terms', example: 'Net 30' },
+            { key: 'transporter', label: 'Transporter', example: 'Bluedart' },
+          ]}
+          onUpdate={handleCSVUpdate}
+          onClose={() => setShowCSVModal(false)}
+          templateFilename="orders_bulk_update.csv"
+        />
+      )}
 
       {showCreateModal && (
         <CreateSalesOrderModal

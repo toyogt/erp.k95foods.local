@@ -5,15 +5,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
-import { Search, Download, Plus, Edit2, X, Check, Loader2, Users, Tag } from 'lucide-react';
+import { Search, Download, Plus, Edit2, X, Check, Loader2, Users, Tag, Upload } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import BulkActionBar from '@/components/sales/BulkActionBar';
+import BulkCSVUploadModal from '@/components/sales/BulkCSVUploadModal';
 
 function exportCSV(rows) {
-  const headers = ['Name', 'Code', 'GSTIN', 'PAN', 'Phone', 'Email', 'Price List', 'GST Category', 'Place of Supply', 'Payment Terms', 'Status', 'Credit Limit', 'Current Outstanding'];
+  const headers = ['Name', 'Code', 'GSTIN', 'PAN', 'Phone', 'Email', 'Customer Group', 'Price List', 'GST Category', 'Place of Supply', 'Payment Terms', 'Status', 'Credit Limit', 'Current Outstanding'];
   const lines = [headers.join(',')];
   for (const r of rows) {
     lines.push([
-      r.name, r.code, r.gstin, r.pan, r.phone, r.email,
+      r.name, r.code, r.gstin, r.pan, r.phone, r.email, r.customer_group,
       r.price_list, r.gst_category, r.place_of_supply, r.payment_terms, r.status,
       r.outstanding_limit, r.current_outstanding,
     ].map(v => `"${(v ?? '').toString().replace(/"/g, '""')}"`).join(','));
@@ -25,9 +27,23 @@ function exportCSV(rows) {
 const BLANK_FORM = {
   name: '', code: '', contact_name: '', phone: '', email: '', gstin: '', pan: '',
   billing_address: '', shipping_address: '', region: '', gst_category: 'Registered Regular',
-  place_of_supply: '', payment_terms: '', price_list: '', status: 'active', notes: '',
+  place_of_supply: '', payment_terms: '', price_list: '', customer_group: '', status: 'active', notes: '',
   check_outstanding: false, outstanding_limit: 0, leverage_outstanding: 0, current_outstanding: 0,
 };
+
+const CSV_TEMPLATE_COLUMNS = [
+  { key: 'name', label: 'Name', example: 'Swiggy Pvt Ltd' },
+  { key: 'code', label: 'Code', example: 'SW001' },
+  { key: 'customer_group', label: 'Customer Group', example: 'Quick Commerce' },
+  { key: 'price_list', label: 'Price List', example: 'Swiggy Rate' },
+  { key: 'payment_terms', label: 'Payment Terms', example: 'Net 30' },
+  { key: 'status', label: 'Status', example: 'active' },
+  { key: 'region', label: 'Region', example: 'Mumbai' },
+  { key: 'gstin', label: 'GSTIN', example: '27AAACS1234A1Z5' },
+  { key: 'phone', label: 'Phone', example: '9876543210' },
+  { key: 'email', label: 'Email', example: 'accounts@swiggy.com' },
+  { key: 'outstanding_limit', label: 'Credit Limit', example: '500000' },
+];
 
 export default function SalesCustomerManager() {
   const { toast } = useToast();
@@ -35,10 +51,14 @@ export default function SalesCustomerManager() {
   const [search, setSearch] = useState('');
   const [filterPriceList, setFilterPriceList] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  const [filterGroup, setFilterGroup] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(BLANK_FORM);
   const [saving, setSaving] = useState(false);
+  const [selected, setSelected] = useState(new Set());
+  const [applying, setApplying] = useState(false);
+  const [showCSVModal, setShowCSVModal] = useState(false);
 
   const { data: customers = [], isLoading } = useQuery({
     queryKey: ['customers_all'],
@@ -50,24 +70,111 @@ export default function SalesCustomerManager() {
     queryFn: () => base44.entities.SalesRateList.list('-created_date', 1000),
   });
 
-  // Price lists from actual rate master (source of truth)
   const priceLists = [...new Set(allRates.map(r => r.price_list).filter(Boolean))].sort();
+  const customerGroups = [...new Set(customers.map(c => c.customer_group).filter(Boolean))].sort();
 
   const filtered = customers.filter(c => {
     const s = search.toLowerCase();
     const matchSearch = !search || c.name?.toLowerCase().includes(s) || c.gstin?.toLowerCase().includes(s) || c.code?.toLowerCase().includes(s) || c.email?.toLowerCase().includes(s);
     const matchPL = !filterPriceList || c.price_list === filterPriceList;
     const matchStatus = !filterStatus || c.status === filterStatus;
-    return matchSearch && matchPL && matchStatus;
+    const matchGroup = !filterGroup || c.customer_group === filterGroup;
+    return matchSearch && matchPL && matchStatus && matchGroup;
   });
 
-  function openNew() {
-    setEditing(null); setForm(BLANK_FORM); setShowForm(true);
+  const allFilteredIds = filtered.map(c => c.id);
+  const allSelected = allFilteredIds.length > 0 && allFilteredIds.every(id => selected.has(id));
+
+  function toggleAll() {
+    if (allSelected) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(allFilteredIds));
+    }
   }
 
-  function openEdit(c) {
-    setEditing(c); setForm({ ...BLANK_FORM, ...c }); setShowForm(true);
+  function toggleRow(id) {
+    setSelected(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
   }
+
+  const BULK_ACTIONS = [
+    {
+      key: 'customer_group',
+      label: 'Set Customer Group',
+      type: customerGroups.length > 0 ? 'select' : 'text',
+      options: customerGroups.map(g => ({ value: g, label: g })),
+    },
+    {
+      key: 'price_list',
+      label: 'Assign Price List',
+      type: 'select',
+      options: priceLists.map(p => ({ value: p, label: p })),
+    },
+    {
+      key: 'payment_terms',
+      label: 'Set Payment Terms',
+      type: 'text',
+    },
+    {
+      key: 'status',
+      label: 'Change Status',
+      type: 'select',
+      options: [
+        { value: 'active', label: 'Active' },
+        { value: 'inactive', label: 'Inactive' },
+        { value: 'suspended', label: 'Suspended' },
+      ],
+    },
+    {
+      key: 'region',
+      label: 'Set Region',
+      type: 'text',
+    },
+  ];
+
+  async function handleBulkApply(key, value) {
+    setApplying(true);
+    const ids = [...selected];
+    await Promise.all(ids.map(id => base44.entities.Customer.update(id, { [key]: value })));
+    toast({ title: 'Bulk update applied', description: `${ids.length} customers updated (${key} → ${value})` });
+    setSelected(new Set());
+    setApplying(false);
+    qc.invalidateQueries(['customers_all']);
+  }
+
+  async function handleCSVUpdate(rows) {
+    let count = 0;
+    for (const row of rows) {
+      const match = customers.find(c =>
+        c.name?.toLowerCase() === row.name?.toLowerCase() ||
+        c.code?.toLowerCase() === row.code?.toLowerCase() ||
+        c.gstin?.toLowerCase() === row.gstin?.toLowerCase()
+      );
+      if (!match) continue;
+      const updates = {};
+      if (row.customer_group) updates.customer_group = row.customer_group;
+      if (row.price_list) updates.price_list = row.price_list;
+      if (row.payment_terms) updates.payment_terms = row.payment_terms;
+      if (row.status) updates.status = row.status;
+      if (row.region) updates.region = row.region;
+      if (row.phone) updates.phone = row.phone;
+      if (row.email) updates.email = row.email;
+      if (row['credit limit'] || row.outstanding_limit) updates.outstanding_limit = parseFloat(row['credit limit'] || row.outstanding_limit) || 0;
+      if (Object.keys(updates).length > 0) {
+        await base44.entities.Customer.update(match.id, updates);
+        count++;
+      }
+    }
+    qc.invalidateQueries(['customers_all']);
+    return count;
+  }
+
+  function openNew() { setEditing(null); setForm(BLANK_FORM); setShowForm(true); }
+  function openEdit(c) { setEditing(c); setForm({ ...BLANK_FORM, ...c }); setShowForm(true); }
 
   async function handleSave() {
     if (!form.name) { toast({ title: 'Customer name is required', variant: 'destructive' }); return; }
@@ -85,7 +192,7 @@ export default function SalesCustomerManager() {
   }
 
   return (
-    <div className="p-3 md:p-6 max-w-7xl mx-auto space-y-4">
+    <div className="p-3 md:p-6 max-w-7xl mx-auto space-y-4 pb-32">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
@@ -95,6 +202,9 @@ export default function SalesCustomerManager() {
         <div className="flex gap-2 flex-wrap">
           <Button variant="outline" className="h-11 text-sm" onClick={() => exportCSV(filtered)}>
             <Download className="w-4 h-4 mr-2" /> Export CSV
+          </Button>
+          <Button variant="outline" className="h-11 text-sm" onClick={() => setShowCSVModal(true)}>
+            <Upload className="w-4 h-4 mr-2" /> Bulk Update CSV
           </Button>
           <Link to="/SalesPriceListView">
             <Button variant="outline" className="h-11 text-sm">
@@ -114,6 +224,10 @@ export default function SalesCustomerManager() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <Input placeholder="Search name, GSTIN, code, email..." className="pl-9 h-9 text-sm" value={search} onChange={e => setSearch(e.target.value)} />
           </div>
+          <select className="h-9 rounded-md border border-input bg-background px-3 text-sm" value={filterGroup} onChange={e => setFilterGroup(e.target.value)}>
+            <option value="">All Groups</option>
+            {customerGroups.map(g => <option key={g} value={g}>{g}</option>)}
+          </select>
           <select className="h-9 rounded-md border border-input bg-background px-3 text-sm" value={filterPriceList} onChange={e => setFilterPriceList(e.target.value)}>
             <option value="">All Price Lists</option>
             {priceLists.map(pl => <option key={pl} value={pl}>{pl}</option>)}
@@ -124,10 +238,16 @@ export default function SalesCustomerManager() {
             <option value="inactive">Inactive</option>
             <option value="suspended">Suspended</option>
           </select>
-          {(search || filterPriceList || filterStatus) && (
-            <button onClick={() => { setSearch(''); setFilterPriceList(''); setFilterStatus(''); }} className="h-9 px-3 text-sm text-slate-500 hover:text-slate-900 border border-slate-200 rounded-md">Clear</button>
+          {(search || filterPriceList || filterStatus || filterGroup) && (
+            <button onClick={() => { setSearch(''); setFilterPriceList(''); setFilterStatus(''); setFilterGroup(''); }} className="h-9 px-3 text-sm text-slate-500 hover:text-slate-900 border border-slate-200 rounded-md">Clear</button>
           )}
         </div>
+
+        {selected.size > 0 && (
+          <div className="px-3 py-2 bg-blue-50 border-b border-blue-100 text-xs text-blue-700 font-medium">
+            {selected.size} of {filtered.length} customers selected — use the action bar below to apply bulk changes
+          </div>
+        )}
 
         {isLoading ? (
           <div className="p-8 text-center text-slate-400 text-sm">Loading customers...</div>
@@ -138,12 +258,15 @@ export default function SalesCustomerManager() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 text-xs text-slate-700 font-medium">
+                  <th className="px-3 py-2.5 w-10">
+                    <input type="checkbox" checked={allSelected} onChange={toggleAll} className="rounded" />
+                  </th>
                   <th className="px-3 py-2.5 text-left">Customer Name</th>
-                   <th className="px-3 py-2.5 text-left">Code</th>
-                   <th className="px-3 py-2.5 text-left">GSTIN</th>
-                   <th className="px-3 py-2.5 text-left">Group</th>
-                   <th className="px-3 py-2.5 text-left">Price List</th>
-                   <th className="px-3 py-2.5 text-left">Payment Terms</th>
+                  <th className="px-3 py-2.5 text-left">Code</th>
+                  <th className="px-3 py-2.5 text-left">GSTIN</th>
+                  <th className="px-3 py-2.5 text-left">Group</th>
+                  <th className="px-3 py-2.5 text-left">Price List</th>
+                  <th className="px-3 py-2.5 text-left">Payment Terms</th>
                   <th className="px-3 py-2.5 text-right">Credit Limit</th>
                   <th className="px-3 py-2.5 text-right">Outstanding</th>
                   <th className="px-3 py-2.5 text-center">Status</th>
@@ -152,17 +275,20 @@ export default function SalesCustomerManager() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filtered.map(c => (
-                  <tr key={c.id} className="hover:bg-slate-50">
+                  <tr key={c.id} className={`hover:bg-slate-50 ${selected.has(c.id) ? 'bg-blue-50' : ''}`}>
+                    <td className="px-3 py-2">
+                      <input type="checkbox" checked={selected.has(c.id)} onChange={() => toggleRow(c.id)} className="rounded" />
+                    </td>
                     <td className="px-3 py-2 font-medium text-slate-900">{c.name}</td>
-                     <td className="px-3 py-2 text-slate-500 text-xs font-mono">{c.code || '—'}</td>
-                     <td className="px-3 py-2 text-slate-600 text-xs font-mono">{c.gstin || '—'}</td>
-                     <td className="px-3 py-2">
-                       {c.customer_group ? (
-                         <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium">{c.customer_group}</span>
-                       ) : <span className="text-slate-400 text-xs">—</span>}
-                     </td>
-                     <td className="px-3 py-2">
-                       {c.price_list ? (
+                    <td className="px-3 py-2 text-slate-500 text-xs font-mono">{c.code || '—'}</td>
+                    <td className="px-3 py-2 text-slate-600 text-xs font-mono">{c.gstin || '—'}</td>
+                    <td className="px-3 py-2">
+                      {c.customer_group ? (
+                        <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium">{c.customer_group}</span>
+                      ) : <span className="text-slate-400 text-xs">—</span>}
+                    </td>
+                    <td className="px-3 py-2">
+                      {c.price_list ? (
                         <Link to={`/SalesPriceListView?list=${encodeURIComponent(c.price_list)}`} className="text-blue-600 hover:underline text-xs font-medium">{c.price_list}</Link>
                       ) : <span className="text-slate-400 text-xs">—</span>}
                     </td>
@@ -184,6 +310,26 @@ export default function SalesCustomerManager() {
           </div>
         )}
       </div>
+
+      {/* Bulk Action Bar */}
+      <BulkActionBar
+        selectedCount={selected.size}
+        onClearSelection={() => setSelected(new Set())}
+        actions={BULK_ACTIONS}
+        onApply={handleBulkApply}
+        applying={applying}
+      />
+
+      {/* CSV Bulk Update Modal */}
+      {showCSVModal && (
+        <BulkCSVUploadModal
+          entityName="Customer"
+          templateColumns={CSV_TEMPLATE_COLUMNS}
+          onUpdate={handleCSVUpdate}
+          onClose={() => setShowCSVModal(false)}
+          templateFilename="customers_bulk_update.csv"
+        />
+      )}
 
       {/* Form Drawer */}
       {showForm && (
@@ -210,14 +356,13 @@ export default function SalesCustomerManager() {
                 ['outstanding_limit', 'Credit Limit (INR)', 'number'],
                 ['leverage_outstanding', 'Leverage on Limit (INR)', 'number'],
                 ['current_outstanding', 'Current Outstanding (INR)', 'number'],
-                ].map(([key, label, type]) => (
+              ].map(([key, label, type]) => (
                 <div key={key}>
                   <Label className="text-xs font-medium text-slate-700">{label}</Label>
                   <Input type={type} className="h-9 text-sm mt-1" value={form[key] ?? ''}
                     onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} />
                 </div>
               ))}
-              {/* Price List Dropdown — linked to actual SalesRateList master */}
               <div>
                 <Label className="text-xs font-medium text-slate-700">Default Price List</Label>
                 <select
@@ -231,7 +376,7 @@ export default function SalesCustomerManager() {
                 <p className="text-xs text-slate-500 mt-0.5">This will auto-apply when creating orders for this customer</p>
               </div>
               <div>
-                 <Label className="text-xs font-medium text-slate-700">GST Category</Label>
+                <Label className="text-xs font-medium text-slate-700">GST Category</Label>
                 <select className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm mt-1" value={form.gst_category} onChange={e => setForm(f => ({ ...f, gst_category: e.target.value }))}>
                   {['Registered Regular', 'Registered Composition', 'Unregistered', 'SEZ', 'Overseas', 'UIN Holders'].map(g => <option key={g}>{g}</option>)}
                 </select>

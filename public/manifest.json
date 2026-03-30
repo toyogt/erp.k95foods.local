@@ -1,0 +1,31 @@
+{
+  "name": "K95 ERP",
+  "short_name": "K95 ERP",
+  "description": "K95 Enterprise Resource Planning — Sales, Production, Warehouse & More",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#ffffff",
+  "theme_color": "#0f172a",
+  "icons": [
+    {
+      "src": "https://base44.com/logo_v2.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://base44.com/logo_v2.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "https://base44.com/logo_v2.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ],
+  "categories": ["business", "productivity"],
+  "lang": "en-IN",
+  "scope": "/"
+}
