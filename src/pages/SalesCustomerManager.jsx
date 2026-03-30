@@ -176,18 +176,44 @@ export default function SalesCustomerManager() {
   function openNew() { setEditing(null); setForm(BLANK_FORM); setShowForm(true); }
   function openEdit(c) { setEditing(c); setForm({ ...BLANK_FORM, ...c }); setShowForm(true); }
 
+  function generateCode(existingCustomers, prefix = 'CUST') {
+    const existing = existingCustomers
+      .map(c => c.code)
+      .filter(c => c?.startsWith(prefix + '-'))
+      .map(c => parseInt(c.replace(prefix + '-', ''), 10))
+      .filter(n => !isNaN(n));
+    const next = existing.length > 0 ? Math.max(...existing) + 1 : 1;
+    return `${prefix}-${String(next).padStart(3, '0')}`;
+  }
+
   async function handleSave() {
     if (!form.name) { toast({ title: 'Customer name is required', variant: 'destructive' }); return; }
     setSaving(true);
-    const data = { ...form, outstanding_limit: parseFloat(form.outstanding_limit) || 0, leverage_outstanding: parseFloat(form.leverage_outstanding) || 0, current_outstanding: parseFloat(form.current_outstanding) || 0 };
+    const autoCode = !editing && !form.code ? generateCode(customers) : form.code;
+    const data = { ...form, code: autoCode, outstanding_limit: parseFloat(form.outstanding_limit) || 0, leverage_outstanding: parseFloat(form.leverage_outstanding) || 0, current_outstanding: parseFloat(form.current_outstanding) || 0 };
     if (editing) {
       await base44.entities.Customer.update(editing.id, data);
       toast({ title: 'Customer updated' });
     } else {
       await base44.entities.Customer.create(data);
-      toast({ title: 'Customer created' });
+      toast({ title: `Customer created with code ${autoCode}` });
     }
     setSaving(false); setShowForm(false);
+    qc.invalidateQueries(['customers_all']);
+  }
+
+  async function assignMissingCodes() {
+    const missing = customers.filter(c => !c.code);
+    if (missing.length === 0) { toast({ title: 'All customers already have codes' }); return; }
+    setSaving(true);
+    let allCustomers = [...customers];
+    for (const c of missing) {
+      const code = generateCode(allCustomers);
+      await base44.entities.Customer.update(c.id, { code });
+      allCustomers = [...allCustomers.filter(x => x.id !== c.id), { ...c, code }];
+    }
+    toast({ title: `Codes assigned to ${missing.length} customers` });
+    setSaving(false);
     qc.invalidateQueries(['customers_all']);
   }
 
@@ -202,6 +228,10 @@ export default function SalesCustomerManager() {
         <div className="flex gap-2 flex-wrap">
           <Button variant="outline" className="h-11 text-sm" onClick={() => exportCSV(filtered)}>
             <Download className="w-4 h-4 mr-2" /> Export CSV
+          </Button>
+          <Button variant="outline" className="h-11 text-sm" onClick={assignMissingCodes} disabled={saving}>
+            {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Tag className="w-4 h-4 mr-2" />}
+            Assign Codes
           </Button>
           <Button variant="outline" className="h-11 text-sm" onClick={() => setShowCSVModal(true)}>
             <Upload className="w-4 h-4 mr-2" /> Bulk Update CSV
@@ -342,7 +372,7 @@ export default function SalesCustomerManager() {
             <div className="p-5 space-y-3">
               {[
                 ['name', 'Customer Name *', 'text'],
-                ['code', 'Customer Code', 'text'],
+                ['code', 'Customer Code (leave blank to auto-assign)', 'text'],
                 ['customer_group', 'Customer Group', 'text'],
                 ['contact_name', 'Contact Name', 'text'],
                 ['phone', 'Phone', 'text'],
