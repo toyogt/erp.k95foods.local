@@ -17,61 +17,64 @@ const PLATFORMS = [
   { value: 'other', label: 'Other' },
 ];
 
-const DEFAULT_ITEM = { sku_code: '', description: '', mrp: '', exp_qty: '', grn_qty: '', unit_price: '', taxable_value: '', igst_amount: '', total_amount: '', dn_qty: '', reason: '' };
+const DEFAULT_ITEM = {
+  sku_code: '', description: '', vendor_sku: '', sku_bin: '', lot_no: '',
+  mrp: '', exp_qty: '', grn_qty: '', unit_price: '', taxable_value: '', total_amount: '',
+};
 
-// ── Scootsy GRN text parser (regex, no AI) ─────────────────────────────────
-// Matches the known Scootsy / CPD GRN PDF format exactly.
-// Fields appear inline: "PO No :- CPDPO254308 PO Date :- 17-3-2026"
-// So we capture \S+ (stops at first space) not [^\n\r]+
+// Convert "27-3-2026" to "2026-03-27" for date inputs
 function parseDDMMYYYY(str) {
-  // Convert "27-3-2026" → "2026-03-27" for date inputs
   if (!str) return '';
   const m = str.match(/(\d{1,2})-(\d{1,2})-(\d{4})/);
   if (!m) return str;
-  return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+  return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
 }
 
+// Scootsy GRN PDF parser (pure regex, no AI)
+// Handles format: "PO No :- CPDPO254308 PO Date :- 17-3-2026"
+// Item rows: SKU STAGING LotNo MRP ExpQty RecvQty UnitPrice TaxableValue ...taxes... Total(INR)
 function parseScootsyGRN(text) {
   const grab = (pattern) => { const m = text.match(pattern); return m ? m[1].trim() : ''; };
 
-  // Header fields — \S+ stops at next whitespace (all on same line)
   const po_number      = grab(/PO\s+No\s*:-\s*(\S+)/i);
   const grn_number     = grab(/GRN\s+No\s*:-\s*(\S+)/i);
   const grn_date_raw   = grab(/GRN\s+Date\s*:-\s*(\S+)/i);
   const inbound_number = grab(/Inbound\s+No\s*:-\s*(\S+)/i);
   const invoice_number = grab(/Invoice\s+No\s*:-\s*(\S+)/i);
 
-  // Total row: "Total: 216 216 15318.07 ... 21445.30"
-  // Greedy .* then last decimal = grand total
+  // Total row: "Total: 216 216 15318.07 0.00 0.00 6127.23 0.00 0.00 21445.30"
+  // Last decimal on the line = grand total (Total INR column)
   let grn_total_qty = 0, grn_total_amount = 0;
-  const totalLine = text.match(/Total:\s*(\d+)\s+\d+\s+.*(\d+\.\d+)\s*$/m);
+  const totalLine = text.match(/Total:\s*(\d+)\s+\d+\s+[\s\S]*?([\d,]+\.\d{2})\s*$/m);
   if (totalLine) {
     grn_total_qty = parseFloat(totalLine[1]);
-    grn_total_amount = parseFloat(totalLine[2]);
+    grn_total_amount = parseFloat(totalLine[2].replace(/,/g, ''));
   }
 
-  // Line items — anchor on "<SKU> STAGING" which is always the data row.
-  // Each data row: <SKU> STAGING <LotNo> <MRP> <ExpQty> <RecvQty> <UnitPrice> <TaxableValue> <...zeros...> <Total>
-  // Use greedy .* to capture LAST decimal on the line as Total.
+  // Parse line items anchored on STAGING (always present for Scootsy)
+  // Columns after SKU: STAGING | LotNo | MRP | ExpQty | RecvQty | UnitPrice | TaxableValue | ...tax cols... | Total(INR)
   const items = [];
-  const dataRowRegex = /(\d{5,6})\s+STAGING\s+\S+\s+([\d.]+)\s+(\d+)\s+(\d+)\s+([\d.]+)\s+([\d.]+).*(\d+\.\d+)\s*$/gm;
+  const rowRe = /(\d{5,6})\s+STAGING\s+(\S+)\s+([\d.]+)\s+(\d+)\s+(\d+)\s+([\d.]+)\s+([\d.]+)(?:[\s\d.]+?)([\d.]+)\s*$/gm;
   let m;
-  while ((m = dataRowRegex.exec(text)) !== null) {
+  while ((m = rowRe.exec(text)) !== null) {
     const sku_code = m[1];
-    // Description is text between "<SrNo> <SKU>" and "<SKU> STAGING" — may span multiple lines
-    const descMatch = text.match(new RegExp(`\\d+\\s+${sku_code}\\s+([\\s\\S]*?)\\s*${sku_code}\\s+STAGING`));
+    const lot_no   = m[2];
+    // Description lives between "<SrNo> <SKU>" and "<SKU> STAGING" (may span lines)
+    const descRe = new RegExp(`\\d+\\s+${sku_code}\\s+([\\s\\S]*?)\\s*${sku_code}\\s+STAGING`);
+    const descMatch = text.match(descRe);
     const description = descMatch ? descMatch[1].replace(/\s+/g, ' ').trim() : '';
     items.push({
       sku_code,
+      vendor_sku:    sku_code,     // Vendor SKU = same as SKU Code in Scootsy format
+      sku_bin:       'STAGING',
+      lot_no,
       description,
-      mrp:          parseFloat(m[2]) || 0,
-      exp_qty:      parseFloat(m[3]) || 0,
-      grn_qty:      parseFloat(m[4]) || 0,
-      unit_price:   parseFloat(m[5]) || 0,
-      taxable_value: parseFloat(m[6]) || 0,
-      total_amount: parseFloat(m[7]) || 0,
-      dn_qty: 0,
-      igst_amount: 0,
+      mrp:           parseFloat(m[3]) || 0,
+      exp_qty:       parseFloat(m[4]) || 0,
+      grn_qty:       parseFloat(m[5]) || 0,
+      unit_price:    parseFloat(m[6]) || 0,
+      taxable_value: parseFloat(m[7]) || 0,
+      total_amount:  parseFloat(m[8]) || 0,  // Total(INR) — last column
     });
   }
 
@@ -88,65 +91,61 @@ function parseScootsyGRN(text) {
   };
 }
 
-// ── Scootsy Debit Note parser (regex, no AI) ──────────────────────────────
-// Format: Note# CPD-DN601670 | Reference number: CPD000263881
-// Credits Applied Bills table: Bill# K95/25-26/004450 | Payment Amount 1,242.02
+// Scootsy Debit Note PDF parser (pure regex, no AI)
+// Format: Note# CPD-DN601670, Credits Applied Bills: Bill# K95/25-26/004450
 function parseScootsyDebitNote(text) {
   const grab = (pattern) => { const m = text.match(pattern); return m ? m[1].trim() : ''; };
 
-  const dn_number     = grab(/Note#\s*(\S+)/i);
-  const date_raw      = grab(/Date\s*:\s*([\d]{1,2}-[\d]{1,2}-[\d]{4})/i);
-  const grn_number    = grab(/GRN\s*No\s*:\s*(\S+)/i);
-  const po_number     = grab(/Po\s*No\s*:\s*(\S+)/i);
-  // Invoice from "Credits Applied Bills" table — Bill# column
+  const dn_number      = grab(/Note#\s*(\S+)/i);
+  const date_raw       = grab(/Date\s*:\s*([\d]{1,2}-[\d]{1,2}-[\d]{4})/i);
+  const grn_number     = grab(/GRN\s*No\s*:\s*(\S+)/i);
+  const po_number      = grab(/Po\s*No\s*:\s*(\S+)/i);
   const invoice_number = grab(/Bill#\s*([\S]+)/i);
-  // Total = the bold Total line value
-  const totalMatch = text.match(/\bTotal\b[\s₹]+(\d[\d,]+\.\d{2})/i);
-  const dn_amount   = totalMatch ? parseFloat(totalMatch[1].replace(/,/g, '')) : 0;
-  // Sub total (taxable)
-  const subMatch    = text.match(/Sub\s*Total\s+([\d,]+\.\d{2})/i);
-  const taxable     = subMatch ? parseFloat(subMatch[1].replace(/,/g, '')) : 0;
-  // IGST
-  const igstMatch   = text.match(/IGST[^(]*\([^)]+\)\s+([\d,]+\.\d{2})/i);
-  const igst        = igstMatch ? parseFloat(igstMatch[1].replace(/,/g, '')) : 0;
 
-  // Line items: "<N> <Description> <Qty> <Rate> <Amount>"
-  // Pattern anchors on decimal rates like 46.821 / 73.929 / 73.93
+  const totalMatch = text.match(/\bTotal\b[\s\u20b9]+([\d,]+\.\d{2})/i);
+  const dn_amount  = totalMatch ? parseFloat(totalMatch[1].replace(/,/g, '')) : 0;
+
+  // Line items: "N Description Qty Rate Amount"
   const items = [];
-  const rowRegex = /^(\d+)\s+(.+?)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s*$/gm;
+  const rowRe = /^(\d+)\s+(.+?)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s*$/gm;
   let m;
-  while ((m = rowRegex.exec(text)) !== null) {
+  while ((m = rowRe.exec(text)) !== null) {
     const qty = parseFloat(m[3]);
     const rate = parseFloat(m[4]);
     const amount = parseFloat(m[5]);
-    // skip header-like rows (no real amount) or sub-total rows
     if (isNaN(qty) || isNaN(rate)) continue;
     items.push({
       description: m[2].replace(/\s+/g, ' ').trim(),
       grn_qty: qty,
       unit_price: rate,
       total_amount: amount,
-      dn_qty: qty > 0 ? qty : 0,
     });
   }
 
-  return { dn_number, dn_date: parseDDMMYYYY(date_raw), grn_number, po_number, invoice_number, dn_amount, taxable, igst, items: items.length > 0 ? items : null };
+  return {
+    dn_number,
+    dn_date: parseDDMMYYYY(date_raw),
+    grn_number,
+    po_number,
+    invoice_number,
+    dn_amount,
+    items: items.length > 0 ? items : null,
+  };
 }
 
 export default function GRNEntryModal({ open, onClose, onSaved, invoices = [] }) {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [extracting, setExtracting] = useState(false);
+  const [uploadingDN, setUploadingDN] = useState(false);
   const { toast } = useToast();
 
-  // Fetch all SalesOrders so we can do PO → SO → Invoice lookup
   const { data: allSalesOrders = [] } = useQuery({
     queryKey: ['grn-entry-sales-orders'],
     queryFn: () => base44.entities.SalesOrder.list('-created_date', 500),
     staleTime: 60000,
   });
 
-  const [uploadingDN, setUploadingDN] = useState(false);
   const [form, setForm] = useState({
     platform: 'swiggy', grn_number: '', grn_date: '', po_number: '', asn_number: '',
     inbound_number: '', invoice_id: '', invoice_number: '', customer_name: 'SCOOTSY LOGISTICS PRIVATE LIMITED',
@@ -157,7 +156,6 @@ export default function GRNEntryModal({ open, onClose, onSaved, invoices = [] })
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
-  // PO Number → SalesOrder → SalesInvoice lookup
   const lookupInvoiceByPO = async (poNumber) => {
     if (!poNumber) return null;
     const so = allSalesOrders.find(s => s.po_number?.trim().toUpperCase() === poNumber.trim().toUpperCase());
@@ -187,21 +185,15 @@ export default function GRNEntryModal({ open, onClose, onSaved, invoices = [] })
       setExtracting(true);
       setUploading(false);
 
-      // Step 1: Extract raw text from PDF (no interpretation)
       const rawText = await base44.integrations.Core.InvokeLLM({
-        prompt: `Return ONLY the raw text content of this document exactly as it appears. Do not interpret, summarise or change anything. Just return the plain text.`,
+        prompt: 'Return ONLY the raw text content of this document exactly as it appears. Do not interpret, summarise or change anything. Just return the plain text.',
         file_urls: [file_url],
       });
 
-      // Step 2: Parse using regex against known Scootsy GRN format
       const parsed = parseScootsyGRN(typeof rawText === 'string' ? rawText : JSON.stringify(rawText));
 
-      // Step 3: Look up invoice via PO Number → Sales Order → Sales Invoice
       let linkedInvoice = null;
-      if (parsed.po_number) {
-        linkedInvoice = await lookupInvoiceByPO(parsed.po_number);
-      }
-      // Fallback: match by invoice_number directly
+      if (parsed.po_number) linkedInvoice = await lookupInvoiceByPO(parsed.po_number);
       if (!linkedInvoice && parsed.invoice_number) {
         linkedInvoice = invoices.find(i => i.invoice_number?.trim() === parsed.invoice_number?.trim()) || null;
       }
@@ -223,8 +215,10 @@ export default function GRNEntryModal({ open, onClose, onSaved, invoices = [] })
       }));
 
       const matchMsg = linkedInvoice
-        ? `Matched to Invoice ${linkedInvoice.invoice_number} (₹${(linkedInvoice.total_amount || 0).toLocaleString('en-IN')})`
-        : parsed.po_number ? `PO ${parsed.po_number} — no matching Sales Order found. Please link invoice manually.` : 'Could not match invoice. Please link manually.';
+        ? `Matched to Invoice ${linkedInvoice.invoice_number} (\u20b9${(linkedInvoice.total_amount || 0).toLocaleString('en-IN')})`
+        : parsed.po_number
+          ? `Purchase Order ${parsed.po_number} — no matching Sales Order found. Please link invoice manually.`
+          : 'Could not match invoice. Please link manually.';
 
       toast({ title: 'GRN data extracted', description: matchMsg });
     } catch (err) {
@@ -234,17 +228,6 @@ export default function GRNEntryModal({ open, onClose, onSaved, invoices = [] })
       setExtracting(false);
     }
   };
-
-  const updateItem = (idx, k, v) => {
-    setForm(p => {
-      const items = [...p.items];
-      items[idx] = { ...items[idx], [k]: v };
-      return { ...p, items };
-    });
-  };
-
-  const addItem = () => setForm(p => ({ ...p, items: [...p.items, { ...DEFAULT_ITEM }] }));
-  const removeItem = (idx) => setForm(p => ({ ...p, items: p.items.filter((_, i) => i !== idx) }));
 
   const handleDebitNotePDF = async (e) => {
     const file = e.target.files?.[0];
@@ -268,13 +251,24 @@ export default function GRNEntryModal({ open, onClose, onSaved, invoices = [] })
         discrepancy_pdf_url: file_url,
         items: parsed.items || p.items,
       }));
-      toast({ title: 'Debit Note extracted', description: `Note# ${parsed.dn_number} — ₹${parsed.dn_amount?.toLocaleString('en-IN')}` });
+      toast({ title: 'Debit Note extracted', description: `Note# ${parsed.dn_number} \u2014 \u20b9${parsed.dn_amount?.toLocaleString('en-IN')}` });
     } catch (err) {
       toast({ title: 'Extraction failed', description: err.message, variant: 'destructive' });
     } finally {
       setUploadingDN(false);
     }
   };
+
+  const updateItem = (idx, k, v) => {
+    setForm(p => {
+      const items = [...p.items];
+      items[idx] = { ...items[idx], [k]: v };
+      return { ...p, items };
+    });
+  };
+
+  const addItem = () => setForm(p => ({ ...p, items: [...p.items, { ...DEFAULT_ITEM }] }));
+  const removeItem = (idx) => setForm(p => ({ ...p, items: p.items.filter((_, i) => i !== idx) }));
 
   const handleSave = async () => {
     if (!form.platform || !form.grn_number || !form.invoice_number) {
@@ -286,20 +280,19 @@ export default function GRNEntryModal({ open, onClose, onSaved, invoices = [] })
     const totalAmt = form.items.reduce((s, i) => s + (Number(i.total_amount) || 0), 0);
     const payload = {
       ...form,
-      grn_total_qty: totalQty || Number(form.grn_total_qty) || 0,
+      grn_total_qty:    totalQty || Number(form.grn_total_qty) || 0,
       grn_total_amount: totalAmt || Number(form.grn_total_amount) || 0,
+      amount_discrepancy: (Number(form.invoice_total_amount) || 0) - (totalAmt || Number(form.grn_total_amount) || 0),
       dn_amount: Number(form.dn_amount) || 0,
       status: (form.dn_number || form.dn_amount) ? 'discrepancy_identified' : 'pending_match',
       items: form.items.map(it => ({
         ...it,
-        mrp: Number(it.mrp) || 0,
-        exp_qty: Number(it.exp_qty) || 0,
-        grn_qty: Number(it.grn_qty) || 0,
-        unit_price: Number(it.unit_price) || 0,
-        taxable_value: Number(it.taxable_value) || 0,
-        igst_amount: Number(it.igst_amount) || 0,
-        total_amount: Number(it.total_amount) || 0,
-        dn_qty: Number(it.dn_qty) || 0,
+        mrp:           Number(it.mrp)           || 0,
+        exp_qty:       Number(it.exp_qty)        || 0,
+        grn_qty:       Number(it.grn_qty)        || 0,
+        unit_price:    Number(it.unit_price)     || 0,
+        taxable_value: Number(it.taxable_value)  || 0,
+        total_amount:  Number(it.total_amount)   || 0,
       })),
     };
     await base44.entities.CustomerGRN.create(payload);
@@ -309,12 +302,20 @@ export default function GRNEntryModal({ open, onClose, onSaved, invoices = [] })
     setSaving(false);
   };
 
-  const F = ({ label, k, type = 'text', half = false }) => (
-    <div className={half ? '' : ''}>
+  const F = ({ label, k, type = 'text' }) => (
+    <div>
       <Label className="text-xs font-medium text-slate-700">{label}</Label>
       <Input className="h-9 text-sm mt-1" type={type} value={form[k] || ''} onChange={e => set(k, e.target.value)} />
     </div>
   );
+
+  // Reconciliation summary values
+  const invAmt = Number(form.invoice_total_amount) || 0;
+  const grnAmt = Number(form.grn_total_amount) || 0;
+  const discAmt = invAmt - grnAmt;
+  const discPct = invAmt > 0 ? ((discAmt / invAmt) * 100).toFixed(2) : '0.00';
+  const hasDisc = Math.abs(discAmt) > 0.01;
+  const showSummary = invAmt > 0 || grnAmt > 0;
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -339,7 +340,7 @@ export default function GRNEntryModal({ open, onClose, onSaved, invoices = [] })
               ) : (
                 <>
                   <Upload className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-                  <p className="text-sm text-slate-600 mb-3">Upload GRN or Discrepancy Note PDF — data will be auto-extracted</p>
+                  <p className="text-sm text-slate-600 mb-3">Upload Scootsy GRN PDF — data will be auto-extracted</p>
                   <label className="cursor-pointer">
                     <span className="bg-slate-900 text-white text-sm px-4 py-2 rounded-lg hover:bg-slate-700 transition-colors">Choose PDF</span>
                     <input type="file" accept=".pdf" className="hidden" onChange={handlePDFUpload} />
@@ -347,7 +348,7 @@ export default function GRNEntryModal({ open, onClose, onSaved, invoices = [] })
                 </>
               )}
             </div>
-            <p className="text-xs text-slate-500">After extraction, the form below will be pre-filled. Review and save.</p>
+            <p className="text-xs text-slate-500">After extraction, review and save.</p>
           </TabsContent>
 
           <TabsContent value="manual" />
@@ -372,9 +373,9 @@ export default function GRNEntryModal({ open, onClose, onSaved, invoices = [] })
               {!form.invoice_id && (
                 <Input className="h-9 text-sm mt-1" placeholder="Or type invoice number manually" value={form.invoice_number} onChange={e => set('invoice_number', e.target.value)} />
               )}
-              {form.invoice_total_amount > 0 && (
+              {invAmt > 0 && (
                 <p className="text-xs text-green-700 font-medium mt-1">
-                  ✓ Our Invoice Amount: ₹{Number(form.invoice_total_amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  &#10003; Our Invoice Amount: &#8377;{invAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                 </p>
               )}
             </div>
@@ -411,7 +412,30 @@ export default function GRNEntryModal({ open, onClose, onSaved, invoices = [] })
             </div>
           </div>
 
-          {/* Line Items */}
+          {/* Reconciliation Summary: Discrepancy = Invoice Total - GRN Total */}
+          {showSummary && (
+            <div className={`rounded-lg p-3 border text-sm ${hasDisc ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
+              <p className={`text-xs font-semibold mb-2 ${hasDisc ? 'text-red-700' : 'text-green-700'}`}>Reconciliation Summary</p>
+              <div className="grid grid-cols-3 gap-3 text-xs">
+                <div>
+                  <span className="text-slate-500">Invoice Total</span>
+                  <p className="font-medium text-slate-900">&#8377;{invAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+                </div>
+                <div>
+                  <span className="text-slate-500">GRN Total (Accepted)</span>
+                  <p className="font-medium text-slate-900">&#8377;{grnAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+                </div>
+                <div>
+                  <span className="text-slate-500">Discrepancy (Invoice &#8722; GRN)</span>
+                  <p className={`font-semibold ${hasDisc ? 'text-red-700' : 'text-green-700'}`}>
+                    &#8377;{discAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })} ({discPct}%)
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* GRN Line Items */}
           <div>
             <div className="flex items-center justify-between mb-2">
               <p className="text-xs font-semibold text-slate-700">GRN Line Items</p>
@@ -422,19 +446,31 @@ export default function GRNEntryModal({ open, onClose, onSaved, invoices = [] })
                 <div key={idx} className="border border-slate-200 rounded-lg p-3 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-medium text-slate-500">Item {idx + 1}</span>
-                    {form.items.length > 1 && <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => removeItem(idx)}><Trash2 className="w-3 h-3 text-red-500" /></Button>}
+                    {form.items.length > 1 && (
+                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => removeItem(idx)}>
+                        <Trash2 className="w-3 h-3 text-red-500" />
+                      </Button>
+                    )}
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                    {[['Description', 'description'], ['Product Code', 'sku_code'], ['MRP', 'mrp'], ['Expected Qty', 'exp_qty'], ['GRN Qty (Received)', 'grn_qty'], ['Discrepancy Qty', 'dn_qty'], ['Unit Price', 'unit_price'], ['Total Amount', 'total_amount']].map(([lbl, key]) => (
+                    {[
+                      ['Product Code (SKU)', 'sku_code'],
+                      ['SKU Description', 'description'],
+                      ['Vendor SKU', 'vendor_sku'],
+                      ['SKU Bin', 'sku_bin'],
+                      ['Lot Number', 'lot_no'],
+                      ['Lot MRP (INR)', 'mrp'],
+                      ['Expected Qty', 'exp_qty'],
+                      ['Received Qty', 'grn_qty'],
+                      ['Unit Price (INR)', 'unit_price'],
+                      ['Taxable Value (INR)', 'taxable_value'],
+                      ['Total Amount (INR)', 'total_amount'],
+                    ].map(([lbl, key]) => (
                       <div key={key}>
                         <Label className="text-xs text-slate-600">{lbl}</Label>
                         <Input className="h-8 text-sm mt-0.5" value={item[key] || ''} onChange={e => updateItem(idx, key, e.target.value)} />
                       </div>
                     ))}
-                  </div>
-                  <div>
-                    <Label className="text-xs text-slate-600">Reason for Discrepancy</Label>
-                    <Input className="h-8 text-sm mt-0.5" value={item.reason || ''} onChange={e => updateItem(idx, 'reason', e.target.value)} />
                   </div>
                 </div>
               ))}
