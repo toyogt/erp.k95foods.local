@@ -38,7 +38,7 @@ const NEXT_STATUS = {
 const PANELS = [
   { key: 'items',            label: 'Details' },
   { key: 'address',          label: 'Address & Contact' },
-  { key: 'connections',      label: 'More Info' },
+  { key: 'connections',      label: 'Connections' },
   { key: 'logistics_review', label: 'Logistics Review' },
   { key: 'stock_pick',       label: 'Pick List' },
   { key: 'delivery_note',    label: 'Delivery Note' },
