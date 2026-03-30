@@ -53,6 +53,12 @@ export default function SalesOrders() {
   const [selected, setSelected] = useState(new Set());
   const [applying, setApplying] = useState(false);
   const [showCSVModal, setShowCSVModal] = useState(false);
+  const [activeTab, setActiveTab] = useState('all');
+  const [search, setSearch] = useState('');
+  const [filterPlatform, setFilterPlatform] = useState('');
+  const [filterExpiryAlert, setFilterExpiryAlert] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createType, setCreateType] = useState('manual');
 
   const ORDER_BULK_ACTIONS = [
     { key: 'status', label: 'Change Status', type: 'select', options: [
