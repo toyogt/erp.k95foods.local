@@ -355,7 +355,7 @@ export default function SalesCustomerManager() {
       <SalesAnalyticsPanel
         context="Customer Master"
         data={customers}
-        extraContext={`Total customers: ${customers.length}. Active: ${customers.filter(c=>c.status==='active').length}. Customer groups: ${customerGroups.join(', ')}. Price lists in use: ${priceLists.join(', ')}.`}
+        type="customers"
       />
 
       {/* Form Drawer */}
