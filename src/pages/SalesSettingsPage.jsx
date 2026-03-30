@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { Plus, X, Save, Loader2, Zap } from 'lucide-react';
 import MOQConfigManager from '@/components/sales/MOQConfigManager';
+import GmailIntegrationSettings from '@/components/sales/GmailIntegrationSettings';
 import ClearTaxSettings from '@/components/sales/ClearTaxSettings';
 
 const DEFAULT_SETTINGS = [
@@ -118,6 +119,8 @@ export default function SalesSettingsPage() {
       </div>
 
       <ClearTaxSettings />
+
+      <GmailIntegrationSettings />
     </div>
   );
 }
