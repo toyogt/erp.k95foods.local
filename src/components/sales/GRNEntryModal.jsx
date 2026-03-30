@@ -88,6 +88,51 @@ function parseScootsyGRN(text) {
   };
 }
 
+// ── Scootsy Debit Note parser (regex, no AI) ──────────────────────────────
+// Format: Note# CPD-DN601670 | Reference number: CPD000263881
+// Credits Applied Bills table: Bill# K95/25-26/004450 | Payment Amount 1,242.02
+function parseScootsyDebitNote(text) {
+  const grab = (pattern) => { const m = text.match(pattern); return m ? m[1].trim() : ''; };
+
+  const dn_number     = grab(/Note#\s*(\S+)/i);
+  const date_raw      = grab(/Date\s*:\s*([\d]{1,2}-[\d]{1,2}-[\d]{4})/i);
+  const grn_number    = grab(/GRN\s*No\s*:\s*(\S+)/i);
+  const po_number     = grab(/Po\s*No\s*:\s*(\S+)/i);
+  // Invoice from "Credits Applied Bills" table — Bill# column
+  const invoice_number = grab(/Bill#\s*([\S]+)/i);
+  // Total = the bold Total line value
+  const totalMatch = text.match(/\bTotal\b[\s₹]+(\d[\d,]+\.\d{2})/i);
+  const dn_amount   = totalMatch ? parseFloat(totalMatch[1].replace(/,/g, '')) : 0;
+  // Sub total (taxable)
+  const subMatch    = text.match(/Sub\s*Total\s+([\d,]+\.\d{2})/i);
+  const taxable     = subMatch ? parseFloat(subMatch[1].replace(/,/g, '')) : 0;
+  // IGST
+  const igstMatch   = text.match(/IGST[^(]*\([^)]+\)\s+([\d,]+\.\d{2})/i);
+  const igst        = igstMatch ? parseFloat(igstMatch[1].replace(/,/g, '')) : 0;
+
+  // Line items: "<N> <Description> <Qty> <Rate> <Amount>"
+  // Pattern anchors on decimal rates like 46.821 / 73.929 / 73.93
+  const items = [];
+  const rowRegex = /^(\d+)\s+(.+?)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s*$/gm;
+  let m;
+  while ((m = rowRegex.exec(text)) !== null) {
+    const qty = parseFloat(m[3]);
+    const rate = parseFloat(m[4]);
+    const amount = parseFloat(m[5]);
+    // skip header-like rows (no real amount) or sub-total rows
+    if (isNaN(qty) || isNaN(rate)) continue;
+    items.push({
+      description: m[2].replace(/\s+/g, ' ').trim(),
+      grn_qty: qty,
+      unit_price: rate,
+      total_amount: amount,
+      dn_qty: qty > 0 ? qty : 0,
+    });
+  }
+
+  return { dn_number, dn_date: parseDDMMYYYY(date_raw), grn_number, po_number, invoice_number, dn_amount, taxable, igst, items: items.length > 0 ? items : null };
+}
+
 export default function GRNEntryModal({ open, onClose, onSaved, invoices = [] }) {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -101,6 +146,7 @@ export default function GRNEntryModal({ open, onClose, onSaved, invoices = [] })
     staleTime: 60000,
   });
 
+  const [uploadingDN, setUploadingDN] = useState(false);
   const [form, setForm] = useState({
     platform: 'swiggy', grn_number: '', grn_date: '', po_number: '', asn_number: '',
     inbound_number: '', invoice_id: '', invoice_number: '', customer_name: 'SCOOTSY LOGISTICS PRIVATE LIMITED',
@@ -199,6 +245,36 @@ export default function GRNEntryModal({ open, onClose, onSaved, invoices = [] })
 
   const addItem = () => setForm(p => ({ ...p, items: [...p.items, { ...DEFAULT_ITEM }] }));
   const removeItem = (idx) => setForm(p => ({ ...p, items: p.items.filter((_, i) => i !== idx) }));
+
+  const handleDebitNotePDF = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingDN(true);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const rawText = await base44.integrations.Core.InvokeLLM({
+        prompt: 'Return ONLY the raw text content of this document exactly as it appears. No interpretation.',
+        file_urls: [file_url],
+      });
+      const parsed = parseScootsyDebitNote(typeof rawText === 'string' ? rawText : JSON.stringify(rawText));
+      setForm(p => ({
+        ...p,
+        dn_number:      parsed.dn_number      || p.dn_number,
+        dn_date:        parsed.dn_date        || p.dn_date,
+        dn_amount:      parsed.dn_amount      || p.dn_amount,
+        grn_number:     parsed.grn_number     || p.grn_number,
+        po_number:      parsed.po_number      || p.po_number,
+        invoice_number: parsed.invoice_number || p.invoice_number,
+        discrepancy_pdf_url: file_url,
+        items: parsed.items || p.items,
+      }));
+      toast({ title: 'Debit Note extracted', description: `Note# ${parsed.dn_number} — ₹${parsed.dn_amount?.toLocaleString('en-IN')}` });
+    } catch (err) {
+      toast({ title: 'Extraction failed', description: err.message, variant: 'destructive' });
+    } finally {
+      setUploadingDN(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!form.platform || !form.grn_number || !form.invoice_number) {
@@ -315,8 +391,19 @@ export default function GRNEntryModal({ open, onClose, onSaved, invoices = [] })
           </div>
 
           {/* Discrepancy Note section */}
-          <div className="border border-amber-200 bg-amber-50 rounded-lg p-3">
-            <p className="text-xs font-semibold text-amber-700 mb-2">Discrepancy / Debit Note (if any)</p>
+          <div className="border border-amber-200 bg-amber-50 rounded-lg p-3 space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold text-amber-700">Discrepancy / Debit Note (if any)</p>
+              <label className="cursor-pointer">
+                {uploadingDN
+                  ? <span className="flex items-center gap-1 text-xs text-amber-600"><Loader2 className="w-3 h-3 animate-spin" />Parsing...</span>
+                  : <span className="flex items-center gap-1 text-xs bg-amber-100 border border-amber-300 text-amber-800 px-2 py-1 rounded hover:bg-amber-200 transition-colors">
+                      <Upload className="w-3 h-3" />Upload Debit Note PDF
+                    </span>
+                }
+                <input type="file" accept=".pdf" className="hidden" onChange={handleDebitNotePDF} />
+              </label>
+            </div>
             <div className="grid grid-cols-3 gap-3">
               <F label="Debit / Discrepancy Note Number" k="dn_number" />
               <F label="Date" k="dn_date" type="date" />
