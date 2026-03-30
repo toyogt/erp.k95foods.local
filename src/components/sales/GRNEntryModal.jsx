@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -18,35 +19,64 @@ const PLATFORMS = [
 
 const DEFAULT_ITEM = { sku_code: '', description: '', mrp: '', exp_qty: '', grn_qty: '', unit_price: '', taxable_value: '', igst_amount: '', total_amount: '', dn_qty: '', reason: '' };
 
+// ── Scootsy GRN text parser (regex, no AI) ─────────────────────────────────
+function parseScootsyGRN(text) {
+  const grab = (pattern) => {
+    const m = text.match(pattern);
+    return m ? m[1].trim() : '';
+  };
+  return {
+    po_number:       grab(/PO\s*No\s*[:\-]+\s*([^\n\r]+)/i),
+    grn_number:      grab(/GRN\s*No\s*[:\-]+\s*([^\n\r]+)/i),
+    grn_date:        grab(/GRN\s*Date\s*[:\-]+\s*([^\n\r]+)/i),
+    inbound_number:  grab(/Inbound\s*No\s*[:\-]+\s*([^\n\r]+)/i),
+    invoice_number:  grab(/Invoice\s*No\s*[:\-]+\s*([^\n\r]+)/i),
+    customer_name:   'SCOOTSY LOGISTICS PRIVATE LIMITED',
+  };
+}
+
 export default function GRNEntryModal({ open, onClose, onSaved, invoices = [] }) {
-  const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [extracting, setExtracting] = useState(false);
+  const { toast } = useToast();
+
+  // Fetch all SalesOrders so we can do PO → SO → Invoice lookup
+  const { data: allSalesOrders = [] } = useQuery({
+    queryKey: ['grn-entry-sales-orders'],
+    queryFn: () => base44.entities.SalesOrder.list('-created_date', 500),
+    staleTime: 60000,
+  });
 
   const [form, setForm] = useState({
-    platform: '', grn_number: '', grn_date: '', po_number: '', asn_number: '',
-    inbound_number: '', invoice_id: '', invoice_number: '', customer_name: '',
-    warehouse_location: '', grn_total_qty: '', grn_total_amount: '',
+    platform: 'swiggy', grn_number: '', grn_date: '', po_number: '', asn_number: '',
+    inbound_number: '', invoice_id: '', invoice_number: '', customer_name: 'SCOOTSY LOGISTICS PRIVATE LIMITED',
+    warehouse_location: '', grn_total_qty: '', grn_total_amount: '', invoice_total_amount: '',
     dn_number: '', dn_date: '', dn_amount: '', email_subject: '', notes: '',
     items: [{ ...DEFAULT_ITEM }],
   });
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
-  const handleInvoiceSelect = async (invoiceId) => {
+  // PO Number → SalesOrder → SalesInvoice lookup
+  const lookupInvoiceByPO = async (poNumber) => {
+    if (!poNumber) return null;
+    const so = allSalesOrders.find(s => s.po_number?.trim().toUpperCase() === poNumber.trim().toUpperCase());
+    if (!so) return null;
+    const linked = await base44.entities.SalesInvoice.filter({ sales_order_id: so.id });
+    return linked?.[0] || null;
+  };
+
+  const handleInvoiceSelect = (invoiceId) => {
     const inv = invoices.find(i => i.id === invoiceId);
     if (!inv) return;
-    setForm(p => ({ ...p, invoice_id: invoiceId, invoice_number: inv.invoice_number, customer_name: p.customer_name || inv.customer_name }));
-    // Auto-populate PO number from the linked Sales Order
-    if (inv.sales_order_id) {
-      try {
-        const sos = await base44.entities.SalesOrder.filter({ id: inv.sales_order_id });
-        if (sos?.[0]?.po_number) {
-          setForm(p => ({ ...p, po_number: p.po_number || sos[0].po_number }));
-        }
-      } catch {}
-    }
+    setForm(p => ({
+      ...p,
+      invoice_id: invoiceId,
+      invoice_number: inv.invoice_number,
+      invoice_total_amount: inv.total_amount || p.invoice_total_amount,
+      customer_name: p.customer_name || inv.customer_name,
+    }));
   };
 
   const handlePDFUpload = async (e) => {
@@ -58,80 +88,43 @@ export default function GRNEntryModal({ open, onClose, onSaved, invoices = [] })
       setExtracting(true);
       setUploading(false);
 
-      const extracted = await base44.integrations.Core.InvokeLLM({
-        prompt: `Extract GRN (Goods Receipt Note) data from this PDF. This is from a customer (Swiggy/Scootsy or Zepto) to a vendor (K95 Foods). Extract all fields carefully.`,
+      // Step 1: Extract raw text from PDF (no interpretation)
+      const rawText = await base44.integrations.Core.InvokeLLM({
+        prompt: `Return ONLY the raw text content of this document exactly as it appears. Do not interpret, summarise or change anything. Just return the plain text.`,
         file_urls: [file_url],
-        response_json_schema: {
-          type: 'object',
-          properties: {
-            grn_number: { type: 'string' },
-            grn_date: { type: 'string' },
-            po_number: { type: 'string' },
-            asn_number: { type: 'string' },
-            inbound_number: { type: 'string' },
-            invoice_number: { type: 'string' },
-            customer_name: { type: 'string' },
-            warehouse_location: { type: 'string' },
-            grn_total_qty: { type: 'number' },
-            grn_total_amount: { type: 'number' },
-            dn_number: { type: 'string' },
-            dn_amount: { type: 'number' },
-            items: {
-              type: 'array',
-              items: {
-                type: 'object',
-                properties: {
-                  sku_code: { type: 'string' },
-                  description: { type: 'string' },
-                  mrp: { type: 'number' },
-                  exp_qty: { type: 'number' },
-                  grn_qty: { type: 'number' },
-                  unit_price: { type: 'number' },
-                  taxable_value: { type: 'number' },
-                  igst_amount: { type: 'number' },
-                  total_amount: { type: 'number' },
-                  dn_qty: { type: 'number' },
-                  reason: { type: 'string' },
-                }
-              }
-            }
-          }
-        }
       });
 
-      // Try to auto-match invoice and pull PO number from SO
-      let autoPO = extracted.po_number || '';
-      const extractedInvNumber = extracted.invoice_number;
-      if (extractedInvNumber && !autoPO) {
-        try {
-          const matchedInv = invoices.find(i => i.invoice_number === extractedInvNumber);
-          if (matchedInv?.sales_order_id) {
-            const sos = await base44.entities.SalesOrder.filter({ id: matchedInv.sales_order_id });
-            if (sos?.[0]?.po_number) autoPO = sos[0].po_number;
-          }
-        } catch {}
+      // Step 2: Parse using regex against known Scootsy GRN format
+      const parsed = parseScootsyGRN(typeof rawText === 'string' ? rawText : JSON.stringify(rawText));
+
+      // Step 3: Look up invoice via PO Number → Sales Order → Sales Invoice
+      let linkedInvoice = null;
+      if (parsed.po_number) {
+        linkedInvoice = await lookupInvoiceByPO(parsed.po_number);
+      }
+      // Fallback: match by invoice_number directly
+      if (!linkedInvoice && parsed.invoice_number) {
+        linkedInvoice = invoices.find(i => i.invoice_number?.trim() === parsed.invoice_number?.trim()) || null;
       }
 
       setForm(p => ({
         ...p,
-        grn_number: extracted.grn_number || p.grn_number,
-        grn_date: extracted.grn_date || p.grn_date,
-        po_number: autoPO || p.po_number,
-        asn_number: extracted.asn_number || p.asn_number,
-        inbound_number: extracted.inbound_number || p.inbound_number,
-        invoice_number: extractedInvNumber || p.invoice_number,
-        invoice_id: invoices.find(i => i.invoice_number === extractedInvNumber)?.id || p.invoice_id,
-        customer_name: extracted.customer_name || p.customer_name,
-        warehouse_location: extracted.warehouse_location || p.warehouse_location,
-        grn_total_qty: extracted.grn_total_qty || p.grn_total_qty,
-        grn_total_amount: extracted.grn_total_amount || p.grn_total_amount,
-        dn_number: extracted.dn_number || p.dn_number,
-        dn_amount: extracted.dn_amount || p.dn_amount,
+        grn_number:          parsed.grn_number      || p.grn_number,
+        grn_date:            parsed.grn_date        || p.grn_date,
+        po_number:           parsed.po_number       || p.po_number,
+        inbound_number:      parsed.inbound_number  || p.inbound_number,
+        invoice_number:      parsed.invoice_number  || (linkedInvoice?.invoice_number) || p.invoice_number,
+        customer_name:       parsed.customer_name   || p.customer_name,
+        invoice_id:          linkedInvoice?.id      || p.invoice_id,
+        invoice_total_amount: linkedInvoice?.total_amount || p.invoice_total_amount,
         grn_pdf_url: file_url,
-        items: extracted.items?.length ? extracted.items : p.items,
       }));
 
-      toast({ title: 'Data extracted from PDF', description: 'Please review and confirm the details.' });
+      const matchMsg = linkedInvoice
+        ? `Matched to Invoice ${linkedInvoice.invoice_number} (₹${(linkedInvoice.total_amount || 0).toLocaleString('en-IN')})`
+        : parsed.po_number ? `PO ${parsed.po_number} — no matching Sales Order found. Please link invoice manually.` : 'Could not match invoice. Please link manually.';
+
+      toast({ title: 'GRN data extracted', description: matchMsg });
     } catch (err) {
       toast({ title: 'Extraction failed', description: err.message, variant: 'destructive' });
     } finally {
@@ -246,6 +239,11 @@ export default function GRNEntryModal({ open, onClose, onSaved, invoices = [] })
               </Select>
               {!form.invoice_id && (
                 <Input className="h-9 text-sm mt-1" placeholder="Or type invoice number manually" value={form.invoice_number} onChange={e => set('invoice_number', e.target.value)} />
+              )}
+              {form.invoice_total_amount > 0 && (
+                <p className="text-xs text-green-700 font-medium mt-1">
+                  ✓ Our Invoice Amount: ₹{Number(form.invoice_total_amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                </p>
               )}
             </div>
           </div>
