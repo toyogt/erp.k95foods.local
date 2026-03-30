@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Search, RefreshCw, AlertTriangle, CheckCircle, Clock, FileText } from 'lucide-react';
+import { Plus, Search, RefreshCw, AlertTriangle, CheckCircle, Clock, FileText, ShieldAlert } from 'lucide-react';
 import GRNEntryModal from '@/components/sales/GRNEntryModal';
+import ManagementReviewTab from '@/components/sales/ManagementReviewTab';
 import DebitNoteEntryModal from '@/components/sales/DebitNoteEntryModal';
 import GRNReconciliationPanel from '@/components/sales/GRNReconciliationPanel';
 
@@ -92,6 +93,14 @@ export default function SalesGRNReconciliation() {
     creditIssued: grns.filter(g => g.status === 'credit_note_issued').length,
   };
 
+  // Count items needing management review (GRN discrepancy >1%)
+  const mgmtReviewCount = grns.filter(g => {
+    const inv = invoices.find(i => i.invoice_number === g.invoice_number || i.id === g.invoice_id);
+    const invAmt = inv?.total_amount || g.invoice_total_amount || 0;
+    const grnAmt = g.grn_total_amount || 0;
+    return invAmt > 0 && Math.abs((invAmt - grnAmt) / invAmt) * 100 > 1;
+  }).length + debitNotes.filter(d => ['under_review', 'disputed'].includes(d.status)).length;
+
   return (
     <div className="space-y-4 p-3 md:p-4 lg:p-6">
       {/* Header */}
@@ -156,6 +165,13 @@ export default function SalesGRNReconciliation() {
         <TabsList>
           <TabsTrigger value="grns">Customer GRNs ({grns.length})</TabsTrigger>
           <TabsTrigger value="debitnotes">Debit Notes ({debitNotes.length})</TabsTrigger>
+          <TabsTrigger value="mgmt_review" className="relative">
+            <ShieldAlert className="w-3.5 h-3.5 mr-1" />
+            Management Review
+            {mgmtReviewCount > 0 && (
+              <span className="ml-1.5 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 font-bold">{mgmtReviewCount}</span>
+            )}
+          </TabsTrigger>
         </TabsList>
 
         {/* GRNs Tab */}
@@ -181,8 +197,14 @@ export default function SalesGRNReconciliation() {
                 {!grnsLoading && filterGRNs(grns).length === 0 && (
                   <tr><td colSpan={8} className="text-center py-8 text-slate-400">No GRNs recorded yet. Click "Record GRN" to add one.</td></tr>
                 )}
-                {filterGRNs(grns).map(grn => (
-                  <tr key={grn.id} className="hover:bg-slate-50 cursor-pointer" onClick={() => setSelectedGRN(grn)}>
+                {filterGRNs(grns).map(grn => {
+                  const inv = invoices.find(i => i.invoice_number === grn.invoice_number || i.id === grn.invoice_id);
+                  const invAmt = inv?.total_amount || grn.invoice_total_amount || 0;
+                  const grnAmt = grn.grn_total_amount || 0;
+                  const discPct = invAmt > 0 ? Math.abs((invAmt - grnAmt) / invAmt) * 100 : 0;
+                  const flagged = discPct > 1;
+                  return (
+                  <tr key={grn.id} className={`cursor-pointer ${flagged ? 'bg-red-50 hover:bg-red-100' : 'hover:bg-slate-50'}`} onClick={() => setSelectedGRN(grn)}>
                     <td className="px-4 py-3 font-medium text-slate-900">{grn.grn_number}</td>
                     <td className="px-3 py-3">
                       <span className={`text-xs font-medium px-2 py-1 rounded-full ${PLATFORM_COLORS[grn.platform] || ''}`}>{grn.platform?.toUpperCase()}</span>
@@ -199,11 +221,24 @@ export default function SalesGRNReconciliation() {
                       <span className={`text-xs font-medium px-2 py-1 rounded-full ${GRN_STATUS_COLORS[grn.status] || ''}`}>{GRN_STATUS_LABELS[grn.status] || grn.status}</span>
                     </td>
                     <td className="px-3 py-3 text-slate-500 text-xs">{grn.grn_date}</td>
-                  </tr>
-                ))}
+                    {flagged && (
+                      <td className="px-2 py-3">
+                        <span className="flex items-center gap-1 text-xs text-red-700 font-semibold whitespace-nowrap">
+                          <AlertTriangle className="w-3 h-3" /> {discPct.toFixed(1)}%
+                        </span>
+                      </td>
+                    )}
+                    </tr>
+                    );
+                    })}
               </tbody>
             </table>
           </div>
+        </TabsContent>
+
+        {/* Management Review Tab */}
+        <TabsContent value="mgmt_review" className="mt-3">
+          <ManagementReviewTab grns={grns} debitNotes={debitNotes} invoices={invoices} />
         </TabsContent>
 
         {/* Debit Notes Tab */}
