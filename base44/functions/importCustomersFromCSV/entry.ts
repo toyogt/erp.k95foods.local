@@ -127,7 +127,9 @@ Deno.serve(async (req) => {
 
     // Fetch existing customers to skip duplicates
     const existing = await base44.asServiceRole.entities.Customer.list();
-    const existingNames = new Set(existing.map(c => c.name?.toLowerCase()));
+    const existingNames = new Set(existing.map(c => (c.name || '').toLowerCase()));
+    const existingGSTINs = new Set(existing.filter(c => c.gstin).map(c => c.gstin.toLowerCase()));
+    const existingMobiles = new Set(existing.filter(c => c.mobile_no).map(c => c.mobile_no.replace(/\s+/g, '')));
 
     const toCreate = [];
     const skipped = [];
@@ -135,14 +137,22 @@ Deno.serve(async (req) => {
     for (const row of rows) {
       const mapped = mapRow(row);
       if (!mapped.name) continue;
-      if (existingNames.has(mapped.name.toLowerCase())) {
-        skipped.push(mapped.name);
+
+      const dupByName = existingNames.has(mapped.name.toLowerCase());
+      const dupByGSTIN = mapped.gstin && existingGSTINs.has(mapped.gstin.toLowerCase());
+      const dupByMobile = mapped.mobile_no && existingMobiles.has(mapped.mobile_no.replace(/\s+/g, ''));
+
+      if (dupByName || dupByGSTIN || dupByMobile) {
+        const reason = dupByName ? 'name' : dupByGSTIN ? 'GSTIN' : 'mobile';
+        skipped.push({ name: mapped.name, reason });
         continue;
       }
-      // Clean empty string fields to avoid schema issues
-      Object.keys(mapped).forEach(k => {
-        if (mapped[k] === '') delete mapped[k];
-      });
+
+      // Register in sets so intra-CSV duplicates are also caught
+      existingNames.add(mapped.name.toLowerCase());
+      if (mapped.gstin) existingGSTINs.add(mapped.gstin.toLowerCase());
+      if (mapped.mobile_no) existingMobiles.add(mapped.mobile_no.replace(/\s+/g, ''));
+
       toCreate.push(mapped);
     }
 
@@ -166,6 +176,7 @@ Deno.serve(async (req) => {
       total_in_csv: rows.length,
       created,
       skipped: skipped.length,
+      skipped_details: skipped.slice(0, 20),
       errors: errors.length,
       error_details: errors.slice(0, 10),
     });
