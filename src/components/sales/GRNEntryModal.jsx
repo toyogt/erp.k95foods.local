@@ -20,18 +20,74 @@ const PLATFORMS = [
 const DEFAULT_ITEM = { sku_code: '', description: '', mrp: '', exp_qty: '', grn_qty: '', unit_price: '', taxable_value: '', igst_amount: '', total_amount: '', dn_qty: '', reason: '' };
 
 // ── Scootsy GRN text parser (regex, no AI) ─────────────────────────────────
+// Matches the known Scootsy / CPD GRN PDF format exactly.
+// Fields appear inline: "PO No :- CPDPO254308 PO Date :- 17-3-2026"
+// So we capture \S+ (stops at first space) not [^\n\r]+
+function parseDDMMYYYY(str) {
+  // Convert "27-3-2026" → "2026-03-27" for date inputs
+  if (!str) return '';
+  const m = str.match(/(\d{1,2})-(\d{1,2})-(\d{4})/);
+  if (!m) return str;
+  return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+}
+
 function parseScootsyGRN(text) {
-  const grab = (pattern) => {
-    const m = text.match(pattern);
-    return m ? m[1].trim() : '';
-  };
+  const grab = (pattern) => { const m = text.match(pattern); return m ? m[1].trim() : ''; };
+  const grabNum = (pattern) => { const m = text.match(pattern); return m ? parseFloat(m[1].replace(/,/g, '')) : 0; };
+
+  // Header fields — use \S+ to stop at next whitespace (fields are inline on same line)
+  const po_number      = grab(/PO\s+No\s*:-\s*(\S+)/i);
+  const grn_number     = grab(/GRN\s+No\s*:-\s*(\S+)/i);
+  const grn_date_raw   = grab(/GRN\s+Date\s*:-\s*(\S+)/i);
+  const inbound_number = grab(/Inbound\s+No\s*:-\s*(\S+)/i);
+  const invoice_number = grab(/Invoice\s+No\s*:-\s*(\S+)/i);
+
+  // Totals row: "Total: 216 216 15318.07 0.00 0.00 6127.23 0.00 0.00 21445.30"
+  // Last number on that line is the grand total
+  let grn_total_qty = 0;
+  let grn_total_amount = 0;
+  const totalsMatch = text.match(/Total:\s+([\d.]+)\s+[\d.]+\s+[\d.]+.*?([\d.]+)\s*$/);
+  if (totalsMatch) {
+    grn_total_qty = parseFloat(totalsMatch[1]) || 0;
+    grn_total_amount = parseFloat(totalsMatch[2]) || 0;
+  }
+  // Fallback: find the last number on the "Total:" line
+  if (!grn_total_amount) {
+    const totalLine = text.match(/Total:.*/);
+    if (totalLine) {
+      const nums = totalLine[0].match(/[\d]+\.[\d]+/g);
+      if (nums?.length) grn_total_amount = parseFloat(nums[nums.length - 1]);
+      if (nums?.length >= 2) grn_total_qty = parseFloat(nums[0]);
+    }
+  }
+
+  // Parse line items — each row starts with a number (Sr. No) followed by SKU code
+  const items = [];
+  // Pattern: line starting with digit, then SKU code (6 digits), then description, then numbers
+  const itemRegex = /^(\d+)\s+(\d{5,6})\s+(.*?)\s+(\d{5,6})\s+\S+\s+\S+\s+[\d.]+\s+([\d]+)\s+([\d]+)\s+([\d.]+)\s+([\d.]+).*?([\d.]+)\s*$/gm;
+  let m;
+  while ((m = itemRegex.exec(text)) !== null) {
+    items.push({
+      sku_code: m[2],
+      description: m[3].trim(),
+      exp_qty: parseFloat(m[5]) || 0,
+      grn_qty: parseFloat(m[6]) || 0,
+      unit_price: parseFloat(m[7]) || 0,
+      taxable_value: parseFloat(m[8]) || 0,
+      total_amount: parseFloat(m[9]) || 0,
+    });
+  }
+
   return {
-    po_number:       grab(/PO\s*No\s*[:\-]+\s*([^\n\r]+)/i),
-    grn_number:      grab(/GRN\s*No\s*[:\-]+\s*([^\n\r]+)/i),
-    grn_date:        grab(/GRN\s*Date\s*[:\-]+\s*([^\n\r]+)/i),
-    inbound_number:  grab(/Inbound\s*No\s*[:\-]+\s*([^\n\r]+)/i),
-    invoice_number:  grab(/Invoice\s*No\s*[:\-]+\s*([^\n\r]+)/i),
-    customer_name:   'SCOOTSY LOGISTICS PRIVATE LIMITED',
+    po_number,
+    grn_number,
+    grn_date: parseDDMMYYYY(grn_date_raw),
+    inbound_number,
+    invoice_number,
+    grn_total_qty,
+    grn_total_amount,
+    customer_name: 'SCOOTSY LOGISTICS PRIVATE LIMITED',
+    items: items.length > 0 ? items : null,
   };
 }
 
@@ -109,14 +165,17 @@ export default function GRNEntryModal({ open, onClose, onSaved, invoices = [] })
 
       setForm(p => ({
         ...p,
-        grn_number:          parsed.grn_number      || p.grn_number,
-        grn_date:            parsed.grn_date        || p.grn_date,
-        po_number:           parsed.po_number       || p.po_number,
-        inbound_number:      parsed.inbound_number  || p.inbound_number,
-        invoice_number:      parsed.invoice_number  || (linkedInvoice?.invoice_number) || p.invoice_number,
-        customer_name:       parsed.customer_name   || p.customer_name,
-        invoice_id:          linkedInvoice?.id      || p.invoice_id,
+        grn_number:           parsed.grn_number           || p.grn_number,
+        grn_date:             parsed.grn_date             || p.grn_date,
+        po_number:            parsed.po_number            || p.po_number,
+        inbound_number:       parsed.inbound_number       || p.inbound_number,
+        invoice_number:       parsed.invoice_number       || linkedInvoice?.invoice_number || p.invoice_number,
+        customer_name:        parsed.customer_name        || p.customer_name,
+        invoice_id:           linkedInvoice?.id           || p.invoice_id,
         invoice_total_amount: linkedInvoice?.total_amount || p.invoice_total_amount,
+        grn_total_qty:        parsed.grn_total_qty        || p.grn_total_qty,
+        grn_total_amount:     parsed.grn_total_amount     || p.grn_total_amount,
+        items:                parsed.items                || p.items,
         grn_pdf_url: file_url,
       }));
 
@@ -202,7 +261,7 @@ export default function GRNEntryModal({ open, onClose, onSaved, invoices = [] })
               {uploading || extracting ? (
                 <div className="flex flex-col items-center gap-2">
                   <Loader2 className="w-6 h-6 animate-spin text-slate-500" />
-                  <p className="text-sm text-slate-600">{uploading ? 'Uploading PDF...' : 'Extracting data with AI...'}</p>
+                  <p className="text-sm text-slate-600">{uploading ? 'Uploading PDF...' : 'Reading and parsing document...'}</p>
                 </div>
               ) : (
                 <>
