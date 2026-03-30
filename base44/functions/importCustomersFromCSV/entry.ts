@@ -148,20 +148,17 @@ Deno.serve(async (req) => {
 
     console.log(`Creating ${toCreate.length} new, skipping ${skipped.length} duplicates`);
 
-    // Bulk create in batches of 50
+    // Sequential with delay to stay within rate limits
     let created = 0;
     const errors = [];
-    const batchSize = 50;
-    for (let i = 0; i < toCreate.length; i += batchSize) {
-      const batch = toCreate.slice(i, i + batchSize);
-      for (const record of batch) {
-        try {
-          await base44.asServiceRole.entities.Customer.create(record);
-          created++;
-        } catch (e) {
-          errors.push({ name: record.name, error: e.message });
-        }
+    for (const record of toCreate) {
+      try {
+        await base44.asServiceRole.entities.Customer.create(record);
+        created++;
+      } catch (e) {
+        errors.push({ name: record.name, error: e.message });
       }
+      await new Promise(res => setTimeout(res, 400));
     }
 
     return Response.json({
