@@ -310,7 +310,11 @@ export default function CustomerImportModal({ onClose, onImported, existingCusto
       });
     }
 
-    await Promise.all(toCreate.map(data => base44.entities.Customer.create(data)));
+    const CHUNK = 10;
+    for (let i = 0; i < toCreate.length; i += CHUNK) {
+      await Promise.all(toCreate.slice(i, i + CHUNK).map(data => base44.entities.Customer.create(data)));
+      if (i + CHUNK < toCreate.length) await new Promise(r => setTimeout(r, 300));
+    }
     const created = toCreate.length;
 
     setResults({ created, skipped });
