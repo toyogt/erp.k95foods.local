@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { X, Zap, Loader2, ChevronDown } from 'lucide-react';
+import { X, Zap, Loader2, ChevronDown, Trash2 } from 'lucide-react';
 
 /**
  * Reusable bulk action bar.
@@ -18,7 +18,13 @@ export default function BulkActionBar({ selectedCount, onClearSelection, actions
   if (selectedCount === 0) return null;
 
   function handleApply() {
-    if (!activeAction || value === '') return;
+    if (!activeAction) return;
+    if (action?.type === 'confirm') {
+      onApply(activeAction, true);
+      setActiveAction(null);
+      return;
+    }
+    if (value === '') return;
     onApply(activeAction, value);
     setActiveAction(null);
     setValue('');
@@ -40,18 +46,28 @@ export default function BulkActionBar({ selectedCount, onClearSelection, actions
         {/* Action buttons */}
         <div className="flex flex-wrap gap-2 flex-1">
           {actions.map(a => (
-            <button
-              key={a.key}
-              onClick={() => { setActiveAction(activeAction === a.key ? null : a.key); setValue(''); }}
-              className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
-                activeAction === a.key
-                  ? 'bg-white text-slate-900'
-                  : 'bg-slate-700 hover:bg-slate-600 text-slate-200'
-              }`}
-            >
-              {a.label}
-              <ChevronDown className={`w-3 h-3 transition-transform ${activeAction === a.key ? 'rotate-180' : ''}`} />
-            </button>
+            a.type === 'confirm' ? (
+              <button
+                key={a.key}
+                onClick={() => onApply(a.key, true)}
+                className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white transition-colors"
+              >
+                <Trash2 className="w-3 h-3" />{a.label}
+              </button>
+            ) : (
+              <button
+                key={a.key}
+                onClick={() => { setActiveAction(activeAction === a.key ? null : a.key); setValue(''); }}
+                className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
+                  activeAction === a.key
+                    ? 'bg-white text-slate-900'
+                    : 'bg-slate-700 hover:bg-slate-600 text-slate-200'
+                }`}
+              >
+                {a.label}
+                <ChevronDown className={`w-3 h-3 transition-transform ${activeAction === a.key ? 'rotate-180' : ''}`} />
+              </button>
+            )
           ))}
         </div>
 

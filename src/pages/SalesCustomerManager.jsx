@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
-import { Search, Download, Plus, Edit2, Loader2, Users, Tag, Upload, FileDown } from 'lucide-react';
+import { Search, Download, Plus, Edit2, Loader2, Users, Tag, Upload, FileDown, Trash2, ChevronUp, ChevronDown, ArrowUpDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import BulkActionBar from '@/components/sales/BulkActionBar';
 import BulkCSVUploadModal from '@/components/sales/BulkCSVUploadModal';
@@ -57,6 +57,9 @@ export default function SalesCustomerManager() {
   const [applying, setApplying] = useState(false);
   const [showCSVModal, setShowCSVModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [sortCol, setSortCol] = useState('name');
+  const [sortDir, setSortDir] = useState('asc');
 
   const { data: customers = [], isLoading } = useQuery({
     queryKey: ['customers_all'],
@@ -80,6 +83,22 @@ export default function SalesCustomerManager() {
     return matchSearch && matchPL && matchStatus && matchGroup;
   });
 
+  function handleSort(col) {
+    if (sortCol === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortCol(col); setSortDir('asc'); }
+  }
+
+  const sorted = [...filtered].sort((a, b) => {
+    let av = a[sortCol] ?? '';
+    let bv = b[sortCol] ?? '';
+    if (typeof av === 'number' || typeof bv === 'number') {
+      av = Number(av) || 0; bv = Number(bv) || 0;
+      return sortDir === 'asc' ? av - bv : bv - av;
+    }
+    av = String(av).toLowerCase(); bv = String(bv).toLowerCase();
+    return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+  });
+
   const allFilteredIds = filtered.map(c => c.id);
   const allSelected = allFilteredIds.length > 0 && allFilteredIds.every(id => selected.has(id));
 
@@ -101,25 +120,20 @@ export default function SalesCustomerManager() {
 
   const BULK_ACTIONS = [
     {
-      key: 'customer_group',
-      label: 'Set Customer Group',
-      type: customerGroups.length > 0 ? 'select' : 'text',
-      options: customerGroups.map(g => ({ value: g, label: g })),
-    },
-    {
       key: 'price_list',
       label: 'Assign Price List',
       type: 'select',
       options: priceLists.map(p => ({ value: p, label: p })),
     },
     {
-      key: 'payment_terms',
-      label: 'Set Payment Terms',
-      type: 'text',
+      key: 'customer_group',
+      label: 'Set Customer Group',
+      type: customerGroups.length > 0 ? 'select' : 'text',
+      options: customerGroups.map(g => ({ value: g, label: g })),
     },
     {
       key: 'status',
-      label: 'Change Status',
+      label: 'Mark Active',
       type: 'select',
       options: [
         { value: 'active', label: 'Active' },
@@ -128,19 +142,48 @@ export default function SalesCustomerManager() {
       ],
     },
     {
+      key: 'payment_terms',
+      label: 'Set Payment Terms',
+      type: 'text',
+    },
+    {
       key: 'region',
       label: 'Set Region',
       type: 'text',
     },
+    {
+      key: '__delete__',
+      label: 'Delete Selected',
+      type: 'confirm',
+      danger: true,
+    },
   ];
 
   async function handleBulkApply(key, value) {
+    if (key === '__delete__') {
+      if (!window.confirm(`Delete ${selected.size} selected customers? This cannot be undone.`)) return;
+      setDeleting(true);
+      const ids = [...selected];
+      await Promise.all(ids.map(id => base44.entities.Customer.delete(id)));
+      toast({ title: `${ids.length} customers deleted` });
+      setSelected(new Set());
+      setDeleting(false);
+      qc.invalidateQueries(['customers_all']);
+      return;
+    }
     setApplying(true);
     const ids = [...selected];
     await Promise.all(ids.map(id => base44.entities.Customer.update(id, { [key]: value })));
     toast({ title: 'Bulk update applied', description: `${ids.length} customers updated (${key} → ${value})` });
     setSelected(new Set());
     setApplying(false);
+    qc.invalidateQueries(['customers_all']);
+  }
+
+  async function handleDeleteSingle(c) {
+    if (!window.confirm(`Delete customer "${c.name}"? This cannot be undone.`)) return;
+    await base44.entities.Customer.delete(c.id);
+    toast({ title: 'Customer deleted' });
     qc.invalidateQueries(['customers_all']);
   }
 
@@ -272,20 +315,16 @@ export default function SalesCustomerManager() {
                   <th className="px-3 py-2.5 w-10">
                     <input type="checkbox" checked={allSelected} onChange={toggleAll} className="rounded" />
                   </th>
-                  <th className="px-3 py-2.5 text-left">Customer Name</th>
-                  <th className="px-3 py-2.5 text-left">Code</th>
-                  <th className="px-3 py-2.5 text-left">GSTIN</th>
-                  <th className="px-3 py-2.5 text-left">Group</th>
-                  <th className="px-3 py-2.5 text-left">Price List</th>
-                  <th className="px-3 py-2.5 text-left">Payment Terms</th>
-                  <th className="px-3 py-2.5 text-right">Credit Limit</th>
-                  <th className="px-3 py-2.5 text-right">Outstanding</th>
-                  <th className="px-3 py-2.5 text-center">Status</th>
+                  {[['name','Customer Name','text-left'],['code','Code','text-left'],['gstin','GSTIN','text-left'],['customer_group','Group','text-left'],['price_list','Price List','text-left'],['payment_terms','Payment Terms','text-left'],['outstanding_limit','Credit Limit','text-right'],['current_outstanding','Outstanding','text-right'],['status','Status','text-center']].map(([col, label, align]) => (
+                    <th key={col} className={`px-3 py-2.5 ${align} cursor-pointer select-none hover:bg-slate-100`} onClick={() => handleSort(col)}>
+                      <span className="inline-flex items-center gap-1">{label}{sortCol === col ? (sortDir === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />) : <ArrowUpDown className="w-3 h-3 text-slate-300" />}</span>
+                    </th>
+                  ))}
                   <th className="px-3 py-2.5" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filtered.map(c => (
+                {sorted.map(c => (
                   <tr key={c.id} className={`hover:bg-slate-50 ${selected.has(c.id) ? 'bg-blue-50' : ''}`}>
                     <td className="px-3 py-2">
                       <input type="checkbox" checked={selected.has(c.id)} onChange={() => toggleRow(c.id)} className="rounded" />
@@ -312,7 +351,10 @@ export default function SalesCustomerManager() {
                       </span>
                     </td>
                     <td className="px-3 py-2">
-                      <button onClick={() => openEdit(c)} className="text-slate-400 hover:text-slate-900"><Edit2 className="w-4 h-4" /></button>
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => openEdit(c)} className="text-slate-400 hover:text-slate-900 p-1"><Edit2 className="w-3.5 h-3.5" /></button>
+                        <button onClick={() => handleDeleteSingle(c)} className="text-slate-300 hover:text-red-600 p-1"><Trash2 className="w-3.5 h-3.5" /></button>
+                      </div>
                     </td>
                   </tr>
                 ))}

@@ -79,26 +79,114 @@ function downloadTemplate() {
   a.click();
 }
 
+// Maps CSV column headers (from the actual export) to entity field keys
+const CSV_COLUMN_MAP = {
+  'customer name': 'name',
+  'id': 'name', // frappe uses ID = customer name
+  'customer type': 'customer_type',
+  'customer group': 'customer_group',
+  'gst category': 'gst_category',
+  'series': 'series',
+  'salutation': 'salutation',
+  'outlet id': 'outlet_id',
+  'territory': 'territory',
+  'gender': 'gender',
+  'from lead': 'from_lead',
+  'from opportunity': 'from_opportunity',
+  'from prospect': 'from_prospect',
+  'account manager': 'account_manager',
+  'image': 'image',
+  'billing currency': 'billing_currency',
+  'default company bank account': 'default_bank_account',
+  'check outstanding': 'check_outstanding',
+  'default price list': 'price_list',
+  'outstanding limit': 'outstanding_limit',
+  'current outstanding': 'current_outstanding',
+  'leverage outstanding': 'leverage_outstanding',
+  'is internal customer': 'is_internal_customer',
+  'represents company': 'represents_company',
+  'market segment': 'market_segment',
+  'industry': 'industry',
+  'customer pos id': 'customer_pos_id',
+  'website': 'website',
+  'print language': 'print_language',
+  'customer details': 'customer_details',
+  'customer primary address': 'customer_primary_address',
+  'primary address': 'primary_address',
+  'customer primary contact': 'customer_primary_contact',
+  'mobile no': 'mobile_no',
+  'email id': 'email',
+  'first name': 'first_name',
+  'last name': 'last_name',
+  'gstin / uin': 'gstin',
+  'pan': 'pan',
+  'tax id': 'tax_id',
+  'gstin': 'gstin',
+  'tax category': 'tax_category',
+  'tax withholding category': 'tax_withholding_category',
+  'default payment terms template': 'payment_terms',
+  'loyalty program': 'loyalty_program',
+  'loyalty program tier': 'loyalty_program_tier',
+  'sales partner': 'sales_partner',
+  'commission rate': 'commission_rate',
+  'allow sales invoice creation without sales order': 'allow_invoice_without_so',
+  'allow sales invoice creation without delivery note': 'allow_invoice_without_dn',
+  'is frozen': 'is_frozen',
+  'disabled': 'disabled',
+  'tally synced': 'tally_synced',
+  'tally sync date': 'tally_sync_date',
+  'tally sync status': 'tally_sync_status',
+  'tally parent group': 'tally_parent_group',
+  'status': 'status',
+  'region': 'region',
+  'billing address': 'billing_address',
+  'shipping address': 'shipping_address',
+  'place of supply (state code)': 'place_of_supply',
+  'bypass credit limit check at sales order (credit limit)': 'bypass_credit_limit_check',
+};
+
+function splitCSVLine(line) {
+  const result = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQuotes && line[i + 1] === '"') { current += '"'; i++; }
+      else { inQuotes = !inQuotes; }
+    } else if (ch === ',' && !inQuotes) {
+      result.push(current.trim());
+      current = '';
+    } else {
+      current += ch;
+    }
+  }
+  result.push(current.trim());
+  return result;
+}
+
 function parseCSV(text) {
-  const lines = text.trim().split('\n').filter(Boolean);
+  // Normalize line endings
+  const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim().split('\n').filter(Boolean);
   if (lines.length < 2) return { rows: [], errors: ['File must have a header row and at least one data row'] };
 
-  const rawHeaders = lines[0].split(',').map(h => h.replace(/^"|"$/g, '').trim().toLowerCase());
-  const colMap = {};
-  for (const col of IMPORT_COLUMNS) {
-    const idx = rawHeaders.indexOf(col.label.toLowerCase());
-    if (idx !== -1) colMap[col.key] = idx;
-  }
+  const rawHeaders = splitCSVLine(lines[0]).map(h => h.toLowerCase().replace(/^\uFEFF/, ''));
+
+  // Build column index map using our flexible header mapping
+  const colIdx = {};
+  rawHeaders.forEach((h, i) => {
+    const mapped = CSV_COLUMN_MAP[h];
+    if (mapped && !(mapped in colIdx)) colIdx[mapped] = i; // first match wins
+  });
 
   const rows = [];
   const errors = [];
 
   for (let i = 1; i < lines.length; i++) {
-    const vals = lines[i].match(/(".*?"|[^,]+|(?<=,)(?=,)|(?<=,)$|^(?=,))/g) || [];
-    const clean = vals.map(v => v.replace(/^"|"$/g, '').trim());
+    const vals = splitCSVLine(lines[i]);
     const row = {};
-    for (const [key, idx] of Object.entries(colMap)) {
-      row[key] = clean[idx] || '';
+    for (const [field, idx] of Object.entries(colIdx)) {
+      row[field] = (vals[idx] || '').trim();
     }
     if (!row.name) { errors.push(`Row ${i + 1}: Customer Name is required`); continue; }
     rows.push({ ...row, _line: i + 1 });
