@@ -3,13 +3,13 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
-import { Search, Download, Plus, Edit2, X, Check, Loader2, Users, Tag, Upload, FileDown } from 'lucide-react';
+import { Search, Download, Plus, Edit2, Loader2, Users, Tag, Upload, FileDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import BulkActionBar from '@/components/sales/BulkActionBar';
 import BulkCSVUploadModal from '@/components/sales/BulkCSVUploadModal';
 import CustomerImportModal from '@/components/sales/CustomerImportModal';
+import CustomerFormDrawer, { BLANK_CUSTOMER } from '@/components/sales/CustomerFormDrawer';
 
 function exportCSV(rows) {
   const headers = ['Name', 'Code', 'GSTIN', 'PAN', 'Phone', 'Email', 'Customer Group', 'Price List', 'GST Category', 'Place of Supply', 'Payment Terms', 'Status', 'Credit Limit', 'Current Outstanding'];
@@ -25,12 +25,7 @@ function exportCSV(rows) {
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'customers.csv'; a.click();
 }
 
-const BLANK_FORM = {
-  name: '', code: '', contact_name: '', phone: '', email: '', gstin: '', pan: '',
-  billing_address: '', shipping_address: '', region: '', gst_category: 'Registered Regular',
-  place_of_supply: '', payment_terms: '', price_list: '', customer_group: '', status: 'active', notes: '',
-  check_outstanding: false, outstanding_limit: 0, leverage_outstanding: 0, current_outstanding: 0,
-};
+
 
 const CSV_TEMPLATE_COLUMNS = [
   { key: 'name', label: 'Name', example: 'Swiggy Pvt Ltd' },
@@ -55,7 +50,7 @@ export default function SalesCustomerManager() {
   const [filterGroup, setFilterGroup] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState(BLANK_FORM);
+  const [form, setForm] = useState(BLANK_CUSTOMER);
   const [saving, setSaving] = useState(false);
   const [selected, setSelected] = useState(new Set());
   const [applying, setApplying] = useState(false);
@@ -175,44 +170,24 @@ export default function SalesCustomerManager() {
     return count;
   }
 
-  function openNew() { setEditing(null); setForm(BLANK_FORM); setShowForm(true); }
-  function openEdit(c) { setEditing(c); setForm({ ...BLANK_FORM, ...c }); setShowForm(true); }
+  function openNew() { setEditing(null); setForm(BLANK_CUSTOMER); setShowForm(true); }
+  function openEdit(c) { setEditing(c); setForm({ ...BLANK_CUSTOMER, ...c }); setShowForm(true); }
 
-  function generateCode(existingCustomers, prefix = 'CUST') {
-    const existing = existingCustomers
-      .map(c => c.code)
-      .filter(c => c?.startsWith(prefix + '-'))
-      .map(c => parseInt(c.replace(prefix + '-', ''), 10))
-      .filter(n => !isNaN(n));
-    const next = existing.length > 0 ? Math.max(...existing) + 1 : 1;
+  function generateCode(existingCodes, prefix = 'CUST') {
+    const nums = existingCodes.filter(c => c?.startsWith(prefix + '-')).map(c => parseInt(c.replace(prefix + '-', ''), 10)).filter(n => !isNaN(n));
+    const next = nums.length > 0 ? Math.max(...nums) + 1 : 1;
     return `${prefix}-${String(next).padStart(3, '0')}`;
-  }
-
-  async function handleSave() {
-    if (!form.name) { toast({ title: 'Customer name is required', variant: 'destructive' }); return; }
-    setSaving(true);
-    const autoCode = !editing && !form.code ? generateCode(customers) : form.code;
-    const data = { ...form, code: autoCode, outstanding_limit: parseFloat(form.outstanding_limit) || 0, leverage_outstanding: parseFloat(form.leverage_outstanding) || 0, current_outstanding: parseFloat(form.current_outstanding) || 0 };
-    if (editing) {
-      await base44.entities.Customer.update(editing.id, data);
-      toast({ title: 'Customer updated' });
-    } else {
-      await base44.entities.Customer.create(data);
-      toast({ title: `Customer created with code ${autoCode}` });
-    }
-    setSaving(false); setShowForm(false);
-    qc.invalidateQueries(['customers_all']);
   }
 
   async function assignMissingCodes() {
     const missing = customers.filter(c => !c.code);
     if (missing.length === 0) { toast({ title: 'All customers already have codes' }); return; }
     setSaving(true);
-    let allCustomers = [...customers];
+    let allCodes = customers.map(c => c.code).filter(Boolean);
     for (const c of missing) {
-      const code = generateCode(allCustomers);
+      const code = generateCode(allCodes);
       await base44.entities.Customer.update(c.id, { code });
-      allCustomers = [...allCustomers.filter(x => x.id !== c.id), { ...c, code }];
+      allCodes.push(code);
     }
     toast({ title: `Codes assigned to ${missing.length} customers` });
     setSaving(false);
@@ -377,77 +352,14 @@ export default function SalesCustomerManager() {
 
       {/* Form Drawer */}
       {showForm && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-end">
-          <div className="bg-white h-full w-full max-w-md overflow-y-auto shadow-xl">
-            <div className="flex items-center justify-between p-5 border-b border-slate-100 sticky top-0 bg-white z-10">
-              <h2 className="text-base font-semibold text-slate-900">{editing ? 'Edit Customer' : 'Add Customer'}</h2>
-              <button onClick={() => setShowForm(false)}><X className="w-5 h-5 text-slate-400" /></button>
-            </div>
-            <div className="p-5 space-y-3">
-              {[
-                ['name', 'Customer Name *', 'text'],
-                ['code', 'Customer Code (leave blank to auto-assign)', 'text'],
-                ['customer_group', 'Customer Group', 'text'],
-                ['contact_name', 'Contact Name', 'text'],
-                ['phone', 'Phone', 'text'],
-                ['email', 'Email', 'email'],
-                ['gstin', 'GSTIN', 'text'],
-                ['pan', 'PAN', 'text'],
-                ['payment_terms', 'Payment Terms', 'text'],
-                ['region', 'Region / Territory', 'text'],
-                ['place_of_supply', 'Place of Supply (State Code)', 'text'],
-                ['billing_address', 'Billing Address', 'text'],
-                ['outstanding_limit', 'Credit Limit (INR)', 'number'],
-                ['leverage_outstanding', 'Leverage on Limit (INR)', 'number'],
-                ['current_outstanding', 'Current Outstanding (INR)', 'number'],
-              ].map(([key, label, type]) => (
-                <div key={key}>
-                  <Label className="text-xs font-medium text-slate-700">{label}</Label>
-                  <Input type={type} className="h-9 text-sm mt-1" value={form[key] ?? ''}
-                    onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} />
-                </div>
-              ))}
-              <div>
-                <Label className="text-xs font-medium text-slate-700">Default Price List</Label>
-                <select
-                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm mt-1"
-                  value={form.price_list || ''}
-                  onChange={e => setForm(f => ({ ...f, price_list: e.target.value }))}
-                >
-                  <option value="">— None / Select —</option>
-                  {priceLists.map(pl => <option key={pl} value={pl}>{pl}</option>)}
-                </select>
-                <p className="text-xs text-slate-500 mt-0.5">This will auto-apply when creating orders for this customer</p>
-              </div>
-              <div>
-                <Label className="text-xs font-medium text-slate-700">GST Category</Label>
-                <select className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm mt-1" value={form.gst_category} onChange={e => setForm(f => ({ ...f, gst_category: e.target.value }))}>
-                  {['Registered Regular', 'Registered Composition', 'Unregistered', 'SEZ', 'Overseas', 'UIN Holders'].map(g => <option key={g}>{g}</option>)}
-                </select>
-              </div>
-              <div>
-                <Label className="text-xs font-medium text-slate-700">Status</Label>
-                <select className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm mt-1" value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                  <option value="suspended">Suspended</option>
-                </select>
-              </div>
-              <div className="flex items-center gap-2">
-                <input type="checkbox" id="check_outstanding" checked={!!form.check_outstanding}
-                  onChange={e => setForm(f => ({ ...f, check_outstanding: e.target.checked }))} />
-                <label htmlFor="check_outstanding" className="text-sm text-slate-700">Enable Credit Limit Check</label>
-              </div>
-            </div>
-            <div className="flex justify-end gap-2 p-5 border-t border-slate-100">
-              <Button variant="outline" className="h-11 px-4" onClick={() => setShowForm(false)}>Cancel</Button>
-              <Button className="h-11 bg-slate-900 text-white" onClick={handleSave} disabled={saving}>
-                {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Check className="w-4 h-4 mr-2" />}
-                Save
-              </Button>
-            </div>
-          </div>
-        </div>
+        <CustomerFormDrawer
+          editing={editing}
+          form={form}
+          setForm={setForm}
+          priceLists={priceLists}
+          onClose={() => setShowForm(false)}
+          onSaved={() => { setShowForm(false); qc.invalidateQueries(['customers_all']); }}
+        />
       )}
     </div>
   );

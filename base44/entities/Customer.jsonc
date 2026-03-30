@@ -8,15 +8,55 @@
     },
     "code": {
       "type": "string",
-      "title": "Customer Code / ID"
+      "title": "Customer Code"
+    },
+    "customer_type": {
+      "type": "string",
+      "title": "Customer Type",
+      "enum": [
+        "Company",
+        "Individual"
+      ]
     },
     "customer_group": {
       "type": "string",
       "title": "Customer Group"
     },
+    "salutation": {
+      "type": "string",
+      "title": "Salutation",
+      "enum": [
+        "Mr",
+        "Ms",
+        "Mrs",
+        "Dr",
+        "Prof"
+      ]
+    },
+    "first_name": {
+      "type": "string",
+      "title": "First Name"
+    },
+    "last_name": {
+      "type": "string",
+      "title": "Last Name"
+    },
+    "gender": {
+      "type": "string",
+      "title": "Gender",
+      "enum": [
+        "Male",
+        "Female",
+        "Other"
+      ]
+    },
     "contact_name": {
       "type": "string",
       "title": "Contact Name"
+    },
+    "mobile_no": {
+      "type": "string",
+      "title": "Mobile Number"
     },
     "phone": {
       "type": "string",
@@ -24,27 +64,23 @@
     },
     "email": {
       "type": "string",
-      "title": "Email"
+      "title": "Email ID"
+    },
+    "website": {
+      "type": "string",
+      "title": "Website"
     },
     "gstin": {
       "type": "string",
-      "title": "GSTIN"
+      "title": "GSTIN / UIN"
     },
     "pan": {
       "type": "string",
       "title": "PAN"
     },
-    "billing_address": {
+    "tax_id": {
       "type": "string",
-      "title": "Billing Address"
-    },
-    "shipping_address": {
-      "type": "string",
-      "title": "Shipping Address"
-    },
-    "region": {
-      "type": "string",
-      "title": "Region / Territory"
+      "title": "Tax ID"
     },
     "gst_category": {
       "type": "string",
@@ -58,17 +94,94 @@
         "UIN Holders"
       ]
     },
+    "tax_withholding_category": {
+      "type": "string",
+      "title": "Tax Withholding Category"
+    },
+    "billing_address": {
+      "type": "string",
+      "title": "Billing Address"
+    },
+    "shipping_address": {
+      "type": "string",
+      "title": "Shipping Address"
+    },
+    "primary_address": {
+      "type": "string",
+      "title": "Primary Address"
+    },
+    "region": {
+      "type": "string",
+      "title": "Region / Territory"
+    },
+    "territory": {
+      "type": "string",
+      "title": "Territory"
+    },
+    "outlet_id": {
+      "type": "string",
+      "title": "Outlet ID"
+    },
+    "customer_pos_id": {
+      "type": "string",
+      "title": "Customer POS ID"
+    },
     "place_of_supply": {
       "type": "string",
       "title": "Place of Supply (State Code)"
     },
+    "market_segment": {
+      "type": "string",
+      "title": "Market Segment"
+    },
+    "industry": {
+      "type": "string",
+      "title": "Industry"
+    },
+    "account_manager": {
+      "type": "string",
+      "title": "Account Manager"
+    },
+    "sales_partner": {
+      "type": "string",
+      "title": "Sales Partner"
+    },
+    "commission_rate": {
+      "type": "number",
+      "title": "Commission Rate (%)"
+    },
     "payment_terms": {
       "type": "string",
-      "title": "Payment Terms"
+      "title": "Default Payment Terms"
     },
     "price_list": {
       "type": "string",
       "title": "Default Price List"
+    },
+    "billing_currency": {
+      "type": "string",
+      "title": "Billing Currency",
+      "default": "INR"
+    },
+    "default_bank_account": {
+      "type": "string",
+      "title": "Default Company Bank Account"
+    },
+    "loyalty_program": {
+      "type": "string",
+      "title": "Loyalty Program"
+    },
+    "loyalty_program_tier": {
+      "type": "string",
+      "title": "Loyalty Program Tier"
+    },
+    "print_language": {
+      "type": "string",
+      "title": "Print Language"
+    },
+    "customer_details": {
+      "type": "string",
+      "title": "Customer Details"
     },
     "status": {
       "type": "string",
@@ -79,28 +192,70 @@
       ],
       "title": "Status"
     },
-    "notes": {
-      "type": "string",
-      "title": "Notes"
-    },
     "check_outstanding": {
       "type": "boolean",
-      "title": "Enable Credit Limit Check",
+      "title": "Check Credit Outstanding",
       "default": false
     },
     "outstanding_limit": {
       "type": "number",
-      "title": "Credit Limit (INR)"
+      "title": "Outstanding Credit Limit (INR)"
     },
     "leverage_outstanding": {
       "type": "number",
-      "title": "Leverage / Buffer on Limit (INR)",
+      "title": "Leverage on Credit Limit (INR)",
       "default": 0
     },
     "current_outstanding": {
       "type": "number",
       "title": "Current Outstanding (INR)",
       "default": 0
+    },
+    "is_internal_customer": {
+      "type": "boolean",
+      "title": "Is Internal Customer",
+      "default": false
+    },
+    "allow_invoice_without_so": {
+      "type": "boolean",
+      "title": "Allow Invoice Creation Without Sales Order",
+      "default": false
+    },
+    "allow_invoice_without_dn": {
+      "type": "boolean",
+      "title": "Allow Invoice Creation Without Delivery Note",
+      "default": false
+    },
+    "is_frozen": {
+      "type": "boolean",
+      "title": "Is Frozen",
+      "default": false
+    },
+    "disabled": {
+      "type": "boolean",
+      "title": "Disabled",
+      "default": false
+    },
+    "tally_synced": {
+      "type": "boolean",
+      "title": "Tally Synced",
+      "default": false
+    },
+    "tally_sync_date": {
+      "type": "string",
+      "title": "Tally Sync Date"
+    },
+    "tally_sync_status": {
+      "type": "string",
+      "title": "Tally Sync Status"
+    },
+    "tally_parent_group": {
+      "type": "string",
+      "title": "Tally Parent Group"
+    },
+    "notes": {
+      "type": "string",
+      "title": "Internal Notes"
     },
     "workflow_state": {
       "type": "string",
