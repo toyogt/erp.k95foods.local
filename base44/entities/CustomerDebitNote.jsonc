@@ -1,0 +1,106 @@
+{
+  "name": "CustomerDebitNote",
+  "type": "object",
+  "properties": {
+    "platform": {
+      "type": "string",
+      "enum": [
+        "swiggy",
+        "zepto",
+        "blinkit",
+        "other"
+      ],
+      "title": "Platform"
+    },
+    "debit_note_number": {
+      "type": "string",
+      "title": "Debit Note Number (from Customer)"
+    },
+    "debit_note_date": {
+      "type": "string",
+      "title": "Debit Note Date"
+    },
+    "grn_id": {
+      "type": "string",
+      "title": "Linked GRN Record ID"
+    },
+    "grn_number": {
+      "type": "string",
+      "title": "GRN Number"
+    },
+    "invoice_id": {
+      "type": "string",
+      "title": "Linked Invoice ID"
+    },
+    "invoice_number": {
+      "type": "string",
+      "title": "Invoice Number"
+    },
+    "customer_name": {
+      "type": "string",
+      "title": "Customer Name"
+    },
+    "po_number": {
+      "type": "string",
+      "title": "Purchase Order Number"
+    },
+    "debit_note_amount": {
+      "type": "number",
+      "title": "Debit Note Amount (INR)"
+    },
+    "taxable_amount": {
+      "type": "number",
+      "title": "Taxable Amount"
+    },
+    "igst_amount": {
+      "type": "number",
+      "title": "IGST Amount"
+    },
+    "narration": {
+      "type": "string",
+      "title": "Narration / Reason"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "received",
+        "matched_to_grn",
+        "under_review",
+        "accepted",
+        "disputed",
+        "credit_note_issued",
+        "closed"
+      ],
+      "title": "Status"
+    },
+    "our_credit_note_number": {
+      "type": "string",
+      "title": "Our Credit Note Number"
+    },
+    "our_credit_note_amount": {
+      "type": "number",
+      "title": "Our Credit Note Amount (INR)"
+    },
+    "our_credit_note_date": {
+      "type": "string",
+      "title": "Credit Note Issue Date"
+    },
+    "pdf_url": {
+      "type": "string",
+      "title": "Debit Note PDF URL"
+    },
+    "email_subject": {
+      "type": "string",
+      "title": "Email Subject"
+    },
+    "notes": {
+      "type": "string",
+      "title": "Internal Notes"
+    }
+  },
+  "required": [
+    "platform",
+    "debit_note_number",
+    "debit_note_amount"
+  ]
+}

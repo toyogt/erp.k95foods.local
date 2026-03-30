@@ -1,0 +1,189 @@
+{
+  "name": "CustomerGRN",
+  "type": "object",
+  "properties": {
+    "platform": {
+      "type": "string",
+      "enum": [
+        "swiggy",
+        "zepto",
+        "blinkit",
+        "other"
+      ],
+      "title": "Platform"
+    },
+    "grn_number": {
+      "type": "string",
+      "title": "GRN Number"
+    },
+    "grn_date": {
+      "type": "string",
+      "title": "GRN Date"
+    },
+    "po_number": {
+      "type": "string",
+      "title": "Purchase Order Number"
+    },
+    "asn_number": {
+      "type": "string",
+      "title": "ASN Number (Zepto)"
+    },
+    "inbound_number": {
+      "type": "string",
+      "title": "Inbound Number"
+    },
+    "invoice_id": {
+      "type": "string",
+      "title": "Linked Invoice ID"
+    },
+    "invoice_number": {
+      "type": "string",
+      "title": "Our Invoice Number"
+    },
+    "invoice_date": {
+      "type": "string",
+      "title": "Invoice Date"
+    },
+    "customer_name": {
+      "type": "string",
+      "title": "Customer Name"
+    },
+    "warehouse_location": {
+      "type": "string",
+      "title": "Warehouse / Hub Location"
+    },
+    "grn_total_qty": {
+      "type": "number",
+      "title": "GRN Total Quantity Received"
+    },
+    "grn_total_amount": {
+      "type": "number",
+      "title": "GRN Total Amount (INR)"
+    },
+    "invoice_total_qty": {
+      "type": "number",
+      "title": "Our Invoice Total Quantity"
+    },
+    "invoice_total_amount": {
+      "type": "number",
+      "title": "Our Invoice Total Amount (INR)"
+    },
+    "qty_discrepancy": {
+      "type": "number",
+      "title": "Total Quantity Discrepancy"
+    },
+    "amount_discrepancy": {
+      "type": "number",
+      "title": "Total Amount Discrepancy (INR)"
+    },
+    "dn_number": {
+      "type": "string",
+      "title": "Discrepancy / Debit Note Number"
+    },
+    "dn_date": {
+      "type": "string",
+      "title": "Discrepancy Note Date"
+    },
+    "dn_amount": {
+      "type": "number",
+      "title": "Discrepancy Note Amount (INR)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending_match",
+        "matched",
+        "discrepancy_identified",
+        "credit_note_issued",
+        "closed"
+      ],
+      "title": "Status"
+    },
+    "our_credit_note_number": {
+      "type": "string",
+      "title": "Our Credit Note Number (Issued)"
+    },
+    "our_credit_note_amount": {
+      "type": "number",
+      "title": "Our Credit Note Amount (INR)"
+    },
+    "our_credit_note_date": {
+      "type": "string",
+      "title": "Credit Note Issue Date"
+    },
+    "items": {
+      "type": "array",
+      "title": "GRN Line Items",
+      "items": {
+        "type": "object",
+        "properties": {
+          "sku_code": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "mrp": {
+            "type": "number"
+          },
+          "exp_qty": {
+            "type": "number",
+            "description": "Expected / Ordered Qty"
+          },
+          "grn_qty": {
+            "type": "number",
+            "description": "Actually Received Qty"
+          },
+          "unit_price": {
+            "type": "number"
+          },
+          "taxable_value": {
+            "type": "number"
+          },
+          "igst_rate": {
+            "type": "number"
+          },
+          "igst_amount": {
+            "type": "number"
+          },
+          "total_amount": {
+            "type": "number"
+          },
+          "dn_qty": {
+            "type": "number",
+            "description": "Discrepancy / Return Qty"
+          },
+          "reason": {
+            "type": "string",
+            "description": "Reason for discrepancy"
+          }
+        }
+      }
+    },
+    "grn_pdf_url": {
+      "type": "string",
+      "title": "GRN PDF URL"
+    },
+    "discrepancy_pdf_url": {
+      "type": "string",
+      "title": "Discrepancy Note PDF URL"
+    },
+    "email_subject": {
+      "type": "string",
+      "title": "Email Subject"
+    },
+    "email_received_date": {
+      "type": "string",
+      "title": "Email Received Date"
+    },
+    "notes": {
+      "type": "string",
+      "title": "Internal Notes"
+    }
+  },
+  "required": [
+    "platform",
+    "grn_number",
+    "invoice_number"
+  ]
+}

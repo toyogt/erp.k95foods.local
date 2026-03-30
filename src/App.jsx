@@ -94,6 +94,7 @@ import SalesDistributors from './pages/SalesDistributors';
 import SalesRateListManager from './pages/SalesRateListManager';
 import SalesSettingsPage from './pages/SalesSettingsPage';
 import DistributorPortal from './pages/DistributorPortal';
+import SalesGRNReconciliation from './pages/SalesGRNReconciliation';
 
 // Page component lookup table
 const PAGE_COMPONENTS = {
@@ -111,7 +112,7 @@ const PAGE_COMPONENTS = {
   SLAConfigManager, SLAEscalationDashboard,
   SalesOrders, SalesDistributors, SalesRateListManager, SalesSettingsPage, DistributorPortal,
   SalesPicklistDetail, SalesDeliveryNoteDetail, SalesInvoiceDetail,
-  SalesCustomerManager, SalesPriceListView,
+  SalesCustomerManager, SalesPriceListView, SalesGRNReconciliation,
 };
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -236,6 +237,10 @@ const AuthenticatedApp = () => {
             <SalesDeliveryNoteDetail />
           </LayoutWrapper>
         }
+      />
+      <Route
+        path="/SalesGRNReconciliation"
+        element={<LayoutWrapper currentPageName="SalesGRNReconciliation"><SalesGRNReconciliation /></LayoutWrapper>}
       />
       <Route
         path="/SalesInvoiceDetail"
