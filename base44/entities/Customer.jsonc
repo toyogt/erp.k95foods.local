@@ -10,6 +10,10 @@
       "type": "string",
       "title": "Customer Code"
     },
+    "series": {
+      "type": "string",
+      "title": "Series"
+    },
     "customer_type": {
       "type": "string",
       "title": "Customer Type",
@@ -70,6 +74,27 @@
       "type": "string",
       "title": "Website"
     },
+    "image": {
+      "type": "string",
+      "title": "Image URL"
+    },
+    "from_lead": {
+      "type": "string",
+      "title": "From Lead"
+    },
+    "from_opportunity": {
+      "type": "string",
+      "title": "From Opportunity"
+    },
+    "from_prospect": {
+      "type": "string",
+      "title": "From Prospect"
+    },
+    "represents_company": {
+      "type": "boolean",
+      "title": "Represents Company",
+      "default": false
+    },
     "gstin": {
       "type": "string",
       "title": "GSTIN / UIN"
@@ -94,6 +119,10 @@
         "UIN Holders"
       ]
     },
+    "tax_category": {
+      "type": "string",
+      "title": "Tax Category"
+    },
     "tax_withholding_category": {
       "type": "string",
       "title": "Tax Withholding Category"
@@ -109,6 +138,14 @@
     "primary_address": {
       "type": "string",
       "title": "Primary Address"
+    },
+    "customer_primary_address": {
+      "type": "string",
+      "title": "Customer Primary Address"
+    },
+    "customer_primary_contact": {
+      "type": "string",
+      "title": "Customer Primary Contact"
     },
     "region": {
       "type": "string",
@@ -211,6 +248,11 @@
       "title": "Current Outstanding (INR)",
       "default": 0
     },
+    "bypass_credit_limit_check": {
+      "type": "boolean",
+      "title": "Bypass Credit Limit Check at Sales Order",
+      "default": false
+    },
     "is_internal_customer": {
       "type": "boolean",
       "title": "Is Internal Customer",
@@ -260,6 +302,94 @@
     "workflow_state": {
       "type": "string",
       "title": "Workflow State"
+    },
+    "sales_team": {
+      "type": "array",
+      "title": "Sales Team",
+      "items": {
+        "type": "object",
+        "properties": {
+          "sales_person": {
+            "type": "string"
+          },
+          "commission_rate": {
+            "type": "number"
+          },
+          "contact_no": {
+            "type": "string"
+          },
+          "contribution_pct": {
+            "type": "number",
+            "description": "Contribution (%)"
+          },
+          "contribution_to_net_total": {
+            "type": "number"
+          },
+          "incentives": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "allowed_to_transact_with": {
+      "type": "array",
+      "title": "Allowed To Transact With",
+      "items": {
+        "type": "object",
+        "properties": {
+          "company": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "credit_limits": {
+      "type": "array",
+      "title": "Credit Limits",
+      "items": {
+        "type": "object",
+        "properties": {
+          "company": {
+            "type": "string"
+          },
+          "credit_limit": {
+            "type": "number"
+          },
+          "bypass_credit_limit_check": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "accounts": {
+      "type": "array",
+      "title": "Accounts",
+      "items": {
+        "type": "object",
+        "properties": {
+          "company": {
+            "type": "string"
+          },
+          "advance_account": {
+            "type": "string"
+          },
+          "default_account": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "portal_users": {
+      "type": "array",
+      "title": "Customer Portal Users",
+      "items": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "string"
+          }
+        }
+      }
     }
   },
   "required": [

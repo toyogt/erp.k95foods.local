@@ -10,6 +10,7 @@ import BulkActionBar from '@/components/sales/BulkActionBar';
 import BulkCSVUploadModal from '@/components/sales/BulkCSVUploadModal';
 import CustomerImportModal from '@/components/sales/CustomerImportModal';
 import CustomerFormDrawer, { BLANK_CUSTOMER } from '@/components/sales/CustomerFormDrawer';
+import SalesAnalyticsPanel from '@/components/sales/SalesAnalyticsPanel';
 
 function exportCSV(rows) {
   const headers = ['Name', 'Code', 'GSTIN', 'PAN', 'Phone', 'Email', 'Customer Group', 'Price List', 'GST Category', 'Place of Supply', 'Payment Terms', 'Status', 'Credit Limit', 'Current Outstanding'];
@@ -349,6 +350,13 @@ export default function SalesCustomerManager() {
           templateFilename="customers_bulk_update.csv"
         />
       )}
+
+      {/* AI Analytics */}
+      <SalesAnalyticsPanel
+        context="Customer Master"
+        data={customers}
+        extraContext={`Total customers: ${customers.length}. Active: ${customers.filter(c=>c.status==='active').length}. Customer groups: ${customerGroups.join(', ')}. Price lists in use: ${priceLists.join(', ')}.`}
+      />
 
       {/* Form Drawer */}
       {showForm && (
