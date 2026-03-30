@@ -162,18 +162,12 @@ export default function SalesCustomerManager() {
     },
   ];
 
-  async function chunkProcess(ids, fn, chunkSize = 50) {
-    for (let i = 0; i < ids.length; i += chunkSize) {
-      await Promise.all(ids.slice(i, i + chunkSize).map(fn));
-    }
-  }
-
   async function handleBulkApply(key, value) {
     if (key === '__delete__') {
       if (!window.confirm(`Delete ${selected.size} selected customers? This cannot be undone.`)) return;
       setDeleting(true);
       const ids = [...selected];
-      await chunkProcess(ids, id => base44.entities.Customer.delete(id));
+      await Promise.all(ids.map(id => base44.entities.Customer.delete(id)));
       toast({ title: `${ids.length} customers deleted` });
       setSelected(new Set());
       setDeleting(false);
@@ -182,7 +176,7 @@ export default function SalesCustomerManager() {
     }
     setApplying(true);
     const ids = [...selected];
-    await chunkProcess(ids, id => base44.entities.Customer.update(id, { [key]: value }));
+    await Promise.all(ids.map(id => base44.entities.Customer.update(id, { [key]: value })));
     toast({ title: 'Bulk update applied', description: `${ids.length} customers updated (${key} → ${value})` });
     setSelected(new Set());
     setApplying(false);
