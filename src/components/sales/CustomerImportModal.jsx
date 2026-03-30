@@ -228,11 +228,13 @@ export default function CustomerImportModal({ onClose, onImported, existingCusto
 
   async function handleImport() {
     setImporting(true);
-    let created = 0, skipped = 0;
     const existingCodes = [...existingCustomers.map(c => c.code).filter(Boolean)];
+    const parseBool = (v) => v === 'true' || v === '1' || v === 'yes';
+
+    const toCreate = [];
+    let skipped = 0;
 
     for (const row of rows) {
-      // Skip duplicates by GSTIN or name
       const duplicate = existingCustomers.find(c =>
         (row.gstin && c.gstin?.toLowerCase() === row.gstin.toLowerCase()) ||
         c.name?.toLowerCase() === row.name.toLowerCase()
@@ -242,8 +244,7 @@ export default function CustomerImportModal({ onClose, onImported, existingCusto
       const code = row.code || generateCode(existingCodes);
       existingCodes.push(code);
 
-      const parseBool = (v) => v === 'true' || v === '1' || v === 'yes';
-      await base44.entities.Customer.create({
+      toCreate.push({
         name: row.name,
         code,
         series: row.series || '',
@@ -307,8 +308,10 @@ export default function CustomerImportModal({ onClose, onImported, existingCusto
         bypass_credit_limit_check: parseBool(row.bypass_credit_limit_check),
         status: row.status || 'active',
       });
-      created++;
     }
+
+    await Promise.all(toCreate.map(data => base44.entities.Customer.create(data)));
+    const created = toCreate.length;
 
     setResults({ created, skipped });
     setStep('done');
