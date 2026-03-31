@@ -69,15 +69,11 @@ export default function GRNReconciliationPanel({ grn, open, onClose, onUpdated }
   const needsManagementReview = discrepancyPct > 1;
   const hasDiscrepancy = Math.abs(discrepancyAmount) > 0.01;
 
-  // Qty totals from line items
-  const totalExpQty = (grn.items || []).reduce((s, i) => s + (i.exp_qty || 0), 0);
-  const totalGrnQty = (grn.items || []).reduce((s, i) => s + (i.grn_qty || 0), 0);
-  const qtyDiscrepancy = totalExpQty - totalGrnQty;
-
-  // Debit note state: either already on grn or being entered
+  // Debit note state
   const hasDNOnRecord = grn.dn_number || grn.dn_amount > 0;
   const hasDNDocs = grn.discrepancy_pdf_url;
 
+  // Build reconciled items using SO quantities (most accurate expected qty)
   const reconciled = (grn.items || []).map(grnItem => {
     const match = soItems.find(oi =>
       oi.description?.toLowerCase().includes(grnItem.description?.toLowerCase()?.substring(0, 15)) ||
@@ -93,6 +89,19 @@ export default function GRNReconciliationPanel({ grn, open, onClose, onUpdated }
       has_issue: Math.abs(qtyDiff) > 0,
     };
   });
+
+  // Qty totals from reconciled (uses SO quantities for expected, GRN for received)
+  const totalExpQty = reconciled.reduce((s, i) => s + (i.our_qty || 0), 0);
+  const totalGrnQty = reconciled.reduce((s, i) => s + (i.grn_qty || 0), 0);
+  // Bottle shortfall = sum of negative qty_diff across all items
+  const qtyShortfall = reconciled.reduce((s, i) => s + (i.qty_diff < 0 ? Math.abs(i.qty_diff) : 0), 0);
+  // Fallback: if line-item matching gave 0 (items not matched to SO), derive from amount/avg price
+  const avgUnitPrice = reconciled.length > 0
+    ? reconciled.reduce((s, i) => s + (i.our_price || i.unit_price || 0), 0) / reconciled.filter(i => (i.our_price || i.unit_price) > 0).length || 1
+    : 0;
+  const bottleShortfall = qtyShortfall > 0
+    ? qtyShortfall
+    : (avgUnitPrice > 0 ? Math.round(Math.abs(discrepancyAmount) / avgUnitPrice) : 0);
 
   const handleUploadDebitNote = async (e) => {
     const file = e.target.files?.[0];
@@ -312,9 +321,9 @@ export default function GRNReconciliationPanel({ grn, open, onClose, onUpdated }
                   <p className={`text-xs mt-0.5 ${needsManagementReview ? 'text-red-600 font-semibold' : 'text-slate-400'}`}>
                     {discrepancyPct.toFixed(2)}% of invoice
                   </p>
-                  {qtyDiscrepancy !== 0 && (
+                  {bottleShortfall > 0 && (
                     <p className="text-xs mt-0.5 text-amber-700 font-medium">
-                      {Math.abs(qtyDiscrepancy)} bottle{Math.abs(qtyDiscrepancy) !== 1 ? 's' : ''} {qtyDiscrepancy > 0 ? 'short' : 'excess'}
+                      {bottleShortfall} bottle{bottleShortfall !== 1 ? 's' : ''} short
                     </p>
                   )}
                 </div>
@@ -335,7 +344,7 @@ export default function GRNReconciliationPanel({ grn, open, onClose, onUpdated }
                   </div>
                   <div>
                     <span className="text-red-500 block">Bottles Short</span>
-                    <span className="font-bold">{Math.abs(qtyDiscrepancy)} bottle{Math.abs(qtyDiscrepancy) !== 1 ? 's' : ''}</span>
+                    <span className="font-bold">{bottleShortfall} bottle{bottleShortfall !== 1 ? 's' : ''}</span>
                   </div>
                   <div>
                     <span className="text-red-500 block">Discrepancy %</span>
