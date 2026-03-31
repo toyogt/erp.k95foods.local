@@ -73,35 +73,51 @@ export default function GRNReconciliationPanel({ grn, open, onClose, onUpdated }
   const hasDNOnRecord = grn.dn_number || grn.dn_amount > 0;
   const hasDNDocs = grn.discrepancy_pdf_url;
 
-  // Build reconciled items using SO quantities (most accurate expected qty)
-  const reconciled = (grn.items || []).map(grnItem => {
+  // Step 1: Match each GRN line to an SO item
+  const reconciledGrnItems = (grn.items || []).map(grnItem => {
     const match = soItems.find(oi =>
-      oi.description?.toLowerCase().includes(grnItem.description?.toLowerCase()?.substring(0, 15)) ||
-      oi.item_code === grnItem.sku_code
+      (oi.sku_code && oi.sku_code === grnItem.sku_code) ||
+      (oi.item_code && oi.item_code === grnItem.sku_code) ||
+      (grnItem.description && oi.description?.toLowerCase().includes(grnItem.description?.toLowerCase().substring(0, 20)))
     );
     const expectedQty = match?.quantity || grnItem.exp_qty || 0;
     const qtyDiff = (grnItem.grn_qty || 0) - expectedQty;
     return {
       ...grnItem,
+      _soItemId: match?.id,
       our_qty: expectedQty,
       our_price: match?.unit_base_cost || grnItem.unit_price,
       qty_diff: qtyDiff,
       has_issue: Math.abs(qtyDiff) > 0,
+      _missing: false,
     };
   });
 
-  // Qty totals from reconciled (uses SO quantities for expected, GRN for received)
+  // Step 2: Find SO items completely absent from the GRN — these are fully short
+  const matchedSoIds = new Set(reconciledGrnItems.map(r => r._soItemId).filter(Boolean));
+  const missingFromGrn = soItems
+    .filter(oi => !matchedSoIds.has(oi.id))
+    .map(oi => ({
+      sku_code: oi.sku_code || oi.item_code,
+      description: oi.description,
+      our_qty: oi.quantity || 0,
+      grn_qty: 0,
+      qty_diff: -(oi.quantity || 0),
+      has_issue: true,
+      our_price: oi.unit_base_cost,
+      unit_price: oi.unit_base_cost,
+      total_amount: 0,
+      dn_qty: null,
+      _missing: true,
+    }));
+
+  const reconciled = [...reconciledGrnItems, ...missingFromGrn];
+
+  // Totals
   const totalExpQty = reconciled.reduce((s, i) => s + (i.our_qty || 0), 0);
-  const totalGrnQty = reconciled.reduce((s, i) => s + (i.grn_qty || 0), 0);
-  // Bottle shortfall = sum of negative qty_diff across all items
-  const qtyShortfall = reconciled.reduce((s, i) => s + (i.qty_diff < 0 ? Math.abs(i.qty_diff) : 0), 0);
-  // Fallback: if line-item matching gave 0 (items not matched to SO), derive from amount/avg price
-  const avgUnitPrice = reconciled.length > 0
-    ? reconciled.reduce((s, i) => s + (i.our_price || i.unit_price || 0), 0) / reconciled.filter(i => (i.our_price || i.unit_price) > 0).length || 1
-    : 0;
-  const bottleShortfall = qtyShortfall > 0
-    ? qtyShortfall
-    : (avgUnitPrice > 0 ? Math.round(Math.abs(discrepancyAmount) / avgUnitPrice) : 0);
+  const totalGrnQty = reconciledGrnItems.reduce((s, i) => s + (i.grn_qty || 0), 0);
+  // Bottle shortfall = sum of all negative differences (including completely missing SKUs)
+  const bottleShortfall = reconciled.reduce((s, i) => s + (i.qty_diff < 0 ? Math.abs(i.qty_diff) : 0), 0);
 
   const handleUploadDebitNote = async (e) => {
     const file = e.target.files?.[0];
@@ -420,23 +436,26 @@ export default function GRNReconciliationPanel({ grn, open, onClose, onUpdated }
                       <tr><td colSpan={6} className="text-center text-slate-400 py-6">No line items recorded</td></tr>
                     )}
                     {reconciled.map((item, idx) => (
-                      <tr key={idx} className={item.has_issue ? 'bg-red-50' : 'hover:bg-slate-50'}>
+                      <tr key={idx} className={item._missing ? 'bg-red-100' : item.has_issue ? 'bg-red-50' : 'hover:bg-slate-50'}>
                         <td className="px-3 py-2">
                           <div className="flex items-start gap-1">
                             {item.has_issue && <AlertTriangle className="w-3 h-3 text-red-500 shrink-0 mt-0.5" />}
                             <div>
                               <p className="font-medium text-slate-800 leading-tight">{item.description}</p>
                               {item.sku_code && <p className="text-slate-400">{item.sku_code}</p>}
+                              {item._missing && (
+                                <span className="inline-block mt-0.5 text-xs font-semibold text-red-700 bg-red-100 px-1.5 py-0.5 rounded">Not received in GRN</span>
+                              )}
                             </div>
                           </div>
                         </td>
                         <td className="text-center px-2 py-2 text-slate-700">{item.our_qty}</td>
-                        <td className="text-center px-2 py-2 text-slate-700">{item.grn_qty}</td>
+                        <td className={`text-center px-2 py-2 font-semibold ${item._missing ? 'text-red-600' : 'text-slate-700'}`}>{item._missing ? '0' : item.grn_qty}</td>
                         <td className={`text-center px-2 py-2 font-semibold ${item.qty_diff < 0 ? 'text-red-600' : item.qty_diff > 0 ? 'text-amber-600' : 'text-green-600'}`}>
-                          {item.qty_diff > 0 ? '+' : ''}{item.qty_diff || '—'}
+                          {item.qty_diff > 0 ? '+' : ''}{item.qty_diff !== 0 ? item.qty_diff : '—'}
                         </td>
                         <td className="text-center px-2 py-2 text-red-600 font-medium">{item.dn_qty || '—'}</td>
-                        <td className="text-right px-3 py-2 text-slate-700">₹{(item.total_amount || 0).toFixed(2)}</td>
+                        <td className="text-right px-3 py-2 text-slate-700">{item._missing ? '—' : `₹${(item.total_amount || 0).toFixed(2)}`}</td>
                       </tr>
                     ))}
                   </tbody>
