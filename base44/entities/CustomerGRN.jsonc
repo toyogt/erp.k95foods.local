@@ -164,9 +164,13 @@
       "type": "string",
       "title": "GRN PDF URL"
     },
+    "pod_url": {
+      "type": "string",
+      "title": "Proof of Delivery (POD) PDF URL"
+    },
     "discrepancy_pdf_url": {
       "type": "string",
-      "title": "Discrepancy Note PDF URL"
+      "title": "Discrepancy / Debit Note PDF URL"
     },
     "email_subject": {
       "type": "string",

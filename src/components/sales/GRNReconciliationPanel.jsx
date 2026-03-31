@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
-import { AlertTriangle, CheckCircle, Loader2, FileText, X, ShieldAlert, Upload } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Loader2, FileText, X, ShieldAlert, Upload, PackageCheck } from 'lucide-react';
 
 function StatusBadge({ status }) {
   const map = {
@@ -26,6 +26,7 @@ export default function GRNReconciliationPanel({ grn, open, onClose, onUpdated }
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const [uploadingDN, setUploadingDN] = useState(false);
+  const [uploadingPOD, setUploadingPOD] = useState(false);
   const [creditNoteNumber, setCreditNoteNumber] = useState('');
   const [creditNoteAmount, setCreditNoteAmount] = useState('');
   const [creditNoteDate, setCreditNoteDate] = useState(new Date().toISOString().split('T')[0]);
@@ -62,6 +63,10 @@ export default function GRNReconciliationPanel({ grn, open, onClose, onUpdated }
 
   if (!open || !grn) return null;
 
+  // Platform-aware label for the discrepancy document
+  const isZepto = grn.platform === 'zepto';
+  const discrepancyDocLabel = isZepto ? 'Quantity Difference Note' : 'Debit Note';
+
   const ourInvoiceAmount = invoice?.total_amount || grn.invoice_total_amount || 0;
   const grnAmount = grn.grn_total_amount || 0;
   const discrepancyAmount = ourInvoiceAmount - grnAmount;
@@ -69,9 +74,10 @@ export default function GRNReconciliationPanel({ grn, open, onClose, onUpdated }
   const needsManagementReview = discrepancyPct > 1;
   const hasDiscrepancy = Math.abs(discrepancyAmount) > 0.01;
 
-  // Debit note state
+  // Document state
   const hasDNOnRecord = grn.dn_number || grn.dn_amount > 0;
   const hasDNDocs = grn.discrepancy_pdf_url;
+  const hasPOD = !!grn.pod_url;
 
   // Step 1: Match each GRN line to an SO item
   // Priority: exact sku_code > exact item_code > full description equality > partial (last resort)
@@ -123,6 +129,22 @@ export default function GRNReconciliationPanel({ grn, open, onClose, onUpdated }
   // Bottle shortfall = sum of all negative differences (including completely missing SKUs)
   const bottleShortfall = reconciled.reduce((s, i) => s + (i.qty_diff < 0 ? Math.abs(i.qty_diff) : 0), 0);
 
+  const handleUploadPOD = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingPOD(true);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      await base44.entities.CustomerGRN.update(grn.id, { pod_url: file_url });
+      toast({ title: 'Proof of Delivery uploaded successfully.' });
+      onUpdated?.();
+    } catch (err) {
+      toast({ title: 'Upload failed', description: err.message, variant: 'destructive' });
+    } finally {
+      setUploadingPOD(false);
+    }
+  };
+
   const handleUploadDebitNote = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -134,21 +156,20 @@ export default function GRNReconciliationPanel({ grn, open, onClose, onUpdated }
         file_urls: [file_url],
       });
 
-      // Try to extract debit note fields from the text
       const text = typeof rawText === 'string' ? rawText : JSON.stringify(rawText);
-      const noteMatch = text.match(/Note#\s*(\S+)/i);
-      const dateMatch = text.match(/Date\s*:\s*([\d]{1,2}-[\d]{1,2}-[\d]{4})/i);
-      const amtMatch = text.match(/\bTotal\b[\s\u20b9]+([\d,]+\.\d{2})/i);
+      const noteMatch = text.match(/Note#\s*(\S+)/i) || text.match(/Debit Note no:\s*(\S+)/i);
+      const dateMatch = text.match(/Date\s*:\s*([\d]{1,2}[\/\-][\d]{1,2}[\/\-][\d]{4})/i);
+      const amtMatch = text.match(/Grand Total[\s\u20b9]+([\.\d,]+)/i) || text.match(/\bTotal\b[\s\u20b9]+([\.\d,]+)/i);
 
       if (noteMatch) setDnNumber(noteMatch[1]);
       if (dateMatch) {
-        const parts = dateMatch[1].split('-');
+        const parts = dateMatch[1].split(/[\/\-]/);
         if (parts[0].length <= 2) setDnDate(`${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`);
       }
       if (amtMatch) setDnAmount(amtMatch[1].replace(/,/g, ''));
 
       await base44.entities.CustomerGRN.update(grn.id, { discrepancy_pdf_url: file_url });
-      toast({ title: 'Debit Note PDF uploaded', description: 'Fill in details below and save.' });
+      toast({ title: `${discrepancyDocLabel} PDF uploaded`, description: 'Fill in details below and save.' });
       onUpdated?.();
     } catch (err) {
       toast({ title: 'Upload failed', description: err.message, variant: 'destructive' });
@@ -382,16 +403,50 @@ export default function GRNReconciliationPanel({ grn, open, onClose, onUpdated }
               </div>
             )}
 
-            {/* Conditional: Upload Debit Note section — only shown if there's a discrepancy and GRN not closed/matched/credit_note_issued */}
+            {/* POD Upload — mandatory when discrepancy exists */}
+            {hasDiscrepancy && !['closed'].includes(grn.status) && (
+              <div className={`border rounded-lg p-4 space-y-2 ${hasPOD ? 'border-green-200 bg-green-50' : 'border-red-300 bg-red-50'}`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <PackageCheck className={`w-4 h-4 ${hasPOD ? 'text-green-600' : 'text-red-600'}`} />
+                    <p className={`text-sm font-semibold ${hasPOD ? 'text-green-800' : 'text-red-800'}`}>
+                      Proof of Delivery (POD) {!hasPOD && <span className="text-xs font-normal ml-1">— Required before issuing credit note</span>}
+                    </p>
+                  </div>
+                  {!hasPOD ? (
+                    <label className="cursor-pointer">
+                      {uploadingPOD
+                        ? <span className="flex items-center gap-1 text-xs text-red-600"><Loader2 className="w-3 h-3 animate-spin" />Uploading...</span>
+                        : <span className="flex items-center gap-1 text-xs bg-white border border-red-300 text-red-700 px-3 py-1.5 rounded hover:bg-red-50 transition-colors">
+                            <Upload className="w-3 h-3" /> Upload POD PDF
+                          </span>
+                      }
+                      <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={handleUploadPOD} />
+                    </label>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => window.open(grn.pod_url, '_blank')} className="text-xs text-green-700 underline">View POD</button>
+                      <label className="cursor-pointer text-xs text-slate-500 underline">
+                        Replace
+                        <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={handleUploadPOD} />
+                      </label>
+                    </div>
+                  )}
+                </div>
+                {hasPOD && <p className="text-xs text-green-700">POD uploaded — you may now proceed to issue a credit note.</p>}
+              </div>
+            )}
+
+            {/* Discrepancy / Quantity Difference Note */}
             {hasDiscrepancy && !['credit_note_issued', 'closed', 'matched'].includes(grn.status) && (
               <div className="border border-amber-200 bg-amber-50 rounded-lg p-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold text-amber-800">Discrepancy / Debit Note</p>
+                  <p className="text-sm font-semibold text-amber-800">{discrepancyDocLabel}</p>
                   <label className="cursor-pointer">
                     {uploadingDN
                       ? <span className="flex items-center gap-1 text-xs text-amber-600"><Loader2 className="w-3 h-3 animate-spin" />Parsing PDF...</span>
                       : <span className="flex items-center gap-1 text-xs bg-amber-100 border border-amber-300 text-amber-800 px-3 py-1.5 rounded hover:bg-amber-200 transition-colors">
-                          <Upload className="w-3 h-3" /> Upload Debit Note PDF (auto-fill)
+                          <Upload className="w-3 h-3" /> Upload {discrepancyDocLabel} PDF (auto-fill)
                         </span>
                     }
                     <input type="file" accept=".pdf" className="hidden" onChange={handleUploadDebitNote} />
@@ -399,8 +454,8 @@ export default function GRNReconciliationPanel({ grn, open, onClose, onUpdated }
                 </div>
                 <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <Label className="text-xs font-medium text-slate-700">Debit Note Number</Label>
-                    <Input className="h-9 text-sm mt-1" value={dnNumber || grn.dn_number || ''} onChange={e => setDnNumber(e.target.value)} placeholder="e.g. CPD-DN601670" />
+                    <Label className="text-xs font-medium text-slate-700">{discrepancyDocLabel} Number</Label>
+                    <Input className="h-9 text-sm mt-1" value={dnNumber || grn.dn_number || ''} onChange={e => setDnNumber(e.target.value)} placeholder="e.g. 25-26/004352_QD" />
                   </div>
                   <div>
                     <Label className="text-xs font-medium text-slate-700">Date</Label>
@@ -414,7 +469,7 @@ export default function GRNReconciliationPanel({ grn, open, onClose, onUpdated }
                 {!hasDNOnRecord && (
                   <Button onClick={handleSaveDebitNote} disabled={saving} className="h-10 w-full">
                     {saving && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                    Save Debit Note Details
+                    Save {discrepancyDocLabel} Details
                   </Button>
                 )}
               </div>
@@ -429,10 +484,10 @@ export default function GRNReconciliationPanel({ grn, open, onClose, onUpdated }
                     <tr>
                       <th className="text-left px-3 py-2">Product</th>
                       <th className="text-center px-2 py-2">Our Qty</th>
-                      <th className="text-center px-2 py-2">GRN Qty</th>
+                      <th className="text-center px-2 py-2">Goods Receipt Qty</th>
                       <th className="text-center px-2 py-2">Difference</th>
-                      <th className="text-center px-2 py-2">Debit Qty</th>
-                      <th className="text-right px-3 py-2">GRN Amount</th>
+                      <th className="text-center px-2 py-2">Discrepancy Qty</th>
+                      <th className="text-right px-3 py-2">Goods Receipt Amount</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -448,7 +503,7 @@ export default function GRNReconciliationPanel({ grn, open, onClose, onUpdated }
                               <p className="font-medium text-slate-800 leading-tight">{item.description}</p>
                               {item.sku_code && <p className="text-slate-400">{item.sku_code}</p>}
                               {item._missing && (
-                                <span className="inline-block mt-0.5 text-xs font-semibold text-red-700 bg-red-100 px-1.5 py-0.5 rounded">Not received in GRN</span>
+                                <span className="inline-block mt-0.5 text-xs font-semibold text-red-700 bg-red-100 px-1.5 py-0.5 rounded">Not received in Goods Receipt</span>
                               )}
                             </div>
                           </div>
@@ -467,8 +522,8 @@ export default function GRNReconciliationPanel({ grn, open, onClose, onUpdated }
               </div>
             </div>
 
-            {/* Issue Credit Note — only shown when debit note docs are uploaded */}
-            {hasDNDocs && hasDNOnRecord && !['credit_note_issued', 'closed', 'matched'].includes(grn.status) && (
+            {/* Issue Credit Note — only shown when debit note docs AND POD are uploaded */}
+            {hasDNDocs && hasDNOnRecord && hasPOD && !['credit_note_issued', 'closed', 'matched'].includes(grn.status) && (
               <div className="border border-blue-200 bg-blue-50 rounded-lg p-4">
                 <p className="text-sm font-semibold text-blue-800 mb-3">Issue Credit Note</p>
                 <div className="grid grid-cols-3 gap-3">
@@ -495,7 +550,12 @@ export default function GRNReconciliationPanel({ grn, open, onClose, onUpdated }
             {/* Show message if debit note not yet uploaded */}
             {hasDiscrepancy && hasDNOnRecord && !hasDNDocs && !['credit_note_issued', 'closed', 'matched'].includes(grn.status) && (
               <div className="border border-slate-200 bg-slate-50 rounded-lg p-3 text-sm text-slate-500 text-center">
-                Upload the Debit Note PDF above to proceed with Credit Note issuance.
+                Upload the {discrepancyDocLabel} PDF above to proceed with Credit Note issuance.
+              </div>
+            )}
+            {hasDiscrepancy && hasDNDocs && hasDNOnRecord && !hasPOD && !['credit_note_issued', 'closed', 'matched'].includes(grn.status) && (
+              <div className="border border-red-200 bg-red-50 rounded-lg p-3 text-sm text-red-600 text-center">
+                Please upload the Proof of Delivery (POD) above before issuing a Credit Note.
               </div>
             )}
 
@@ -520,12 +580,17 @@ export default function GRNReconciliationPanel({ grn, open, onClose, onUpdated }
               )}
               {grn.grn_pdf_url && (
                 <Button variant="outline" className="h-11" onClick={() => window.open(grn.grn_pdf_url, '_blank')}>
-                  <FileText className="w-4 h-4 mr-2" /> View GRN PDF
+                  <FileText className="w-4 h-4 mr-2" /> View Goods Receipt PDF
+                </Button>
+              )}
+              {grn.pod_url && (
+                <Button variant="outline" className="h-11" onClick={() => window.open(grn.pod_url, '_blank')}>
+                  <PackageCheck className="w-4 h-4 mr-2" /> View POD
                 </Button>
               )}
               {grn.discrepancy_pdf_url && (
                 <Button variant="outline" className="h-11" onClick={() => window.open(grn.discrepancy_pdf_url, '_blank')}>
-                  <FileText className="w-4 h-4 mr-2" /> View Debit Note PDF
+                  <FileText className="w-4 h-4 mr-2" /> View {discrepancyDocLabel} PDF
                 </Button>
               )}
             </div>
