@@ -542,12 +542,9 @@ Deno.serve(async (req) => {
     // 5. Build XML
     const xmlBody = buildTallyXml(inv, items, order, customer);
 
-    // 6. Save XML request to invoice record
-    await base44.asServiceRole.entities.SalesInvoice.update(invoice_id, {
-      notes: (inv.notes || '') + '\n[Tally XML pushed at ' + new Date().toISOString() + ']'
-    });
+    const pushedAt = new Date().toISOString();
 
-    // 7. Send to Tally
+    // 6. Send to Tally
     let responseText = '';
     try {
       const tallyResponse = await fetch(TALLY_URL, {
@@ -559,6 +556,17 @@ Deno.serve(async (req) => {
       const responseBuffer = await tallyResponse.arrayBuffer();
       responseText = new TextDecoder('utf-8').decode(responseBuffer);
     } catch (fetchErr) {
+      // Log network failure
+      await base44.asServiceRole.entities.TallyPushLog.create({
+        invoice_id,
+        invoice_number: inv.invoice_number,
+        customer_name: inv.customer_name,
+        status: 'network_error',
+        error_message: 'Cannot reach Tally: ' + fetchErr.message,
+        xml_sent_preview: xmlBody.substring(0, 800),
+        pushed_by: user.email,
+        pushed_at: pushedAt,
+      });
       return Response.json({
         error: 'Cannot reach Tally. Check TALLY_URL and ensure Tally is running.',
         details: fetchErr.message,
@@ -566,26 +574,36 @@ Deno.serve(async (req) => {
       }, { status: 502 });
     }
 
-    // 8. Parse Tally response
+    // 7. Parse Tally response
     if (responseText.includes('<CREATED>1</CREATED>')) {
-      // Extract voucher number from response if present
       let voucherNumber = inv.invoice_number;
       const vchStart = responseText.indexOf('<VOUCHERNUMBER>');
       if (vchStart !== -1) {
         const vchEnd = responseText.indexOf('</VOUCHERNUMBER>', vchStart);
-        if (vchEnd !== -1) {
-          voucherNumber = responseText.substring(vchStart + 15, vchEnd).trim();
-        }
+        if (vchEnd !== -1) voucherNumber = responseText.substring(vchStart + 15, vchEnd).trim();
       }
 
       const today = new Date().toISOString().split('T')[0];
 
-      await base44.asServiceRole.entities.SalesInvoice.update(invoice_id, {
-        posted_to_tally: true,
-        tally_voucher_no: voucherNumber,
-        tally_posted_date: today,
-        tally_posted_by: user.email,
-      });
+      await Promise.all([
+        base44.asServiceRole.entities.SalesInvoice.update(invoice_id, {
+          posted_to_tally: true,
+          tally_voucher_no: voucherNumber,
+          tally_posted_date: today,
+          tally_posted_by: user.email,
+        }),
+        base44.asServiceRole.entities.TallyPushLog.create({
+          invoice_id,
+          invoice_number: inv.invoice_number,
+          customer_name: inv.customer_name,
+          status: 'success',
+          tally_voucher_no: voucherNumber,
+          tally_response_preview: responseText.substring(0, 600),
+          xml_sent_preview: xmlBody.substring(0, 800),
+          pushed_by: user.email,
+          pushed_at: pushedAt,
+        }),
+      ]);
 
       return Response.json({
         status: 'success',
@@ -595,15 +613,24 @@ Deno.serve(async (req) => {
       });
 
     } else {
-      // Extract error from Tally response
       let errorMsg = 'Voucher not created in Tally';
       const errStart = responseText.indexOf('<LINEERROR>');
       if (errStart !== -1) {
         const errEnd = responseText.indexOf('</LINEERROR>', errStart);
-        if (errEnd !== -1) {
-          errorMsg = responseText.substring(errStart + 11, errEnd).trim();
-        }
+        if (errEnd !== -1) errorMsg = responseText.substring(errStart + 11, errEnd).trim();
       }
+
+      await base44.asServiceRole.entities.TallyPushLog.create({
+        invoice_id,
+        invoice_number: inv.invoice_number,
+        customer_name: inv.customer_name,
+        status: 'error',
+        error_message: errorMsg,
+        tally_response_preview: responseText.substring(0, 600),
+        xml_sent_preview: xmlBody.substring(0, 800),
+        pushed_by: user.email,
+        pushed_at: pushedAt,
+      });
 
       return Response.json({
         status: 'error',

@@ -1,0 +1,56 @@
+{
+  "name": "TallyPushLog",
+  "type": "object",
+  "properties": {
+    "invoice_id": {
+      "type": "string",
+      "title": "Invoice ID"
+    },
+    "invoice_number": {
+      "type": "string",
+      "title": "Invoice Number"
+    },
+    "customer_name": {
+      "type": "string",
+      "title": "Customer Name"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "success",
+        "error",
+        "network_error"
+      ],
+      "title": "Push Status"
+    },
+    "tally_voucher_no": {
+      "type": "string",
+      "title": "Tally Voucher Number"
+    },
+    "error_message": {
+      "type": "string",
+      "title": "Error Message"
+    },
+    "tally_response_preview": {
+      "type": "string",
+      "title": "Tally Response Preview"
+    },
+    "xml_sent_preview": {
+      "type": "string",
+      "title": "XML Sent (Preview)"
+    },
+    "pushed_by": {
+      "type": "string",
+      "title": "Pushed By (Email)"
+    },
+    "pushed_at": {
+      "type": "string",
+      "title": "Pushed At (ISO)"
+    }
+  },
+  "required": [
+    "invoice_id",
+    "invoice_number",
+    "status"
+  ]
+}

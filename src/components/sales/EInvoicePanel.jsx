@@ -24,8 +24,9 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import {
   FileText, Truck, Upload, AlertTriangle, CheckCircle2,
-  Loader2, ArrowRight, RotateCcw, Zap, XCircle
+  Loader2, ArrowRight, RotateCcw, Zap, XCircle, History
 } from 'lucide-react';
+import TallyPushLogViewer from '@/components/sales/TallyPushLogViewer';
 import { fireFMSEvent } from '@/lib/useFMSAutoComplete';
 
 const SI_STEPS = [
@@ -99,8 +100,9 @@ export default function EInvoicePanel({ invoice, order, onUpdated }) {
   const [lrDate, setLrDate] = useState(invoice?.lr_date || '');
   const [podDate, setPodDate] = useState(invoice?.pod_date || '');
 
-  // Tally (metadata only)
+  // Tally
   const [tallyVoucherNo, setTallyVoucherNo] = useState(invoice?.tally_voucher_no || '');
+  const [showTallyLog, setShowTallyLog] = useState(false);
 
   if (!invoice) {
     return (
@@ -304,21 +306,26 @@ export default function EInvoicePanel({ invoice, order, onUpdated }) {
 
   async function saveTally() {
     setSaving(true);
-    await base44.entities.SalesInvoice.update(invoice.id, {
-      posted_to_tally: true,
-      tally_voucher_no: tallyVoucherNo,
-      tally_posted_date: new Date().toISOString().split('T')[0],
-      tally_posted_by: user?.email,
-    });
-    await base44.entities.SalesAuditLog.create({
-      entity_type: 'SalesInvoice', entity_id: invoice.id,
-      reference_number: invoice.invoice_number,
-      action: 'posted_to_tally', user_email: user?.email,
-    });
-    await fireFMSEvent('sales_tally_posted', invoice.id);
+    try {
+      const resp = await base44.functions.invoke('tallyPushInvoice', { invoice_id: invoice.id });
+      const data = resp?.data;
+      if (data?.status === 'success') {
+        toast({ title: 'Invoice pushed to Tally successfully!', description: `Voucher: ${data.voucher_number}` });
+        await fireFMSEvent('sales_tally_posted', invoice.id);
+        if (onUpdated) onUpdated();
+      } else {
+        toast({
+          title: 'Tally push failed',
+          description: data?.error || 'Check the Push Log tab for details.',
+          variant: 'destructive',
+        });
+        setShowTallyLog(true);
+      }
+    } catch (err) {
+      toast({ title: 'Error pushing to Tally', description: err.message, variant: 'destructive' });
+      setShowTallyLog(true);
+    }
     setSaving(false);
-    toast({ title: 'Posted to Tally' });
-    if (onUpdated) onUpdated();
   }
 
   return (
@@ -506,16 +513,21 @@ export default function EInvoicePanel({ invoice, order, onUpdated }) {
         </div>
       )}
 
-      {/* Tally Posting — manual metadata, no workflow state */}
+      {/* Tally Posting */}
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
         <div className="bg-slate-50 px-4 py-3 border-b border-slate-100 flex items-center gap-2">
           <Upload className="w-4 h-4 text-emerald-600" />
           <span className="text-sm font-semibold text-slate-900">Tally Posting</span>
           {invoice.posted_to_tally && (
-            <span className="ml-auto bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+            <span className="ml-1 bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
               <CheckCircle2 className="w-3 h-3" /> Posted
             </span>
           )}
+          <button
+            onClick={() => setShowTallyLog(v => !v)}
+            className="ml-auto flex items-center gap-1 text-xs text-slate-500 hover:text-slate-800 border border-slate-200 rounded px-2 py-1">
+            <History className="w-3.5 h-3.5" /> Push Log
+          </button>
         </div>
         <div className="p-4 space-y-3">
           {invoice.posted_to_tally ? (
@@ -523,20 +535,24 @@ export default function EInvoicePanel({ invoice, order, onUpdated }) {
               {invoice.tally_voucher_no && <div><span className="text-slate-500">Voucher No: </span><span className="font-medium">{invoice.tally_voucher_no}</span></div>}
               {invoice.tally_posted_date && <div><span className="text-slate-500">Date: </span><span>{invoice.tally_posted_date}</span></div>}
               {invoice.tally_posted_by && <div><span className="text-slate-500">By: </span><span>{invoice.tally_posted_by}</span></div>}
+              <Button variant="outline" className="h-11 text-sm mt-2" onClick={saveTally} disabled={saving}>
+                {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Upload className="w-4 h-4 mr-2" />}
+                Re-push to Tally
+              </Button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs font-medium text-slate-700">Tally Voucher Number</Label>
-                <Input className="h-9 text-sm mt-1" value={tallyVoucherNo}
-                  onChange={e => setTallyVoucherNo(e.target.value)} placeholder="Enter Tally voucher number..." />
-              </div>
-              <div className="flex items-end">
-                <Button className="h-11 bg-emerald-700 hover:bg-emerald-800 text-white text-sm w-full" onClick={saveTally} disabled={saving}>
-                  {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Upload className="w-4 h-4 mr-2" />}
-                  Post to Tally
-                </Button>
-              </div>
+            <div className="flex items-center gap-3">
+              <Button className="h-11 bg-emerald-700 hover:bg-emerald-800 text-white text-sm" onClick={saveTally} disabled={saving}>
+                {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Upload className="w-4 h-4 mr-2" />}
+                Push to Tally
+              </Button>
+              <p className="text-xs text-slate-500">This will automatically generate the XML and send it to your Tally instance.</p>
+            </div>
+          )}
+          {showTallyLog && (
+            <div>
+              <p className="text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wide">Push Attempt History</p>
+              <TallyPushLogViewer invoiceId={invoice.id} />
             </div>
           )}
         </div>
