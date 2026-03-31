@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
-import { AlertTriangle, CheckCircle, Loader2, FileText, X, ShieldAlert } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Loader2, FileText, X, ShieldAlert, Upload } from 'lucide-react';
 
 function StatusBadge({ status }) {
   const map = {
@@ -24,20 +24,21 @@ function StatusBadge({ status }) {
 
 export default function GRNReconciliationPanel({ grn, open, onClose, onUpdated }) {
   const { toast } = useToast();
-  const qc = useQueryClient();
   const [saving, setSaving] = useState(false);
+  const [uploadingDN, setUploadingDN] = useState(false);
   const [creditNoteNumber, setCreditNoteNumber] = useState('');
   const [creditNoteAmount, setCreditNoteAmount] = useState('');
   const [creditNoteDate, setCreditNoteDate] = useState(new Date().toISOString().split('T')[0]);
+  const [dnNumber, setDnNumber] = useState('');
+  const [dnDate, setDnDate] = useState('');
+  const [dnAmount, setDnAmount] = useState('');
 
-  // Fetch the actual invoice to get real amounts and SO reference
   const { data: matchedInvoices = [] } = useQuery({
     queryKey: ['grn-invoice-lookup', grn?.invoice_number, grn?.id],
     enabled: !!grn?.invoice_number,
     queryFn: () => base44.entities.SalesInvoice.filter({ invoice_number: grn.invoice_number }),
   });
 
-  // Also try by invoice_id if available
   const { data: invoiceById = [] } = useQuery({
     queryKey: ['grn-invoice-by-id', grn?.invoice_id],
     enabled: !!grn?.invoice_id && matchedInvoices.length === 0,
@@ -46,7 +47,6 @@ export default function GRNReconciliationPanel({ grn, open, onClose, onUpdated }
 
   const invoice = matchedInvoices[0] || invoiceById[0];
 
-  // Fetch SO
   const { data: salesOrders = [] } = useQuery({
     queryKey: ['grn-so-lookup', invoice?.sales_order_id, grn?.id],
     enabled: !!invoice?.sales_order_id,
@@ -54,7 +54,6 @@ export default function GRNReconciliationPanel({ grn, open, onClose, onUpdated }
   });
   const salesOrder = salesOrders[0];
 
-  // Fetch SO items for the preview
   const { data: soItems = [] } = useQuery({
     queryKey: ['grn-so-items-preview', invoice?.sales_order_id],
     enabled: !!invoice?.sales_order_id,
@@ -63,14 +62,22 @@ export default function GRNReconciliationPanel({ grn, open, onClose, onUpdated }
 
   if (!open || !grn) return null;
 
-  // Use actual invoice amount from linked invoice, fallback to grn.invoice_total_amount
   const ourInvoiceAmount = invoice?.total_amount || grn.invoice_total_amount || 0;
   const grnAmount = grn.grn_total_amount || 0;
   const discrepancyAmount = ourInvoiceAmount - grnAmount;
   const discrepancyPct = ourInvoiceAmount > 0 ? Math.abs(discrepancyAmount / ourInvoiceAmount) * 100 : 0;
   const needsManagementReview = discrepancyPct > 1;
+  const hasDiscrepancy = Math.abs(discrepancyAmount) > 0.01;
 
-  // Build comparison
+  // Qty totals from line items
+  const totalExpQty = (grn.items || []).reduce((s, i) => s + (i.exp_qty || 0), 0);
+  const totalGrnQty = (grn.items || []).reduce((s, i) => s + (i.grn_qty || 0), 0);
+  const qtyDiscrepancy = totalExpQty - totalGrnQty;
+
+  // Debit note state: either already on grn or being entered
+  const hasDNOnRecord = grn.dn_number || grn.dn_amount > 0;
+  const hasDNDocs = grn.discrepancy_pdf_url;
+
   const reconciled = (grn.items || []).map(grnItem => {
     const match = soItems.find(oi =>
       oi.description?.toLowerCase().includes(grnItem.description?.toLowerCase()?.substring(0, 15)) ||
@@ -86,6 +93,56 @@ export default function GRNReconciliationPanel({ grn, open, onClose, onUpdated }
       has_issue: Math.abs(qtyDiff) > 0,
     };
   });
+
+  const handleUploadDebitNote = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingDN(true);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const rawText = await base44.integrations.Core.InvokeLLM({
+        prompt: 'Return ONLY the raw text content of this document exactly as it appears. No interpretation.',
+        file_urls: [file_url],
+      });
+
+      // Try to extract debit note fields from the text
+      const text = typeof rawText === 'string' ? rawText : JSON.stringify(rawText);
+      const noteMatch = text.match(/Note#\s*(\S+)/i);
+      const dateMatch = text.match(/Date\s*:\s*([\d]{1,2}-[\d]{1,2}-[\d]{4})/i);
+      const amtMatch = text.match(/\bTotal\b[\s\u20b9]+([\d,]+\.\d{2})/i);
+
+      if (noteMatch) setDnNumber(noteMatch[1]);
+      if (dateMatch) {
+        const parts = dateMatch[1].split('-');
+        if (parts[0].length <= 2) setDnDate(`${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`);
+      }
+      if (amtMatch) setDnAmount(amtMatch[1].replace(/,/g, ''));
+
+      await base44.entities.CustomerGRN.update(grn.id, { discrepancy_pdf_url: file_url });
+      toast({ title: 'Debit Note PDF uploaded', description: 'Fill in details below and save.' });
+      onUpdated?.();
+    } catch (err) {
+      toast({ title: 'Upload failed', description: err.message, variant: 'destructive' });
+    } finally {
+      setUploadingDN(false);
+    }
+  };
+
+  const handleSaveDebitNote = async () => {
+    if (!dnNumber || !dnAmount) {
+      toast({ title: 'Debit note number and amount are required.', variant: 'destructive' }); return;
+    }
+    setSaving(true);
+    await base44.entities.CustomerGRN.update(grn.id, {
+      dn_number: dnNumber,
+      dn_date: dnDate,
+      dn_amount: Number(dnAmount),
+      status: 'discrepancy_identified',
+    });
+    toast({ title: 'Debit note details saved.' });
+    onUpdated?.();
+    setSaving(false);
+  };
 
   const handleIssueCreditNote = async () => {
     if (!creditNoteNumber || !creditNoteAmount) {
@@ -118,7 +175,7 @@ export default function GRNReconciliationPanel({ grn, open, onClose, onUpdated }
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-start justify-end">
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-start justify-end" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="h-full w-full max-w-6xl bg-white shadow-2xl flex flex-col overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-slate-200 shrink-0">
@@ -165,7 +222,6 @@ export default function GRNReconciliationPanel({ grn, open, onClose, onUpdated }
                   ))}
                 </div>
 
-                {/* SO Items */}
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mt-2">Order Items</p>
                 <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
                   <table className="w-full text-xs">
@@ -194,7 +250,6 @@ export default function GRNReconciliationPanel({ grn, open, onClose, onUpdated }
                   </table>
                 </div>
 
-                {/* Invoice total */}
                 <div className="bg-white border border-slate-200 rounded-lg p-3 text-xs space-y-1">
                   <div className="flex justify-between">
                     <span className="text-slate-500">Invoice Taxable</span>
@@ -234,44 +289,105 @@ export default function GRNReconciliationPanel({ grn, open, onClose, onUpdated }
               ))}
             </div>
 
-            {/* Amount comparison — highlight if >1% discrepancy */}
-            <div className={`grid grid-cols-3 gap-2 rounded-lg p-3 border ${needsManagementReview ? 'bg-red-50 border-red-300' : 'bg-white border-slate-200'}`}>
-              <div className="text-center">
-                <p className="text-xs text-blue-600">Our Invoice Amount</p>
-                <p className="font-bold text-blue-800 text-sm">₹{ourInvoiceAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
-                {invoice?.invoice_number && <p className="text-xs text-slate-400 mt-0.5">{invoice.invoice_number}</p>}
-                {salesOrder?.so_number && <p className="text-xs text-slate-400">{salesOrder.so_number}</p>}
-                {salesOrder?.po_number && <p className="text-xs text-slate-400">PO: {salesOrder.po_number}</p>}
-              </div>
-              <div className="text-center">
-                <p className="text-xs text-green-600">GRN Accepted Amount</p>
-                <p className="font-bold text-green-800 text-sm">₹{grnAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
-              </div>
-              <div className="text-center">
-                <p className={`text-xs ${needsManagementReview ? 'text-red-600 font-semibold' : 'text-slate-500'}`}>
-                  Discrepancy {needsManagementReview ? '⚠ >1%' : ''}
-                </p>
-                <p className={`font-bold text-sm ${needsManagementReview ? 'text-red-700' : 'text-slate-700'}`}>
-                  ₹{Math.abs(discrepancyAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                </p>
-                <p className={`text-xs mt-0.5 ${needsManagementReview ? 'text-red-600 font-semibold' : 'text-slate-400'}`}>
-                  {discrepancyPct.toFixed(2)}%
-                </p>
+            {/* Amount + Qty comparison */}
+            <div className={`rounded-lg p-3 border ${needsManagementReview ? 'bg-red-50 border-red-300' : hasDiscrepancy ? 'bg-amber-50 border-amber-200' : 'bg-green-50 border-green-200'}`}>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="text-center">
+                  <p className="text-xs text-blue-600">Our Invoice Amount</p>
+                  <p className="font-bold text-blue-800 text-sm">₹{ourInvoiceAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+                  {totalExpQty > 0 && <p className="text-xs text-blue-500 mt-0.5">{totalExpQty} bottles ordered</p>}
+                </div>
+                <div className="text-center">
+                  <p className="text-xs text-green-600">GRN Accepted Amount</p>
+                  <p className="font-bold text-green-800 text-sm">₹{grnAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+                  {totalGrnQty > 0 && <p className="text-xs text-green-500 mt-0.5">{totalGrnQty} bottles received</p>}
+                </div>
+                <div className="text-center">
+                  <p className={`text-xs ${needsManagementReview ? 'text-red-600 font-semibold' : 'text-slate-500'}`}>
+                    Discrepancy {needsManagementReview ? '⚠ >1%' : ''}
+                  </p>
+                  <p className={`font-bold text-sm ${needsManagementReview ? 'text-red-700' : hasDiscrepancy ? 'text-amber-700' : 'text-green-700'}`}>
+                    ₹{Math.abs(discrepancyAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  </p>
+                  <p className={`text-xs mt-0.5 ${needsManagementReview ? 'text-red-600 font-semibold' : 'text-slate-400'}`}>
+                    {discrepancyPct.toFixed(2)}% of invoice
+                  </p>
+                  {qtyDiscrepancy !== 0 && (
+                    <p className="text-xs mt-0.5 text-amber-700 font-medium">
+                      {Math.abs(qtyDiscrepancy)} bottle{Math.abs(qtyDiscrepancy) !== 1 ? 's' : ''} {qtyDiscrepancy > 0 ? 'short' : 'excess'}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
 
+            {/* Management Review Banner — enhanced with qty and weight info */}
             {needsManagementReview && (
-              <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-                <ShieldAlert className="w-4 h-4 shrink-0" />
-                <span>Discrepancy exceeds 1% of invoice value. This GRN has been flagged for management review.</span>
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg space-y-1">
+                <div className="flex items-center gap-2 text-red-700">
+                  <ShieldAlert className="w-4 h-4 shrink-0" />
+                  <span className="text-sm font-semibold">Discrepancy exceeds 1% of invoice value. This GRN has been flagged for management review.</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2 mt-2 text-xs text-red-700 bg-red-100 rounded p-2">
+                  <div>
+                    <span className="text-red-500 block">Amount Short</span>
+                    <span className="font-bold">₹{Math.abs(discrepancyAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div>
+                    <span className="text-red-500 block">Bottles Short</span>
+                    <span className="font-bold">{Math.abs(qtyDiscrepancy)} bottle{Math.abs(qtyDiscrepancy) !== 1 ? 's' : ''}</span>
+                  </div>
+                  <div>
+                    <span className="text-red-500 block">Discrepancy %</span>
+                    <span className="font-bold">{discrepancyPct.toFixed(2)}%</span>
+                  </div>
+                </div>
               </div>
             )}
 
-            {/* Debit note if any */}
-            {grn.dn_amount > 0 && (
+            {/* Existing debit note on record */}
+            {hasDNOnRecord && (
               <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-sm">
-                <p className="font-semibold text-orange-800">Debit Note: {grn.dn_number}</p>
-                <p className="text-orange-700">Amount: ₹{(grn.dn_amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })} · Date: {grn.dn_date || '—'}</p>
+                <p className="font-semibold text-orange-800">Debit Note on Record: {grn.dn_number}</p>
+                <p className="text-orange-700 text-xs mt-0.5">Amount: ₹{(grn.dn_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })} · Date: {grn.dn_date || '—'}</p>
+              </div>
+            )}
+
+            {/* Conditional: Upload Debit Note section — only shown if there's a discrepancy and GRN not closed/matched/credit_note_issued */}
+            {hasDiscrepancy && !['credit_note_issued', 'closed', 'matched'].includes(grn.status) && (
+              <div className="border border-amber-200 bg-amber-50 rounded-lg p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold text-amber-800">Discrepancy / Debit Note</p>
+                  <label className="cursor-pointer">
+                    {uploadingDN
+                      ? <span className="flex items-center gap-1 text-xs text-amber-600"><Loader2 className="w-3 h-3 animate-spin" />Parsing PDF...</span>
+                      : <span className="flex items-center gap-1 text-xs bg-amber-100 border border-amber-300 text-amber-800 px-3 py-1.5 rounded hover:bg-amber-200 transition-colors">
+                          <Upload className="w-3 h-3" /> Upload Debit Note PDF (auto-fill)
+                        </span>
+                    }
+                    <input type="file" accept=".pdf" className="hidden" onChange={handleUploadDebitNote} />
+                  </label>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <Label className="text-xs font-medium text-slate-700">Debit Note Number</Label>
+                    <Input className="h-9 text-sm mt-1" value={dnNumber || grn.dn_number || ''} onChange={e => setDnNumber(e.target.value)} placeholder="e.g. CPD-DN601670" />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-medium text-slate-700">Date</Label>
+                    <Input className="h-9 text-sm mt-1" type="date" value={dnDate || grn.dn_date || ''} onChange={e => setDnDate(e.target.value)} />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-medium text-slate-700">Amount (INR)</Label>
+                    <Input className="h-9 text-sm mt-1" type="number" value={dnAmount || grn.dn_amount || ''} onChange={e => setDnAmount(e.target.value)} />
+                  </div>
+                </div>
+                {!hasDNOnRecord && (
+                  <Button onClick={handleSaveDebitNote} disabled={saving} className="h-10 w-full">
+                    {saving && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+                    Save Debit Note Details
+                  </Button>
+                )}
               </div>
             )}
 
@@ -285,15 +401,14 @@ export default function GRNReconciliationPanel({ grn, open, onClose, onUpdated }
                       <th className="text-left px-3 py-2">Product</th>
                       <th className="text-center px-2 py-2">Our Qty</th>
                       <th className="text-center px-2 py-2">GRN Qty</th>
-                      <th className="text-center px-2 py-2">Diff</th>
+                      <th className="text-center px-2 py-2">Difference</th>
                       <th className="text-center px-2 py-2">Debit Qty</th>
                       <th className="text-right px-3 py-2">GRN Amount</th>
-                      <th className="px-2 py-2">Reason</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {reconciled.length === 0 && (
-                      <tr><td colSpan={7} className="text-center text-slate-400 py-6">No line items recorded</td></tr>
+                      <tr><td colSpan={6} className="text-center text-slate-400 py-6">No line items recorded</td></tr>
                     )}
                     {reconciled.map((item, idx) => (
                       <tr key={idx} className={item.has_issue ? 'bg-red-50' : 'hover:bg-slate-50'}>
@@ -313,7 +428,6 @@ export default function GRNReconciliationPanel({ grn, open, onClose, onUpdated }
                         </td>
                         <td className="text-center px-2 py-2 text-red-600 font-medium">{item.dn_qty || '—'}</td>
                         <td className="text-right px-3 py-2 text-slate-700">₹{(item.total_amount || 0).toFixed(2)}</td>
-                        <td className="px-2 py-2 text-slate-500 max-w-[100px]">{item.reason || '—'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -321,8 +435,8 @@ export default function GRNReconciliationPanel({ grn, open, onClose, onUpdated }
               </div>
             </div>
 
-            {/* Credit Note Issuance */}
-            {!['credit_note_issued', 'closed', 'matched'].includes(grn.status) && (
+            {/* Issue Credit Note — only shown when debit note docs are uploaded */}
+            {hasDNDocs && hasDNOnRecord && !['credit_note_issued', 'closed', 'matched'].includes(grn.status) && (
               <div className="border border-blue-200 bg-blue-50 rounded-lg p-4">
                 <p className="text-sm font-semibold text-blue-800 mb-3">Issue Credit Note</p>
                 <div className="grid grid-cols-3 gap-3">
@@ -332,7 +446,7 @@ export default function GRNReconciliationPanel({ grn, open, onClose, onUpdated }
                   </div>
                   <div>
                     <Label className="text-xs font-medium text-slate-700">Amount (INR)</Label>
-                    <Input className="h-9 text-sm mt-1" type="number" value={creditNoteAmount} onChange={e => setCreditNoteAmount(e.target.value)} placeholder={grn.dn_amount || ''} />
+                    <Input className="h-9 text-sm mt-1" type="number" value={creditNoteAmount} onChange={e => setCreditNoteAmount(e.target.value)} placeholder={grn.dn_amount?.toString() || ''} />
                   </div>
                   <div>
                     <Label className="text-xs font-medium text-slate-700">Date</Label>
@@ -343,6 +457,13 @@ export default function GRNReconciliationPanel({ grn, open, onClose, onUpdated }
                   {saving && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
                   Issue Credit Note
                 </Button>
+              </div>
+            )}
+
+            {/* Show message if debit note not yet uploaded */}
+            {hasDiscrepancy && hasDNOnRecord && !hasDNDocs && !['credit_note_issued', 'closed', 'matched'].includes(grn.status) && (
+              <div className="border border-slate-200 bg-slate-50 rounded-lg p-3 text-sm text-slate-500 text-center">
+                Upload the Debit Note PDF above to proceed with Credit Note issuance.
               </div>
             )}
 
@@ -358,14 +479,21 @@ export default function GRNReconciliationPanel({ grn, open, onClose, onUpdated }
 
             {/* Actions */}
             <div className="flex gap-3 pb-4">
-              {grn.status === 'pending_match' && (
+              {/* Mark as Fully Matched: only shown if NO discrepancy */}
+              {!hasDiscrepancy && grn.status === 'pending_match' && (
                 <Button variant="outline" onClick={handleMarkMatched} disabled={saving} className="h-11 flex-1">
+                  {saving && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
                   Mark as Fully Matched (No Discrepancy)
                 </Button>
               )}
               {grn.grn_pdf_url && (
                 <Button variant="outline" className="h-11" onClick={() => window.open(grn.grn_pdf_url, '_blank')}>
                   <FileText className="w-4 h-4 mr-2" /> View GRN PDF
+                </Button>
+              )}
+              {grn.discrepancy_pdf_url && (
+                <Button variant="outline" className="h-11" onClick={() => window.open(grn.discrepancy_pdf_url, '_blank')}>
+                  <FileText className="w-4 h-4 mr-2" /> View Debit Note PDF
                 </Button>
               )}
             </div>

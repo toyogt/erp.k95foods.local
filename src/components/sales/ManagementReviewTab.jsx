@@ -1,4 +1,8 @@
-import { ShieldAlert, AlertTriangle, Clock } from 'lucide-react';
+import { useState } from 'react';
+import { base44 } from '@/api/base44Client';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/components/ui/use-toast';
+import { ShieldAlert, AlertTriangle, Clock, CheckCircle, Loader2 } from 'lucide-react';
 
 const PLATFORM_COLORS = {
   swiggy: 'bg-orange-100 text-orange-700',
@@ -7,12 +11,9 @@ const PLATFORM_COLORS = {
   other: 'bg-slate-100 text-slate-600',
 };
 
-// Rule engine: collects all items needing management review
-// Add new rules here as more modules are built
 function buildReviewItems(grns, debitNotes, invoices) {
   const items = [];
 
-  // Rule 1: GRN discrepancy > 1% of invoice amount
   for (const grn of grns) {
     const invoice = invoices.find(inv => inv.invoice_number === grn.invoice_number || inv.id === grn.invoice_id);
     const invoiceAmount = invoice?.total_amount || grn.invoice_total_amount || 0;
@@ -20,6 +21,9 @@ function buildReviewItems(grns, debitNotes, invoices) {
     if (invoiceAmount > 0) {
       const pct = Math.abs((invoiceAmount - grnAmount) / invoiceAmount) * 100;
       if (pct > 1) {
+        const totalExpQty = (grn.items || []).reduce((s, i) => s + (i.exp_qty || 0), 0);
+        const totalGrnQty = (grn.items || []).reduce((s, i) => s + (i.grn_qty || 0), 0);
+        const qtyShort = totalExpQty - totalGrnQty;
         items.push({
           id: grn.id,
           type: 'grn_discrepancy',
@@ -29,15 +33,16 @@ function buildReviewItems(grns, debitNotes, invoices) {
           platform: grn.platform,
           description: `GRN amount (₹${grnAmount.toLocaleString('en-IN')}) differs from invoice (₹${invoiceAmount.toLocaleString('en-IN')}) by ${pct.toFixed(2)}%`,
           detail: `Invoice: ${grn.invoice_number} · PO: ${grn.po_number || '—'} · GRN Date: ${grn.grn_date || '—'}`,
+          qty_detail: qtyShort !== 0 ? `${Math.abs(qtyShort)} bottle${Math.abs(qtyShort) !== 1 ? 's' : ''} ${qtyShort > 0 ? 'short' : 'excess'}` : null,
           status: grn.status,
           amount_diff: Math.abs(invoiceAmount - grnAmount),
           raw: grn,
+          entity: 'grn',
         });
       }
     }
   }
 
-  // Rule 2: Debit notes under review or disputed
   for (const dn of debitNotes) {
     if (['under_review', 'disputed'].includes(dn.status)) {
       items.push({
@@ -49,45 +54,41 @@ function buildReviewItems(grns, debitNotes, invoices) {
         platform: dn.platform,
         description: `Debit note of ₹${(dn.debit_note_amount || 0).toLocaleString('en-IN')} is ${dn.status === 'disputed' ? 'disputed' : 'under review'}`,
         detail: `Invoice: ${dn.invoice_number || '—'} · Narration: ${dn.narration || '—'}`,
+        qty_detail: null,
         status: dn.status,
         amount_diff: dn.debit_note_amount || 0,
         raw: dn,
+        entity: 'debit_note',
       });
     }
   }
 
-  // Rule 3: GRNs pending match for too long (created > 7 days ago with no action)
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
   for (const grn of grns) {
     if (grn.status === 'pending_match' && grn.grn_date) {
       const grnDate = new Date(grn.grn_date);
-      if (grnDate < sevenDaysAgo) {
-        // Only add if not already added for discrepancy
-        const alreadyAdded = items.some(i => i.id === grn.id && i.type === 'grn_discrepancy');
-        if (!alreadyAdded) {
-          items.push({
-            id: grn.id + '_stale',
-            type: 'grn_stale',
-            severity: 'low',
-            source: 'GRN Reconciliation',
-            reference: grn.grn_number,
-            platform: grn.platform,
-            description: `GRN unmatched for more than 7 days`,
-            detail: `Invoice: ${grn.invoice_number} · GRN Date: ${grn.grn_date}`,
-            status: grn.status,
-            amount_diff: null,
-            raw: grn,
-          });
-        }
+      if (grnDate < sevenDaysAgo && !items.some(i => i.id === grn.id && i.type === 'grn_discrepancy')) {
+        items.push({
+          id: grn.id + '_stale',
+          type: 'grn_stale',
+          severity: 'low',
+          source: 'GRN Reconciliation',
+          reference: grn.grn_number,
+          platform: grn.platform,
+          description: `GRN unmatched for more than 7 days`,
+          detail: `Invoice: ${grn.invoice_number} · GRN Date: ${grn.grn_date}`,
+          qty_detail: null,
+          status: grn.status,
+          amount_diff: null,
+          raw: grn,
+          entity: 'grn',
+        });
       }
     }
   }
 
-  return items.sort((a, b) => {
-    const order = { high: 0, medium: 1, low: 2 };
-    return order[a.severity] - order[b.severity];
-  });
+  return items.sort((a, b) => ({ high: 0, medium: 1, low: 2 }[a.severity] - { high: 0, medium: 1, low: 2 }[b.severity]));
 }
 
 const SEVERITY_STYLES = {
@@ -96,7 +97,74 @@ const SEVERITY_STYLES = {
   low: { badge: 'bg-slate-100 text-slate-600 border border-slate-200', dot: 'bg-slate-400', label: 'Low' },
 };
 
-export default function ManagementReviewTab({ grns, debitNotes, invoices }) {
+function ApproveRow({ item, onApproved }) {
+  const [showForm, setShowForm] = useState(false);
+  const [comment, setComment] = useState('');
+  const [saving, setSaving] = useState(false);
+  const { toast } = useToast();
+
+  const handleApprove = async () => {
+    if (!comment.trim()) {
+      toast({ title: 'Approval comment is required.', description: 'Please provide a comment before approving.', variant: 'destructive' });
+      return;
+    }
+    setSaving(true);
+    if (item.entity === 'grn') {
+      await base44.entities.CustomerGRN.update(item.raw.id, {
+        status: 'discrepancy_identified',
+        notes: (item.raw.notes ? item.raw.notes + '\n' : '') + `[Management Approved] ${comment}`,
+      });
+    } else if (item.entity === 'debit_note') {
+      await base44.entities.CustomerDebitNote.update(item.raw.id, {
+        status: 'accepted',
+        notes: (item.raw.notes ? item.raw.notes + '\n' : '') + `[Management Approved] ${comment}`,
+      });
+    }
+    toast({ title: 'Approved successfully', description: comment });
+    setSaving(false);
+    setShowForm(false);
+    onApproved?.();
+  };
+
+  if (item.status === 'discrepancy_identified' || item.status === 'accepted') {
+    return (
+      <td className="px-3 py-3">
+        <span className="flex items-center gap-1 text-xs text-green-700 font-medium">
+          <CheckCircle className="w-3 h-3" /> Approved
+        </span>
+      </td>
+    );
+  }
+
+  return (
+    <td className="px-3 py-3 min-w-[200px]">
+      {!showForm ? (
+        <Button size="sm" className="h-8 text-xs" onClick={() => setShowForm(true)}>
+          Approve
+        </Button>
+      ) : (
+        <div className="space-y-1.5">
+          <textarea
+            className="w-full text-xs border border-slate-300 rounded p-1.5 h-16 resize-none focus:outline-none focus:border-blue-400"
+            placeholder="Approval comment (required)..."
+            value={comment}
+            onChange={e => setComment(e.target.value)}
+          />
+          <div className="flex gap-1.5">
+            <Button size="sm" className="h-7 text-xs flex-1" onClick={handleApprove} disabled={saving || !comment.trim()}>
+              {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Confirm Approve'}
+            </Button>
+            <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => { setShowForm(false); setComment(''); }}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
+    </td>
+  );
+}
+
+export default function ManagementReviewTab({ grns, debitNotes, invoices, onRefresh }) {
   const items = buildReviewItems(grns, debitNotes, invoices);
 
   const high = items.filter(i => i.severity === 'high').length;
@@ -105,7 +173,6 @@ export default function ManagementReviewTab({ grns, debitNotes, invoices }) {
 
   return (
     <div className="space-y-4">
-      {/* Summary */}
       <div className="grid grid-cols-3 gap-3">
         {[
           { label: 'High Priority', count: high, color: 'text-red-600', bg: 'bg-red-50 border-red-200' },
@@ -137,13 +204,14 @@ export default function ManagementReviewTab({ grns, debitNotes, invoices }) {
                 <th className="text-left px-3 py-3">Issue</th>
                 <th className="text-right px-3 py-3">Amount at Risk</th>
                 <th className="text-left px-3 py-3">Status</th>
+                <th className="text-left px-3 py-3">Approval</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {items.map(item => {
                 const sev = SEVERITY_STYLES[item.severity];
                 return (
-                  <tr key={item.id} className={`hover:bg-slate-50 ${item.severity === 'high' ? 'bg-red-50/40' : ''}`}>
+                  <tr key={item.id} className={`${item.severity === 'high' ? 'bg-red-50/40' : ''}`}>
                     <td className="px-4 py-3">
                       <span className={`text-xs font-semibold px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${sev.badge}`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${sev.dot}`} />
@@ -162,6 +230,9 @@ export default function ManagementReviewTab({ grns, debitNotes, invoices }) {
                     <td className="px-3 py-3">
                       <p className="text-slate-800 font-medium leading-tight">{item.description}</p>
                       <p className="text-xs text-slate-400 mt-0.5">{item.detail}</p>
+                      {item.qty_detail && (
+                        <p className="text-xs text-amber-700 font-medium mt-0.5">📦 {item.qty_detail}</p>
+                      )}
                     </td>
                     <td className="px-3 py-3 text-right font-semibold text-red-700">
                       {item.amount_diff != null ? `₹${item.amount_diff.toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : '—'}
@@ -171,6 +242,7 @@ export default function ManagementReviewTab({ grns, debitNotes, invoices }) {
                         {item.status?.replace(/_/g, ' ')}
                       </span>
                     </td>
+                    <ApproveRow item={item} onApproved={onRefresh} />
                   </tr>
                 );
               })}
@@ -180,7 +252,7 @@ export default function ManagementReviewTab({ grns, debitNotes, invoices }) {
       )}
 
       <p className="text-xs text-slate-400 text-center">
-        Review items are auto-generated by system rules: GRN discrepancy &gt;1%, disputed/under-review debit notes, and unmatched GRNs older than 7 days.
+        Review items are auto-generated: GRN discrepancy &gt;1%, disputed or under-review debit notes, and unmatched GRNs older than 7 days.
       </p>
     </div>
   );

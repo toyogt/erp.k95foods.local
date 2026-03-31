@@ -238,7 +238,7 @@ export default function SalesGRNReconciliation() {
 
         {/* Management Review Tab */}
         <TabsContent value="mgmt_review" className="mt-3">
-          <ManagementReviewTab grns={grns} debitNotes={debitNotes} invoices={invoices} />
+          <ManagementReviewTab grns={grns} debitNotes={debitNotes} invoices={invoices} onRefresh={refresh} />
         </TabsContent>
 
         {/* Debit Notes Tab */}

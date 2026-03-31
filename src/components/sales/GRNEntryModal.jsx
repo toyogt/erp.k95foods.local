@@ -391,27 +391,6 @@ export default function GRNEntryModal({ open, onClose, onSaved, invoices = [] })
             <F label="Warehouse / Hub Location" k="warehouse_location" />
           </div>
 
-          {/* Discrepancy Note section */}
-          <div className="border border-amber-200 bg-amber-50 rounded-lg p-3 space-y-3">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold text-amber-700">Discrepancy / Debit Note (if any)</p>
-              <label className="cursor-pointer">
-                {uploadingDN
-                  ? <span className="flex items-center gap-1 text-xs text-amber-600"><Loader2 className="w-3 h-3 animate-spin" />Parsing...</span>
-                  : <span className="flex items-center gap-1 text-xs bg-amber-100 border border-amber-300 text-amber-800 px-2 py-1 rounded hover:bg-amber-200 transition-colors">
-                      <Upload className="w-3 h-3" />Upload Debit Note PDF
-                    </span>
-                }
-                <input type="file" accept=".pdf" className="hidden" onChange={handleDebitNotePDF} />
-              </label>
-            </div>
-            <div className="grid grid-cols-3 gap-3">
-              <F label="Debit / Discrepancy Note Number" k="dn_number" />
-              <F label="Date" k="dn_date" type="date" />
-              <F label="Amount (INR)" k="dn_amount" type="number" />
-            </div>
-          </div>
-
           {/* Reconciliation Summary: Discrepancy = Invoice Total - GRN Total */}
           {showSummary && (
             <div className={`rounded-lg p-3 border text-sm ${hasDisc ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
