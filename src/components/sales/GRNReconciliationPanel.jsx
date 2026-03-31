@@ -74,12 +74,16 @@ export default function GRNReconciliationPanel({ grn, open, onClose, onUpdated }
   const hasDNDocs = grn.discrepancy_pdf_url;
 
   // Step 1: Match each GRN line to an SO item
+  // Priority: exact sku_code > exact item_code > full description equality > partial (last resort)
   const reconciledGrnItems = (grn.items || []).map(grnItem => {
-    const match = soItems.find(oi =>
-      (oi.sku_code && oi.sku_code === grnItem.sku_code) ||
-      (oi.item_code && oi.item_code === grnItem.sku_code) ||
-      (grnItem.description && oi.description?.toLowerCase().includes(grnItem.description?.toLowerCase().substring(0, 20)))
-    );
+    const grnDesc = grnItem.description?.toLowerCase().trim();
+    const grnSku = grnItem.sku_code?.trim();
+    const match =
+      soItems.find(oi => grnSku && oi.sku_code?.trim() === grnSku) ||
+      soItems.find(oi => grnSku && oi.item_code?.trim() === grnSku) ||
+      soItems.find(oi => grnDesc && oi.description?.toLowerCase().trim() === grnDesc) ||
+      soItems.find(oi => grnDesc && grnDesc.length > 25 && oi.description?.toLowerCase().trim().includes(grnDesc.substring(0, 30)));
+    
     const expectedQty = match?.quantity || grnItem.exp_qty || 0;
     const qtyDiff = (grnItem.grn_qty || 0) - expectedQty;
     return {
