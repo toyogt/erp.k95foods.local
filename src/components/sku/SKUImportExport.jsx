@@ -169,109 +169,72 @@ export default function SKUImportExport({ products, onImportComplete }) {
     toast.success(`Exported ${products.length} SKUs`);
   };
 
-  const handleImport = async () => {
-    if (!file) {
-      toast.error('Please select a file');
-      return;
-    }
+  const parseCSV = (text) => {
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#'));
+    if (lines.length < 2) return [];
+    const headers = lines[0].split(',').map(h => h.trim());
+    return lines.slice(1).map(line => {
+      const vals = line.split(',').map(v => v.trim());
+      const obj = {};
+      headers.forEach((h, i) => { obj[h] = vals[i] ?? ''; });
+      return obj;
+    }).filter(r => Object.values(r).some(v => v !== ''));
+  };
 
+  const handleImport = async () => {
+    if (!file) { toast.error('Please select a file'); return; }
     setImporting(true);
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      
-      const schema = {
-        type: 'array',
-        items: {
-          type: 'object',
-          properties: {
-            brand_name: { type: 'string' },
-            product_family: { type: 'string' },
-            product_name: { type: 'string' },
-            flavour: { type: 'string' },
-            ml_per_bottle: { type: 'number' },
-            bottles_per_box: { type: 'number' },
-            mrp: { type: 'number' },
-            gross_weight_kg: { type: 'number' },
-            shelf_life_days: { type: 'number' },
-            is_trial_pack: { type: 'boolean' },
-            container_type: { type: 'string' },
-            colour: { type: 'string' },
-            cap_type: { type: 'string' },
-            cap_colour: { type: 'string' },
-            hsn_code: { type: 'string' },
-            swiggy_item_id: { type: 'string' },
-            bigbasket_item_id: { type: 'string' },
-            zepto_item_id: { type: 'string' },
-            amazon_item_id: { type: 'string' }
-          }
-        }
-      };
+      const text = await file.text();
+      const rows = parseCSV(text);
 
-      const extractResult = await base44.integrations.Core.ExtractDataFromUploadedFile({
-        file_url,
-        json_schema: schema
-      });
-
-      if (extractResult.status === 'error') {
-        toast.error(extractResult.details || 'Failed to extract data from file');
+      if (rows.length === 0) {
+        toast.error('No valid rows found in CSV');
         setImporting(false);
         return;
       }
 
-      const rows = extractResult.output;
-      let created = 0;
-      let errors = 0;
+      const records = rows.map(row => {
+        const prefix = (row.brand_name || 'SK').substring(0, 2).toUpperCase();
+        const familyCode = (row.product_family || 'XXX').substring(0, 3).toUpperCase();
+        const ml = row.ml_per_bottle || '000';
+        const btl = row.bottles_per_box || '00';
+        const itemCode = `${prefix}-${familyCode}-${ml}ML-${btl}PC`;
 
-      for (const row of rows) {
-        try {
-          // Auto-generate SKU code
-          const prefix = row.brand_name?.substring(0, 2).toUpperCase() || 'SK';
-          const familyCode = row.product_family?.substring(0, 3).toUpperCase() || 'XXX';
-          const mlCode = row.ml_per_bottle || '000';
-          const btlCode = row.bottles_per_box || '00';
-          const itemCode = `${prefix}-${familyCode}-${mlCode}ML-${btlCode}PC`;
+        const bottleType = (row.container_type && row.colour && row.ml_per_bottle)
+          ? `${row.container_type} ${row.colour} ${row.ml_per_bottle}ML`
+          : '';
 
-          // Auto-generate bottle type name
-          let bottleType = '';
-          if (row.container_type && row.colour && row.ml_per_bottle) {
-            bottleType = `${row.container_type} ${row.colour} ${row.ml_per_bottle}ML`;
-          }
+        const capSku = (row.cap_type && row.cap_colour)
+          ? `CAP-${row.cap_type.replace(/\s+/g, '-').toUpperCase()}-${row.cap_colour.toUpperCase()}`
+          : '';
 
-          // Auto-generate cap SKU
-          let capSku = '';
-          if (row.cap_type && row.cap_colour) {
-            capSku = `CAP-${row.cap_type.replace(/\s+/g, '-').toUpperCase()}-${row.cap_colour.toUpperCase()}`;
-          }
+        return {
+          item_code: itemCode,
+          brand_name: row.brand_name || '',
+          product_family: row.product_family || '',
+          product_name: row.product_name || '',
+          flavour: row.flavour || '',
+          ml_per_bottle: row.ml_per_bottle ? Number(row.ml_per_bottle) : undefined,
+          bottles_per_box: row.bottles_per_box ? Number(row.bottles_per_box) : undefined,
+          mrp: row.mrp ? Number(row.mrp) : undefined,
+          gross_weight_kg: row.gross_weight_kg ? Number(row.gross_weight_kg) : undefined,
+          shelf_life_days: row.shelf_life_days ? Number(row.shelf_life_days) : undefined,
+          is_trial_pack: String(row.is_trial_pack).toUpperCase() === 'TRUE',
+          bottle_type: bottleType,
+          cap_sku_code: capSku,
+          is_active: false,
+          hsn_code: row.hsn_code || '',
+          swiggy_item_id: row.swiggy_item_id || '',
+          bigbasket_item_id: row.bigbasket_item_id || '',
+          zepto_item_id: row.zepto_item_id || '',
+          amazon_item_id: row.amazon_item_id || '',
+        };
+      });
 
-          await base44.entities.ProductMaster.create({
-            item_code: itemCode,
-            brand_name: row.brand_name,
-            product_family: row.product_family,
-            product_name: row.product_name,
-            flavour: row.flavour,
-            ml_per_bottle: row.ml_per_bottle,
-            bottles_per_box: row.bottles_per_box,
-            mrp: row.mrp,
-            gross_weight_kg: row.gross_weight_kg,
-            shelf_life_days: row.shelf_life_days,
-            is_trial_pack: row.is_trial_pack || false,
-            bottle_type: bottleType,
-            cap_sku_code: capSku,
-            is_active: false,
-            hsn_code: row.hsn_code || '',
-            swiggy_item_id: row.swiggy_item_id || '',
-            bigbasket_item_id: row.bigbasket_item_id || '',
-            zepto_item_id: row.zepto_item_id || '',
-            amazon_item_id: row.amazon_item_id || ''
-          });
-          created++;
-        } catch (err) {
-          console.error('Failed to create SKU:', err);
-          errors++;
-        }
-      }
+      await base44.entities.ProductMaster.bulkCreate(records);
 
-      toast.success(`Imported ${created} SKUs${errors > 0 ? `, ${errors} errors` : ''}`, { duration: 5000 });
+      toast.success(`Imported ${records.length} Product Code${records.length > 1 ? 's' : ''} successfully`, { duration: 5000 });
       setShowImport(false);
       setFile(null);
       onImportComplete?.();
