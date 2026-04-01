@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Plus, Trash2, Loader2, Truck, Edit2 } from 'lucide-react';
+import { Plus, Trash2, Loader2, Truck, Edit2, Download } from 'lucide-react';
 
 const EMPTY = {
   name: '', customer_name: '', customer_group: '',
@@ -99,20 +99,66 @@ export default function TransportRateManager() {
     toast({ title: 'Rate card deleted' });
   };
 
+  const [transporterFilter, setTransporterFilter] = useState('');
+
   const totalCost = (c) =>
     (c.freight_cost || 0) + (c.door_delivery_cost || 0) + (c.bilty_cost || 0) +
     (c.labour_cost || 0) + (c.pickup_charges || 0) + (c.late_fees || 0);
 
+  // Unique transporters for filter
+  const transporters = [...new Set(cards.map(c => c.transporter).filter(Boolean))];
+
+  // Filtered cards
+  const filteredCards = transporterFilter
+    ? cards.filter(c => c.transporter === transporterFilter)
+    : cards;
+
+  const handleExportCSV = () => {
+    const headers = ['name','customer_name','customer_group','weight_from_kg','weight_to_kg','freight_cost','door_delivery_cost','bilty_cost','labour_cost','pickup_charges','late_fees','transporter','destination_region','is_active','notes'];
+    const rows = filteredCards.map(c => headers.map(h => {
+      const val = c[h];
+      if (val === undefined || val === null) return '';
+      if (typeof val === 'boolean') return val ? 'true' : 'false';
+      const str = String(val);
+      return str.includes(',') ? `"${str}"` : str;
+    }).join(','));
+    const csv = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `transport_rate_cards_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast({ title: `Exported ${filteredCards.length} rate cards` });
+  };
+
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2">
           <Truck className="w-4 h-4 text-slate-600" />
           <span className="text-sm font-semibold text-slate-900">Transport Rate Cards</span>
+          <span className="text-xs text-slate-400">({filteredCards.length})</span>
         </div>
-        <Button variant="outline" className="h-9 text-sm gap-1" onClick={openCreate}>
-          <Plus className="w-4 h-4" /> Add Rate Card
-        </Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {transporters.length > 0 && (
+            <select
+              className="h-9 text-sm border border-slate-200 rounded-md px-2 bg-white text-slate-700"
+              value={transporterFilter}
+              onChange={e => setTransporterFilter(e.target.value)}
+            >
+              <option value="">All Transporters</option>
+              {transporters.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+          )}
+          <Button variant="outline" className="h-9 text-sm gap-1" onClick={handleExportCSV} disabled={filteredCards.length === 0}>
+            <Download className="w-4 h-4" /> Export CSV
+          </Button>
+          <Button variant="outline" className="h-9 text-sm gap-1" onClick={openCreate}>
+            <Plus className="w-4 h-4" /> Add Rate Card
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
@@ -134,12 +180,13 @@ export default function TransportRateManager() {
                 <th className="text-right py-2 px-2 font-medium">Labour</th>
                 <th className="text-right py-2 px-2 font-medium">Pickup</th>
                 <th className="text-right py-2 px-2 font-medium">Late Fee</th>
+                <th className="text-left py-2 px-2 font-medium">Transporter</th>
                 <th className="text-right py-2 px-2 font-medium">Total</th>
                 <th className="text-center py-2 px-2 font-medium">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {cards.map(c => (
+              {filteredCards.map(c => (
                 <tr key={c.id} className="hover:bg-slate-50">
                   <td className="py-1.5 px-2 font-medium">{c.name || '—'}</td>
                   <td className="py-1.5 px-2">{c.customer_name || <span className="text-slate-400">All</span>}</td>
@@ -151,6 +198,7 @@ export default function TransportRateManager() {
                   <td className="py-1.5 px-2 text-right">₹{(c.labour_cost || 0).toLocaleString('en-IN')}</td>
                   <td className="py-1.5 px-2 text-right">₹{(c.pickup_charges || 0).toLocaleString('en-IN')}</td>
                   <td className="py-1.5 px-2 text-right">₹{(c.late_fees || 0).toLocaleString('en-IN')}</td>
+                  <td className="py-1.5 px-2">{c.transporter || <span className="text-slate-400">Any</span>}</td>
                   <td className="py-1.5 px-2 text-right font-semibold">₹{totalCost(c).toLocaleString('en-IN')}</td>
                   <td className="py-1.5 px-2 text-center">
                     <div className="flex items-center justify-center gap-1">
