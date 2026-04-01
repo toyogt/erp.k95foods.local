@@ -13,7 +13,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Plus, Trash2, Loader2, Truck, Edit2 } from 'lucide-react';
 
 const EMPTY = {
-  name: '', weight_from_kg: '', weight_to_kg: '',
+  name: '', customer_name: '', customer_group: '',
+  weight_from_kg: '', weight_to_kg: '',
   freight_cost: '', door_delivery_cost: '', bilty_cost: '',
   labour_cost: '', pickup_charges: '', late_fees: '',
   transporter: '', destination_region: '', is_active: true, notes: '',
@@ -39,6 +40,8 @@ export default function TransportRateManager() {
     setEditing(card);
     setForm({
       name: card.name || '',
+      customer_name: card.customer_name || '',
+      customer_group: card.customer_group || '',
       weight_from_kg: card.weight_from_kg || '',
       weight_to_kg: card.weight_to_kg || '',
       freight_cost: card.freight_cost || '',
@@ -62,6 +65,8 @@ export default function TransportRateManager() {
     setSaving(true);
     const payload = {
       name: form.name || undefined,
+      customer_name: form.customer_name || undefined,
+      customer_group: form.customer_group || undefined,
       weight_from_kg: Number(form.weight_from_kg),
       weight_to_kg: Number(form.weight_to_kg),
       freight_cost: Number(form.freight_cost) || 0,
@@ -119,9 +124,12 @@ export default function TransportRateManager() {
           <table className="w-full text-xs">
             <thead>
               <tr className="bg-slate-100 text-slate-700">
+                <th className="text-left py-2 px-2 font-medium">Name</th>
+                <th className="text-left py-2 px-2 font-medium">Customer</th>
+                <th className="text-left py-2 px-2 font-medium">Group</th>
                 <th className="text-left py-2 px-2 font-medium">Weight Range (kg)</th>
                 <th className="text-right py-2 px-2 font-medium">Freight</th>
-                <th className="text-right py-2 px-2 font-medium">Door Del.</th>
+                <th className="text-right py-2 px-2 font-medium">Door Delivery</th>
                 <th className="text-right py-2 px-2 font-medium">Bilty</th>
                 <th className="text-right py-2 px-2 font-medium">Labour</th>
                 <th className="text-right py-2 px-2 font-medium">Pickup</th>
@@ -133,7 +141,10 @@ export default function TransportRateManager() {
             <tbody className="divide-y divide-slate-100">
               {cards.map(c => (
                 <tr key={c.id} className="hover:bg-slate-50">
-                  <td className="py-1.5 px-2 font-medium">{c.weight_from_kg}–{c.weight_to_kg} kg {c.name ? <span className="text-slate-400">({c.name})</span> : ''}</td>
+                  <td className="py-1.5 px-2 font-medium">{c.name || '—'}</td>
+                  <td className="py-1.5 px-2">{c.customer_name || <span className="text-slate-400">All</span>}</td>
+                  <td className="py-1.5 px-2">{c.customer_group || <span className="text-slate-400">All</span>}</td>
+                  <td className="py-1.5 px-2">{c.weight_from_kg}–{c.weight_to_kg} kg</td>
                   <td className="py-1.5 px-2 text-right">₹{(c.freight_cost || 0).toLocaleString('en-IN')}</td>
                   <td className="py-1.5 px-2 text-right">₹{(c.door_delivery_cost || 0).toLocaleString('en-IN')}</td>
                   <td className="py-1.5 px-2 text-right">₹{(c.bilty_cost || 0).toLocaleString('en-IN')}</td>
@@ -164,6 +175,18 @@ export default function TransportRateManager() {
             <div>
               <Label className="text-xs font-medium text-slate-700">Name (optional)</Label>
               <Input className="h-9 text-sm mt-1" value={form.name} onChange={e => set('name', e.target.value)} placeholder="e.g. Local Mumbai" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs font-medium text-slate-700">Customer Name</Label>
+                <Input className="h-9 text-sm mt-1" value={form.customer_name} onChange={e => set('customer_name', e.target.value)} placeholder="Leave blank for all customers" />
+                <p className="text-xs text-slate-500 mt-0.5">Maps rate to a specific customer</p>
+              </div>
+              <div>
+                <Label className="text-xs font-medium text-slate-700">Customer Group</Label>
+                <Input className="h-9 text-sm mt-1" value={form.customer_group} onChange={e => set('customer_group', e.target.value)} placeholder="e.g. Quick Commerce" />
+                <p className="text-xs text-slate-500 mt-0.5">Maps rate to a customer group</p>
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
