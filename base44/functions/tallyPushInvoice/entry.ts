@@ -530,13 +530,17 @@ Deno.serve(async (req) => {
 
     // 4. Fetch customer (for address, place_of_supply)
     let customer = null;
-    if (inv.customer_gstin) {
-      const customers = await base44.asServiceRole.entities.Customer.filter({ gstin: inv.customer_gstin });
-      customer = customers?.[0] || null;
-    }
-    if (!customer && inv.customer_name) {
-      const customers = await base44.asServiceRole.entities.Customer.filter({ name: inv.customer_name });
-      customer = customers?.[0] || null;
+    try {
+      if (inv.customer_gstin) {
+        const customers = await base44.asServiceRole.entities.Customer.filter({ gstin: inv.customer_gstin });
+        customer = customers?.[0] || null;
+      }
+      if (!customer && inv.customer_name) {
+        const customers = await base44.asServiceRole.entities.Customer.filter({ name: inv.customer_name });
+        customer = customers?.[0] || null;
+      }
+    } catch (_) {
+      // Customer lookup is non-fatal
     }
 
     // 5. Build XML

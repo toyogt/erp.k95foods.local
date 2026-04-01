@@ -16,6 +16,7 @@ import BatchRulePreview from '@/components/batch/BatchRulePreview.jsx';
 import TrialPackBOMTab from '@/components/sku/TrialPackBOMTab';
 import SKUImportExport from '@/components/sku/SKUImportExport';
 import PlatformIDsSection from '@/components/sku/PlatformIDsSection';
+import SKUBulkEditModal from '@/components/sku/SKUBulkEditModal';
 
 function genId(prefix) { return prefix + '-' + Date.now().toString(36).toUpperCase().slice(-5); }
 
@@ -62,6 +63,10 @@ export default function SKUSetup() {
   const [ruleBuilderOpen, setRuleBuilderOpen] = useState(false);
   const [ruleBuilderMode, setRuleBuilderMode] = useState('create'); // 'create' | 'edit' | 'duplicate'
   const [ruleBuilderRule, setRuleBuilderRule] = useState(null);
+
+  // Bulk edit
+  const [bulkEditOpen, setBulkEditOpen] = useState(false);
+  const [bulkEditSkus, setBulkEditSkus] = useState([]);
 
   const isAdmin = user?.role === 'admin';
 
@@ -304,7 +309,14 @@ export default function SKUSetup() {
           </div>
           <SKUImportExport products={skus} onImportComplete={loadAll} />
         </div>
-        <SKUList skus={skus} mappings={mappings} selected={selected} onSelect={openSku} onNew={openNew} />
+        <SKUList
+          skus={skus}
+          mappings={mappings}
+          selected={selected}
+          onSelect={openSku}
+          onNew={openNew}
+          onBulkEdit={(skusToEdit) => { setBulkEditSkus(skusToEdit); setBulkEditOpen(true); }}
+        />
       </div>
 
       {/* Right: Editor */}
@@ -832,6 +844,19 @@ export default function SKUSetup() {
           </Tabs>
         </div>
       </div>
+      {/* Bulk Edit Modal */}
+      <SKUBulkEditModal
+        open={bulkEditOpen}
+        onClose={() => setBulkEditOpen(false)}
+        selectedSkus={bulkEditSkus}
+        brands={brands}
+        families={families}
+        flavours={flavours}
+        capTypes={capTypes}
+        boxTypes={boxTypes}
+        onSaved={loadAll}
+      />
+
       {/* Batch Rule Builder Modal */}
       <Dialog open={ruleBuilderOpen} onOpenChange={setRuleBuilderOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
