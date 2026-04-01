@@ -1,0 +1,169 @@
+{
+  "name": "ProductMaster",
+  "type": "object",
+  "title": "Product Master",
+  "properties": {
+    "item_code": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "brand_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "product_family": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "product_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "flavour": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "ml_per_bottle": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Volume per container - auto-filled from ContainerType. Not required for trial packs"
+    },
+    "bottles_per_box": {
+      "type": "number",
+      "minimum": 1,
+      "description": "For trial packs: total bottles in pack"
+    },
+    "box_type_id": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Reference to BoxType.box_type_id - not required for trial packs"
+    },
+    "product_barcode": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "box_barcode": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "mrp": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Not required for trial packs"
+    },
+    "mrp_box": {
+      "type": "number",
+      "minimum": 0
+    },
+    "gross_weight_kg": {
+      "type": "number",
+      "minimum": 0
+    },
+    "hsn_code": {
+      "type": "string",
+      "maxLength": 20,
+      "description": "HSN/SAC code for tax classification"
+    },
+    "swiggy_item_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Swiggy platform item ID"
+    },
+    "bigbasket_item_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "BigBasket platform item ID"
+    },
+    "zepto_item_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Zepto platform item ID"
+    },
+    "amazon_item_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Amazon Item ID / ASIN"
+    },
+    "fssai_no": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "manufacturer_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "address_1": {
+      "type": "string",
+      "maxLength": 300
+    },
+    "address_2": {
+      "type": "string",
+      "maxLength": 300
+    },
+    "customer_care_email": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "customer_care_phone": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "shelf_life_days": {
+      "type": "number",
+      "minimum": 0
+    },
+    "is_trial_pack": {
+      "type": "boolean",
+      "default": false,
+      "description": "True for trial pack SKUs that consume other SKUs as components"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": false
+    },
+    "bottle_type": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Container name from ContainerType.auto_generated_name - not required for trial packs"
+    },
+    "cap_sku_code": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Reference to CapType.cap_sku_code - not required for trial packs"
+    },
+    "recipe_group_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Reference to RecipeGroup.recipe_group_id - not required for trial packs"
+    },
+    "default_recipe_option_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Reference to RecipeOption.option_id - not required for trial packs"
+    },
+    "recipe_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Legacy recipe ref (RecipeMaster) - not required for trial packs"
+    },
+    "default_artwork_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Reference to LabelArtwork.artwork_id - not required for trial packs"
+    },
+    "batch_prefix": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "label_template_4x6": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "4x6 inch label template ID for trial packs"
+    }
+  },
+  "required": [
+    "item_code",
+    "product_name"
+  ]
+}

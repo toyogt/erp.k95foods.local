@@ -42,7 +42,12 @@ export default function SKUImportExport({ products, onImportComplete }) {
         'container_type',
         'colour',
         'cap_type',
-        'cap_colour'
+        'cap_colour',
+        'hsn_code',
+        'swiggy_item_id',
+        'bigbasket_item_id',
+        'zepto_item_id',
+        'amazon_item_id'
       ];
 
       const optionsRow = [
@@ -58,7 +63,12 @@ export default function SKUImportExport({ products, onImportComplete }) {
         containerOptions || 'Glass Bottle/Can',
         colourOptions || 'Transparent/Amber',
         capTypeOptions || 'Crown Cap/Flip-Top Cap',
-        capColourOptions || 'Gold/Silver/Red/Blue'
+        capColourOptions || 'Gold/Silver/Red/Blue',
+        'e.g. 22021090 (HSN/SAC)',
+        'Swiggy platform item ID',
+        'BigBasket platform item ID',
+        'Zepto platform item ID',
+        'Amazon ASIN'
       ];
 
       const exampleRow = [
@@ -74,7 +84,12 @@ export default function SKUImportExport({ products, onImportComplete }) {
         containers[0]?.container_type || 'Glass Bottle',
         containers[0]?.colour || 'Transparent',
         caps[0]?.cap_type || 'Crown Cap',
-        caps[0]?.cap_colour || 'Gold'
+        caps[0]?.cap_colour || 'Gold',
+        '22021090',
+        '',
+        '',
+        '',
+        ''
       ];
 
       const csv = [
@@ -115,7 +130,12 @@ export default function SKUImportExport({ products, onImportComplete }) {
       'gross_weight_kg',
       'shelf_life_days',
       'is_trial_pack',
-      'is_active'
+      'is_active',
+      'hsn_code',
+      'swiggy_item_id',
+      'bigbasket_item_id',
+      'zepto_item_id',
+      'amazon_item_id'
     ];
 
     const rows = products.map(p => [
@@ -130,7 +150,12 @@ export default function SKUImportExport({ products, onImportComplete }) {
       p.gross_weight_kg || '',
       p.shelf_life_days || '',
       p.is_trial_pack ? 'TRUE' : 'FALSE',
-      p.is_active ? 'TRUE' : 'FALSE'
+      p.is_active ? 'TRUE' : 'FALSE',
+      p.hsn_code || '',
+      p.swiggy_item_id || '',
+      p.bigbasket_item_id || '',
+      p.zepto_item_id || '',
+      p.amazon_item_id || ''
     ]);
 
     const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
@@ -172,7 +197,12 @@ export default function SKUImportExport({ products, onImportComplete }) {
             container_type: { type: 'string' },
             colour: { type: 'string' },
             cap_type: { type: 'string' },
-            cap_colour: { type: 'string' }
+            cap_colour: { type: 'string' },
+            hsn_code: { type: 'string' },
+            swiggy_item_id: { type: 'string' },
+            bigbasket_item_id: { type: 'string' },
+            zepto_item_id: { type: 'string' },
+            amazon_item_id: { type: 'string' }
           }
         }
       };
@@ -227,7 +257,12 @@ export default function SKUImportExport({ products, onImportComplete }) {
             is_trial_pack: row.is_trial_pack || false,
             bottle_type: bottleType,
             cap_sku_code: capSku,
-            is_active: false
+            is_active: false,
+            hsn_code: row.hsn_code || '',
+            swiggy_item_id: row.swiggy_item_id || '',
+            bigbasket_item_id: row.bigbasket_item_id || '',
+            zepto_item_id: row.zepto_item_id || '',
+            amazon_item_id: row.amazon_item_id || ''
           });
           created++;
         } catch (err) {

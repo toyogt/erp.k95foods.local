@@ -15,6 +15,7 @@ import BatchRuleBuilder from '@/components/batch/BatchRuleBuilder';
 import BatchRulePreview from '@/components/batch/BatchRulePreview.jsx';
 import TrialPackBOMTab from '@/components/sku/TrialPackBOMTab';
 import SKUImportExport from '@/components/sku/SKUImportExport';
+import PlatformIDsSection from '@/components/sku/PlatformIDsSection';
 
 function genId(prefix) { return prefix + '-' + Date.now().toString(36).toUpperCase().slice(-5); }
 
@@ -25,6 +26,7 @@ const EMPTY_SKU = {
   default_artwork_id: '', is_active: false, is_trial_pack: false,
   fssai_no: '', manufacturer_name: '', address_1: '', address_2: '',
   customer_care_email: '', customer_care_phone: '', product_barcode: '', box_barcode: '',
+  hsn_code: '', swiggy_item_id: '', bigbasket_item_id: '', zepto_item_id: '', amazon_item_id: '',
 };
 
 const EMPTY_MAPPING = {
@@ -343,6 +345,7 @@ export default function SKUSetup() {
               {skuForm.is_trial_pack && (
                 <TabsTrigger value="bom" className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-4">BOM</TabsTrigger>
               )}
+              <TabsTrigger value="platforms" className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-4">Platform IDs</TabsTrigger>
             </TabsList>
 
             {/* ─── Tab 1: Basics ─────────────────────────────── */}
@@ -818,6 +821,14 @@ export default function SKUSetup() {
                 <TrialPackBOMTab sku={selected?.item_code} skuData={skuForm} />
               </TabsContent>
             )}
+
+            {/* ─── Tab 6: Platform IDs ──────────────────────── */}
+            <TabsContent value="platforms" className="mt-4">
+              <PlatformIDsSection
+                form={skuForm}
+                onChange={(key, val) => setSkuForm(f => ({ ...f, [key]: val }))}
+              />
+            </TabsContent>
           </Tabs>
         </div>
       </div>
