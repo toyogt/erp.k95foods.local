@@ -16,6 +16,7 @@ import PlannedCostForm from './PlannedCostForm';
 import ExtraChargesSection from './ExtraChargesSection';
 import ActualCostForm from './ActualCostForm';
 import CostComparisonCard from './CostComparisonCard';
+import WeightCalculatorPanel from './WeightCalculatorPanel';
 import { Loader2, Scale, Lightbulb } from 'lucide-react';
 
 export default function LogisticsCostPanel({ order }) {
@@ -24,6 +25,7 @@ export default function LogisticsCostPanel({ order }) {
   const qc = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [weightInput, setWeightInput] = useState('');
+  const [transporter, setTransporter] = useState(order?.transporter || '');
 
   // Fetch existing cost record for this order
   const { data: costRecords = [], isLoading } = useQuery({
@@ -42,8 +44,14 @@ export default function LogisticsCostPanel({ order }) {
 
   const orderWeight = costRecord?.order_weight_kg || Number(weightInput) || 0;
 
-  // Find matching rate card by weight
+  // Collect unique transporters from rate cards
+  const transporterOptions = [...new Set(rateCards.map(rc => rc.transporter).filter(Boolean))];
+
+  // Find matching rate card by weight AND transporter
   const matchedCard = rateCards.find(rc =>
+    orderWeight >= rc.weight_from_kg && orderWeight <= rc.weight_to_kg &&
+    (!transporter || !rc.transporter || rc.transporter === transporter)
+  ) || rateCards.find(rc =>
     orderWeight >= rc.weight_from_kg && orderWeight <= rc.weight_to_kg
   );
 
@@ -141,33 +149,39 @@ export default function LogisticsCostPanel({ order }) {
         <p className="text-xs text-slate-500 mt-0.5">System intelligence + your planned costs + actual post-delivery costs</p>
       </div>
 
-      {/* Weight Input */}
-      <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
-        <div className="flex items-end gap-3">
-          <div className="flex-1 max-w-xs">
-            <Label className="text-xs font-medium text-slate-700">Order Weight (kg)</Label>
-            <Input
-              className="h-9 text-sm mt-1"
-              type="number"
-              value={costRecord?.order_weight_kg || weightInput}
-              onChange={e => setWeightInput(e.target.value)}
-              placeholder="Enter total order weight"
-              disabled={!!costRecord?.order_weight_kg}
-            />
-          </div>
-          {!costRecord?.order_weight_kg && (
-            <Button className="h-11 text-sm" onClick={handleSetWeight} disabled={saving}>
-              {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
-              Calculate Estimate
-            </Button>
-          )}
-          {costRecord?.order_weight_kg && matchedCard && (
-            <p className="text-xs text-green-700 pb-2">
-              Matched rate card: {matchedCard.weight_from_kg}–{matchedCard.weight_to_kg} kg
-              {matchedCard.name ? ` (${matchedCard.name})` : ''}
+      {/* Transporter + Weight Section */}
+      <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-4">
+        {/* Transporter dropdown */}
+        <div className="max-w-xs">
+          <Label className="text-xs font-medium text-slate-700">Transporter</Label>
+          <select
+            className="mt-1 h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+            value={transporter}
+            onChange={e => setTransporter(e.target.value)}
+          >
+            <option value="">— Select Transporter —</option>
+            {transporterOptions.map(t => (
+              <option key={t} value={t}>{t}</option>
+            ))}
+          </select>
+          {transporter && matchedCard && (
+            <p className="text-xs text-green-700 mt-1">
+              Rate card matched: {matchedCard.weight_from_kg}–{matchedCard.weight_to_kg} kg
+              {matchedCard.name ? ` · ${matchedCard.name}` : ''}
             </p>
           )}
         </div>
+
+        {/* Weight calculator with SKU breakdown */}
+        <WeightCalculatorPanel
+          order={order}
+          lockedWeight={costRecord?.order_weight_kg}
+          manualWeight={weightInput}
+          onManualWeightChange={setWeightInput}
+          onUseCalculated={val => setWeightInput(String(val))}
+          onConfirm={handleSetWeight}
+          saving={saving}
+        />
       </div>
 
       {/* System Estimate (Reference) */}
