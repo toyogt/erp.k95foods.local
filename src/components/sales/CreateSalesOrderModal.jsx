@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import { X, Upload, FileText, Loader2, Edit2, Check, AlertTriangle, FileSpreadsheet } from 'lucide-react';
@@ -47,35 +47,26 @@ export default function CreateSalesOrderModal({ defaultType = 'manual', onClose,
     notes: '',
   });
 
-  const [creditWarning, setCreditWarning] = useState(null); // null | { current, limit, max_allowed }
+  const [creditWarning, setCreditWarning] = useState(null);
   const [soNumber, setSoNumber] = useState('');
-
-  // Generate SO number on mount using BatchSeqCounter
-  useState(() => {
-    (async () => {
-      const fiscalYear = getFiscalYear();
-      const batchKey = `SO_${fiscalYear}`;
-      const counters = await base44.entities.BatchSeqCounter.filter({ batch_key: batchKey });
-      let nextSeq = 5001; // Start from 005001
-      if (counters.length > 0) {
-        nextSeq = (counters[0].last_seq || 5000) + 1;
-      }
-      const seqStr = String(nextSeq).padStart(6, '0');
-      setSoNumber(`SO/${fiscalYear}/${seqStr}`);
-    })();
-  });
 
   function getFiscalYear() {
     const now = new Date();
     const year = now.getFullYear();
-    const month = now.getMonth(); // 0-indexed
-    // FY starts April (month 3)
-    if (month >= 3) {
-      return `${String(year).slice(-2)}-${String(year + 1).slice(-2)}`;
-    } else {
-      return `${String(year - 1).slice(-2)}-${String(year).slice(-2)}`;
-    }
+    const month = now.getMonth();
+    if (month >= 3) return `${String(year).slice(-2)}-${String(year + 1).slice(-2)}`;
+    return `${String(year - 1).slice(-2)}-${String(year).slice(-2)}`;
   }
+
+  useEffect(() => {
+    (async () => {
+      const fiscalYear = getFiscalYear();
+      const batchKey = `SO_${fiscalYear}`;
+      const counters = await base44.entities.BatchSeqCounter.filter({ batch_key: batchKey });
+      const nextSeq = counters.length > 0 ? (counters[0].last_seq || 5000) + 1 : 5001;
+      setSoNumber(`SO/${fiscalYear}/${String(nextSeq).padStart(6, '0')}`);
+    })();
+  }, []);
 
   async function handlePDFUpload(file) {
     setUploading(true);
