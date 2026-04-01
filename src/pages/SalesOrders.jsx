@@ -320,7 +320,9 @@ export default function SalesOrders() {
                       <td className="px-4 py-3">
                         <input type="checkbox" checked={selected.has(order.id)} onChange={() => toggleRow(order.id)} className="rounded" />
                       </td>
-                      <td className="px-4 py-3 font-medium text-slate-900">{order.so_number || '—'}</td>
+                      <td className="px-4 py-3 font-medium text-slate-900">
+                        <a href={`/SalesOrderDetail?id=${order.id}`} className="text-blue-600 hover:underline">{order.so_number || '—'}</a>
+                      </td>
                       <td className="px-4 py-3 text-slate-700">{order.customer_name}</td>
                       <td className="px-4 py-3">
                         {order.platform && (
@@ -329,7 +331,11 @@ export default function SalesOrders() {
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-slate-600">{order.po_number || '—'}</td>
+                      <td className="px-4 py-3">
+                        {order.po_number ? (
+                          <a href={`/SalesOrderDetail?id=${order.id}`} className="text-blue-600 hover:underline">{order.po_number}</a>
+                        ) : '—'}
+                      </td>
                       <td className="px-4 py-3">
                         {order.po_expiry_date ? (
                           <span className={isExpired ? 'text-red-600 font-medium' : 'text-slate-600'}>

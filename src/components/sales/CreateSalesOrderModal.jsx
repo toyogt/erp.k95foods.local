@@ -48,8 +48,34 @@ export default function CreateSalesOrderModal({ defaultType = 'manual', onClose,
   });
 
   const [creditWarning, setCreditWarning] = useState(null); // null | { current, limit, max_allowed }
+  const [soNumber, setSoNumber] = useState('');
 
-  const soNumber = `SO-${Date.now().toString().slice(-8)}`;
+  // Generate SO number on mount using BatchSeqCounter
+  useState(() => {
+    (async () => {
+      const fiscalYear = getFiscalYear();
+      const batchKey = `SO_${fiscalYear}`;
+      const counters = await base44.entities.BatchSeqCounter.filter({ batch_key: batchKey });
+      let nextSeq = 5001; // Start from 005001
+      if (counters.length > 0) {
+        nextSeq = (counters[0].last_seq || 5000) + 1;
+      }
+      const seqStr = String(nextSeq).padStart(6, '0');
+      setSoNumber(`SO/${fiscalYear}/${seqStr}`);
+    })();
+  });
+
+  function getFiscalYear() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth(); // 0-indexed
+    // FY starts April (month 3)
+    if (month >= 3) {
+      return `${String(year).slice(-2)}-${String(year + 1).slice(-2)}`;
+    } else {
+      return `${String(year - 1).slice(-2)}-${String(year).slice(-2)}`;
+    }
+  }
 
   async function handlePDFUpload(file) {
     setUploading(true);
@@ -193,6 +219,17 @@ export default function CreateSalesOrderModal({ defaultType = 'manual', onClose,
     };
 
     const so = await base44.entities.SalesOrder.create(soData);
+
+    // Update the sequence counter
+    const fiscalYear = getFiscalYear();
+    const batchKey = `SO_${fiscalYear}`;
+    const counters = await base44.entities.BatchSeqCounter.filter({ batch_key: batchKey });
+    const seqNum = parseInt(soNumber.split('/').pop(), 10);
+    if (counters.length > 0) {
+      await base44.entities.BatchSeqCounter.update(counters[0].id, { last_seq: seqNum });
+    } else {
+      await base44.entities.BatchSeqCounter.create({ batch_key: batchKey, last_seq: seqNum });
+    }
 
     // Save items if extracted
     if (extractedData?.items?.length) {
