@@ -335,21 +335,51 @@ Return numbers as numbers, not strings.`,
     setSaving(true);
     const totalQty = form.items.reduce((s, i) => s + (Number(i.grn_qty) || 0), 0);
     const totalAmt = form.items.reduce((s, i) => s + (Number(i.total_amount) || 0), 0);
+    const grnTotalQty = totalQty || Number(form.grn_total_qty) || 0;
+    const grnTotalAmt = totalAmt || Number(form.grn_total_amount) || 0;
+    const invTotalAmt = Number(form.invoice_total_amount) || 0;
+    const invTotalQty = Number(form.invoice_total_qty) || 0;
+
+    // Build payload explicitly — avoid spreading raw form (empty strings break number fields)
     const payload = {
-      ...form,
-      grn_total_qty:    totalQty || Number(form.grn_total_qty) || 0,
-      grn_total_amount: totalAmt || Number(form.grn_total_amount) || 0,
-      amount_discrepancy: (Number(form.invoice_total_amount) || 0) - (totalAmt || Number(form.grn_total_amount) || 0),
-      dn_amount: Number(form.dn_amount) || 0,
-      status: (form.dn_number || form.dn_amount) ? 'discrepancy_identified' : 'pending_match',
+      platform:           form.platform,
+      grn_number:         form.grn_number,
+      grn_date:           form.grn_date || undefined,
+      po_number:          form.po_number || undefined,
+      asn_number:         form.asn_number || undefined,
+      inbound_number:     form.inbound_number || undefined,
+      invoice_id:         form.invoice_id || undefined,
+      invoice_number:     form.invoice_number,
+      invoice_date:       form.invoice_date || undefined,
+      customer_name:      form.customer_name || undefined,
+      warehouse_location: form.warehouse_location || undefined,
+      grn_total_qty:      grnTotalQty,
+      grn_total_amount:   grnTotalAmt,
+      invoice_total_qty:  invTotalQty || undefined,
+      invoice_total_amount: invTotalAmt || undefined,
+      qty_discrepancy:    invTotalQty > 0 ? (invTotalQty - grnTotalQty) : undefined,
+      amount_discrepancy: invTotalAmt > 0 ? (invTotalAmt - grnTotalAmt) : 0,
+      dn_number:          form.dn_number || undefined,
+      dn_date:            form.dn_date || undefined,
+      dn_amount:          Number(form.dn_amount) || undefined,
+      grn_pdf_url:        form.grn_pdf_url || undefined,
+      discrepancy_pdf_url: form.discrepancy_pdf_url || undefined,
+      email_subject:      form.email_subject || undefined,
+      notes:              form.notes || undefined,
+      status: (form.dn_number || Number(form.dn_amount)) ? 'discrepancy_identified' : 'pending_match',
       items: form.items.map(it => ({
-        ...it,
-        mrp:           Number(it.mrp)           || 0,
-        exp_qty:       Number(it.exp_qty)        || 0,
-        grn_qty:       Number(it.grn_qty)        || 0,
-        unit_price:    Number(it.unit_price)     || 0,
-        taxable_value: Number(it.taxable_value)  || 0,
-        total_amount:  Number(it.total_amount)   || 0,
+        sku_code:      it.sku_code || undefined,
+        description:   it.description || undefined,
+        mrp:           Number(it.mrp) || 0,
+        exp_qty:       Number(it.exp_qty) || 0,
+        grn_qty:       Number(it.grn_qty) || 0,
+        unit_price:    Number(it.unit_price) || 0,
+        taxable_value: Number(it.taxable_value) || 0,
+        igst_rate:     Number(it.igst_rate) || undefined,
+        igst_amount:   Number(it.igst_amount) || undefined,
+        total_amount:  Number(it.total_amount) || 0,
+        dn_qty:        Number(it.dn_qty) || undefined,
+        reason:        it.reason || undefined,
       })),
     };
     await base44.entities.CustomerGRN.create(payload);
