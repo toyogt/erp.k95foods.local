@@ -95,6 +95,7 @@ import SalesRateListManager from './pages/SalesRateListManager';
 import SalesSettingsPage from './pages/SalesSettingsPage';
 import DistributorPortal from './pages/DistributorPortal';
 import SalesGRNReconciliation from './pages/SalesGRNReconciliation';
+import TransportRateCards from './pages/TransportRateCards';
 
 // Page component lookup table
 const PAGE_COMPONENTS = {
@@ -112,7 +113,7 @@ const PAGE_COMPONENTS = {
   SLAConfigManager, SLAEscalationDashboard,
   SalesOrders, SalesDistributors, SalesRateListManager, SalesSettingsPage, DistributorPortal,
   SalesPicklistDetail, SalesDeliveryNoteDetail, SalesInvoiceDetail,
-  SalesCustomerManager, SalesPriceListView, SalesGRNReconciliation,
+  SalesCustomerManager, SalesPriceListView, SalesGRNReconciliation, TransportRateCards,
 };
 
 const { Pages, Layout, mainPage } = pagesConfig;
