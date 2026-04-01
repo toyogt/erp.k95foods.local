@@ -122,7 +122,7 @@ export default function Layout({ children, currentPageName }) {
           const isExpanded = expandedModules[mod.moduleKey];
 
           return (
-            <div key={mod.key}>
+            <div key={mod.moduleKey}>
               <button
                 onClick={() => !sidebarCollapsed && toggleModule(mod.moduleKey)}
                 className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${

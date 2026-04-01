@@ -185,12 +185,67 @@ export default function GRNEntryModal({ open, onClose, onSaved, invoices = [] })
       setExtracting(true);
       setUploading(false);
 
-      const rawText = await base44.integrations.Core.InvokeLLM({
-        prompt: 'Return ONLY the raw text content of this document exactly as it appears. Do not interpret, summarise or change anything. Just return the plain text.',
-        file_urls: [file_url],
-      });
+      let parsed = {};
 
-      const parsed = parseScootsyGRN(typeof rawText === 'string' ? rawText : JSON.stringify(rawText));
+      if (form.platform === 'zepto') {
+        // Zepto: use LLM with JSON schema for reliable extraction
+        parsed = await base44.integrations.Core.InvokeLLM({
+          prompt: `Extract all data from this Zepto GRN (Goods Receipt Note) document. 
+- grn_number: the GRN or receipt number
+- grn_date: date in YYYY-MM-DD format
+- po_number: Purchase Order number
+- asn_number: ASN number if present
+- invoice_number: vendor/supplier invoice number if present
+- customer_name: Zepto entity name (buyer)
+- warehouse_location: warehouse or hub location
+- grn_total_qty: total quantity received (number)
+- grn_total_amount: total amount (number, INR)
+- items: array of line items, each with: sku_code, description, mrp (number), exp_qty (number), grn_qty (number), unit_price (number), taxable_value (number), igst_rate (number), igst_amount (number), total_amount (number), dn_qty (number, short/rejected qty if any), reason (reason for short if any)
+Return numbers as numbers, not strings.`,
+          file_urls: [file_url],
+          response_json_schema: {
+            type: 'object',
+            properties: {
+              grn_number:        { type: 'string' },
+              grn_date:          { type: 'string' },
+              po_number:         { type: 'string' },
+              asn_number:        { type: 'string' },
+              invoice_number:    { type: 'string' },
+              customer_name:     { type: 'string' },
+              warehouse_location:{ type: 'string' },
+              grn_total_qty:     { type: 'number' },
+              grn_total_amount:  { type: 'number' },
+              items: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    sku_code:      { type: 'string' },
+                    description:   { type: 'string' },
+                    mrp:           { type: 'number' },
+                    exp_qty:       { type: 'number' },
+                    grn_qty:       { type: 'number' },
+                    unit_price:    { type: 'number' },
+                    taxable_value: { type: 'number' },
+                    igst_rate:     { type: 'number' },
+                    igst_amount:   { type: 'number' },
+                    total_amount:  { type: 'number' },
+                    dn_qty:        { type: 'number' },
+                    reason:        { type: 'string' },
+                  }
+                }
+              }
+            }
+          }
+        });
+      } else {
+        // Swiggy/Scootsy: regex parser
+        const rawText = await base44.integrations.Core.InvokeLLM({
+          prompt: 'Return ONLY the raw text content of this document exactly as it appears. Do not interpret, summarise or change anything. Just return the plain text.',
+          file_urls: [file_url],
+        });
+        parsed = parseScootsyGRN(typeof rawText === 'string' ? rawText : JSON.stringify(rawText));
+      }
 
       let linkedInvoice = null;
       if (parsed.po_number) linkedInvoice = await lookupInvoiceByPO(parsed.po_number);
@@ -203,14 +258,16 @@ export default function GRNEntryModal({ open, onClose, onSaved, invoices = [] })
         grn_number:           parsed.grn_number           || p.grn_number,
         grn_date:             parsed.grn_date             || p.grn_date,
         po_number:            parsed.po_number            || p.po_number,
+        asn_number:           parsed.asn_number           || p.asn_number,
         inbound_number:       parsed.inbound_number       || p.inbound_number,
         invoice_number:       parsed.invoice_number       || linkedInvoice?.invoice_number || p.invoice_number,
         customer_name:        parsed.customer_name        || p.customer_name,
+        warehouse_location:   parsed.warehouse_location   || p.warehouse_location,
         invoice_id:           linkedInvoice?.id           || p.invoice_id,
         invoice_total_amount: linkedInvoice?.total_amount || p.invoice_total_amount,
         grn_total_qty:        parsed.grn_total_qty        || p.grn_total_qty,
         grn_total_amount:     parsed.grn_total_amount     || p.grn_total_amount,
-        items:                parsed.items                || p.items,
+        items:                (parsed.items?.length > 0 ? parsed.items : null) || p.items,
         grn_pdf_url: file_url,
       }));
 
@@ -340,7 +397,9 @@ export default function GRNEntryModal({ open, onClose, onSaved, invoices = [] })
               ) : (
                 <>
                   <Upload className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-                  <p className="text-sm text-slate-600 mb-3">Upload Scootsy GRN PDF — data will be auto-extracted</p>
+                  <p className="text-sm text-slate-600 mb-3">
+                    {form.platform === 'zepto' ? 'Upload Zepto GRN PDF — AI will extract all fields automatically' : 'Upload Scootsy GRN PDF — data will be auto-extracted'}
+                  </p>
                   <label className="cursor-pointer">
                     <span className="bg-slate-900 text-white text-sm px-4 py-2 rounded-lg hover:bg-slate-700 transition-colors">Choose PDF</span>
                     <input type="file" accept=".pdf" className="hidden" onChange={handlePDFUpload} />
