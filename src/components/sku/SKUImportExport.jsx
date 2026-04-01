@@ -173,8 +173,21 @@ export default function SKUImportExport({ products, onImportComplete }) {
     const lines = text.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#'));
     if (lines.length < 2) return [];
     const headers = lines[0].split(',').map(h => h.trim());
+    // Proper CSV parser handling quoted fields
+    const parseLine = (line) => {
+      const vals = [];
+      let cur = '', inQuote = false;
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (ch === '"') { inQuote = !inQuote; }
+        else if (ch === ',' && !inQuote) { vals.push(cur.trim()); cur = ''; }
+        else { cur += ch; }
+      }
+      vals.push(cur.trim());
+      return vals;
+    };
     return lines.slice(1).map(line => {
-      const vals = line.split(',').map(v => v.trim());
+      const vals = parseLine(line);
       const obj = {};
       headers.forEach((h, i) => { obj[h] = vals[i] ?? ''; });
       return obj;
@@ -194,47 +207,65 @@ export default function SKUImportExport({ products, onImportComplete }) {
         return;
       }
 
-      const records = rows.map(row => {
+      // Build lookup of existing product codes for upsert
+      const existingMap = {};
+      (products || []).forEach(p => { existingMap[p.item_code] = p.id; });
+
+      const toCreate = [];
+      const toUpdate = []; // { id, data }
+
+      rows.forEach(row => {
         const prefix = (row.brand_name || 'SK').substring(0, 2).toUpperCase();
         const familyCode = (row.product_family || 'XXX').substring(0, 3).toUpperCase();
         const ml = row.ml_per_bottle || '000';
         const btl = row.bottles_per_box || '00';
-        const itemCode = `${prefix}-${familyCode}-${ml}ML-${btl}PC`;
+        // If item_code is provided in CSV use it directly, otherwise auto-generate
+        const itemCode = row.item_code?.trim() || `${prefix}-${familyCode}-${ml}ML-${btl}PC`;
 
         const bottleType = (row.container_type && row.colour && row.ml_per_bottle)
-          ? `${row.container_type} ${row.colour} ${row.ml_per_bottle}ML`
-          : '';
-
+          ? `${row.container_type} ${row.colour} ${row.ml_per_bottle}ML` : '';
         const capSku = (row.cap_type && row.cap_colour)
-          ? `CAP-${row.cap_type.replace(/\s+/g, '-').toUpperCase()}-${row.cap_colour.toUpperCase()}`
-          : '';
+          ? `CAP-${row.cap_type.replace(/\s+/g, '-').toUpperCase()}-${row.cap_colour.toUpperCase()}` : '';
 
-        return {
+        const data = {
           item_code: itemCode,
           brand_name: row.brand_name || '',
           product_family: row.product_family || '',
           product_name: row.product_name || '',
           flavour: row.flavour || '',
-          ml_per_bottle: row.ml_per_bottle ? Number(row.ml_per_bottle) : undefined,
-          bottles_per_box: row.bottles_per_box ? Number(row.bottles_per_box) : undefined,
-          mrp: row.mrp ? Number(row.mrp) : undefined,
-          gross_weight_kg: row.gross_weight_kg ? Number(row.gross_weight_kg) : undefined,
-          shelf_life_days: row.shelf_life_days ? Number(row.shelf_life_days) : undefined,
+          ...(row.ml_per_bottle ? { ml_per_bottle: Number(row.ml_per_bottle) } : {}),
+          ...(row.bottles_per_box ? { bottles_per_box: Number(row.bottles_per_box) } : {}),
+          ...(row.mrp ? { mrp: Number(row.mrp) } : {}),
+          ...(row.gross_weight_kg ? { gross_weight_kg: Number(row.gross_weight_kg) } : {}),
+          ...(row.shelf_life_days ? { shelf_life_days: Number(row.shelf_life_days) } : {}),
           is_trial_pack: String(row.is_trial_pack).toUpperCase() === 'TRUE',
-          bottle_type: bottleType,
-          cap_sku_code: capSku,
-          is_active: false,
+          ...(bottleType ? { bottle_type: bottleType } : {}),
+          ...(capSku ? { cap_sku_code: capSku } : {}),
           hsn_code: row.hsn_code || '',
           swiggy_item_id: row.swiggy_item_id || '',
           bigbasket_item_id: row.bigbasket_item_id || '',
           zepto_item_id: row.zepto_item_id || '',
           amazon_item_id: row.amazon_item_id || '',
         };
+
+        const existingId = existingMap[itemCode];
+        if (existingId) {
+          toUpdate.push({ id: existingId, data });
+        } else {
+          toCreate.push({ ...data, is_active: false });
+        }
       });
 
-      await base44.entities.ProductMaster.bulkCreate(records);
+      // Run creates and updates in parallel
+      await Promise.all([
+        toCreate.length > 0 ? base44.entities.ProductMaster.bulkCreate(toCreate) : Promise.resolve(),
+        ...toUpdate.map(({ id, data }) => base44.entities.ProductMaster.update(id, data)),
+      ]);
 
-      toast.success(`Imported ${records.length} Product Code${records.length > 1 ? 's' : ''} successfully`, { duration: 5000 });
+      const msg = [];
+      if (toCreate.length) msg.push(`${toCreate.length} created`);
+      if (toUpdate.length) msg.push(`${toUpdate.length} updated`);
+      toast.success(`Product Codes imported: ${msg.join(', ')}`, { duration: 5000 });
       setShowImport(false);
       setFile(null);
       onImportComplete?.();

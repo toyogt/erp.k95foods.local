@@ -39,11 +39,8 @@ export default function SKUBulkEditModal({ open, onClose, selectedSkus, brands, 
       return;
     }
     setSaving(true);
-    let updated = 0;
-    for (const sku of selectedSkus) {
-      await base44.entities.ProductMaster.update(sku.id, changes);
-      updated++;
-    }
+    await Promise.all(selectedSkus.map(sku => base44.entities.ProductMaster.update(sku.id, changes)));
+    const updated = selectedSkus.length;
     setSaving(false);
     toast({ title: `Updated ${updated} Product Code${updated > 1 ? 's' : ''}` });
     setChanges({});
