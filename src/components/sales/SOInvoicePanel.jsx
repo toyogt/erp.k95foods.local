@@ -7,7 +7,19 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
-import { Loader2, FileText, Printer } from 'lucide-react';
+import { Loader2, FileText, Printer, Lock } from 'lucide-react';
+
+// Statuses that allow invoice creation
+const INVOICE_ALLOWED_FROM = ['packing'];
+// Statuses where invoice already exists (view-only)
+const INVOICE_DONE_STATUSES = ['invoiced', 'delivered', 'paid', 'closed'];
+// Human-readable prerequisite description per status
+const PREREQUISITE_MSG = {
+  draft:            'Order must be confirmed first.',
+  confirmed:        'Order must go through Logistics Review before invoicing.',
+  logistics_review: 'Order must complete Picking & Packing before invoicing.',
+  picking:          'Order must be fully packed before invoicing.',
+};
 import { fireFMSEvent, linkFMSRef, findFMSInstanceByRef } from '@/lib/useFMSAutoComplete';
 import K95InvoiceTemplate from '@/components/sales/K95InvoiceTemplate';
 import EInvoicePanel from '@/components/sales/EInvoicePanel';
@@ -23,9 +35,14 @@ export default function SOInvoicePanel({ order, items, onUpdated, deliveryNote }
     notes: '',
   });
 
+  const canInvoice = INVOICE_ALLOWED_FROM.includes(order.status) || INVOICE_DONE_STATUSES.includes(order.status);
+
   useEffect(() => {
-    generateDocNumber('INV').then(num => setForm(f => ({ ...f, invoice_number: num })));
-  }, []);
+    // Only consume a counter number when the order is actually ready for invoicing
+    if (INVOICE_ALLOWED_FROM.includes(order.status)) {
+      generateDocNumber('INV').then(num => setForm(f => ({ ...f, invoice_number: num })));
+    }
+  }, [order.status]);
 
   const { data: invoices = [], refetch } = useQuery({
     queryKey: ['so_invoices', order.id],
@@ -70,6 +87,28 @@ export default function SOInvoicePanel({ order, items, onUpdated, deliveryNote }
     setSaving(false);
     toast({ title: 'Invoice created', description: form.invoice_number });
     refetch(); onUpdated();
+  }
+
+  // ── Status gate — order not ready for invoicing yet ─────────────
+  if (!canInvoice && !existingInvoice) {
+    const prereq = PREREQUISITE_MSG[order.status] || 'Order is not ready for invoicing yet.';
+    const statusLabel = order.status?.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    return (
+      <div className="flex flex-col items-center justify-center py-12 gap-4 text-center">
+        <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center">
+          <Lock className="w-5 h-5 text-slate-400" />
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-slate-700">Invoice Not Available Yet</p>
+          <p className="text-xs text-slate-500 mt-1 max-w-xs">{prereq}</p>
+        </div>
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg">
+          <span className="text-xs text-amber-700 font-medium">Current Status:</span>
+          <span className="text-xs font-semibold text-amber-900">{statusLabel}</span>
+        </div>
+        <p className="text-xs text-slate-400">Complete the required workflow steps to unlock invoice generation.</p>
+      </div>
+    );
   }
 
   if (existingInvoice) {
