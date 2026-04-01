@@ -301,7 +301,7 @@ export default function SalesOrders() {
                 <th className="px-4 py-3 w-10">
                   <input type="checkbox" checked={allSelected} onChange={toggleAll} className="rounded" />
                 </th>
-                <th className="px-4 py-3 text-left">Order Number</th>
+                <th className="px-4 py-3 text-left">Sales Order Number</th>
                   <th className="px-4 py-3 text-left">Customer</th>
                   <th className="px-4 py-3 text-left">Platform</th>
                   <th className="px-4 py-3 text-left">Purchase Order Number</th>
