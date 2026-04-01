@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { Upload, Loader2, FileSpreadsheet, CheckCircle2 } from 'lucide-react';
 import { triggerFMSProcess } from '@/lib/useFMSAutoComplete';
+import { generateDocNumber } from '@/lib/docNumberHelper';
 
 export default function ExcelSOImport({ onCreated }) {
   const { user } = useAuth();
@@ -63,7 +64,7 @@ export default function ExcelSOImport({ onCreated }) {
     }
 
     const data = extracted.output;
-    const soNumber = `SO-${Date.now().toString().slice(-8)}`;
+    const soNumber = await generateDocNumber('SO');
 
     const so = await base44.entities.SalesOrder.create({
       so_number: soNumber,

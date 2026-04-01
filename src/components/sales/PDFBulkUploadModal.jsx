@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import PDFInvoiceSplitView from './PDFInvoiceSplitView';
 import { triggerFMSProcess } from '@/lib/useFMSAutoComplete';
+import { generateDocNumber } from '@/lib/docNumberHelper';
 
 // Status badge per PDF
 function FilePill({ entry, active, onClick }) {
@@ -120,7 +121,7 @@ export default function PDFBulkUploadModal({ onClose, onCreated }) {
     const entry = entries.find(e => e.id === entryId);
     if (!entry) return;
 
-    const soNumber = `SO-${Date.now().toString().slice(-8)}`;
+    const soNumber = await generateDocNumber('SO');
     const so = await base44.entities.SalesOrder.create({
       customer_name: confirmedData.customer_name || '',
       customer_gstin: confirmedData.customer_gstin || '',

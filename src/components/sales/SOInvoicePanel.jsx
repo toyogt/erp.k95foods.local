@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { generateDocNumber } from '@/lib/docNumberHelper';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
@@ -22,22 +23,8 @@ export default function SOInvoicePanel({ order, items, onUpdated, deliveryNote }
     notes: '',
   });
 
-  function getFiscalYear() {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth();
-    if (month >= 3) return `${String(year).slice(-2)}-${String(year + 1).slice(-2)}`;
-    return `${String(year - 1).slice(-2)}-${String(year).slice(-2)}`;
-  }
-
   useEffect(() => {
-    (async () => {
-      const fiscalYear = getFiscalYear();
-      const batchKey = `INV_${fiscalYear}`;
-      const counters = await base44.entities.BatchSeqCounter.filter({ batch_key: batchKey });
-      const nextSeq = counters.length > 0 ? (counters[0].last_seq || 5000) + 1 : 5001;
-      setForm(f => ({ ...f, invoice_number: `INV/${fiscalYear}/${String(nextSeq).padStart(6, '0')}` }));
-    })();
+    generateDocNumber('INV').then(num => setForm(f => ({ ...f, invoice_number: num })));
   }, []);
 
   const { data: invoices = [], refetch } = useQuery({

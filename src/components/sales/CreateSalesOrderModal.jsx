@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { triggerFMSProcess } from '@/lib/useFMSAutoComplete';
+import { generateDocNumber } from '@/lib/docNumberHelper';
 
 const CREATION_TYPES = [
   { key: 'manual', label: 'Manual Entry', icon: Edit2 },
@@ -50,22 +51,8 @@ export default function CreateSalesOrderModal({ defaultType = 'manual', onClose,
   const [creditWarning, setCreditWarning] = useState(null);
   const [soNumber, setSoNumber] = useState('');
 
-  function getFiscalYear() {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth();
-    if (month >= 3) return `${String(year).slice(-2)}-${String(year + 1).slice(-2)}`;
-    return `${String(year - 1).slice(-2)}-${String(year).slice(-2)}`;
-  }
-
   useEffect(() => {
-    (async () => {
-      const fiscalYear = getFiscalYear();
-      const batchKey = `SO_${fiscalYear}`;
-      const counters = await base44.entities.BatchSeqCounter.filter({ batch_key: batchKey });
-      const nextSeq = counters.length > 0 ? (counters[0].last_seq || 5000) + 1 : 5001;
-      setSoNumber(`SO/${fiscalYear}/${String(nextSeq).padStart(6, '0')}`);
-    })();
+    generateDocNumber('SO').then(num => setSoNumber(num));
   }, []);
 
   async function handlePDFUpload(file) {
@@ -210,17 +197,6 @@ export default function CreateSalesOrderModal({ defaultType = 'manual', onClose,
     };
 
     const so = await base44.entities.SalesOrder.create(soData);
-
-    // Update the sequence counter
-    const fiscalYear = getFiscalYear();
-    const batchKey = `SO_${fiscalYear}`;
-    const counters = await base44.entities.BatchSeqCounter.filter({ batch_key: batchKey });
-    const seqNum = parseInt(soNumber.split('/').pop(), 10);
-    if (counters.length > 0) {
-      await base44.entities.BatchSeqCounter.update(counters[0].id, { last_seq: seqNum });
-    } else {
-      await base44.entities.BatchSeqCounter.create({ batch_key: batchKey, last_seq: seqNum });
-    }
 
     // Save items if extracted
     if (extractedData?.items?.length) {
