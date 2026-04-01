@@ -190,12 +190,13 @@ export default function GRNEntryModal({ open, onClose, onSaved, invoices = [] })
       if (form.platform === 'zepto') {
         // Zepto: use LLM with JSON schema for reliable extraction
         parsed = await base44.integrations.Core.InvokeLLM({
-          prompt: `Extract all data from this Zepto GRN (Goods Receipt Note) document. 
+          prompt: `Extract all data from this Zepto GRN (Goods Receipt Note) document.
+IMPORTANT for invoice_number: Look for the vendor/supplier invoice number which follows the format K95/25-26/XXXXXX (e.g. K95/25-26/005012). This is OUR invoice number, NOT Zepto's internal PO number.
 - grn_number: the GRN or receipt number
 - grn_date: date in YYYY-MM-DD format
-- po_number: Purchase Order number
+- po_number: Zepto's internal Purchase Order number (for reference only)
 - asn_number: ASN number if present
-- invoice_number: vendor/supplier invoice number if present
+- invoice_number: the vendor/supplier invoice number in K95/25-26/XXXXXX format
 - customer_name: Zepto entity name (buyer)
 - warehouse_location: warehouse or hub location
 - grn_total_qty: total quantity received (number)
@@ -248,9 +249,26 @@ Return numbers as numbers, not strings.`,
       }
 
       let linkedInvoice = null;
-      if (parsed.po_number) linkedInvoice = await lookupInvoiceByPO(parsed.po_number);
-      if (!linkedInvoice && parsed.invoice_number) {
-        linkedInvoice = invoices.find(i => i.invoice_number?.trim() === parsed.invoice_number?.trim()) || null;
+
+      if (form.platform === 'zepto') {
+        // Zepto: match by invoice number (K95/25-26/XXXXXX series)
+        // Zepto's PO number is their internal number — we don't use it for matching
+        const extractedInv = parsed.invoice_number?.trim();
+        if (extractedInv) {
+          linkedInvoice = invoices.find(i => i.invoice_number?.trim() === extractedInv) || null;
+          if (!linkedInvoice) {
+            // Partial match for K95 series format differences
+            linkedInvoice = invoices.find(i =>
+              i.invoice_number?.replace(/\s/g, '').toUpperCase().includes(extractedInv.replace(/\s/g, '').toUpperCase())
+            ) || null;
+          }
+        }
+      } else {
+        // Swiggy/Blinkit/Other: match by PO number first, then invoice number
+        if (parsed.po_number) linkedInvoice = await lookupInvoiceByPO(parsed.po_number);
+        if (!linkedInvoice && parsed.invoice_number) {
+          linkedInvoice = invoices.find(i => i.invoice_number?.trim() === parsed.invoice_number?.trim()) || null;
+        }
       }
 
       setForm(p => ({
@@ -273,9 +291,11 @@ Return numbers as numbers, not strings.`,
 
       const matchMsg = linkedInvoice
         ? `Matched to Invoice ${linkedInvoice.invoice_number} (\u20b9${(linkedInvoice.total_amount || 0).toLocaleString('en-IN')})`
-        : parsed.po_number
-          ? `Purchase Order ${parsed.po_number} — no matching Sales Order found. Please link invoice manually.`
-          : 'Could not match invoice. Please link manually.';
+        : form.platform === 'zepto'
+          ? `Invoice ${parsed.invoice_number || '(not found)'} — could not match to our records. Please link manually.`
+          : parsed.po_number
+            ? `Purchase Order ${parsed.po_number} — no matching Sales Order found. Please link invoice manually.`
+            : 'Could not match invoice. Please link manually.';
 
       toast({ title: 'GRN data extracted', description: matchMsg });
     } catch (err) {

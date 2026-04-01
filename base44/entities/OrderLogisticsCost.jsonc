@@ -1,0 +1,205 @@
+{
+  "name": "OrderLogisticsCost",
+  "type": "object",
+  "properties": {
+    "sales_order_id": {
+      "type": "string",
+      "title": "Sales Order ID"
+    },
+    "so_number": {
+      "type": "string",
+      "title": "Sales Order Number"
+    },
+    "order_weight_kg": {
+      "type": "number",
+      "title": "Order Weight (kg)"
+    },
+    "system_freight": {
+      "type": "number",
+      "title": "System Estimated Freight",
+      "default": 0
+    },
+    "system_door_delivery": {
+      "type": "number",
+      "title": "System Estimated Door Delivery",
+      "default": 0
+    },
+    "system_bilty": {
+      "type": "number",
+      "title": "System Estimated Bilty",
+      "default": 0
+    },
+    "system_labour": {
+      "type": "number",
+      "title": "System Estimated Labour",
+      "default": 0
+    },
+    "system_pickup": {
+      "type": "number",
+      "title": "System Estimated Pickup",
+      "default": 0
+    },
+    "system_late_fees": {
+      "type": "number",
+      "title": "System Estimated Late Fees",
+      "default": 0
+    },
+    "system_total": {
+      "type": "number",
+      "title": "System Estimated Total",
+      "default": 0
+    },
+    "planned_freight": {
+      "type": "number",
+      "title": "Planned Freight",
+      "default": 0
+    },
+    "planned_door_delivery": {
+      "type": "number",
+      "title": "Planned Door Delivery",
+      "default": 0
+    },
+    "planned_bilty": {
+      "type": "number",
+      "title": "Planned Bilty",
+      "default": 0
+    },
+    "planned_labour": {
+      "type": "number",
+      "title": "Planned Labour",
+      "default": 0
+    },
+    "planned_pickup": {
+      "type": "number",
+      "title": "Planned Pickup",
+      "default": 0
+    },
+    "planned_late_fees": {
+      "type": "number",
+      "title": "Planned Late Fees",
+      "default": 0
+    },
+    "planned_total": {
+      "type": "number",
+      "title": "Planned Total",
+      "default": 0
+    },
+    "extra_charges": {
+      "type": "array",
+      "title": "Extra Charges",
+      "items": {
+        "type": "object",
+        "properties": {
+          "charge_name": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "number"
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "extra_charges_confirmed": {
+      "type": "boolean",
+      "title": "Extra Charges Confirmed",
+      "default": false
+    },
+    "actual_freight": {
+      "type": "number",
+      "title": "Actual Freight",
+      "default": 0
+    },
+    "actual_door_delivery": {
+      "type": "number",
+      "title": "Actual Door Delivery",
+      "default": 0
+    },
+    "actual_bilty": {
+      "type": "number",
+      "title": "Actual Bilty",
+      "default": 0
+    },
+    "actual_labour": {
+      "type": "number",
+      "title": "Actual Labour",
+      "default": 0
+    },
+    "actual_pickup": {
+      "type": "number",
+      "title": "Actual Pickup",
+      "default": 0
+    },
+    "actual_late_fees": {
+      "type": "number",
+      "title": "Actual Late Fees",
+      "default": 0
+    },
+    "actual_extra_charges": {
+      "type": "array",
+      "title": "Actual Extra Charges",
+      "items": {
+        "type": "object",
+        "properties": {
+          "charge_name": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "number"
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "actual_total": {
+      "type": "number",
+      "title": "Actual Total",
+      "default": 0
+    },
+    "variance_system_vs_actual": {
+      "type": "number",
+      "title": "Variance (System vs Actual)"
+    },
+    "variance_planned_vs_actual": {
+      "type": "number",
+      "title": "Variance (Planned vs Actual)"
+    },
+    "accuracy_pct": {
+      "type": "number",
+      "title": "Estimation Accuracy %"
+    },
+    "rate_card_id": {
+      "type": "string",
+      "title": "Matched Rate Card ID"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending_plan",
+        "planned",
+        "pending_actual",
+        "completed"
+      ],
+      "title": "Status"
+    },
+    "planned_by": {
+      "type": "string",
+      "title": "Planned By"
+    },
+    "actual_entered_by": {
+      "type": "string",
+      "title": "Actual Entered By"
+    },
+    "notes": {
+      "type": "string",
+      "title": "Notes"
+    }
+  },
+  "required": [
+    "sales_order_id"
+  ]
+}

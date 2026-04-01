@@ -1,0 +1,69 @@
+{
+  "name": "TransportRateCard",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "title": "Rate Card Name"
+    },
+    "weight_from_kg": {
+      "type": "number",
+      "title": "Weight Range From (kg)"
+    },
+    "weight_to_kg": {
+      "type": "number",
+      "title": "Weight Range To (kg)"
+    },
+    "freight_cost": {
+      "type": "number",
+      "title": "Freight Cost (INR)",
+      "default": 0
+    },
+    "door_delivery_cost": {
+      "type": "number",
+      "title": "Door Delivery Cost (INR)",
+      "default": 0
+    },
+    "bilty_cost": {
+      "type": "number",
+      "title": "Bilty Cost (INR)",
+      "default": 0
+    },
+    "labour_cost": {
+      "type": "number",
+      "title": "Labour Charge (INR)",
+      "default": 0
+    },
+    "pickup_charges": {
+      "type": "number",
+      "title": "Pickup Charges (INR)",
+      "default": 0
+    },
+    "late_fees": {
+      "type": "number",
+      "title": "Late Fees (INR)",
+      "default": 0
+    },
+    "transporter": {
+      "type": "string",
+      "title": "Transporter (optional)"
+    },
+    "destination_region": {
+      "type": "string",
+      "title": "Destination Region (optional)"
+    },
+    "is_active": {
+      "type": "boolean",
+      "title": "Active",
+      "default": true
+    },
+    "notes": {
+      "type": "string",
+      "title": "Notes"
+    }
+  },
+  "required": [
+    "weight_from_kg",
+    "weight_to_kg"
+  ]
+}

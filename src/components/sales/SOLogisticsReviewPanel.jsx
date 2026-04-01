@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { CheckCircle2, Loader2 } from 'lucide-react';
 import { fireFMSEvent } from '@/lib/useFMSAutoComplete';
+import LogisticsCostPanel from '@/components/sales/logistics/LogisticsCostPanel';
 
 export default function SOLogisticsReviewPanel({ order, onUpdated }) {
   const { user } = useAuth();
@@ -156,6 +157,11 @@ export default function SOLogisticsReviewPanel({ order, onUpdated }) {
             Approve for Picking
           </Button>
         )}
+      </div>
+
+      {/* Logistics Cost Intelligence */}
+      <div className="border-t border-slate-200 pt-4 mt-4">
+        <LogisticsCostPanel order={order} />
       </div>
     </div>
   );

@@ -10,6 +10,7 @@ import MOQConfigManager from '@/components/sales/MOQConfigManager';
 import GmailIntegrationSettings from '@/components/sales/GmailIntegrationSettings';
 import ClearTaxSettings from '@/components/sales/ClearTaxSettings';
 import TallyIntegrationSettings from '@/components/sales/TallyIntegrationSettings';
+import TransportRateManager from '@/components/sales/logistics/TransportRateManager';
 
 const DEFAULT_SETTINGS = [
   { setting_key: 'transporters', setting_label: 'Transporter Names', values: ['DTDC', 'Local', 'Bluedart', 'Prakash Parcel Services Ltd', 'Delhivery'], description: 'Transporter options for dispatch' },
@@ -118,6 +119,8 @@ export default function SalesSettingsPage() {
           <MOQConfigManager />
         </div>
       </div>
+
+      <TransportRateManager />
 
       <ClearTaxSettings />
 
