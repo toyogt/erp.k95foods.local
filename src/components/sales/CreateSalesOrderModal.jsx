@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import { X, Upload, FileText, Loader2, Edit2, Check, AlertTriangle, FileSpreadsheet } from 'lucide-react';
+import { extractTextFromFile } from '@/lib/pdfTextExtractor';
 import ExcelSOImport from '@/components/sales/ExcelSOImport';
 import PDFPreviewPanel from '@/components/sales/PDFPreviewPanel';
 import PDFBulkUploadModal from '@/components/sales/PDFBulkUploadModal';
@@ -57,12 +58,17 @@ export default function CreateSalesOrderModal({ defaultType = 'manual', onClose,
 
   async function handlePDFUpload(file) {
     setUploading(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    // Upload + extract text in parallel for speed
+    const [uploadResult, rawText] = await Promise.all([
+      base44.integrations.Core.UploadFile({ file }),
+      extractTextFromFile(file).catch(() => ''),
+    ]);
+    const file_url = uploadResult.file_url;
     setPdfUrl(file_url);
     setUploading(false);
 
     setParsing(true);
-    const res = await base44.functions.invoke('parseSalesPDF', { pdf_url: file_url });
+    const res = await base44.functions.invoke('parseSalesPDF', { pdf_url: file_url, raw_text: rawText });
     setParsing(false);
 
     if (res.data?.success) {

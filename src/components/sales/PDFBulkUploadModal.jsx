@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import { X, Upload, Loader2, FileText, CheckCircle2, AlertCircle } from 'lucide-react';
+import { extractTextFromFile } from '@/lib/pdfTextExtractor';
 import PDFProcessingSteps from './PDFProcessingSteps';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
@@ -63,16 +64,20 @@ export default function PDFBulkUploadModal({ onClose, onCreated }) {
     setEntries(prev => [...prev, { id, filename, pdfUrl: null, status: 'uploading', data: null, steps: INITIAL_STEPS }]);
     setActiveId(id);
 
-    // Step 1: Upload
-    setStep(id, 'upload', 'active', 'Sending to server...');
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    // Step 1: Upload + Extract text in parallel for speed
+    setStep(id, 'upload', 'active', 'Uploading & reading text...');
+    const [uploadResult, rawText] = await Promise.all([
+      base44.integrations.Core.UploadFile({ file }),
+      extractTextFromFile(file).catch(() => ''),
+    ]);
+    const file_url = uploadResult.file_url;
     setStep(id, 'upload', 'done', 'Uploaded successfully');
     setEntries(prev => prev.map(e => e.id === id ? { ...e, pdfUrl: file_url } : e));
 
-    // Step 2: Parse PDF
-    setStep(id, 'parse', 'active', 'Reading text and tables...');
+    // Step 2: Parse PDF (send raw_text for instant regex parsing — no server-side extraction needed)
+    setStep(id, 'parse', 'active', 'Matching platform & extracting items...');
     setEntries(prev => prev.map(e => e.id === id ? { ...e, status: 'parsing' } : e));
-    const res = await base44.functions.invoke('parseSalesPDF', { pdf_url: file_url });
+    const res = await base44.functions.invoke('parseSalesPDF', { pdf_url: file_url, raw_text: rawText });
 
     if (!res.data?.success) {
       setStep(id, 'parse', 'error', 'Could not extract data');
