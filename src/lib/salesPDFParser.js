@@ -6,8 +6,8 @@
 // ─── PLATFORM DETECTION ──────────────────────────────────────────────────
 export function detectPlatform(text) {
   const t = (text || '').toUpperCase();
-  if (t.includes('HANDS ON TRADE') || t.includes('HOT ') || t.includes('INNOVATIVE RETAIL')) return 'blinkit';
-  if (t.includes('SCOOTSY') || t.includes('CLOUDSTORE') || t.includes('SWIGGY')) return 'swiggy';
+  if (t.includes('HANDS ON TRADES') || t.includes('HOT ') || t.includes('INNOVATIVE RETAIL')) return 'blinkit';
+  if (t.includes('SCOOTSY') || t.includes('CLOUDSTORE')) return 'swiggy';
   if (t.includes('ZEPTO') || t.includes('KIRANAKART')) return 'zepto';
   if (t.includes('BIGBASKET') || t.includes('SUPERMARKET GROCERY')) return 'bigbasket';
   return 'unknown';
@@ -163,29 +163,20 @@ export function parseSwiggy(text) {
   const items = [];
   const tLines = full.split('\n').map(l => l.trim()).filter(Boolean);
 
-  // Detect if Scootsy uses separate lines for sr and item code
-  let separateLines = false;
   let startIdx = 0;
   for (let k = 0; k < tLines.length; k++) {
     if (tLines[k].match(/^1\s+\d{3,}/)) { startIdx = k; break; }
   }
-  // Fallback: sr and code on separate lines (some Scootsy formats)
-  if (startIdx === 0) {
-    for (let k = 5; k < tLines.length - 1; k++) {
-      if (tLines[k] === '1' && tLines[k + 1]?.match(/^\d{5,10}$/)) {
-        startIdx = k; separateLines = true; break;
-      }
-    }
-  }
 
   let i = startIdx;
   while (i < tLines.length) {
-    let srMatch = tLines[i].match(/^(\d{1,2})\s+(\d{3,10})$/);
-    // Handle separate-line format: sr on one line, code on next
-    if (!srMatch && separateLines && tLines[i].match(/^\d{1,2}$/) && tLines[i + 1]?.match(/^\d{5,10}$/)) {
-      srMatch = [null, tLines[i], tLines[i + 1]];
-      i++; // consume sr line (code consumed below with the normal i++)
+    const srMatch = tLines[i].match(/^(\d{1,2})\s+(\d{3,10})$/);
+    if (!srMatch) {
+      if (tLines[i].match(/Total\s*Amount|Prepared\s*By|Amount\s*in\s*Words/i)) break;
+      i++; continue;
     }
+
+    const itemCode = srMatch[2]; i++;
 
     let desc = '';
     while (i < tLines.length) {
