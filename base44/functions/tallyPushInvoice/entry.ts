@@ -11,7 +11,7 @@ function convertDateToYYYYMMDD(dateVal) {
   }
 }
 
-function qtyDisplay(qty, uom, perBox = 6) {
+function qtyDisplay(qty, uom, perBox = 12) {
   const base = Math.floor(Math.abs(qty));
   const boxes = Math.floor(Math.abs(qty) / perBox);
   if (uom) return ` ${base} ${uom} =  ${boxes} Box`;
@@ -33,45 +33,37 @@ function escapeXml(str) {
 function buildItemsXml(items) {
   let xml = '';
   for (const item of items) {
-    // Qty logic: if qty > 6, round down to nearest multiple of 6
-    let qty = item.quantity || 0;
-    if (qty > 6) {
-      qty = Math.floor(qty / 6) * 6;
-    } else {
-      qty = Math.floor(qty);
-    }
+    const perBox = item.packing_unit || 12;
+    let qty = Math.floor(item.quantity || 0);
+    if (qty > perBox) qty = Math.floor(qty / perBox) * perBox;
 
-    const uom = item.uom || 'PCS';
-    const qtyStr = qtyDisplay(qty, uom, 6);
+    const uom = item.uom || 'Pcs';
+    const qtyStr = qtyDisplay(qty, uom, perBox);
 
     const cgstRate = Math.round(item.cgst_rate || 0);
     const sgstRate = Math.round(item.sgst_rate || 0);
     const igstRate = Math.round(item.igst_rate || 0);
 
-    const stockGroup = item.item_group || 'Primary';
     const itemName = escapeXml(item.description || item.item_code || '');
-    const mrpValue = item.mrp ? `MRP ${Math.round(item.mrp)}` : '';
+    const hsnCode = item.hsn_code || '22029990';
     const rate = item.unit_base_cost || item.rate_snapshot || 0;
     const amount = item.taxable_value || (rate * qty);
 
     xml += `
       <ALLINVENTORYENTRIES.LIST>
-      <BASICUSERDESCRIPTION.LIST TYPE="String">
-        <BASICUSERDESCRIPTION>${escapeXml(mrpValue)}</BASICUSERDESCRIPTION>
-       </BASICUSERDESCRIPTION.LIST>
-      
        <STOCKITEMNAME>${itemName}</STOCKITEMNAME>
-       <GSTOVRDNCLASSIFICATION>${escapeXml(stockGroup)}</GSTOVRDNCLASSIFICATION>
        <GSTOVRDNINELIGIBLEITC>&#4; Not Applicable</GSTOVRDNINELIGIBLEITC>
        <GSTOVRDNISREVCHARGEAPPL>&#4; Not Applicable</GSTOVRDNISREVCHARGEAPPL>
        <GSTOVRDNTAXABILITY>Taxable</GSTOVRDNTAXABILITY>
-       <GSTSOURCETYPE>Stock Group</GSTSOURCETYPE>
-        <HSNSOURCETYPE>Stock Group</HSNSOURCETYPE>
+       <GSTSOURCETYPE>Stock Item</GSTSOURCETYPE>
+       <GSTITEMSOURCE>${itemName}</GSTITEMSOURCE>
+       <HSNSOURCETYPE>Stock Item</HSNSOURCETYPE>
+       <HSNITEMSOURCE>${itemName}</HSNITEMSOURCE>
        <GSTOVRDNSTOREDNATURE/>
        <GSTOVRDNTYPEOFSUPPLY>Goods</GSTOVRDNTYPEOFSUPPLY>
-       <GSTRATEINFERAPPLICABILITY>Use GST Classification</GSTRATEINFERAPPLICABILITY>
-       <GSTHSNINFERAPPLICABILITY>Use GST Classification</GSTHSNINFERAPPLICABILITY>
-       <HSNOVRDNCLASSIFICATION>${escapeXml(stockGroup)}</HSNOVRDNCLASSIFICATION>
+       <GSTRATEINFERAPPLICABILITY>As per Masters/Company</GSTRATEINFERAPPLICABILITY>
+       <GSTHSNNAME>${escapeXml(hsnCode)}</GSTHSNNAME>
+       <GSTHSNINFERAPPLICABILITY>As per Masters/Company</GSTHSNINFERAPPLICABILITY>
        <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
        <ISGSTASSESSABLEVALUEOVERRIDDEN>No</ISGSTASSESSABLEVALUEOVERRIDDEN>
        <STRDISGSTAPPLICABLE>No</STRDISGSTAPPLICABLE>
@@ -106,12 +98,12 @@ function buildItemsXml(items) {
          <OLDAUDITENTRYIDS>-1</OLDAUDITENTRYIDS>
         </OLDAUDITENTRYIDS.LIST>
         <LEDGERNAME>SALES A/C</LEDGERNAME>
-        <GSTCLASS>General</GSTCLASS>
+        <GSTCLASS>&#4; Not Applicable</GSTCLASS>
         <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
         <LEDGERFROMITEM>No</LEDGERFROMITEM>
         <REMOVEZEROENTRIES>No</REMOVEZEROENTRIES>
-        <ISPARTYLEDGER>Yes</ISPARTYLEDGER>
-        <GSTOVERRIDDEN>Yes</GSTOVERRIDDEN>
+        <ISPARTYLEDGER>No</ISPARTYLEDGER>
+        <GSTOVERRIDDEN>No</GSTOVERRIDDEN>
         <ISGSTASSESSABLEVALUEOVERRIDDEN>No</ISGSTASSESSABLEVALUEOVERRIDDEN>
         <STRDISGSTAPPLICABLE>No</STRDISGSTAPPLICABLE>
         <STRDGSTISPARTYLEDGER>No</STRDGSTISPARTYLEDGER>
@@ -196,11 +188,12 @@ function buildTallyXml(inv, items, order, customer) {
   const EXPECTED_COMPANY = Deno.env.get('TALLY_COMPANY_NAME') || '';
 
   // Dates
+  const now = new Date();
+  const narration = `${now.getDate()}-${now.toLocaleString('en-IN',{month:'short'})}-${now.getFullYear()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
   const dateStr = convertDateToYYYYMMDD(inv.invoice_date);
   const poDateStr = convertDateToYYYYMMDD(order?.po_date || '');
   const lrDateStr = convertDateToYYYYMMDD(inv.lr_date || '');
 
-  const poNo = order?.po_number || '';
   const transporter = order?.transporter || '';
   const paymentTerms = inv.payment_terms || '30 Days';
 
@@ -244,6 +237,10 @@ function buildTallyXml(inv, items, order, customer) {
   const customerName = escapeXml(inv.customer_name || '');
   const invoiceNum = escapeXml(inv.invoice_number || '');
   const customerGstin = escapeXml(buyerGstin);
+  const sellerGstinVal = escapeXml(sellerGstin);
+  const poNumber = order?.po_number || '';
+  const paymentTermsDays = paymentTerms || '30 Days';
+  const expiryDateStr = order?.po_expiry_date ? `Expiry Date ${order.po_expiry_date}` : '';
 
   const itemsXml = buildItemsXml(items);
 
@@ -348,26 +345,30 @@ function buildTallyXml(inv, items, order, customer) {
       <OLDAUDITENTRYIDS.LIST TYPE="Number">
        <OLDAUDITENTRYIDS>-1</OLDAUDITENTRYIDS>
       </OLDAUDITENTRYIDS.LIST>
-      <INVOICEORDERLIST.LIST>
-           <BASICORDERDATE>${poDateStr}</BASICORDERDATE>
-           <BASICPURCHASEORDERNO>${escapeXml(poNo)}</BASICPURCHASEORDERNO>
-           <BASICOTHERREFERENCES></BASICOTHERREFERENCES>
-        </INVOICEORDERLIST.LIST>
-        <BASICFINALDESTINATION>${escapeXml(destination)}</BASICFINALDESTINATION>
-        <BASICORDERREF></BASICORDERREF>
-        <BASICDUEDATEOFPYMT>${escapeXml(paymentTerms)}</BASICDUEDATEOFPYMT>
-        <BASICSHIPPEDBY>${escapeXml(transporter)}</BASICSHIPPEDBY>
+      <BASICFINALDESTINATION>${escapeXml(destination)}</BASICFINALDESTINATION>
+         <BASICORDERREF>${escapeXml(expiryDateStr)}</BASICORDERREF>
+         <BASICDUEDATEOFPYMT>${escapeXml(paymentTermsDays)}</BASICDUEDATEOFPYMT>
+         <BASICSHIPPEDBY>${escapeXml(transporter)}</BASICSHIPPEDBY>
 
       <DATE>${dateStr}</DATE>
-      <ISINVOICE>Yes</ISINVOICE>
-      <STATENAME>${escapeXml(stateName)}</STATENAME>
-      <COUNTRYOFRESIDENCE>India</COUNTRYOFRESIDENCE>
-      <PARTYGSTIN>${customerGstin}</PARTYGSTIN>
-      <PLACEOFSUPPLY>${escapeXml(stateName)}</PLACEOFSUPPLY>
-      <PARTYNAME>${customerName}</PARTYNAME>
-      <VOUCHERTYPENAME>Sales</VOUCHERTYPENAME>
-      <VOUCHERNUMBER>${invoiceNum}</VOUCHERNUMBER>
-      <PARTYLEDGERNAME>${customerName}</PARTYLEDGERNAME>
+       <REFERENCEDATE>${dateStr}</REFERENCEDATE>
+       <ISINVOICE>Yes</ISINVOICE>
+       <NARRATION>${escapeXml(narration)}</NARRATION>
+       <STATENAME>${escapeXml(stateName)}</STATENAME>
+       <REFERENCE>${escapeXml(poNumber)}</REFERENCE>
+       <COUNTRYOFRESIDENCE>India</COUNTRYOFRESIDENCE>
+       <PARTYGSTIN>${customerGstin}</PARTYGSTIN>
+       <PLACEOFSUPPLY>${escapeXml(stateName)}</PLACEOFSUPPLY>
+       <VOUCHERTYPENAME>Sales</VOUCHERTYPENAME>
+       <PARTYNAME>${customerName}</PARTYNAME>
+       <CMPGSTIN>${sellerGstinVal}</CMPGSTIN>
+       <PARTYLEDGERNAME>${customerName}</PARTYLEDGERNAME>
+       <VOUCHERNUMBER>${invoiceNum}</VOUCHERNUMBER>
+       <BASICBUYERNAME>${customerName}</BASICBUYERNAME>
+       <PARTYMAILINGNAME>${customerName}</PARTYMAILINGNAME>
+       <CONSIGNEEMAILINGNAME>${customerName}</CONSIGNEEMAILINGNAME>
+       <CONSIGNEEGSTIN>${customerGstin}</CONSIGNEEGSTIN>
+       <CONSIGNEESTATENAME>${escapeXml(stateName)}</CONSIGNEESTATENAME>
       <CSTFORMISSUETYPE>&#4; Not Applicable</CSTFORMISSUETYPE>
       <CSTFORMRECVTYPE>&#4; Not Applicable</CSTFORMRECVTYPE>
       <FBTPAYMENTTYPE>Default</FBTPAYMENTTYPE>
@@ -423,7 +424,10 @@ function buildTallyXml(inv, items, order, customer) {
       <HARYANAVAT.LIST>      </HARYANAVAT.LIST>
       <SUPPLEMENTARYDUTYHEADDETAILS.LIST>      </SUPPLEMENTARYDUTYHEADDETAILS.LIST>
       <INVOICEDELNOTES.LIST>      </INVOICEDELNOTES.LIST>
-      <INVOICEORDERLIST.LIST>      </INVOICEORDERLIST.LIST>
+      <INVOICEORDERLIST.LIST>
+       <BASICORDERDATE>${poDateStr}</BASICORDERDATE>
+       <BASICPURCHASEORDERNO>${escapeXml(poNumber)}</BASICPURCHASEORDERNO>
+      </INVOICEORDERLIST.LIST>
       <INVOICEINDENTLIST.LIST>      </INVOICEINDENTLIST.LIST>
       <ATTENDANCEENTRIES.LIST>      </ATTENDANCEENTRIES.LIST>
       <ORIGINVOICEDETAILS.LIST>      </ORIGINVOICEDETAILS.LIST>
@@ -440,9 +444,17 @@ function buildTallyXml(inv, items, order, customer) {
        <ISPARTYLEDGER>Yes</ISPARTYLEDGER>
        <ISLASTDEEMEDPOSITIVE>Yes</ISLASTDEEMEDPOSITIVE>
        <AMOUNT>${partyAmount.toFixed(2)}</AMOUNT>
-       <SERVICETAXDETAILS.LIST>       </SERVICETAXDETAILS.LIST>
-       <BANKALLOCATIONS.LIST>       </BANKALLOCATIONS.LIST>
-       <BILLALLOCATIONS.LIST>       </BILLALLOCATIONS.LIST>
+        <SERVICETAXDETAILS.LIST>       </SERVICETAXDETAILS.LIST>
+        <BANKALLOCATIONS.LIST>       </BANKALLOCATIONS.LIST>
+        <BILLALLOCATIONS.LIST>
+         <NAME>${invoiceNum}</NAME>
+         <BILLCREDITPERIOD>${escapeXml(paymentTermsDays)}</BILLCREDITPERIOD>
+         <BILLTYPE>New Ref</BILLTYPE>
+         <TDSDEDUCTEEISSPECIALRATE>No</TDSDEDUCTEEISSPECIALRATE>
+         <AMOUNT>${partyAmount.toFixed(2)}</AMOUNT>
+         <INTERESTCOLLECTION.LIST>        </INTERESTCOLLECTION.LIST>
+         <STBILLCATEGORIES.LIST>        </STBILLCATEGORIES.LIST>
+        </BILLALLOCATIONS.LIST>
        <INTERESTCOLLECTION.LIST>       </INTERESTCOLLECTION.LIST>
        <OLDAUDITENTRIES.LIST>       </OLDAUDITENTRIES.LIST>
        <ACCOUNTAUDITENTRIES.LIST>       </ACCOUNTAUDITENTRIES.LIST>
