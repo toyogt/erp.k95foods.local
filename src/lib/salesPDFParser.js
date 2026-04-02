@@ -163,41 +163,44 @@ export function parseSwiggy(text) {
   const items = [];
   const tLines = full.split('\n').map(l => l.trim()).filter(Boolean);
 
+  // Find first data row — may be "1 31670" (combined) or "1" then "31670" on next line
   let startIdx = 0;
   for (let k = 0; k < tLines.length; k++) {
-    if (tLines[k].match(/^1\s+\d{3,}/)) { startIdx = k; break; }
+    if (tLines[k].match(/^1\s+\d{3,}/) || (tLines[k] === '1' && tLines[k+1]?.match(/^\d{3,10}$/))) { startIdx = k; break; }
   }
 
   let i = startIdx;
   while (i < tLines.length) {
+    // Match "1 31670" (sr + itemCode on same line) OR "1" then "31670" on next line
+    let srNum = null, itemCode = null;
     const srMatch = tLines[i].match(/^(\d{1,2})\s+(\d{3,10})$/);
-    if (!srMatch) {
+    if (srMatch) {
+      srNum = srMatch[1]; itemCode = srMatch[2]; i++;
+    } else if (tLines[i].match(/^\d{1,2}$/) && tLines[i+1]?.match(/^\d{3,10}$/)) {
+      srNum = tLines[i]; i++;
+      itemCode = tLines[i]; i++;
+    } else {
       if (tLines[i].match(/Total\s*Amount|Prepared\s*By|Amount\s*in\s*Words/i)) break;
       i++; continue;
     }
 
-    const itemCode = srMatch[2]; i++;
-
     let desc = '';
     while (i < tLines.length) {
-      if (tLines[i].match(/^\d{8}\s+\d+$/)) break;
+      // Stop at combined "22029990 60" OR standalone "22029990"
+      if (tLines[i].match(/^\d{8}\s+\d+$/) || tLines[i].match(/^\d{8}$/)) break;
       desc += (desc ? ' ' : '') + tLines[i];
       i++;
     }
 
     if (i >= tLines.length) break;
+    let hsn = '', qty = 0;
     const hsnQtyMatch = tLines[i].match(/^(\d{8})\s+(\d+)$/);
-    if (!hsnQtyMatch) { i++; continue; }
-    const hsn = hsnQtyMatch[1];
-    const qty = num(hsnQtyMatch[2]); i++;
-
-    if (i >= tLines.length) break;
-    const mrp = num(tLines[i]); i++;
-    if (i >= tLines.length) break;
-    const ubc = num(tLines[i]); i++;
-
-    if (i >= tLines.length) break;
-    let taxStr = tLines[i]; i++;
+    if (hsnQtyMatch) {
+      hsn = hsnQtyMatch[1]; qty = num(hsnQtyMatch[2]); i++;
+    } else if (tLines[i].match(/^\d{8}$/)) {
+      hsn = tLines[i]; i++;
+      if (i < tLines.length && tLines[i].match(/^\d+$/)) { qty = num(tLines[i]); i++; }
+    } else { i++; continue; }
     if (i < tLines.length && tLines[i].match(/^\d{1,2}$/) && !tLines[i + 1]?.match(/^\d{3,}/)) {
       if (taxStr.match(/\.\d$/) || (num(taxStr) < 100 && qty > 10)) {
         taxStr += tLines[i]; i++;
@@ -319,37 +322,36 @@ export function parseBlinkit(text) {
       if (i >= tLines.length) break;
       const basicCost = num(tLines[i]); i++;
 
-      // Each of the 6 tax/qty columns is on its own line in the extracted text.
-      // Order: IGST%  CESS%  ADDT.CESS  TaxAmt  LandingRate  Qty
-      // Some values like "40.00" may come as "40.0" + "0" across two lines.
-      // Strategy: collect numeric tokens until we have 6, handling split decimals.
-      const taxCols = [];
+      // Each of the 6 tax/qty columns: IGST%  CESS%  ADDT.CESS  TaxAmt  LandingRate  Qty
+      // Track original strings so split-decimal detection works (num("40.0")=40 loses the decimal)
+      const taxCols = [], taxColStrs = [];
       while (i < tLines.length && taxCols.length < 6) {
         const l = tLines[i];
-        // Multi-value line (e.g. "40.0 0.00 0 16.28 57.00 552")
         if (l.match(/^[\d.]+(?:\s+[\d.]+)+$/)) {
-          l.split(/\s+/).forEach(p => taxCols.push(num(p)));
-          i++;
-        } else if (l.match(/^[\d.]+$/)) {
-          // Could be split decimal: "31464.0" then "0" → join if prev ends with just 1 decimal digit
-          const prev = taxCols.length > 0 ? String(taxCols[taxCols.length - 1]) : '';
-          if (l === '0' && prev.match(/\.\d$/)) {
-            // continuation of previous decimal
-            taxCols[taxCols.length - 1] = num(prev + l);
-          } else {
-            taxCols.push(num(l));
-          }
+          // Multi-value line e.g. "40.0 0.00 0 16.28 57.00 552"
+          l.split(/\s+/).forEach(p => { taxCols.push(num(p)); taxColStrs.push(p); });
           i++;
         } else if (l === '.') {
-          // Standalone decimal point — ADDT.CESS "0.00" splits as "0" "." "0" "0"
-          // Consume all following single-digit tokens and attach to previous value
+          // Standalone decimal — ADDT.CESS "0.00" splits as "0" "." "0" "0"
           i++;
           let decStr = '';
           while (i < tLines.length && tLines[i].match(/^\d$/)) { decStr += tLines[i]; i++; }
-          // previous value is the integer part, decStr is fractional part
           if (taxCols.length > 0 && decStr) {
-            taxCols[taxCols.length - 1] = num(Math.floor(taxCols[taxCols.length - 1]) + '.' + decStr);
+            const joined = taxColStrs[taxColStrs.length - 1] + '.' + decStr;
+            taxCols[taxCols.length - 1] = num(joined);
+            taxColStrs[taxColStrs.length - 1] = joined;
           }
+        } else if (l.match(/^[\d.]+$/)) {
+          const lastStr = taxColStrs.length > 0 ? taxColStrs[taxColStrs.length - 1] : '';
+          if (lastStr.match(/\.\d$/) && l.match(/^\d{1,2}$/) && num(lastStr) < 100) {
+            // e.g. "40.0" + "0" → "40.00"
+            const joined = lastStr + l;
+            taxCols[taxCols.length - 1] = num(joined);
+            taxColStrs[taxColStrs.length - 1] = joined;
+          } else {
+            taxCols.push(num(l)); taxColStrs.push(l);
+          }
+          i++;
         } else break;
       }
 
@@ -358,16 +360,6 @@ export function parseBlinkit(text) {
       const taxAmt = taxCols[3] || 0;
       const landingRate = taxCols[4] || 0;
       let qty = taxCols[5] || 0;
-
-      // MRP
-      if (i >= tLines.length) break;
-      const mrp = num(tLines[i]); i++;
-
-      // Margin % (skip)
-      if (i >= tLines.length) break;
-      i++;
-
-      // Total — may be split "31464.0" + "0"
       if (i >= tLines.length) break;
       let totalStr = tLines[i]; i++;
       if (i < tLines.length && tLines[i].match(/^\d{1,2}$/) && totalStr.match(/\.\d$/)) {

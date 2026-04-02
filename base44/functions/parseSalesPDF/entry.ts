@@ -163,39 +163,39 @@ function parseSwiggy(text) {
 
   let startIdx = 0;
   for (let k = 0; k < tLines.length; k++) {
-    if (tLines[k].match(/^1\s+\d{3,}/)) { startIdx = k; break; }
+    if (tLines[k].match(/^1\s+\d{3,}/) || (tLines[k] === '1' && tLines[k+1]?.match(/^\d{3,10}$/))) { startIdx = k; break; }
   }
 
   let i = startIdx;
   while (i < tLines.length) {
+    // Match "1 31670" (combined) or "1" + "31670" on separate lines
+    let itemCode = null;
     const srMatch = tLines[i].match(/^(\d{1,2})\s+(\d{3,10})$/);
-    if (!srMatch) {
+    if (srMatch) {
+      itemCode = srMatch[2]; i++;
+    } else if (tLines[i].match(/^\d{1,2}$/) && tLines[i+1]?.match(/^\d{3,10}$/)) {
+      i++; itemCode = tLines[i]; i++;
+    } else {
       if (tLines[i].match(/Total\s*Amount|Prepared\s*By|Amount\s*in\s*Words/i)) break;
       i++; continue;
     }
 
-    const itemCode = srMatch[2]; i++;
-
     let desc = '';
     while (i < tLines.length) {
-      if (tLines[i].match(/^\d{8}\s+\d+$/)) break;
+      if (tLines[i].match(/^\d{8}\s+\d+$/) || tLines[i].match(/^\d{8}$/)) break;
       desc += (desc ? ' ' : '') + tLines[i];
       i++;
     }
 
     if (i >= tLines.length) break;
+    let hsn = '', qty = 0;
     const hsnQtyMatch = tLines[i].match(/^(\d{8})\s+(\d+)$/);
-    if (!hsnQtyMatch) { i++; continue; }
-    const hsn = hsnQtyMatch[1];
-    const qty = num(hsnQtyMatch[2]); i++;
-
-    if (i >= tLines.length) break;
-    const mrp = num(tLines[i]); i++;
-    if (i >= tLines.length) break;
-    const ubc = num(tLines[i]); i++;
-
-    if (i >= tLines.length) break;
-    let taxStr = tLines[i]; i++;
+    if (hsnQtyMatch) {
+      hsn = hsnQtyMatch[1]; qty = num(hsnQtyMatch[2]); i++;
+    } else if (tLines[i].match(/^\d{8}$/)) {
+      hsn = tLines[i]; i++;
+      if (i < tLines.length && tLines[i].match(/^\d+$/)) { qty = num(tLines[i]); i++; }
+    } else { i++; continue; }
     if (i < tLines.length && tLines[i].match(/^\d{1,2}$/) && !tLines[i + 1]?.match(/^\d{3,}/)) {
       if (taxStr.match(/\.\d$/) || (num(taxStr) < 100 && qty > 10)) {
         taxStr += tLines[i]; i++;
@@ -316,32 +316,31 @@ function parseBlinkit(text) {
       if (i >= tLines.length) break;
       const basicCost = num(tLines[i]); i++;
 
-      // Collect 6 tax/qty columns line-by-line: IGST% CESS% ADDT.CESS TaxAmt LandingRate Qty
-      // Each may be on its own line OR all on one space-separated line
-      const taxCols = [];
+      // Collect 6 tax/qty columns: IGST%  CESS%  ADDT.CESS  TaxAmt  LandingRate  Qty
+      // Track original strings to detect split decimals like "40.0"+"0"="40.00"
+      const taxCols = [], taxColStrs = [];
       while (i < tLines.length && taxCols.length < 6) {
         const l = tLines[i];
         if (l.match(/^[\d.]+(?:\s+[\d.]+)+$/)) {
-          // multi-value line
-          l.split(/\s+/).forEach(p => taxCols.push(num(p)));
-          i++;
-        } else if (l.match(/^[\d.]+$/)) {
-          const prev = taxCols.length > 0 ? String(taxCols[taxCols.length - 1]) : '';
-          // join if previous value ended with a single decimal digit (split decimal artifact)
-          if (l === '0' && prev.match(/\.\d$/)) {
-            taxCols[taxCols.length - 1] = num(prev + l);
-          } else {
-            taxCols.push(num(l));
-          }
+          l.split(/\s+/).forEach(p => { taxCols.push(num(p)); taxColStrs.push(p); });
           i++;
         } else if (l === '.') {
-          // Standalone decimal — ADDT.CESS "0.00" splits as "0" "." "0" "0"
           i++;
           let decStr = '';
           while (i < tLines.length && tLines[i].match(/^\d$/)) { decStr += tLines[i]; i++; }
           if (taxCols.length > 0 && decStr) {
-            taxCols[taxCols.length - 1] = num(Math.floor(taxCols[taxCols.length - 1]) + '.' + decStr);
+            const joined = taxColStrs[taxColStrs.length - 1] + '.' + decStr;
+            taxCols[taxCols.length - 1] = num(joined);
+            taxColStrs[taxColStrs.length - 1] = joined;
           }
+        } else if (l.match(/^[\d.]+$/)) {
+          const lastStr = taxColStrs.length > 0 ? taxColStrs[taxColStrs.length - 1] : '';
+          if (lastStr.match(/\.\d$/) && l.match(/^\d{1,2}$/) && num(lastStr) < 100) {
+            const joined = lastStr + l;
+            taxCols[taxCols.length - 1] = num(joined);
+            taxColStrs[taxColStrs.length - 1] = joined;
+          } else { taxCols.push(num(l)); taxColStrs.push(l); }
+          i++;
         } else break;
       }
 
