@@ -3,6 +3,8 @@ import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import { X, Upload, Loader2, FileText, CheckCircle2, AlertCircle } from 'lucide-react';
 import { extractTextFromFile } from '@/lib/pdfTextExtractor';
+import { parsePDFText } from '@/lib/salesPDFParser';
+import { enrichParsedData } from '@/lib/salesPDFEnricher';
 import PDFProcessingSteps from './PDFProcessingSteps';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
@@ -64,7 +66,7 @@ export default function PDFBulkUploadModal({ onClose, onCreated }) {
     setEntries(prev => [...prev, { id, filename, pdfUrl: null, status: 'uploading', data: null, steps: INITIAL_STEPS }]);
     setActiveId(id);
 
-    // Step 1: Upload + Extract text in parallel for speed
+    // Step 1: Upload + extract text in parallel (browser-side, instant)
     setStep(id, 'upload', 'active', 'Uploading & reading text...');
     const [uploadResult, rawText] = await Promise.all([
       base44.integrations.Core.UploadFile({ file }),
@@ -74,44 +76,36 @@ export default function PDFBulkUploadModal({ onClose, onCreated }) {
     setStep(id, 'upload', 'done', 'Uploaded successfully');
     setEntries(prev => prev.map(e => e.id === id ? { ...e, pdfUrl: file_url } : e));
 
-    // Step 2: Parse PDF (send raw_text for instant regex parsing — no server-side extraction needed)
-    setStep(id, 'parse', 'active', 'Matching platform & extracting items...');
+    // Step 2: Parse (browser regex — instant for known platforms)
+    setStep(id, 'parse', 'active', 'Detecting platform & extracting items...');
     setEntries(prev => prev.map(e => e.id === id ? { ...e, status: 'parsing' } : e));
-    const res = await base44.functions.invoke('parseSalesPDF', { pdf_url: file_url, raw_text: rawText });
 
-    if (!res.data?.success) {
-      setStep(id, 'parse', 'error', 'Could not extract data');
-      setEntries(prev => prev.map(e => e.id === id ? { ...e, status: 'error', error: 'Parsing failed' } : e));
-      return;
-    }
+    let d = null;
+    const browserParsed = rawText ? parsePDFText(rawText) : null;
 
-    const d = res.data.data;
-    setStep(id, 'parse', 'done', `${d.items?.length || 0} items extracted`);
-
-    // Step 3: Customer lookup (already done server-side, show result)
-    setStep(id, 'customer', 'active', 'Matching customer record...');
-    await new Promise(r => setTimeout(r, 350));
-    if (d._customer_found) {
-      setStep(id, 'customer', 'done', `Matched: ${d.customer_name}`);
+    if (browserParsed && browserParsed.items?.length > 0) {
+      // Known platform — enrich in browser
+      setStep(id, 'parse', 'done', `${browserParsed.items.length} items extracted (${browserParsed.platform})`);
+      setStep(id, 'customer', 'active', 'Looking up customer & rates...');
+      d = await enrichParsedData(browserParsed);
+      setStep(id, 'customer', 'done', d._customer_found ? `Matched: ${d.customer_name}` : 'Not found — please verify');
+      setStep(id, 'pricelist', 'done', d._price_list_used ? `Using: ${d._price_list_used}` : 'No specific price list');
+      setStep(id, 'rates', 'done', `${d._matched_count} of ${d._total_items} items rate-matched`);
     } else {
-      setStep(id, 'customer', 'done', 'Not found — please verify');
+      // Unknown platform — fall back to backend LLM
+      setStep(id, 'parse', 'active', 'Unknown format — using AI extraction...');
+      const res = await base44.functions.invoke('parseSalesPDF', { pdf_url: file_url, raw_text: rawText });
+      if (!res.data?.success) {
+        setStep(id, 'parse', 'error', 'Could not extract data');
+        setEntries(prev => prev.map(e => e.id === id ? { ...e, status: 'error', error: 'Parsing failed' } : e));
+        return;
+      }
+      d = res.data.data;
+      setStep(id, 'parse', 'done', `${d.items?.length || 0} items extracted`);
+      setStep(id, 'customer', 'done', d._customer_found ? `Matched: ${d.customer_name}` : 'Not found — please verify');
+      setStep(id, 'pricelist', 'done', d._price_list_used ? `Using: ${d._price_list_used}` : 'No specific price list');
+      setStep(id, 'rates', 'done', `${d._matched_count || 0} of ${d._total_items || 0} items rate-matched`);
     }
-
-    // Step 4: Price list
-    setStep(id, 'pricelist', 'active', 'Checking assigned price list...');
-    await new Promise(r => setTimeout(r, 300));
-    if (d._price_list_used) {
-      setStep(id, 'pricelist', 'done', `Using: ${d._price_list_used} (via ${d._rate_source || 'match'})`);
-    } else {
-      setStep(id, 'pricelist', 'done', 'No specific price list — using general rates');
-    }
-
-    // Step 5: Item rates
-    setStep(id, 'rates', 'active', 'Enriching line items...');
-    await new Promise(r => setTimeout(r, 300));
-    const matched = (d.items || []).filter(i => i._rate_matched).length;
-    const total = (d.items || []).length;
-    setStep(id, 'rates', 'done', `${matched} of ${total} items rate-matched`);
 
     setEntries(prev => prev.map(e => e.id === id ? { ...e, status: 'done', data: d } : e));
   }
