@@ -357,15 +357,30 @@ export function parseBlinkit(text) {
 
       // taxCols: [igstPct, cessPct, addtCess, taxAmt, landingRate, qty]
       let igstPct = taxCols[0] || 0;
-      const taxAmt = taxCols[3] || 0;
       const landingRate = taxCols[4] || 0;
       let qty = taxCols[5] || 0;
+
+      // MRP
+      if (i >= tLines.length) break;
+      const mrp = num(tLines[i]); i++;
+
+      // Margin % (skip)
+      if (i >= tLines.length) break;
+      i++;
+
+      // Total — may be split e.g. "31464.0" + "0"
       if (i >= tLines.length) break;
       let totalStr = tLines[i]; i++;
       if (i < tLines.length && tLines[i].match(/^\d{1,2}$/) && totalStr.match(/\.\d$/)) {
         totalStr += tLines[i]; i++;
       }
       const totalAmt = num(totalStr);
+
+      // Cross-validate qty: landingRate × qty = totalAmt (e.g. 57 × 552 = 31464)
+      if ((!qty || qty > 10000) && landingRate > 0 && totalAmt > 0) {
+        const derived = Math.round(totalAmt / landingRate);
+        if (derived > 0 && derived < 10000) qty = derived;
+      }
 
       const taxableValue = igstPct > 0 ? Math.round(totalAmt / (1 + igstPct / 100) * 100) / 100 : totalAmt;
       const igstAmount = Math.round((totalAmt - taxableValue) * 100) / 100;
