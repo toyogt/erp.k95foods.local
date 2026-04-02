@@ -279,31 +279,34 @@ export function parseBlinkit(text) {
 
       if (i >= tLines.length) break;
 
-      const digitLines = [];
-      while (i < tLines.length && digitLines.length < 4) {
-        if (tLines[i].match(/^[A-Z]/i) && tLines[i].length > 3) break;
-        if (tLines[i].match(/^\d+\.\d{2}$/)) break;
-        digitLines.push(tLines[i]);
-        i++;
+      // Collect ALL digit fragments until description text or cost line.
+      // Blinkit splits each column value across lines: "101145" + "00" = "10114500" (item code)
+      // Fixed widths: item code = 8 digits, HSN = 8 digits, EAN = 13 digits
+      let digitStr = '';
+      while (i < tLines.length) {
+        const l = tLines[i];
+        if (l.match(/^[A-Za-z]/) && l.length > 2) break; // description starts
+        if (l.match(/^\d+\.\d{2}$/)) break; // cost line like "40.71"
+        if (l.match(/^[\d\s]+$/)) { digitStr += l.replace(/\s+/g, ''); i++; }
+        else break;
       }
 
+      // Slice by fixed widths: 8 item + 8 HSN + 13 EAN = 29 total
       let itemCode = '', hsn = '', ean = '';
-      if (digitLines.length >= 2) {
-        const g1 = (digitLines[0] || '').trim().split(/\s+/);
-        const g2 = (digitLines[1] || '').trim().split(/\s+/);
-        const g3 = (digitLines[2] || '').trim();
-        itemCode = (g1[0] || '') + (g2[0] || '');
-        hsn = (g1[1] || '') + (g2[1] || '');
-        ean = (g1[2] || '') + (g2[2] || '') + (g3 || '');
-        if (hsn.length !== 8) hsn = '22029990';
-        if (ean.length < 12) ean = '';
-      } else if (digitLines.length === 1) {
-        const parts = digitLines[0].split(/\s+/);
-        itemCode = parts[0] || '';
-        hsn = parts[1] || '22029990';
-        ean = parts[2] || '';
+      if (digitStr.length >= 16) {
+        itemCode = digitStr.slice(0, 8);
+        hsn = digitStr.slice(8, 16);
+        ean = digitStr.slice(16);
+      } else if (digitStr.length >= 8) {
+        itemCode = digitStr.slice(0, 8);
+        hsn = '22029990';
+      } else {
+        itemCode = digitStr;
+        hsn = '22029990';
       }
+      if (ean.length < 12) ean = '';
 
+      // Description — collect until cost line or totals
       let desc = '';
       while (i < tLines.length) {
         if (tLines[i].match(/^\d+\.\d{2}$/) && desc.length > 5) break;
@@ -316,28 +319,50 @@ export function parseBlinkit(text) {
       if (i >= tLines.length) break;
       const basicCost = num(tLines[i]); i++;
 
-      if (i >= tLines.length) break;
-      const comboLine = tLines[i]; i++;
-      const comboParts = comboLine.split(/\s+/).map(num);
-
-      let igstPct = 0, taxAmt = 0, landingRate = 0, qty = 0;
-      if (comboParts.length >= 6) {
-        igstPct = comboParts[0]; taxAmt = comboParts[3]; landingRate = comboParts[4]; qty = comboParts[5];
-      } else if (comboParts.length >= 3) {
-        igstPct = comboParts[0]; qty = comboParts[comboParts.length - 1];
+      // Each of the 6 tax/qty columns is on its own line in the extracted text.
+      // Order: IGST%  CESS%  ADDT.CESS  TaxAmt  LandingRate  Qty
+      // Some values like "40.00" may come as "40.0" + "0" across two lines.
+      // Strategy: collect numeric tokens until we have 6, handling split decimals.
+      const taxCols = [];
+      while (i < tLines.length && taxCols.length < 6) {
+        const l = tLines[i];
+        // Multi-value line (e.g. "40.0 0.00 0 16.28 57.00 552")
+        if (l.match(/^[\d.]+(?:\s+[\d.]+)+$/)) {
+          l.split(/\s+/).forEach(p => taxCols.push(num(p)));
+          i++;
+        } else if (l.match(/^[\d.]+$/)) {
+          // Could be split decimal: "31464.0" then "0" → join if prev ends with just 1 decimal digit
+          const prev = taxCols.length > 0 ? String(taxCols[taxCols.length - 1]) : '';
+          if (l === '0' && prev.match(/\.\d$/)) {
+            // continuation of previous decimal
+            taxCols[taxCols.length - 1] = num(prev + l);
+          } else {
+            taxCols.push(num(l));
+          }
+          i++;
+        } else if (l === '.') {
+          i++; // stray decimal separator artifact — skip
+        } else break;
       }
 
-      if (i < tLines.length && tLines[i] === '0') i++;
+      // taxCols: [igstPct, cessPct, addtCess, taxAmt, landingRate, qty]
+      let igstPct = taxCols[0] || 0;
+      const taxAmt = taxCols[3] || 0;
+      const landingRate = taxCols[4] || 0;
+      let qty = taxCols[5] || 0;
 
+      // MRP
       if (i >= tLines.length) break;
       const mrp = num(tLines[i]); i++;
 
+      // Margin % (skip)
       if (i >= tLines.length) break;
-      i++; // skip margin %
+      i++;
 
+      // Total — may be split "31464.0" + "0"
       if (i >= tLines.length) break;
       let totalStr = tLines[i]; i++;
-      if (i < tLines.length && tLines[i] === '0' && !totalStr.match(/\.00$/)) {
+      if (i < tLines.length && tLines[i].match(/^\d{1,2}$/) && totalStr.match(/\.\d$/)) {
         totalStr += tLines[i]; i++;
       }
       const totalAmt = num(totalStr);

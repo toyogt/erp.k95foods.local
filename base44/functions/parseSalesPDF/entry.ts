@@ -32,13 +32,11 @@ function num(v) {
   return isNaN(n) ? 0 : n;
 }
 
-// ─── ZEPTO PARSER (line-by-line extracted text) ──────────────────────────
+// ─── ZEPTO PARSER ────────────────────────────────────────────────────────
 function parseZepto(text) {
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
   const full = text;
 
-  // Header fields — Zepto text has labels and values on separate lines
-  // Look for the value AFTER the label line
   const po_number = (full.match(/PO\s*No:\s*\n\s*(P?\d+)/i) || full.match(/PO\s*No[:\s]*(P?\d+)/i) || [])[1] || '';
   const po_date = parseDate((full.match(/PO\s*Date:\s*\n\s*([\d\-]+)/i) || full.match(/PO\s*Date[:\s]*([\d\-]+)/i) || [])[1]);
   const po_expiry_date = parseDate((full.match(/PO\s*Expiry\s*Date:\s*\n\s*([\d\-]+)/i) || full.match(/PO\s*Expiry\s*Date[:\s]*([\d\-]+)/i) || [])[1]);
@@ -46,13 +44,9 @@ function parseZepto(text) {
   const payment_terms = (full.match(/Payment\s*Terms:\s*\n\s*([^\n]+)/i) || full.match(/Payment\s*Terms[:\s]*([^\n]*)/i) || [])[1]?.trim() || '';
   const billingGstin = (full.match(/GSTIN:\s*\n\s*(\d{2}[A-Z0-9]{13})/i) || full.match(/GSTIN[:\s]*(\d{2}[A-Z0-9]{13})/i) || [])[1] || '';
 
-  // Customer name
   let customer_name = '';
   const cnMatch = full.match(/(?:Shipping|Billing)\s*Address\s*\n\s*([\s\S]*?)(?:GSTIN|PAN|\n\s*\n)/i);
-  if (cnMatch) {
-    const firstLine = cnMatch[1].split('\n')[0].trim();
-    customer_name = firstLine;
-  }
+  if (cnMatch) customer_name = cnMatch[1].split('\n')[0].trim();
   if (!customer_name) customer_name = 'Zepto Private Limited';
 
   const billingBlock = full.match(/Billing\s*Address([\s\S]*?)(?:Shipping\s*Address)/i);
@@ -60,103 +54,64 @@ function parseZepto(text) {
   const shippingBlock = full.match(/Shipping\s*Address([\s\S]*?)(?:Sr\.|Material\s*Code|GSTIN)/i);
   const shipping_address = shippingBlock ? shippingBlock[1].replace(/\s*\n\s*/g, ' ').replace(/GSTIN.*$/i, '').replace(/PAN.*$/i, '').trim() : billing_address;
 
-  // Items — parse line by line
-  // Pattern in extracted text:
-  // Line: "1" (sr number)
-  // Line: "142286" (material code)
-  // Lines: description (may span multiple lines)
-  // Line: UUID sku code like "020a60fe-f2ec-450d-\na127-87b660ea2754"
-  // Line: "22029990" (HSN)
-  // Line: "8906164010560" (EAN, 13 digits)
-  // Line: "156" (quantity)
-  // Line: "95.00" (MRP)
-  // Line: "42.07" (unit base cost)
-  // Line: "6563.14" (taxable value)
-  // Then tax lines: "0.00%", "0.00", "0.00%", "0.00", "40.00%", "2625.26", "0.00%", "0.00", "0.00", "9188.40"
-
   const items = [];
-  
-  // Find the item table region
   const tableStartIdx = full.search(/Sr\.\s*\n\s*Material\s*Code/i);
   const tableEndIdx = full.search(/Total\s*Taxable\s*Amount/i);
   if (tableStartIdx >= 0) {
     const tableText = full.slice(tableStartIdx, tableEndIdx > tableStartIdx ? tableEndIdx : undefined);
     const tLines = tableText.split('\n').map(l => l.trim()).filter(Boolean);
-    
+
     let i = 0;
-    // Skip header lines
     while (i < tLines.length && !tLines[i].match(/^1$/)) i++;
-    
+
     while (i < tLines.length) {
-      // Sr number
       if (!tLines[i].match(/^\d{1,2}$/)) { i++; continue; }
       const sr = tLines[i]; i++;
-      
-      // Material code (digits, 3-10 chars)
+
       if (i >= tLines.length) break;
       const materialCode = tLines[i]; i++;
       if (!materialCode.match(/^\d{3,10}$/)) continue;
-      
-      // Description — collect lines until we hit a UUID-like pattern or HSN code
+
       let desc = '';
       while (i < tLines.length) {
-        if (tLines[i].match(/^[a-f0-9]{8}-[a-f0-9]{4}/i)) break; // UUID SKU code start
-        if (tLines[i].match(/^\d{8}$/) && desc.length > 10) break; // HSN code (if no SKU)
+        if (tLines[i].match(/^[a-f0-9]{8}-[a-f0-9]{4}/i)) break;
+        if (tLines[i].match(/^\d{8}$/) && desc.length > 10) break;
         desc += (desc ? ' ' : '') + tLines[i];
         i++;
       }
-      
-      // SKU code (UUID, may span 2 lines)
+
       let skuCode = '';
       if (i < tLines.length && tLines[i].match(/^[a-f0-9]{8}-/i)) {
         skuCode = tLines[i]; i++;
-        // UUID continuation
         if (i < tLines.length && tLines[i].match(/^[a-f0-9]{4}-[a-f0-9]/i)) {
           skuCode += tLines[i]; i++;
         }
       }
       skuCode = skuCode.replace(/\s/g, '');
-      
-      // HSN code
+
       if (i >= tLines.length) break;
       const hsn = tLines[i]; i++;
-      
-      // EAN (13 digits)
       if (i >= tLines.length) break;
       const ean = tLines[i]; i++;
-      
-      // Quantity
       if (i >= tLines.length) break;
       const qty = num(tLines[i]); i++;
-      
-      // MRP
       if (i >= tLines.length) break;
       const mrp = num(tLines[i]); i++;
-      
-      // Unit base cost
       if (i >= tLines.length) break;
       const ubc = num(tLines[i]); i++;
-      
-      // Taxable value
       if (i >= tLines.length) break;
       const taxVal = num(tLines[i]); i++;
-      
-      // Tax lines: CGST rate, amt, SGST rate, amt, IGST rate, amt, CESS rate, amt, addtl cess, total
+
       let igstRate = 0, igstAmt = 0, totalAmt = 0;
       const taxNums = [];
       while (i < tLines.length && taxNums.length < 10) {
         const line = tLines[i];
-        if (line.match(/^\d{1,2}$/) && taxNums.length >= 8) break; // next Sr number
-        if (line.match(/^[\d.]+%?$/)) {
-          taxNums.push(num(line));
-          i++;
-        } else break;
+        if (line.match(/^\d{1,2}$/) && taxNums.length >= 8) break;
+        if (line.match(/^[\d.]+%?$/)) { taxNums.push(num(line)); i++; }
+        else break;
       }
-      // taxNums: [cgstRate, cgstAmt, sgstRate, sgstAmt, igstRate, igstAmt, cessRate, cessAmt, addtlCess, total]
       if (taxNums.length >= 10) {
-        igstRate = taxNums[4];
-        igstAmt = taxNums[5];
-        totalAmt = taxNums[9];
+        igstRate = taxNums[4]; igstAmt = taxNums[5]; totalAmt = taxNums[9];
       } else {
         igstRate = 40;
         igstAmt = Math.round(taxVal * 0.4 * 100) / 100;
@@ -164,15 +119,11 @@ function parseZepto(text) {
       }
 
       items.push({
-        item_code: materialCode,
-        sku_code: skuCode,
+        item_code: materialCode, sku_code: skuCode,
         hsn_code: hsn.match(/^\d{8}$/) ? hsn : '22029990',
         ean_number: ean.match(/^\d{10,14}$/) ? ean : '',
-        description: desc,
-        quantity: qty,
-        mrp,
-        unit_base_cost: ubc,
-        taxable_value: taxVal,
+        description: desc, quantity: qty, mrp,
+        unit_base_cost: ubc, taxable_value: taxVal,
         igst_rate: igstRate, igst_amount: igstAmt,
         cgst_rate: 0, cgst_amount: 0, sgst_rate: 0, sgst_amount: 0,
         total_amount: totalAmt,
@@ -187,7 +138,7 @@ function parseZepto(text) {
   return { platform: 'zepto', po_number, po_date, po_expiry_date, po_delivery_date, payment_terms, customer_name, customer_gstin: billingGstin, billing_address, shipping_address, taxable_amount, tax_amount, total_amount, items };
 }
 
-// ─── SWIGGY / SCOOTSY PARSER ────────────────────────────────────────────
+// ─── SWIGGY / SCOOTSY PARSER ─────────────────────────────────────────────
 function parseSwiggy(text) {
   const full = text;
 
@@ -198,92 +149,66 @@ function parseSwiggy(text) {
   const payment_terms = (full.match(/Payment\s*Terms[:\s]*(\d+\s*Days?)/i) || [])[1]?.trim() || '';
 
   const billingGstin = (full.match(/Billing\s*Address[\s\S]*?GSTIN[:\s]*(\d{2}[A-Z0-9]{13})/i) || [])[1] || '';
-  
-  // Customer name
+
   let customer_name = '';
   const custMatch = full.match(/Billing\s*Address\s*\n\s*([A-Z][A-Z\s]+(?:PRIVATE|LIMITED|LTD|LOGISTICS)[A-Z\s]*)/i);
   customer_name = custMatch ? custMatch[1].trim() : 'SCOOTSY LOGISTICS PRIVATE LIMITED';
 
   const billingBlock = full.match(/Billing\s*Address([\s\S]*?)Shipping\s*Address/i);
   const billing_address = billingBlock ? billingBlock[1].replace(/\s*\n\s*/g, ' ').replace(/GSTIN.*$/i, '').replace(/PAN.*$/i, '').trim() : '';
-  const shipping_address = billing_address; // Swiggy bills and ships same
-
-  // Items — Swiggy extracted text pattern:
-  // "1 31670" (sr + item code on same line)
-  // description lines
-  // "22029990 60" (HSN + Qty on same line)
-  // "95.00" (MRP)
-  // "46.82" (unit base cost)
-  // "2809.29" or "2809.2\n9" (taxable value, sometimes split across lines)
-  // tax lines...
+  const shipping_address = billing_address;
 
   const items = [];
   const tLines = full.split('\n').map(l => l.trim()).filter(Boolean);
-  
-  // Find table start
+
   let startIdx = 0;
   for (let k = 0; k < tLines.length; k++) {
     if (tLines[k].match(/^1\s+\d{3,}/)) { startIdx = k; break; }
   }
-  
+
   let i = startIdx;
   while (i < tLines.length) {
-    // Match "Sr ItemCode" pattern e.g. "1 31670"
     const srMatch = tLines[i].match(/^(\d{1,2})\s+(\d{3,10})$/);
-    if (!srMatch) { 
-      // Check if it's the totals section
+    if (!srMatch) {
       if (tLines[i].match(/Total\s*Amount|Prepared\s*By|Amount\s*in\s*Words/i)) break;
-      i++; 
-      continue; 
+      i++; continue;
     }
-    
+
     const itemCode = srMatch[2]; i++;
-    
-    // Description — collect until HSN+Qty line
+
     let desc = '';
     while (i < tLines.length) {
-      if (tLines[i].match(/^\d{8}\s+\d+$/)) break; // HSN + Qty
+      if (tLines[i].match(/^\d{8}\s+\d+$/)) break;
       desc += (desc ? ' ' : '') + tLines[i];
       i++;
     }
-    
-    // HSN + Qty
+
     if (i >= tLines.length) break;
     const hsnQtyMatch = tLines[i].match(/^(\d{8})\s+(\d+)$/);
     if (!hsnQtyMatch) { i++; continue; }
     const hsn = hsnQtyMatch[1];
     const qty = num(hsnQtyMatch[2]); i++;
-    
-    // MRP
+
     if (i >= tLines.length) break;
     const mrp = num(tLines[i]); i++;
-    
-    // Unit base cost
     if (i >= tLines.length) break;
     const ubc = num(tLines[i]); i++;
-    
-    // Taxable value — may be split across 2 lines like "2809.2\n9"
+
     if (i >= tLines.length) break;
     let taxStr = tLines[i]; i++;
-    // Check if next line is a single digit continuation
     if (i < tLines.length && tLines[i].match(/^\d{1,2}$/) && !tLines[i + 1]?.match(/^\d{3,}/)) {
-      // Could be continuation of taxable value OR next Sr#
-      // Heuristic: if the current taxStr has a decimal and looks incomplete
       if (taxStr.match(/\.\d$/) || (num(taxStr) < 100 && qty > 10)) {
         taxStr += tLines[i]; i++;
       }
     }
     const taxVal = num(taxStr);
-    
-    // Tax lines: 0.00% 0.00 0.00% 0.00 40.00% amt 0.00% 0.00 0.00 total
+
     let igstRate = 0, igstAmt = 0, totalAmt = 0;
     const taxNums = [];
     while (i < tLines.length && taxNums.length < 10) {
       if (tLines[i].match(/^\d{1,2}\s+\d{3,}/) || tLines[i].match(/Total|Prepared|Amount/i)) break;
-      if (tLines[i].match(/^[\d.]+%?$/)) {
-        taxNums.push(num(tLines[i]));
-        i++;
-      } else break;
+      if (tLines[i].match(/^[\d.]+%?$/)) { taxNums.push(num(tLines[i])); i++; }
+      else break;
     }
     if (taxNums.length >= 10) {
       igstRate = taxNums[4]; igstAmt = taxNums[5]; totalAmt = taxNums[9];
@@ -313,7 +238,6 @@ function parseSwiggy(text) {
 function parseBlinkit(text) {
   const full = text;
 
-  // Blinkit has values on the line AFTER the label
   const po_number = (full.match(/P\.?O\.?\s*Number\s*\n\s*(\d+)/i) || full.match(/P\.?O\.?\s*Number\s*[:\s]*(\d+)/i) || [])[1] || '';
   const po_date_raw = (full.match(/Date\s*\n?\s*:\s*([\w\s,.:]+?)\n/i) || full.match(/Date\s*[:\s]*(\w+\s+\d{1,2},?\s*\d{4})/i) || [])[1]?.trim() || '';
   const po_date = parseDate(po_date_raw);
@@ -331,83 +255,54 @@ function parseBlinkit(text) {
   const deliveredTo = full.match(/Delivered[\s\S]*?To[\s\S]*?[:]\s*(HANDS[\s\S]*?)(?:GST\s*No|Reference|\n\s*\n)/i);
   const shipping_address = deliveredTo ? deliveredTo[1].replace(/\s*\n\s*/g, ' ').trim() : '';
 
-  // Items — Blinkit extracted text pattern (line by line):
-  // "1" (sr)
-  // "101145 2202 890616"  (item code partial + HSN partial + EAN partial)
-  // "00     9990 401058"  (continuations)
-  // "4"                   (EAN last digit)
-  // "Toyo" "Kombucha" ... (description on multiple lines)
-  // "40.71" (basic cost)
-  // "40.0 0.00 0 16.28 57.00 552" (IGST% CESS% ADDT.CESS TaxAmt LandingRate Qty)
-  // "0"  (continuation of IGST% → 40.00)
-  // "95.00" (MRP)
-  // "40.0" (Margin%)
-  // "31464.0" or "31464.00" (Total, may split)
-
   const items = [];
   const tLines = full.split('\n').map(l => l.trim()).filter(Boolean);
 
-  // Find item table — look for first "1\n" after the column headers
   let startIdx = -1;
   for (let k = 0; k < tLines.length; k++) {
     if (tLines[k] === 'Total' || tLines[k].match(/^Amt$/)) continue;
     if (tLines[k] === '1' && k > 20) {
-      // Verify next line has item code pattern
-      if (tLines[k + 1]?.match(/^\d{6}/)) {
-        startIdx = k;
-        break;
-      }
+      if (tLines[k + 1]?.match(/^\d{6}/)) { startIdx = k; break; }
     }
   }
-  
+
   if (startIdx >= 0) {
     let i = startIdx;
     while (i < tLines.length) {
-      // Sr number
       if (!tLines[i].match(/^\d{1,2}$/)) {
         if (tLines[i].match(/Total\s*Quantity|Total\s*Amount|Net\s*amount|Terms/i)) break;
         i++; continue;
       }
       i++; // skip sr
-      
-      // Next 2-3 lines: ItemCode(split) HSN(split) EAN(split) in columnar format
-      // Line1: "101145 2202 890616"  (top halves of 3 columns)
-      // Line2: "00     9990 401058"  (bottom halves)
-      // Line3: "4"                    (EAN last digit)
+
       if (i >= tLines.length) break;
-      
-      // Collect 2-3 lines of digit data
-      const digitLines = [];
-      while (i < tLines.length && digitLines.length < 4) {
-        if (tLines[i].match(/^[A-Z]/i) && tLines[i].length > 3) break;
-        if (tLines[i].match(/^\d+\.\d{2}$/)) break; // cost line
-        digitLines.push(tLines[i]);
-        i++;
+
+      // Collect ALL digit fragments, concatenate, then slice by fixed widths:
+      // 8 digits = item code, 8 digits = HSN, 13 digits = EAN
+      let digitStr = '';
+      while (i < tLines.length) {
+        const l = tLines[i];
+        if (l.match(/^[A-Za-z]/) && l.length > 2) break; // description starts
+        if (l.match(/^\d+\.\d{2}$/)) break;               // cost line like "40.71"
+        if (l.match(/^[\d\s]+$/)) { digitStr += l.replace(/\s+/g, ''); i++; }
+        else break;
       }
-      
-      // Parse columns: line1 has 3 groups, line2 has 3 groups, pair them vertically
+
       let itemCode = '', hsn = '', ean = '';
-      if (digitLines.length >= 2) {
-        const g1 = (digitLines[0] || '').trim().split(/\s+/);
-        const g2 = (digitLines[1] || '').trim().split(/\s+/);
-        const g3 = (digitLines[2] || '').trim();
-        
-        // Pair: col1 = g1[0]+g2[0], col2 = g1[1]+g2[1], col3 = g1[2]+g2[2]+g3
-        itemCode = (g1[0] || '') + (g2[0] || '');
-        hsn = (g1[1] || '') + (g2[1] || '');
-        ean = (g1[2] || '') + (g2[2] || '') + (g3 || '');
-        
-        // Validate and fix
-        if (hsn.length !== 8) hsn = '22029990';
-        if (ean.length < 12) ean = '';
-      } else if (digitLines.length === 1) {
-        const parts = digitLines[0].split(/\s+/);
-        itemCode = parts[0] || '';
-        hsn = parts[1] || '22029990';
-        ean = parts[2] || '';
+      if (digitStr.length >= 16) {
+        itemCode = digitStr.slice(0, 8);
+        hsn = digitStr.slice(8, 16);
+        ean = digitStr.slice(16);
+      } else if (digitStr.length >= 8) {
+        itemCode = digitStr.slice(0, 8);
+        hsn = '22029990';
+      } else {
+        itemCode = digitStr;
+        hsn = '22029990';
       }
-      
-      // Description — collect until we hit cost line (decimal like "40.71")
+      if (ean.length < 12) ean = '';
+
+      // Description — collect until cost line or totals
       let desc = '';
       while (i < tLines.length) {
         if (tLines[i].match(/^\d+\.\d{2}$/) && desc.length > 5) break;
@@ -416,43 +311,54 @@ function parseBlinkit(text) {
         i++;
       }
       desc = desc.replace(/\s+/g, ' ').trim();
-      
-      // Basic cost price (e.g. "40.71")
+
+      // Basic cost price
       if (i >= tLines.length) break;
       const basicCost = num(tLines[i]); i++;
-      
-      // Combined line: "40.0 0.00 0 16.28 57.00 552"
-      // = IGST% CESS% ADDT_CESS TaxAmt LandingRate Qty
-      if (i >= tLines.length) break;
-      const comboLine = tLines[i]; i++;
-      const comboParts = comboLine.split(/\s+/).map(num);
-      
-      let igstPct = 0, taxAmt = 0, landingRate = 0, qty = 0;
-      if (comboParts.length >= 6) {
-        igstPct = comboParts[0]; taxAmt = comboParts[3]; landingRate = comboParts[4]; qty = comboParts[5];
-      } else if (comboParts.length >= 3) {
-        igstPct = comboParts[0]; qty = comboParts[comboParts.length - 1];
+
+      // Collect 6 tax/qty columns line-by-line: IGST% CESS% ADDT.CESS TaxAmt LandingRate Qty
+      // Each may be on its own line OR all on one space-separated line
+      const taxCols = [];
+      while (i < tLines.length && taxCols.length < 6) {
+        const l = tLines[i];
+        if (l.match(/^[\d.]+(?:\s+[\d.]+)+$/)) {
+          // multi-value line
+          l.split(/\s+/).forEach(p => taxCols.push(num(p)));
+          i++;
+        } else if (l.match(/^[\d.]+$/)) {
+          const prev = taxCols.length > 0 ? String(taxCols[taxCols.length - 1]) : '';
+          // join if previous value ended with a single decimal digit (split decimal artifact)
+          if (l === '0' && prev.match(/\.\d$/)) {
+            taxCols[taxCols.length - 1] = num(prev + l);
+          } else {
+            taxCols.push(num(l));
+          }
+          i++;
+        } else if (l === '.') {
+          i++; // stray decimal artifact
+        } else break;
       }
-      
-      // Skip stray "0" line (continuation artifact)
-      if (i < tLines.length && tLines[i] === '0') i++;
-      
+
+      // taxCols: [igstPct, cessPct, addtCess, taxAmt, landingRate, qty]
+      const igstPct = taxCols[0] || 0;
+      const qty = taxCols[5] || 0;
+
       // MRP
       if (i >= tLines.length) break;
       const mrp = num(tLines[i]); i++;
-      
-      // Margin %
+
+      // Margin % (skip)
       if (i >= tLines.length) break;
-      i++; // skip margin
-      
-      // Total amount — may be split "31464.0\n0" → "31464.00"
+      i++;
+
+      // Total amount — may be split e.g. "31464.0" + "0"
       if (i >= tLines.length) break;
       let totalStr = tLines[i]; i++;
-      if (i < tLines.length && tLines[i] === '0' && !totalStr.match(/\.00$/)) {
+      if (i < tLines.length && tLines[i].match(/^\d{1,2}$/) && totalStr.match(/\.\d$/)) {
         totalStr += tLines[i]; i++;
       }
       const totalAmt = num(totalStr);
-      
+
       const taxableValue = igstPct > 0 ? Math.round(totalAmt / (1 + igstPct / 100) * 100) / 100 : totalAmt;
       const igstAmount = Math.round((totalAmt - taxableValue) * 100) / 100;
 
@@ -489,7 +395,6 @@ Deno.serve(async (req) => {
 
     const t0 = Date.now();
 
-    // ── STEP 1: Get text — if frontend sent raw_text, use it; otherwise extract ──
     let textPromise;
     if (raw_text) {
       textPromise = Promise.resolve(raw_text);
@@ -500,7 +405,6 @@ Deno.serve(async (req) => {
       }).then(r => r?.output?.full_text || '');
     }
 
-    // Parallel: text extraction + all DB lookups
     const [rawText, allCustomers, allRates, allProducts, allCustomerBarcodes] = await Promise.all([
       textPromise,
       base44.asServiceRole.entities.Customer.filter({ status: 'active' }),
@@ -511,7 +415,6 @@ Deno.serve(async (req) => {
 
     const extractTime = Date.now() - t0;
 
-    // ── STEP 2: Detect platform and parse ───────────────────────────────
     const platform = detectPlatform(rawText);
     let parsedData = null;
     let parseMethod = 'regex';
@@ -520,7 +423,6 @@ Deno.serve(async (req) => {
     else if (platform === 'swiggy') parsedData = parseSwiggy(rawText);
     else if (platform === 'blinkit') parsedData = parseBlinkit(rawText);
 
-    // LLM fallback for unknown
     if (!parsedData || parsedData.items.length === 0) {
       parseMethod = 'llm_fallback';
       parsedData = await base44.asServiceRole.integrations.Core.InvokeLLM({
@@ -541,7 +443,6 @@ Deno.serve(async (req) => {
 
     let enrichedData = { ...parsedData };
 
-    // ── STEP 3: Lookup maps ─────────────────────────────────────────────
     const productByCode = {}, productByEAN = {}, productByName = [];
     for (const p of allProducts) {
       if (p.item_code) productByCode[p.item_code.trim().toUpperCase()] = p;
@@ -554,7 +455,6 @@ Deno.serve(async (req) => {
       if (cb.customer_sku && cb.item_code) barcodeToItemCode[cb.customer_sku.trim().toUpperCase()] = cb.item_code.trim();
     }
 
-    // ── STEP 4: Customer + price list ───────────────────────────────────
     const extractedGstin = (enrichedData.customer_gstin || '').trim().toUpperCase();
     const extractedName = (enrichedData.customer_name || '').toLowerCase().trim();
     const customerFound =
@@ -584,7 +484,6 @@ Deno.serve(async (req) => {
       if (r.item_name) rateByNameWords.push({ r, words: r.item_name.toLowerCase().split(' ').filter(w => w.length > 3) });
     }
 
-    // ── STEP 5: Enrich items ────────────────────────────────────────────
     let matchedCount = 0;
     if (enrichedData.items?.length) {
       enrichedData.items = enrichedData.items.map(item => {
@@ -630,7 +529,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ── STEP 6: Metadata ────────────────────────────────────────────────
     if (customerFound) {
       enrichedData._customer_id = customerFound.id;
       enrichedData._customer_price_list = customerFound.price_list || '';
