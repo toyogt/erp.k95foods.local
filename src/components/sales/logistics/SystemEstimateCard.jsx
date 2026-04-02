@@ -1,7 +1,7 @@
 import { COST_HEADS } from './costHeads';
 import { Calculator } from 'lucide-react';
 
-export default function SystemEstimateCard({ costRecord }) {
+export default function SystemEstimateCard({ costRecord, compact = false }) {
   if (!costRecord) return null;
 
   const heads = COST_HEADS.map(h => ({
@@ -10,6 +10,21 @@ export default function SystemEstimateCard({ costRecord }) {
   }));
   const total = Number(costRecord.system_total) || heads.reduce((s, h) => s + h.value, 0);
   const hasEstimate = total > 0;
+
+  if (compact) {
+    return (
+      <div className="bg-blue-50 border border-blue-100 rounded-lg p-2">
+        {hasEstimate ? (
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-blue-700">System Estimate</span>
+            <span className="font-bold text-blue-900">₹{total.toLocaleString('en-IN')}</span>
+          </div>
+        ) : (
+          <p className="text-xs text-blue-600">No rate card matched</p>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">

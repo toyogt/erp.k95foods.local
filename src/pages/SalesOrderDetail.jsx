@@ -20,11 +20,11 @@ const STATUS_ORDER = ['draft', 'confirmed', 'logistics_review', 'picking', 'pack
 const NEXT_STATUS = {
   draft: { label: 'Confirm Order', next: 'confirmed', event: null },
   confirmed: { label: 'Send for Logistics Review', next: 'logistics_review', event: 'sales_logistics_review' },
-  logistics_review: { label: 'Start Picking', next: 'picking', event: null },
+  // logistics_review → picking is handled by SOLogisticsReviewPanel (Approve for Picking)
   picking: { label: 'Mark Packed', next: 'packing', event: null },
-  packing: { label: 'Mark Invoiced', next: 'invoiced', event: null },
+  // packing → invoiced requires Invoice tab
   invoiced: { label: 'Mark Delivered', next: 'delivered', event: null },
-  delivered: { label: 'Mark Paid', next: 'paid', event: null },
+  delivered: { label: 'Go to GRN Reconciliation', next: null, event: null, link: '/SalesGRNReconciliation' },
 };
 
 const PANELS = [
@@ -107,7 +107,40 @@ export default function SalesOrderDetail() {
     enabled: !!soId,
   });
 
+  // Workflow sequence validation
+  function validateWorkflowTransition(from, to) {
+    const VALID_TRANSITIONS = {
+      draft: ['confirmed'],
+      confirmed: ['logistics_review'],
+      logistics_review: ['picking'],
+      picking: ['packing'],
+      packing: ['invoiced'],
+      invoiced: ['delivered'],
+      delivered: ['paid'],
+      paid: ['closed'],
+    };
+    const allowed = VALID_TRANSITIONS[from] || [];
+    if (!allowed.includes(to)) return `Cannot move from ${from} to ${to}. Complete prerequisite steps first.`;
+    // Specific validations
+    if (to === 'invoiced' && order.workflow_state !== 'ready_to_pick') {
+      return 'Logistics Review must be completed before invoicing.';
+    }
+    if (to === 'invoiced' && picklists.length === 0) {
+      return 'A picklist must be generated before invoicing.';
+    }
+    if (to === 'picking' && order.workflow_state !== 'ready_to_pick') {
+      return 'Order must be approved for picking via Logistics Review first.';
+    }
+    return null;
+  }
+
   async function moveToStatus(newStatus, eventKey) {
+    // Enforce workflow sequence
+    const error = validateWorkflowTransition(order.status, newStatus);
+    if (error) {
+      toast({ title: 'Workflow Validation', description: error, variant: 'destructive' });
+      return;
+    }
     setMovingStatus(true);
     const oldStatus = order.status;
     await base44.entities.SalesOrder.update(soId, { status: newStatus });
@@ -186,14 +219,22 @@ export default function SalesOrderDetail() {
               </Button>
             )}
             {nextAction && !['cancelled', 'closed', 'paid'].includes(order.status) && (
-              <Button
-                size="sm"
-                className="h-7 bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 gap-1"
-                onClick={() => moveToStatus(nextAction.next, nextAction.event)}
-                disabled={movingStatus}
-              >
-                {nextAction.label} <ArrowRight className="w-3 h-3" />
-              </Button>
+              nextAction.link ? (
+                <Link to={nextAction.link}>
+                  <Button size="sm" className="h-7 bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 gap-1">
+                    {nextAction.label} <ArrowRight className="w-3 h-3" />
+                  </Button>
+                </Link>
+              ) : nextAction.next ? (
+                <Button
+                  size="sm"
+                  className="h-7 bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 gap-1"
+                  onClick={() => moveToStatus(nextAction.next, nextAction.event)}
+                  disabled={movingStatus}
+                >
+                  {nextAction.label} <ArrowRight className="w-3 h-3" />
+                </Button>
+              ) : null
             )}
             {user?.role === 'admin' && (
               <Button variant="outline" size="sm" className="h-7 text-xs text-red-600 border-red-200 hover:bg-red-50 gap-1"
@@ -361,6 +402,7 @@ export default function SalesOrderDetail() {
 
         {/* ── Connections ───────────────────────────────────────── */}
         {activePanel === 'connections' && (
+          <>
           <Section title="Connections" defaultOpen={true}>
             <div className="space-y-2">
               {/* Picklists */}
@@ -410,6 +452,34 @@ export default function SalesOrderDetail() {
               )}
             </div>
           </Section>
+
+          {/* PDF Documents */}
+          <Section title="Generated Documents" defaultOpen={true}>
+            <div className="space-y-2">
+              {picklists.length > 0 && picklists.map(pl => (
+                <div key={pl.id} className="flex items-center justify-between p-2 bg-slate-50 rounded-lg text-xs">
+                  <span className="font-medium text-slate-700">Picklist — {pl.picklist_number}</span>
+                  <a href={`/SalesPicklistDetail?id=${pl.id}`} className="text-blue-600 hover:underline">View & Print PDF →</a>
+                </div>
+              ))}
+              {invoices.length > 0 && invoices.map(inv => (
+                <div key={inv.id} className="flex items-center justify-between p-2 bg-slate-50 rounded-lg text-xs">
+                  <span className="font-medium text-slate-700">Invoice — {inv.invoice_number}</span>
+                  <a href={`/SalesInvoiceDetail?id=${inv.id}`} className="text-blue-600 hover:underline">View & Print PDF →</a>
+                </div>
+              ))}
+              {deliveryNotes.length > 0 && deliveryNotes.map(dn => (
+                <div key={dn.id} className="flex items-center justify-between p-2 bg-slate-50 rounded-lg text-xs">
+                  <span className="font-medium text-slate-700">Delivery Note — {dn.dn_number}</span>
+                  <a href={`/SalesDeliveryNoteDetail?id=${dn.id}`} className="text-blue-600 hover:underline">View & Print PDF →</a>
+                </div>
+              ))}
+              {picklists.length === 0 && invoices.length === 0 && deliveryNotes.length === 0 && (
+                <p className="text-xs text-slate-400">No documents generated yet.</p>
+              )}
+            </div>
+          </Section>
+          </>
         )}
 
         {/* ── Activity ──────────────────────────────────────────── */}
