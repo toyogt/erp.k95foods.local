@@ -59,11 +59,13 @@ export default function CustomerManager() {
     loadCustomers();
   }
 
-  const filteredCustomers = customers.filter(c => 
-    c.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.customer_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (c.email || '').toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredCustomers = customers.filter(c => {
+    const term = searchTerm.toLowerCase();
+    const name = (c.customer_name || c.name || '').toLowerCase();
+    const code = (c.customer_id || c.code || '').toLowerCase();
+    const email = (c.email || '').toLowerCase();
+    return name.includes(term) || code.includes(term) || email.includes(term);
+  });
 
   if (loading) {
     return <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-slate-400" /></div>;
