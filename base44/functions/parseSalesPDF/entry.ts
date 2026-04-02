@@ -3,8 +3,8 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 // ─── PLATFORM DETECTION ──────────────────────────────────────────────────
 function detectPlatform(text) {
   const t = (text || '').toUpperCase();
-  if (t.includes('HANDS ON TRADES') || t.includes('HOT ') || t.includes('INNOVATIVE RETAIL')) return 'blinkit';
-  if (t.includes('SCOOTSY') || t.includes('CLOUDSTORE')) return 'swiggy';
+  if (t.includes('HANDS ON TRADE') || t.includes('HOT ') || t.includes('INNOVATIVE RETAIL')) return 'blinkit';
+  if (t.includes('SCOOTSY') || t.includes('CLOUDSTORE') || t.includes('SWIGGY')) return 'swiggy';
   if (t.includes('ZEPTO') || t.includes('KIRANAKART')) return 'zepto';
   if (t.includes('BIGBASKET') || t.includes('SUPERMARKET GROCERY')) return 'bigbasket';
   return 'unknown';
