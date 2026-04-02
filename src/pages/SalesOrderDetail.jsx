@@ -13,6 +13,8 @@ import SalesOrderStatusBadge from '@/components/sales/SalesOrderStatusBadge';
 import SOInvoicePanel from '@/components/sales/SOInvoicePanel';
 import SOLogisticsReviewPanel from '@/components/sales/SOLogisticsReviewPanel';
 import DeleteWithRemarks from '@/components/sales/DeleteWithRemarks';
+import SOConnectionsGrid from '@/components/sales/SOConnectionsGrid';
+import SOActivityTimeline from '@/components/sales/SOActivityTimeline';
 import { fireFMSEvent } from '@/lib/useFMSAutoComplete';
 
 const STATUS_ORDER = ['draft', 'confirmed', 'logistics_review', 'picking', 'packing', 'invoiced', 'delivered', 'paid', 'closed'];
@@ -30,10 +32,11 @@ const NEXT_STATUS = {
 const PANELS = [
   { key: 'items',            label: 'Details' },
   { key: 'address',          label: 'Address & Contact' },
+  { key: 'terms',            label: 'Terms' },
+  { key: 'moreinfo',         label: 'More Info' },
   { key: 'connections',      label: 'Connections' },
   { key: 'logistics_review', label: 'Logistics Review' },
   { key: 'invoice',          label: 'Invoice' },
-  { key: 'timeline',         label: 'Activity' },
 ];
 
 function Section({ title, children, defaultOpen = true }) {
@@ -273,15 +276,24 @@ export default function SalesOrderDetail() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
                 <div>
                   <Field label="Customer" value={order.customer_name} highlight />
-                  <Field label="Platform" value={order.platform?.toUpperCase()} />
-                  <Field label="Order Status" value={order.status?.replace(/_/g, ' ')?.replace(/\b\w/g, c => c.toUpperCase())} />
-                  <Field label="Currency" value={order.billing_currency || 'INR'} />
+                  <Field label="Customer Type" value={order.platform?.toUpperCase() || 'Direct'} />
+                  <Field label="Order Date" value={fmt(order.created_date?.split('T')[0])} />
+                  <Field label="Delivery Date" value={fmt(order.po_delivery_date)} />
                 </div>
                 <div>
                   <Field label="Sales Order Number" value={order.so_number} />
-                  <Field label="Order Date" value={fmt(order.created_date?.split('T')[0])} />
-                  <Field label="Source" value={order.source?.replace(/_/g, ' ')?.replace(/\b\w/g, c => c.toUpperCase()) || 'Manual'} />
-                  <Field label="Transporter" value={order.transporter} />
+                  <Field label="Purchase Order Number" value={order.po_number} />
+                  <Field label="Purchase Order Date" value={fmt(order.po_date)} />
+                  <Field label="Price List" value={order.price_list || 'Standard Selling'} />
+                </div>
+              </div>
+            </Section>
+
+            <Section title="Currency and Price List" defaultOpen={false}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+                <div>
+                  <Field label="Currency" value={order.billing_currency || 'INR'} />
+                  <Field label="Price List" value={order.price_list || 'Standard Selling'} />
                 </div>
               </div>
             </Section>
@@ -324,7 +336,7 @@ export default function SalesOrderDetail() {
 
               {/* Totals */}
               <div className="mt-3 flex justify-end">
-                <div className="w-64 space-y-1 text-xs border border-slate-200 rounded p-3 bg-slate-50">
+                <div className="w-72 space-y-1.5 text-xs border border-slate-200 rounded-lg p-3 bg-slate-50">
                   <div className="flex justify-between text-slate-600">
                     <span>Total Quantity</span>
                     <span className="font-medium text-slate-900">{items.reduce((s, i) => s + (i.quantity || 0), 0)}</span>
@@ -337,7 +349,7 @@ export default function SalesOrderDetail() {
                     <span>Total Tax</span>
                     <span className="font-medium text-slate-900">₹{taxAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                   </div>
-                  <div className="flex justify-between text-slate-900 font-bold border-t border-slate-300 pt-1 mt-1">
+                  <div className="flex justify-between text-slate-900 font-bold border-t border-slate-300 pt-1.5 mt-1">
                     <span>Grand Total</span>
                     <span>₹{grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                   </div>
@@ -345,45 +357,155 @@ export default function SalesOrderDetail() {
               </div>
             </Section>
 
-            <Section title="More Information" defaultOpen={true}>
+            {/* Taxes section */}
+            <Section title="Taxes and Charges" defaultOpen={true}>
+              <div className="overflow-x-auto -mx-1">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="bg-slate-100 text-slate-700">
+                      <th className="text-left px-3 py-2 font-medium">#</th>
+                      <th className="text-left px-3 py-2 font-medium">Type</th>
+                      <th className="text-right px-3 py-2 font-medium">Rate</th>
+                      <th className="text-right px-3 py-2 font-medium">Amount</th>
+                      <th className="text-right px-3 py-2 font-medium">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {(() => {
+                      const hasIGST = items.some(i => (i.igst_amount || 0) > 0);
+                      const hasCGST = items.some(i => (i.cgst_amount || 0) > 0);
+                      const rows = [];
+                      if (hasIGST) {
+                        const rate = items.find(i => i.igst_rate)?.igst_rate || 0;
+                        const amt = items.reduce((s, i) => s + (i.igst_amount || 0), 0);
+                        rows.push({ label: 'IGST', rate: `${rate}%`, amount: amt, total: taxableAmt + amt });
+                      }
+                      if (hasCGST) {
+                        const rate = items.find(i => i.cgst_rate)?.cgst_rate || 0;
+                        const cAmt = items.reduce((s, i) => s + (i.cgst_amount || 0), 0);
+                        const sAmt = items.reduce((s, i) => s + (i.sgst_amount || 0), 0);
+                        rows.push({ label: 'CGST', rate: `${rate}%`, amount: cAmt, total: taxableAmt + cAmt });
+                        rows.push({ label: 'SGST', rate: `${rate}%`, amount: sAmt, total: taxableAmt + cAmt + sAmt });
+                      }
+                      if (rows.length === 0) {
+                        rows.push({ label: 'Tax (included)', rate: '—', amount: taxAmt, total: grandTotal });
+                      }
+                      return rows.map((r, idx) => (
+                        <tr key={idx} className="hover:bg-slate-50">
+                          <td className="px-3 py-2 text-slate-400">{idx + 1}</td>
+                          <td className="px-3 py-2 text-slate-900">{r.label}</td>
+                          <td className="px-3 py-2 text-right text-slate-700">{r.rate}</td>
+                          <td className="px-3 py-2 text-right text-slate-700">₹{r.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                          <td className="px-3 py-2 text-right font-medium text-slate-900">₹{r.total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                        </tr>
+                      ));
+                    })()}
+                  </tbody>
+                </table>
+              </div>
+            </Section>
+
+            {/* Totals section */}
+            <Section title="Totals" defaultOpen={true}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-                <div>
-                  <Field label="Purchase Order Number" value={order.po_number} />
-                  <Field label="Purchase Order Date" value={fmt(order.po_date)} />
-                  <Field label="Purchase Order Expiry" value={fmt(order.po_expiry_date)} />
-                  <Field label="Planned Delivery Date" value={fmt(order.po_delivery_date)} />
+                <div className="space-y-1">
+                  <Field label="Total Taxes and Charges" value={`₹${taxAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`} />
+                  <Field label="Grand Total" value={`₹${grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`} />
+                  <Field label="Rounded Total" value={`₹${Math.round(grandTotal).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`} />
                 </div>
-                <div>
-                  <Field label="Payment Terms" value={order.payment_terms} />
-                  <Field label="Vendor Number" value={order.vendor_no} />
-                  <Field label="Packaging Type" value={order.packaging_type} />
-                  <Field label="Notes" value={order.notes} />
+                <div className="space-y-1">
+                  <Field label="Total Quantity" value={items.reduce((s, i) => s + (i.quantity || 0), 0)} />
+                  <Field label="Net Total" value={`₹${taxableAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`} />
+                  <p className="text-xs mt-3 text-slate-500 italic">
+                    In Words: <span className="text-slate-700 font-medium">₹{grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                  </p>
                 </div>
               </div>
             </Section>
           </>
         )}
 
-        {/* ── Address & Contacts ─────────────────────────────────────── */}
-        {activePanel === 'address' && (
-          <Section title="Address & Contacts" defaultOpen={true}>
+        {/* ── Terms ─────────────────────────────────────────── */}
+        {activePanel === 'terms' && (
+          <Section title="Terms and Conditions" defaultOpen={true}>
+            <p className="text-sm text-slate-600 whitespace-pre-line">
+              {order.payment_terms || 'No specific terms recorded for this order.'}
+            </p>
+          </Section>
+        )}
+
+        {/* ── More Info ─────────────────────────────────────── */}
+        {activePanel === 'moreinfo' && (
+          <Section title="More Information" defaultOpen={true}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
               <div>
-                <p className="text-xs font-semibold text-slate-600 mb-2">Billing Address</p>
-                <p className="text-xs text-slate-700 whitespace-pre-line">{order.billing_address || '—'}</p>
+                <Field label="Purchase Order Expiry" value={fmt(order.po_expiry_date)} />
+                <Field label="Planned Dispatch Date" value={fmt(order.planned_dispatch_date)} />
+                <Field label="Source" value={order.source?.replace(/_/g, ' ')?.replace(/\b\w/g, c => c.toUpperCase()) || 'Manual'} />
+                <Field label="Vendor Number" value={order.vendor_no} />
               </div>
               <div>
-                <p className="text-xs font-semibold text-slate-600 mb-2">Shipping Address</p>
-                <p className="text-xs text-slate-700 whitespace-pre-line">{order.shipping_address || '—'}</p>
+                <Field label="Transporter" value={order.transporter} />
+                <Field label="Packaging Type" value={order.packaging_type} />
+                <Field label="Stock Validation" value={order.stock_validation_status?.replace(/_/g, ' ')?.replace(/\b\w/g, c => c.toUpperCase()) || 'Not Checked'} />
+                <Field label="Notes" value={order.notes} />
               </div>
             </div>
-            {order.customer_gstin && (
-              <div className="mt-3">
-                <Field label="Customer GSTIN" value={order.customer_gstin} />
-                <Field label="Customer PAN" value={order.customer_pan} />
-              </div>
-            )}
           </Section>
+        )}
+
+        {/* ── Address & Contacts ─────────────────────────────────────── */}
+        {activePanel === 'address' && (
+          <>
+            <Section title="Billing Address" defaultOpen={true}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+                <div>
+                  <Field label="Customer Address" value={order.customer_name} highlight />
+                  <div className="py-2">
+                    <p className="text-xs text-slate-500 mb-1">Address</p>
+                    <p className="text-xs text-slate-700 whitespace-pre-line bg-slate-50 rounded p-2">{order.billing_address || '—'}</p>
+                  </div>
+                  <Field label="Billing Address GSTIN" value={order.customer_gstin} />
+                  <Field label="Status" value="Active" />
+                  <Field label="GST Category" value={order.gst_category || 'Registered Regular'} />
+                  <Field label="Place of Supply" value={order.place_of_supply || '—'} />
+                </div>
+              </div>
+            </Section>
+
+            <Section title="Shipping Address" defaultOpen={true}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+                <div>
+                  <Field label="Shipping Address Name" value={order.customer_name} />
+                  <div className="py-2">
+                    <p className="text-xs text-slate-500 mb-1">Shipping Address</p>
+                    <p className="text-xs text-slate-700 whitespace-pre-line bg-slate-50 rounded p-2">{order.shipping_address || order.billing_address || '—'}</p>
+                  </div>
+                </div>
+                <div>
+                  <Field label="Dispatch Address Name" value="—" />
+                </div>
+              </div>
+            </Section>
+
+            <Section title="Company Address" defaultOpen={false}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+                <div>
+                  <Field label="Company Address Name" value="K95 Foods Private Limited - Display Shipping" />
+                  <Field label="Company GSTIN" value="—" />
+                </div>
+              </div>
+            </Section>
+
+            {order.customer_pan && (
+              <Section title="Tax Information" defaultOpen={true}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+                  <Field label="Customer GSTIN" value={order.customer_gstin} />
+                  <Field label="Customer PAN" value={order.customer_pan} />
+                </div>
+              </Section>
+            )}
+          </>
         )}
 
         {/* ── Logistics ─────────────────────────────────────────── */}
@@ -402,120 +524,20 @@ export default function SalesOrderDetail() {
 
         {/* ── Connections ───────────────────────────────────────── */}
         {activePanel === 'connections' && (
-          <>
           <Section title="Connections" defaultOpen={true}>
-            <div className="space-y-2">
-              {/* Picklists */}
-              {picklists.length > 0 && (
-                <div>
-                  <p className="text-xs font-semibold text-slate-500 mb-1">Pick Lists</p>
-                  <div className="flex flex-wrap gap-2">
-                    {picklists.map(pl => (
-                      <a key={pl.id} href={`/SalesPicklistDetail?id=${pl.id}`}
-                        className="flex items-center gap-1 text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded px-2 py-1 hover:bg-blue-100">
-                        {pl.picklist_number} <ExternalLink className="w-3 h-3" />
-                      </a>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {/* Delivery Notes */}
-              {deliveryNotes.length > 0 && (
-                <div>
-                  <p className="text-xs font-semibold text-slate-500 mb-1">Delivery Notes</p>
-                  <div className="flex flex-wrap gap-2">
-                    {deliveryNotes.map(dn => (
-                      <a key={dn.id} href={`/SalesDeliveryNoteDetail?id=${dn.id}`}
-                        className="flex items-center gap-1 text-xs bg-green-50 text-green-700 border border-green-200 rounded px-2 py-1 hover:bg-green-100">
-                        {dn.dn_number} <ExternalLink className="w-3 h-3" />
-                      </a>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {/* Invoices */}
-              {invoices.length > 0 && (
-                <div>
-                  <p className="text-xs font-semibold text-slate-500 mb-1">Sales Invoices</p>
-                  <div className="flex flex-wrap gap-2">
-                    {invoices.map(inv => (
-                      <a key={inv.id} href={`/SalesInvoiceDetail?id=${inv.id}`}
-                        className="flex items-center gap-1 text-xs bg-purple-50 text-purple-700 border border-purple-200 rounded px-2 py-1 hover:bg-purple-100">
-                        {inv.invoice_number} — ₹{(inv.total_amount || 0).toLocaleString('en-IN')} <ExternalLink className="w-3 h-3" />
-                      </a>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {picklists.length === 0 && deliveryNotes.length === 0 && invoices.length === 0 && (
-                <p className="text-xs text-slate-400">No linked documents yet.</p>
-              )}
-            </div>
-          </Section>
-
-          {/* PDF Documents */}
-          <Section title="Generated Documents" defaultOpen={true}>
-            <div className="space-y-2">
-              {picklists.length > 0 && picklists.map(pl => (
-                <div key={pl.id} className="flex items-center justify-between p-2 bg-slate-50 rounded-lg text-xs">
-                  <span className="font-medium text-slate-700">Picklist — {pl.picklist_number}</span>
-                  <a href={`/SalesPicklistDetail?id=${pl.id}`} className="text-blue-600 hover:underline">View & Print PDF →</a>
-                </div>
-              ))}
-              {invoices.length > 0 && invoices.map(inv => (
-                <div key={inv.id} className="flex items-center justify-between p-2 bg-slate-50 rounded-lg text-xs">
-                  <span className="font-medium text-slate-700">Invoice — {inv.invoice_number}</span>
-                  <a href={`/SalesInvoiceDetail?id=${inv.id}`} className="text-blue-600 hover:underline">View & Print PDF →</a>
-                </div>
-              ))}
-              {deliveryNotes.length > 0 && deliveryNotes.map(dn => (
-                <div key={dn.id} className="flex items-center justify-between p-2 bg-slate-50 rounded-lg text-xs">
-                  <span className="font-medium text-slate-700">Delivery Note — {dn.dn_number}</span>
-                  <a href={`/SalesDeliveryNoteDetail?id=${dn.id}`} className="text-blue-600 hover:underline">View & Print PDF →</a>
-                </div>
-              ))}
-              {picklists.length === 0 && invoices.length === 0 && deliveryNotes.length === 0 && (
-                <p className="text-xs text-slate-400">No documents generated yet.</p>
-              )}
-            </div>
-          </Section>
-          </>
-        )}
-
-        {/* ── Activity ──────────────────────────────────────────── */}
-        {activePanel === 'timeline' && (
-          <Section title="Activity" defaultOpen={true}>
-            <div className="space-y-3 max-h-80 overflow-y-auto">
-              {auditLogs.length === 0 ? (
-                <p className="text-xs text-slate-400">No activity recorded.</p>
-              ) : auditLogs.map(log => (
-                <div key={log.id} className="flex gap-3 text-xs">
-                  <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0" />
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-slate-700 capitalize">{log.action?.replace(/_/g, ' ')}</span>
-                      {log.field_name && (
-                        <span className="text-slate-400">· {log.field_name}</span>
-                      )}
-                      <span className="ml-auto text-slate-400">
-                        {log.created_date ? fmt(log.created_date.split('T')[0]) : ''}
-                      </span>
-                    </div>
-                    {log.old_value && log.new_value && (
-                      <p className="text-slate-500 mt-0.5">
-                        <span className="line-through text-red-400">{log.old_value}</span>
-                        {' → '}
-                        <span className="text-green-600 font-medium">{log.new_value}</span>
-                      </p>
-                    )}
-                    {log.notes && <p className="text-slate-500 mt-0.5">{log.notes}</p>}
-                    <p className="text-slate-400 mt-0.5">{log.user_email}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <SOConnectionsGrid
+              picklists={picklists}
+              deliveryNotes={deliveryNotes}
+              invoices={invoices}
+            />
           </Section>
         )}
+
+        {/* ── Activity — always visible below tab content (like ERPNext) ──── */}
+        <div className="mt-6 border-t border-slate-200 pt-4">
+          <h3 className="text-sm font-bold text-slate-900 mb-3">Activity</h3>
+          <SOActivityTimeline auditLogs={auditLogs} />
+        </div>
 
       </div>
 
