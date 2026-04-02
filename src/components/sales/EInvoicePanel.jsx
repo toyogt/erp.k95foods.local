@@ -87,8 +87,6 @@ export default function EInvoicePanel({ invoice, order, onUpdated }) {
   const [cancelReason, setCancelReason] = useState('');
   const [showDistancePrompt, setShowDistancePrompt] = useState(false);
   const [distanceKm, setDistanceKm] = useState('');
-  const [useSandbox, setUseSandbox] = useState(false);
-  const [lastResponse, setLastResponse] = useState(null);
 
   // E-Invoice manual fields
   const [irn, setIrn] = useState(invoice?.irn || '');
@@ -156,7 +154,7 @@ export default function EInvoicePanel({ invoice, order, onUpdated }) {
       const currentIrn = irn || invoice?.irn;
       if (!currentIrn) {
         toast({ title: 'Generating E-Invoice (IRN)…' });
-        const resp = await base44.functions.invoke('cleartaxGenerate', { action: 'generate_irn', invoice_id: invoice.id, sandbox: useSandbox });
+        const resp = await base44.functions.invoke('cleartaxGenerate', { action: 'generate_irn', invoice_id: invoice.id });
         if (!resp.data?.success) {
           toast({ title: 'E-Invoice generation failed', description: resp.data?.error || 'Check ClearTax settings', variant: 'destructive' });
           setSaving(false);
@@ -171,9 +169,10 @@ export default function EInvoicePanel({ invoice, order, onUpdated }) {
       // Step 2: Generate E-Way Bill if missing
       const currentEway = ewayBill || invoice?.eway_bill;
       if (!currentEway) {
+        // Need distance — prompt user
         setSaving(false);
         setShowDistancePrompt(true);
-        return;
+        return; // Resume after distance submitted via confirmEwayGeneration()
       }
 
       // Step 3: All docs present — advance workflow
@@ -194,7 +193,7 @@ export default function EInvoicePanel({ invoice, order, onUpdated }) {
     setSaving(true);
     try {
       toast({ title: 'Generating E-Way Bill…' });
-      const resp = await base44.functions.invoke('cleartaxGenerate', { action: 'generate_eway', invoice_id: invoice.id, distance_km: km, sandbox: useSandbox });
+      const resp = await base44.functions.invoke('cleartaxGenerate', { action: 'generate_eway', invoice_id: invoice.id, distance_km: km });
       if (!resp.data?.success) {
         toast({ title: 'E-Way Bill generation failed', description: resp.data?.error || 'Check ClearTax settings', variant: 'destructive' });
         setSaving(false);
@@ -283,31 +282,25 @@ export default function EInvoicePanel({ invoice, order, onUpdated }) {
 
   async function generateIRN() {
     setSaving(true);
-    const resp = await base44.functions.invoke('cleartaxGenerate', { action: 'generate_irn', invoice_id: invoice.id, sandbox: useSandbox });
+    const resp = await base44.functions.invoke('cleartaxGenerate', { action: 'generate_irn', invoice_id: invoice.id });
     setSaving(false);
-    setLastResponse(resp.data);
     if (resp.data?.success) {
       setIrn(resp.data.irn || ''); setAckNo(resp.data.ack_number || ''); setAckDate(resp.data.ack_date || '');
-      const modeLabel = resp.data.demo_mode ? 'Demo Mode' : (resp.data.mode || 'API');
-      toast({ title: `IRN generated (${modeLabel})`, description: resp.data.message || 'Success' });
-      if (onUpdated) onUpdated();
+      toast({ title: 'IRN generated successfully' }); if (onUpdated) onUpdated();
     } else {
-      toast({ title: 'IRN generation failed', description: resp.data?.error || 'Check GST integration settings', variant: 'destructive' });
+      toast({ title: 'IRN generation failed', description: resp.data?.error || 'Check ClearTax settings', variant: 'destructive' });
     }
   }
 
   async function generateEwayBill() {
     setSaving(true);
-    const resp = await base44.functions.invoke('cleartaxGenerate', { action: 'generate_eway', invoice_id: invoice.id, sandbox: useSandbox });
+    const resp = await base44.functions.invoke('cleartaxGenerate', { action: 'generate_eway', invoice_id: invoice.id });
     setSaving(false);
-    setLastResponse(resp.data);
     if (resp.data?.success) {
       setEwayBill(resp.data.eway_bill || ''); setEwayBillDate(resp.data.eway_bill_date || '');
-      const modeLabel = resp.data.demo_mode ? 'Demo Mode' : (resp.data.mode || 'API');
-      toast({ title: `E-Way Bill generated (${modeLabel})` });
-      if (onUpdated) onUpdated();
+      toast({ title: 'E-Way Bill generated' }); if (onUpdated) onUpdated();
     } else {
-      toast({ title: 'E-Way Bill generation failed', description: resp.data?.error || 'Check GST integration settings', variant: 'destructive' });
+      toast({ title: 'E-Way Bill generation failed', description: resp.data?.error || 'Check ClearTax settings', variant: 'destructive' });
     }
   }
 
@@ -482,26 +475,14 @@ export default function EInvoicePanel({ invoice, order, onUpdated }) {
                 <Input type="date" className="h-9 text-sm mt-1" value={ewayBillDate} onChange={e => setEwayBillDate(e.target.value)} />
               </div>
             </div>
-            <div className="flex items-center gap-3 flex-wrap pt-1">
-               <label className="flex items-center gap-2 cursor-pointer select-none">
-                 <input type="checkbox" className="w-4 h-4 rounded" checked={useSandbox} onChange={e => setUseSandbox(e.target.checked)} />
-                 <span className="text-xs text-slate-600">Sandbox / Test mode</span>
-               </label>
-             </div>
-             <div className="flex gap-2 flex-wrap">
-               <Button variant="outline" className="h-11 text-sm" onClick={generateIRN} disabled={saving}>
-                 <Zap className="w-4 h-4 mr-2" /> Generate IRN
-               </Button>
-               <Button variant="outline" className="h-11 text-sm" onClick={generateEwayBill} disabled={saving || !invoice?.irn}>
-                 <Zap className="w-4 h-4 mr-2" /> Generate E-Way Bill{!invoice?.irn && <span className="text-xs ml-1 opacity-60">(IRN first)</span>}
-               </Button>
-             </div>
-             {lastResponse && (
-               <div className={`text-xs rounded-lg px-3 py-2 ${lastResponse.success ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-700'}`}>
-                 {lastResponse.message || lastResponse.error || (lastResponse.success ? 'Success' : 'Failed')}
-                 {lastResponse.demo_mode && <span className="ml-2 font-semibold">[Demo Mode]</span>}
-               </div>
-             )}
+            <div className="flex gap-2 flex-wrap">
+              <Button variant="outline" className="h-11 text-sm" onClick={generateIRN} disabled={saving}>
+                <Zap className="w-4 h-4 mr-2" /> Generate IRN via ClearTax
+              </Button>
+              <Button variant="outline" className="h-11 text-sm" onClick={generateEwayBill} disabled={saving || !invoice?.irn}>
+                <Zap className="w-4 h-4 mr-2" /> Generate E-Way Bill{!invoice?.irn && <span className="text-xs ml-1 opacity-60">(IRN first)</span>}
+              </Button>
+            </div>
           </div>
         </div>
       )}
