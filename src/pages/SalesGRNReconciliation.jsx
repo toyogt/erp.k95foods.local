@@ -5,11 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Search, RefreshCw, AlertTriangle, CheckCircle, Clock, FileText, ShieldAlert } from 'lucide-react';
+import { Plus, Search, RefreshCw, AlertTriangle, CheckCircle, Clock, FileText, ShieldAlert, PackageSearch } from 'lucide-react';
 import GRNEntryModal from '@/components/sales/GRNEntryModal';
 import ManagementReviewTab from '@/components/sales/ManagementReviewTab';
 import DebitNoteEntryModal from '@/components/sales/DebitNoteEntryModal';
 import GRNReconciliationPanel from '@/components/sales/GRNReconciliationPanel';
+import PendingGRNTab from '@/components/sales/PendingGRNTab';
 
 const PLATFORM_COLORS = {
   swiggy: 'bg-orange-100 text-orange-700',
@@ -49,6 +50,7 @@ export default function SalesGRNReconciliation() {
   const [showGRNModal, setShowGRNModal] = useState(false);
   const [showDNModal, setShowDNModal] = useState(false);
   const [selectedGRN, setSelectedGRN] = useState(null);
+  const [prefillInvoice, setPrefillInvoice] = useState(null);
 
   const { data: grns = [], isLoading: grnsLoading } = useQuery({
     queryKey: ['customer-grns'],
@@ -65,9 +67,33 @@ export default function SalesGRNReconciliation() {
     queryFn: () => base44.entities.SalesInvoice.list('-invoice_date', 200),
   });
 
+  const { data: salesOrders = [] } = useQuery({
+    queryKey: ['sales-orders-for-grn'],
+    queryFn: () => base44.entities.SalesOrder.list('-created_date', 500),
+  });
+
   const refresh = () => {
     qc.invalidateQueries({ queryKey: ['customer-grns'] });
     qc.invalidateQueries({ queryKey: ['customer-debit-notes'] });
+    qc.invalidateQueries({ queryKey: ['sales-invoices-for-grn'] });
+    qc.invalidateQueries({ queryKey: ['sales-orders-for-grn'] });
+  };
+
+  // Count delivered invoices without a GRN
+  const pendingGRNCount = (() => {
+    const grnInvIds = new Set(grns.map(g => g.invoice_id).filter(Boolean));
+    const grnInvNums = new Set(grns.map(g => g.invoice_number?.trim().toLowerCase()).filter(Boolean));
+    return invoices.filter(inv => {
+      if (inv.workflow_state !== 'delivered') return false;
+      if (grnInvIds.has(inv.id)) return false;
+      if (inv.invoice_number && grnInvNums.has(inv.invoice_number.trim().toLowerCase())) return false;
+      return true;
+    }).length;
+  })();
+
+  const handleRecordGRNFromPending = (invoice, salesOrder) => {
+    setPrefillInvoice(invoice);
+    setShowGRNModal(true);
   };
 
   const filterGRNs = (items) => items.filter(g => {
@@ -161,8 +187,15 @@ export default function SalesGRNReconciliation() {
         </Select>
       </div>
 
-      <Tabs defaultValue="grns">
+      <Tabs defaultValue="pending_grn">
         <TabsList>
+          <TabsTrigger value="pending_grn" className="relative">
+            <PackageSearch className="w-3.5 h-3.5 mr-1" />
+            Pending for GRN
+            {pendingGRNCount > 0 && (
+              <span className="ml-1.5 bg-amber-500 text-white text-xs rounded-full px-1.5 py-0.5 font-bold">{pendingGRNCount}</span>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="grns">Customer GRNs ({grns.length})</TabsTrigger>
           <TabsTrigger value="debitnotes">Debit Notes ({debitNotes.length})</TabsTrigger>
           <TabsTrigger value="mgmt_review" className="relative">
@@ -173,6 +206,16 @@ export default function SalesGRNReconciliation() {
             )}
           </TabsTrigger>
         </TabsList>
+
+        {/* Pending for GRN Tab */}
+        <TabsContent value="pending_grn" className="mt-3">
+          <PendingGRNTab
+            invoices={invoices}
+            grns={grns}
+            orders={salesOrders}
+            onRecordGRN={handleRecordGRNFromPending}
+          />
+        </TabsContent>
 
         {/* GRNs Tab */}
         <TabsContent value="grns" className="mt-3">
@@ -285,7 +328,13 @@ export default function SalesGRNReconciliation() {
       </Tabs>
 
       {/* Modals */}
-      <GRNEntryModal open={showGRNModal} onClose={() => setShowGRNModal(false)} onSaved={refresh} invoices={invoices} />
+      <GRNEntryModal
+        open={showGRNModal}
+        onClose={() => { setShowGRNModal(false); setPrefillInvoice(null); }}
+        onSaved={refresh}
+        invoices={invoices}
+        prefillInvoice={prefillInvoice}
+      />
       <DebitNoteEntryModal open={showDNModal} onClose={() => setShowDNModal(false)} onSaved={refresh} grns={grns} invoices={invoices} />
       <GRNReconciliationPanel grn={selectedGRN} open={!!selectedGRN} onClose={() => setSelectedGRN(null)} onUpdated={() => { refresh(); setSelectedGRN(null); }} />
     </div>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -133,7 +133,7 @@ function parseScootsyDebitNote(text) {
   };
 }
 
-export default function GRNEntryModal({ open, onClose, onSaved, invoices = [] }) {
+export default function GRNEntryModal({ open, onClose, onSaved, invoices = [], prefillInvoice = null }) {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [extracting, setExtracting] = useState(false);
@@ -146,13 +146,36 @@ export default function GRNEntryModal({ open, onClose, onSaved, invoices = [] })
     staleTime: 60000,
   });
 
-  const [form, setForm] = useState({
-    platform: 'swiggy', grn_number: '', grn_date: '', po_number: '', asn_number: '',
-    inbound_number: '', invoice_id: '', invoice_number: '', customer_name: 'SCOOTSY LOGISTICS PRIVATE LIMITED',
-    warehouse_location: '', grn_total_qty: '', grn_total_amount: '', invoice_total_amount: '',
-    dn_number: '', dn_date: '', dn_amount: '', email_subject: '', notes: '',
-    items: [{ ...DEFAULT_ITEM }],
-  });
+  const buildInitialForm = () => {
+    if (prefillInvoice) {
+      return {
+        platform: 'swiggy', grn_number: '', grn_date: '', po_number: '', asn_number: '',
+        inbound_number: '',
+        invoice_id: prefillInvoice.id || '',
+        invoice_number: prefillInvoice.invoice_number || '',
+        customer_name: prefillInvoice.customer_name || '',
+        warehouse_location: '',
+        grn_total_qty: '', grn_total_amount: '',
+        invoice_total_amount: prefillInvoice.total_amount || '',
+        dn_number: '', dn_date: '', dn_amount: '', email_subject: '', notes: '',
+        items: [{ ...DEFAULT_ITEM }],
+      };
+    }
+    return {
+      platform: 'swiggy', grn_number: '', grn_date: '', po_number: '', asn_number: '',
+      inbound_number: '', invoice_id: '', invoice_number: '', customer_name: 'SCOOTSY LOGISTICS PRIVATE LIMITED',
+      warehouse_location: '', grn_total_qty: '', grn_total_amount: '', invoice_total_amount: '',
+      dn_number: '', dn_date: '', dn_amount: '', email_subject: '', notes: '',
+      items: [{ ...DEFAULT_ITEM }],
+    };
+  };
+
+  const [form, setForm] = useState(buildInitialForm);
+
+  // Reset form when prefillInvoice changes (opening from Pending tab)
+  useEffect(() => {
+    if (open) setForm(buildInitialForm());
+  }, [prefillInvoice, open]);
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
