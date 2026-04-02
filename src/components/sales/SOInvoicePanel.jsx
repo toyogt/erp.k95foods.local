@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
-import { Loader2, FileText, Printer, Lock } from 'lucide-react';
+import { Loader2, FileText, Printer, Lock, Eye } from 'lucide-react';
 
 // Statuses that allow invoice creation
 const INVOICE_ALLOWED_FROM = ['packing'];
@@ -21,13 +21,14 @@ const PREREQUISITE_MSG = {
   picking:          'Order must be fully packed before invoicing.',
 };
 import { fireFMSEvent, linkFMSRef, findFMSInstanceByRef } from '@/lib/useFMSAutoComplete';
-import K95InvoiceTemplate from '@/components/sales/K95InvoiceTemplate';
+import InvoiceModal from '@/components/invoice/InvoiceModal';
 import EInvoicePanel from '@/components/sales/EInvoicePanel';
 
 export default function SOInvoicePanel({ order, items, onUpdated, deliveryNote }) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
+  const [showPrint, setShowPrint] = useState(false);
   const [form, setForm] = useState({
     invoice_number: '',
     invoice_date: new Date().toISOString().split('T')[0],
@@ -124,20 +125,20 @@ export default function SOInvoicePanel({ order, items, onUpdated, deliveryNote }
               'bg-violet-100 text-violet-700'
             }`}>{existingInvoice.status}</span>
           </div>
-          <Button variant="outline" className="ml-3 h-9 text-xs" onClick={() => window.print()}>
-            <Printer className="w-3 h-3 mr-1" /> Print
+          <Button variant="outline" className="ml-3 h-9 text-sm gap-1.5" onClick={() => setShowPrint(true)}>
+            <Eye className="w-4 h-4" /> View &amp; Print
           </Button>
         </div>
 
-        {/* K95 Invoice Preview */}
-        <div className="border border-slate-200 rounded-xl overflow-hidden">
-          <K95InvoiceTemplate
-            invoice={existingInvoice}
-            items={items}
-            order={order}
-            deliveryNote={deliveryNote}
-          />
-        </div>
+        {/* Invoice Print Modal */}
+        <InvoiceModal
+          open={showPrint}
+          onClose={() => setShowPrint(false)}
+          invoice={existingInvoice}
+          items={items}
+          order={order}
+          deliveryNote={deliveryNote}
+        />
 
         {/* E-Invoice, E-Way Bill, Workflow & Tally — inline below invoice */}
         <div className="border-t border-slate-200 pt-4">
