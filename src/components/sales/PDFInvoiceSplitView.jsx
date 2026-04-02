@@ -31,9 +31,14 @@ export default function PDFInvoiceSplitView({ pdfEntry, onConfirm }) {
     setEditing(false);
   }, [pdfEntry.id]);
 
-  // Resolve customer → price list
+  // Resolve customer → price list (skip if already resolved server-side)
   useEffect(() => {
     if (!data?.customer_name) return;
+    if (data?._customer_id) {
+      // Already resolved on the server — skip extra API call
+      setCustomer({ id: data._customer_id, price_list: data._customer_price_list, customer_group: data._customer_group, name: data.customer_name });
+      return;
+    }
     base44.entities.Customer.filter({ name: data.customer_name }, undefined, 1)
       .then(results => {
         if (results?.[0]) setCustomer(results[0]);

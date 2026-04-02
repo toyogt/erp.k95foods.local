@@ -144,14 +144,13 @@ export default function PDFBulkUploadModal({ onClose, onCreated }) {
     });
 
     if (confirmedData.items?.length) {
-      for (const item of confirmedData.items) {
-        await base44.entities.SalesOrderItem.create({
-          ...item,
-          sales_order_id: so.id,
-          so_number: soNumber,
-          stock_status: 'not_checked',
-        });
-      }
+      const itemPayloads = confirmedData.items.map(item => ({
+        ...item,
+        sales_order_id: so.id,
+        so_number: soNumber,
+        stock_status: 'not_checked',
+      }));
+      await base44.entities.SalesOrderItem.bulkCreate(itemPayloads);
     }
 
     await base44.entities.SalesAuditLog.create({

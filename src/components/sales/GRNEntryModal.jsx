@@ -143,7 +143,9 @@ export default function GRNEntryModal({ open, onClose, onSaved, invoices = [], p
   const { data: allSalesOrders = [] } = useQuery({
     queryKey: ['grn-entry-sales-orders'],
     queryFn: () => base44.entities.SalesOrder.list('-created_date', 500),
-    staleTime: 60000,
+    staleTime: 120000,
+    cacheTime: 300000,
+    enabled: open,
   });
 
   const buildInitialForm = () => {

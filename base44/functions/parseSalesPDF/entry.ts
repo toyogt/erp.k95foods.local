@@ -19,8 +19,8 @@ Deno.serve(async (req) => {
     const { pdf_url } = await req.json();
     if (!pdf_url) return Response.json({ error: 'pdf_url is required' }, { status: 400 });
 
-    // ── PARALLEL: LLM extraction + DB prefetch at the same time ──────────
-    const [result, allCustomers, allRates] = await Promise.all([
+    // ── PARALLEL: LLM extraction + ALL DB prefetches at the same time ──────────
+    const [result, allCustomers, allRates, allProducts, allCustomerBarcodes] = await Promise.all([
       // 1. LLM extraction — tight focused prompt
       base44.asServiceRole.integrations.Core.InvokeLLM({
         model: 'gemini_3_flash',
@@ -86,17 +86,46 @@ Return ONLY valid JSON.`,
         }
       }),
 
-      // 2. Fetch all active customers in parallel
+      // 2. Fetch all active customers
       base44.asServiceRole.entities.Customer.filter({ status: 'active' }),
 
-      // 3. Fetch all active rates in parallel
+      // 3. Fetch all active rates
       base44.asServiceRole.entities.SalesRateList.filter({ is_active: true }),
+
+      // 4. Fetch all active products (for item code standardisation)
+      base44.asServiceRole.entities.ProductMaster.filter({ is_active: true }),
+
+      // 5. Fetch customer barcode mappings (partner item codes → our item codes)
+      base44.asServiceRole.entities.SKUCustomerBarcode.list('-created_date', 2000).catch(() => []),
     ]);
 
-    // ── POST-PROCESS: deterministic matching, no extra DB calls ──────────
+    // ── BUILD FAST LOOKUP MAPS ──────────────────────────────────────────
+
+    // Product Master lookups
+    const productByCode = {};     // item_code → product
+    const productByEAN = {};      // product_barcode → product
+    const productByName = [];     // for fuzzy matching
+    for (const p of allProducts) {
+      if (p.item_code) productByCode[p.item_code.trim().toUpperCase()] = p;
+      if (p.product_barcode) productByEAN[p.product_barcode.trim()] = p;
+      if (p.product_name) productByName.push({ p, words: p.product_name.toLowerCase().split(' ').filter(w => w.length > 3) });
+    }
+
+    // Customer barcode → our item_code (partner platform integration)
+    const barcodeToItemCode = {};
+    for (const cb of allCustomerBarcodes) {
+      if (cb.customer_barcode && cb.item_code) {
+        barcodeToItemCode[cb.customer_barcode.trim().toUpperCase()] = cb.item_code.trim();
+      }
+      if (cb.customer_sku && cb.item_code) {
+        barcodeToItemCode[cb.customer_sku.trim().toUpperCase()] = cb.item_code.trim();
+      }
+    }
+
+    // ── POST-PROCESS ──────────────────────────────────────────────────
     let enrichedData = { ...result };
 
-    // Ensure platform is set using deterministic logic as fallback
+    // Ensure platform is set
     if (!enrichedData.platform || enrichedData.platform === 'direct') {
       enrichedData.platform = detectPlatform(enrichedData.customer_name, enrichedData.customer_gstin);
     }
@@ -140,7 +169,7 @@ Return ONLY valid JSON.`,
       ? allRates.filter(r => r.price_list === priceListUsed)
       : allRates;
 
-    // Build fast lookup maps from rate list
+    // Build fast rate lookup maps
     const rateByItemCode = {};
     const rateByEAN = {};
     const rateByNameWords = [];
@@ -150,39 +179,78 @@ Return ONLY valid JSON.`,
       if (r.item_name) rateByNameWords.push({ r, words: r.item_name.toLowerCase().split(' ').filter(w => w.length > 3) });
     }
 
-    // Enrich items
+    // ── ENRICH ITEMS with standardised item codes ──────────────────────
     let matchedCount = 0;
     if (enrichedData.items?.length) {
       enrichedData.items = enrichedData.items.map(item => {
-        // Match by item_code, sku_code, ean_number, then description keywords
-        let match =
-          (item.item_code && rateByItemCode[item.item_code.trim()]) ||
+        // Step 1: Try to resolve partner barcode → our item code
+        let resolvedItemCode = item.item_code || '';
+        const pdfCode = (item.sku_code || item.item_code || '').trim().toUpperCase();
+        const pdfEAN = (item.ean_number || '').trim().toUpperCase();
+
+        if (pdfCode && barcodeToItemCode[pdfCode]) {
+          resolvedItemCode = barcodeToItemCode[pdfCode];
+        } else if (pdfEAN && barcodeToItemCode[pdfEAN]) {
+          resolvedItemCode = barcodeToItemCode[pdfEAN];
+        }
+
+        // Step 2: Validate against Product Master
+        let product = null;
+        if (resolvedItemCode) {
+          product = productByCode[resolvedItemCode.toUpperCase()];
+        }
+        if (!product && pdfEAN) {
+          product = productByEAN[pdfEAN];
+          if (product) resolvedItemCode = product.item_code;
+        }
+        if (!product && item.description) {
+          const descLower = item.description.toLowerCase();
+          const fuzzy = productByName.find(({ words }) =>
+            words.filter(w => descLower.includes(w)).length >= Math.min(2, words.length)
+          );
+          if (fuzzy) { product = fuzzy.p; resolvedItemCode = fuzzy.p.item_code; }
+        }
+
+        // Step 3: Match rates
+        let rateMatch =
+          (resolvedItemCode && rateByItemCode[resolvedItemCode.trim()]) ||
           (item.sku_code && rateByItemCode[item.sku_code.trim()]) ||
           (item.ean_number && rateByEAN[item.ean_number.trim()]);
 
-        if (!match && item.description) {
+        if (!rateMatch && item.description) {
           const descLower = item.description.toLowerCase();
-          match = rateByNameWords.find(({ words }) =>
+          rateMatch = rateByNameWords.find(({ words }) =>
             words.filter(w => descLower.includes(w)).length >= Math.min(2, words.length)
           )?.r;
         }
 
-        if (match) {
-          matchedCount++;
-          return {
-            ...item,
-            item_code: match.item_code || item.item_code,
-            hsn_code: match.hsn_code || item.hsn_code || '22029990',
-            packing_unit: match.packing_unit || item.packing_unit || 12,
-            rate_snapshot: match.rate,
-            unit_base_cost: match.rate,
-            mrp: match.mrp || item.mrp,
-            igst_rate: match.igst_rate ?? item.igst_rate,
-            _rate_matched: true,
-            _price_list: priceListUsed,
-          };
+        const enriched = { ...item };
+        // Apply standardised item code
+        if (resolvedItemCode) enriched.item_code = resolvedItemCode;
+        if (product) {
+          enriched.hsn_code = product.hsn_code || enriched.hsn_code || '22029990';
+          enriched.packing_unit = product.bottles_per_box || enriched.packing_unit || 12;
+          enriched._product_name = product.product_name;
+          enriched._product_matched = true;
         }
-        return { ...item, hsn_code: item.hsn_code || '22029990', _rate_matched: false };
+
+        if (rateMatch) {
+          matchedCount++;
+          enriched.item_code = rateMatch.item_code || enriched.item_code;
+          enriched.hsn_code = rateMatch.hsn_code || enriched.hsn_code || '22029990';
+          enriched.packing_unit = rateMatch.packing_unit || enriched.packing_unit || 12;
+          enriched.rate_snapshot = rateMatch.rate;
+          enriched.unit_base_cost = rateMatch.rate;
+          enriched.mrp = rateMatch.mrp || enriched.mrp;
+          enriched.igst_rate = rateMatch.igst_rate ?? enriched.igst_rate;
+          enriched._rate_matched = true;
+          enriched._price_list = priceListUsed;
+        } else {
+          enriched.hsn_code = enriched.hsn_code || '22029990';
+          enriched._rate_matched = false;
+        }
+
+        return enriched;
       });
     }
 
@@ -203,6 +271,7 @@ Return ONLY valid JSON.`,
     enrichedData._customer_found = !!customerFound;
     enrichedData._matched_count = matchedCount;
     enrichedData._total_items = enrichedData.items?.length || 0;
+    enrichedData._product_matched_count = (enrichedData.items || []).filter(i => i._product_matched).length;
     // Block flag: no price list AND no items matched
     enrichedData._no_rate = !priceListUsed && matchedCount === 0;
 

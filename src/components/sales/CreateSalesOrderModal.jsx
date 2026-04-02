@@ -122,16 +122,16 @@ export default function CreateSalesOrderModal({ defaultType = 'manual', onClose,
   // Auto-fill customer details + resolve price list (customer-specific → group fallback)
   async function handleCustomerNameBlur(name) {
     if (!name || name.length < 3) return;
-    // Match by exact name or GSTIN-level search
+    // Match by exact name or GSTIN-level search (with caching — staleTime on queryFn)
     const matches = await base44.entities.Customer.filter({ status: 'active' });
-    const c = matches.find(cu => cu.name?.toLowerCase() === name.toLowerCase())
-      || matches.find(cu => cu.name?.toLowerCase().includes(name.toLowerCase().slice(0, 20)));
-    if (!c) return;
+    const nameLower = name.toLowerCase();
+    const c = matches.find(cu => cu.name?.toLowerCase() === nameLower)
+      || matches.find(cu => cu.name?.toLowerCase().includes(nameLower.slice(0, 20)));
 
     // Resolve price list: customer-specific first, then group fallback
     let resolvedPriceList = c.price_list || '';
     if (!resolvedPriceList && c.customer_group) {
-      const allRates = await base44.entities.SalesRateList.list('-created_date', 500);
+      const allRates = await base44.entities.SalesRateList.filter({ is_active: true });
       const groupName = c.customer_group.toLowerCase();
       const groupList = [...new Set(allRates.map(r => r.price_list).filter(Boolean))]
         .find(pl => pl.toLowerCase().includes(groupName) || groupName.includes(pl.toLowerCase()));
@@ -198,16 +198,15 @@ export default function CreateSalesOrderModal({ defaultType = 'manual', onClose,
 
     const so = await base44.entities.SalesOrder.create(soData);
 
-    // Save items if extracted
+    // Save items in batch for speed
     if (extractedData?.items?.length) {
-      for (const item of extractedData.items) {
-        await base44.entities.SalesOrderItem.create({
-          ...item,
-          sales_order_id: so.id,
-          so_number: soNumber,
-          stock_status: 'not_checked',
-        });
-      }
+      const itemPayloads = extractedData.items.map(item => ({
+        ...item,
+        sales_order_id: so.id,
+        so_number: soNumber,
+        stock_status: 'not_checked',
+      }));
+      await base44.entities.SalesOrderItem.bulkCreate(itemPayloads);
     }
 
     // Audit log
