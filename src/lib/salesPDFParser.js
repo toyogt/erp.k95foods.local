@@ -341,7 +341,15 @@ export function parseBlinkit(text) {
           }
           i++;
         } else if (l === '.') {
-          i++; // stray decimal separator artifact — skip
+          // Standalone decimal point — ADDT.CESS "0.00" splits as "0" "." "0" "0"
+          // Consume all following single-digit tokens and attach to previous value
+          i++;
+          let decStr = '';
+          while (i < tLines.length && tLines[i].match(/^\d$/)) { decStr += tLines[i]; i++; }
+          // previous value is the integer part, decStr is fractional part
+          if (taxCols.length > 0 && decStr) {
+            taxCols[taxCols.length - 1] = num(Math.floor(taxCols[taxCols.length - 1]) + '.' + decStr);
+          }
         } else break;
       }
 
