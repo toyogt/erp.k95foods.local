@@ -39,20 +39,30 @@ export async function enrichParsedData(parsedData) {
     allCustomers.find(c => c.name && c.name.toLowerCase().includes(extractedName.slice(0, 20))) ||
     allCustomers.find(c => c.name && extractedName.includes(c.name.toLowerCase().slice(0, 15)));
 
-  // Price list resolution
+  // Price list resolution — strict priority: customer → group → platform (only if no customer)
+  // Exclude any price list that contains "internal transfer" to prevent accidental matching
+  const isInternalTransfer = (pl) => pl.toLowerCase().includes('internal transfer');
+
   let priceListUsed = null, rateSource = 'none';
-  if (customerFound?.price_list) {
+  if (customerFound?.price_list && !isInternalTransfer(customerFound.price_list)) {
+    // 1. Customer has an explicit price list assigned — always use this
     priceListUsed = customerFound.price_list;
     rateSource = `customer:${customerFound.name}`;
   } else if (customerFound?.customer_group) {
-    const grp = customerFound.customer_group.toLowerCase();
-    const pls = [...new Set(allRates.map(r => r.price_list).filter(Boolean))];
-    const gm = pls.find(pl => pl.toLowerCase().includes(grp) || grp.includes(pl.toLowerCase()));
+    // 2. Match by customer_group — only exact or starts-with match, never partial reverse
+    const grp = customerFound.customer_group.trim().toLowerCase();
+    const pls = [...new Set(allRates.map(r => r.price_list).filter(Boolean))]
+      .filter(pl => !isInternalTransfer(pl));
+    const gm = pls.find(pl => pl.trim().toLowerCase() === grp || pl.trim().toLowerCase().startsWith(grp));
     if (gm) { priceListUsed = gm; rateSource = `group:${customerFound.customer_group}`; }
   }
-  if (!priceListUsed && parsedData.platform !== 'direct' && parsedData.platform !== 'unknown') {
-    const pls = [...new Set(allRates.map(r => r.price_list).filter(Boolean))];
-    const pm = pls.find(pl => pl.toLowerCase().includes(parsedData.platform.toLowerCase()));
+
+  // 3. Platform fallback — ONLY when customer was NOT found at all
+  if (!priceListUsed && !customerFound && parsedData.platform && parsedData.platform !== 'direct' && parsedData.platform !== 'unknown') {
+    const pls = [...new Set(allRates.map(r => r.price_list).filter(Boolean))]
+      .filter(pl => !isInternalTransfer(pl));
+    const pm = pls.find(pl => pl.trim().toLowerCase() === parsedData.platform.toLowerCase()
+      || pl.trim().toLowerCase().startsWith(parsedData.platform.toLowerCase()));
     if (pm) { priceListUsed = pm; rateSource = `platform:${parsedData.platform}`; }
   }
 
