@@ -12,7 +12,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { CheckCircle2, Loader2 } from 'lucide-react';
-import { fireFMSEvent } from '@/lib/useFMSAutoComplete';
+import { fireFMSEvent, linkFMSRef, findFMSInstanceByRef } from '@/lib/useFMSAutoComplete';
+import { generateDocNumber } from '@/lib/docNumberHelper';
 import LogisticsCostPanel from '@/components/sales/logistics/LogisticsCostPanel';
 
 export default function SOLogisticsReviewPanel({ order, onUpdated }) {
@@ -58,8 +59,43 @@ export default function SOLogisticsReviewPanel({ order, onUpdated }) {
       user_email: user?.email,
     });
     await fireFMSEvent('sales_picking_started', order.id);
+
+    // Auto-generate Picklist
+    const plNumber = await generateDocNumber('PL');
+    const soItems = await base44.entities.SalesOrderItem.filter({ sales_order_id: order.id });
+    const plItems = soItems.map(item => ({
+      sales_order_item_id: item.id,
+      item_code: item.sku_code || item.item_code || '',
+      description: item.description,
+      location: item.location || '',
+      required_qty: item.quantity || 0,
+      picked_qty: 0,
+      status: 'pending',
+    }));
+    const newPicklist = await base44.entities.SalesPicklist.create({
+      sales_order_id: order.id,
+      so_number: order.so_number,
+      picklist_number: plNumber,
+      status: 'draft',
+      transporter: form.transporter,
+      packaging_type: form.packaging_type,
+      appointment_date: form.appointment_date || '',
+      dispatch_date: form.dispatch_date || '',
+      expiry_date: order.po_expiry_date || '',
+      generated_by: user?.email,
+      items: plItems,
+    });
+    // Link picklist to FMS
+    const instances = await findFMSInstanceByRef(order.id);
+    if (instances[0]) await linkFMSRef(instances[0].id, newPicklist.id);
+    await base44.entities.SalesAuditLog.create({
+      entity_type: 'SalesPicklist', entity_id: newPicklist.id,
+      reference_number: plNumber, action: 'created',
+      new_value: `Auto-generated from ${order.so_number}`, user_email: user?.email,
+    });
+
     setSaving(false);
-    toast({ title: 'Approved for Picking', description: 'Sales Order is now Ready to Pick & Pack' });
+    toast({ title: 'Approved for Picking', description: `Picklist ${plNumber} generated automatically` });
     if (onUpdated) onUpdated();
   }
 

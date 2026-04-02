@@ -7,7 +7,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Package, CheckCircle2, Calendar, Loader2, XCircle, Printer } from 'lucide-react';
+import { ArrowLeft, Package, CheckCircle2, Calendar, Loader2, XCircle, Printer, Trash2 } from 'lucide-react';
+import DeleteWithRemarks from '@/components/sales/DeleteWithRemarks';
 import PicklistPrintTemplate from '@/components/sales/PicklistPrintTemplate';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,6 +41,7 @@ export default function SalesPicklistDetail() {
   const [dispatchDate, setDispatchDate] = useState('');
   const [pickQtys, setPickQtys] = useState({});
   const [showPrint, setShowPrint] = useState(false);
+  const [showDelete, setShowDelete] = useState(false);
   const printRef = useRef();
 
   function handlePrint() {
@@ -298,6 +300,24 @@ export default function SalesPicklistDetail() {
           {pl.notes && <span className="text-red-600 text-xs ml-2">Reason: {pl.notes}</span>}
         </div>
       )}
+
+      {user?.role === 'admin' && (
+        <div className="flex justify-end">
+          <Button variant="outline" className="h-11 text-sm text-red-600 border-red-200 hover:bg-red-50 gap-1.5"
+            onClick={() => setShowDelete(true)}>
+            <Trash2 className="w-4 h-4" /> Delete Picklist
+          </Button>
+        </div>
+      )}
+
+      <DeleteWithRemarks
+        open={showDelete}
+        onClose={() => setShowDelete(false)}
+        entityName="SalesPicklist"
+        recordId={plId}
+        referenceNumber={pl.picklist_number}
+        onDeleted={() => window.location.href = '/SalesPicklists'}
+      />
     </div>
   );
 }

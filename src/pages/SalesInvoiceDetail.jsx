@@ -2,11 +2,15 @@
  * Sales Invoice Detail Page — dedicated page for a single Sales Invoice.
  * Full SI workflow rendered via EInvoicePanel.
  */
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import { useAuth } from '@/lib/AuthContext';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, FileText } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft, FileText, Trash2 } from 'lucide-react';
 import EInvoicePanel from '@/components/sales/EInvoicePanel';
+import DeleteWithRemarks from '@/components/sales/DeleteWithRemarks';
 import SOItemsTable from '@/components/sales/SOItemsTable';
 
 const STATE_COLORS = {
@@ -33,6 +37,7 @@ const STATE_LABEL = {
 export default function SalesInvoiceDetail() {
   const params = new URLSearchParams(window.location.search);
   const invId = params.get('id');
+  const { user } = useAuth();
 
   const { data: invoice, isLoading, refetch } = useQuery({
     queryKey: ['inv_detail', invId],
@@ -51,6 +56,8 @@ export default function SalesInvoiceDetail() {
     queryFn: () => base44.entities.SalesOrderItem.filter({ sales_order_id: invoice.sales_order_id }),
     enabled: !!invoice?.sales_order_id,
   });
+
+  const [showDelete, setShowDelete] = useState(false);
 
   if (isLoading) return <div className="p-8 text-center text-slate-400">Loading...</div>;
   if (!invoice) return <div className="p-8 text-center text-slate-400">Invoice not found</div>;
@@ -122,6 +129,24 @@ export default function SalesInvoiceDetail() {
           </div>
         </div>
       )}
+
+      {user?.role === 'admin' && (
+        <div className="flex justify-end">
+          <Button variant="outline" className="h-11 text-sm text-red-600 border-red-200 hover:bg-red-50 gap-1.5"
+            onClick={() => setShowDelete(true)}>
+            <Trash2 className="w-4 h-4" /> Delete Invoice
+          </Button>
+        </div>
+      )}
+
+      <DeleteWithRemarks
+        open={showDelete}
+        onClose={() => setShowDelete(false)}
+        entityName="SalesInvoice"
+        recordId={invId}
+        referenceNumber={invoice.invoice_number}
+        onDeleted={() => window.location.href = '/SalesInvoices'}
+      />
     </div>
   );
 }

@@ -96,6 +96,8 @@ import SalesSettingsPage from './pages/SalesSettingsPage';
 import DistributorPortal from './pages/DistributorPortal';
 import SalesGRNReconciliation from './pages/SalesGRNReconciliation';
 import TransportRateCards from './pages/TransportRateCards';
+import SalesPicklists from './pages/SalesPicklists';
+import SalesInvoices from './pages/SalesInvoices';
 
 // Page component lookup table
 const PAGE_COMPONENTS = {
@@ -114,6 +116,7 @@ const PAGE_COMPONENTS = {
   SalesOrders, SalesDistributors, SalesRateListManager, SalesSettingsPage, DistributorPortal,
   SalesPicklistDetail, SalesDeliveryNoteDetail, SalesInvoiceDetail,
   SalesCustomerManager, SalesPriceListView, SalesGRNReconciliation, TransportRateCards,
+  SalesPicklists, SalesInvoices,
 };
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -242,6 +245,14 @@ const AuthenticatedApp = () => {
       <Route
         path="/SalesGRNReconciliation"
         element={<LayoutWrapper currentPageName="SalesGRNReconciliation"><SalesGRNReconciliation /></LayoutWrapper>}
+      />
+      <Route
+        path="/SalesPicklists"
+        element={<LayoutWrapper currentPageName="SalesPicklists"><SalesPicklists /></LayoutWrapper>}
+      />
+      <Route
+        path="/SalesInvoices"
+        element={<LayoutWrapper currentPageName="SalesInvoices"><SalesInvoices /></LayoutWrapper>}
       />
       <Route
         path="/SalesInvoiceDetail"

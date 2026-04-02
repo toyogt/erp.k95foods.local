@@ -5,13 +5,14 @@ import { useAuth } from '@/lib/AuthContext';
 import { Link } from 'react-router-dom';
 import {
   ArrowLeft, ArrowRight, AlertTriangle, Send, Zap, FileCheck,
-  ChevronDown, ChevronUp, ExternalLink
+  ChevronDown, ChevronUp, ExternalLink, Trash2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import SalesOrderStatusBadge from '@/components/sales/SalesOrderStatusBadge';
 import SOInvoicePanel from '@/components/sales/SOInvoicePanel';
 import SOLogisticsReviewPanel from '@/components/sales/SOLogisticsReviewPanel';
+import DeleteWithRemarks from '@/components/sales/DeleteWithRemarks';
 import { fireFMSEvent } from '@/lib/useFMSAutoComplete';
 
 const STATUS_ORDER = ['draft', 'confirmed', 'logistics_review', 'picking', 'packing', 'invoiced', 'delivered', 'paid', 'closed'];
@@ -68,6 +69,7 @@ export default function SalesOrderDetail() {
   const qc = useQueryClient();
   const [activePanel, setActivePanel] = useState('items');
   const [movingStatus, setMovingStatus] = useState(false);
+  const [showDelete, setShowDelete] = useState(false);
 
   const { data: order, isLoading, refetch } = useQuery({
     queryKey: ['sales_order', soId],
@@ -191,6 +193,12 @@ export default function SalesOrderDetail() {
                 disabled={movingStatus}
               >
                 {nextAction.label} <ArrowRight className="w-3 h-3" />
+              </Button>
+            )}
+            {user?.role === 'admin' && (
+              <Button variant="outline" size="sm" className="h-7 text-xs text-red-600 border-red-200 hover:bg-red-50 gap-1"
+                onClick={() => setShowDelete(true)}>
+                <Trash2 className="w-3 h-3" /> Delete
               </Button>
             )}
           </div>
@@ -440,6 +448,15 @@ export default function SalesOrderDetail() {
         )}
 
       </div>
+
+      <DeleteWithRemarks
+        open={showDelete}
+        onClose={() => setShowDelete(false)}
+        entityName="SalesOrder"
+        recordId={soId}
+        referenceNumber={order.so_number}
+        onDeleted={() => window.location.href = '/SalesOrders'}
+      />
     </div>
   );
 }
