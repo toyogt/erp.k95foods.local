@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Plus, CheckCircle2, XCircle, X } from 'lucide-react';
+import ExportButton from '@/components/store/ExportButton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -136,7 +137,15 @@ export default function SMSAdjustments() {
           <h1 className="text-xl font-bold text-slate-900">Stock Adjustments</h1>
           <p className="text-sm text-slate-500">Request manual corrections — no direct deletion allowed</p>
         </div>
-        <Button onClick={() => setShowModal(true)} className="gap-2 h-11"><Plus className="w-4 h-4" />Request Adjustment</Button>
+        <div className="flex gap-2">
+          <ExportButton data={adjustments} columns={[
+            { key: 'adjustment_id', label: 'ID' }, { key: 'item_name', label: 'Item' }, { key: 'lot_id', label: 'Lot' },
+            { key: 'adjustment_type', label: 'Type' }, { key: 'quantity_before', label: 'Before' },
+            { key: 'adjustment_quantity', label: 'Adjustment' }, { key: 'quantity_after', label: 'After' },
+            { key: 'reason', label: 'Reason' }, { key: 'status', label: 'Status' },
+          ]} filename="adjustments" />
+          <Button onClick={() => setShowModal(true)} className="gap-2 h-11"><Plus className="w-4 h-4" />Request Adjustment</Button>
+        </div>
       </div>
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
         <div className="overflow-x-auto">

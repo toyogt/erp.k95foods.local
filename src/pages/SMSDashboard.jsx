@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
-import { Building2, Package, AlertTriangle, CheckCircle2, Clock, ArrowRight, TrendingDown, CalendarClock, Plus } from 'lucide-react';
+import { Building2, Package, AlertTriangle, Clock, ArrowRight, TrendingDown, CalendarClock, Users, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import StorePageAccessManager from '@/components/store/StorePageAccessManager';
+import ExportButton from '@/components/store/ExportButton';
 
 function StatCard({ icon: Icon, label, value, color, sub }) {
   return (
@@ -34,33 +36,26 @@ export default function SMSDashboard() {
   const [stock, setStock] = useState([]);
   const [reorderConfigs, setReorderConfigs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(null);
+  const [showAccessMgr, setShowAccessMgr] = useState(false);
 
   useEffect(() => {
     Promise.all([
+      base44.auth.me(),
       base44.entities.StoreLot.list('-created_date', 200),
       base44.entities.StoreLocation.filter({ is_active: true }),
       base44.entities.StoreStockBalance.list('-created_date', 500),
       base44.entities.StoreReorderConfig.filter({ is_active: true }),
-    ]).then(([l, loc, s, r]) => {
-      setLots(l);
-      setLocations(loc);
-      setStock(s);
-      setReorderConfigs(r);
+    ]).then(([u, l, loc, s, r]) => {
+      setUser(u); setLots(l); setLocations(loc); setStock(s); setReorderConfigs(r);
     }).finally(() => setLoading(false));
   }, []);
 
   const pendingQC = lots.filter(l => l.status === 'qc_pending').length;
-  const approvedPending = lots.filter(l => l.status === 'approved').length;
-
-  // Compute stock totals per item
   const stockByItem = {};
-  stock.forEach(s => {
-    stockByItem[s.item_code] = (stockByItem[s.item_code] || 0) + (s.quantity || 0);
-  });
-
+  stock.forEach(s => { stockByItem[s.item_code] = (stockByItem[s.item_code] || 0) + (s.quantity || 0); });
   const lowStockAlerts = reorderConfigs.filter(r => (stockByItem[r.item_code] || 0) <= r.reorder_level);
 
-  // Expiry within 30 days
   const today = new Date();
   const in30Days = new Date(today.getTime() + 30 * 86400000);
   const expiryAlerts = lots.filter(l => {
@@ -71,25 +66,41 @@ export default function SMSDashboard() {
 
   const quickActions = [
     { label: 'Gate Entry', path: '/GateEntry', color: 'bg-blue-600 text-white' },
-    { label: 'GRN Receive', path: '/GRNReceive', color: 'bg-teal-600 text-white' },
+    { label: 'Goods Receipt', path: '/GRNReceive', color: 'bg-teal-600 text-white' },
     { label: 'Putaway', path: '/SMSPutaway', color: 'bg-violet-600 text-white' },
-    { label: 'Stock Out', path: '/SMSStockOut', color: 'bg-orange-600 text-white' },
+    { label: 'Stock Issue', path: '/SMSStockOut', color: 'bg-orange-600 text-white' },
     { label: 'Transfer', path: '/SMSTransfer', color: 'bg-slate-700 text-white' },
     { label: 'Reports', path: '/SMSReports', color: 'bg-emerald-600 text-white' },
+  ];
+
+  const isAdmin = user?.role === 'admin';
+
+  const stockExportCols = [
+    { key: 'item_name', label: 'Item' }, { key: 'item_code', label: 'Code' },
+    { key: 'lot_id', label: 'Lot ID' }, { key: 'location_code', label: 'Location' },
+    { key: 'quantity', label: 'Quantity' }, { key: 'uom', label: 'Unit' },
   ];
 
   if (loading) return <div className="flex items-center justify-center h-64 text-slate-400">Loading...</div>;
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h1 className="text-xl font-bold text-slate-900">Store Management</h1>
           <p className="text-sm text-slate-500">Inventory lifecycle — Gate Entry to Dispatch</p>
         </div>
-        <Link to="/SMSLocationManager">
-          <Button variant="outline" size="sm" className="gap-2"><Building2 className="w-4 h-4" /> Manage Locations</Button>
-        </Link>
+        <div className="flex gap-2">
+          <ExportButton data={stock} columns={stockExportCols} filename="current_stock" />
+          {isAdmin && (
+            <Button variant="outline" size="sm" className="gap-2" onClick={() => setShowAccessMgr(true)}>
+              <Users className="w-4 h-4" /> Page Access
+            </Button>
+          )}
+          <Link to="/SMSLocationManager">
+            <Button variant="outline" size="sm" className="gap-2"><Building2 className="w-4 h-4" /> Locations</Button>
+          </Link>
+        </div>
       </div>
 
       {/* Stats */}
@@ -97,7 +108,7 @@ export default function SMSDashboard() {
         <StatCard icon={Building2} label="Active Locations" value={locations.length} color="bg-blue-100 text-blue-600" />
         <StatCard icon={Package} label="Active Lots" value={lots.filter(l => !['consumed'].includes(l.status)).length} color="bg-violet-100 text-violet-600" />
         <StatCard icon={Clock} label="Pending QC" value={pendingQC} color="bg-yellow-100 text-yellow-600" sub="Awaiting approval" />
-        <StatCard icon={AlertTriangle} label="Low Stock Items" value={lowStockAlerts.length} color="bg-red-100 text-red-600" sub="Below reorder level" />
+        <StatCard icon={AlertTriangle} label="Low Stock" value={lowStockAlerts.length} color="bg-red-100 text-red-600" sub="Below reorder" />
       </div>
 
       {/* Quick Actions */}
@@ -106,82 +117,87 @@ export default function SMSDashboard() {
         <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
           {quickActions.map(a => (
             <Link key={a.label} to={a.path}>
-              <button className={`w-full py-2.5 px-2 rounded-lg text-xs font-semibold ${a.color} hover:opacity-90 transition-opacity`}>{a.label}</button>
+              <button className={`w-full py-2.5 px-2 rounded-lg text-xs font-semibold ${a.color} hover:opacity-90 transition-opacity h-11`}>{a.label}</button>
             </Link>
           ))}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Low Stock Alerts */}
+      {/* Current Stock Summary */}
+      {stock.length > 0 && (
         <div className="bg-white rounded-xl border border-slate-200 p-4">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-sm font-semibold text-slate-700 flex items-center gap-2"><TrendingDown className="w-4 h-4 text-red-500" /> Low Stock Alerts</p>
-            <Link to="/SMSReports" className="text-xs text-blue-600 hover:underline flex items-center gap-1">View all <ArrowRight className="w-3 h-3" /></Link>
+            <p className="text-sm font-semibold text-slate-700 flex items-center gap-2"><Package className="w-4 h-4 text-blue-500" /> Current Stock ({stock.length} entries)</p>
+            <Link to="/SMSReports" className="text-xs text-blue-600 hover:underline flex items-center gap-1">Full report <ArrowRight className="w-3 h-3" /></Link>
           </div>
-          {lowStockAlerts.length === 0 ? (
-            <p className="text-sm text-slate-400 py-4 text-center">All items are adequately stocked</p>
-          ) : (
-            <div className="space-y-2">
-              {lowStockAlerts.slice(0, 5).map(r => (
-                <div key={r.item_code} className="flex items-center justify-between bg-red-50 rounded-lg px-3 py-2">
-                  <div>
-                    <p className="text-sm font-medium text-slate-800">{r.item_name || r.item_code}</p>
-                    <p className="text-xs text-slate-500">Reorder at: {r.reorder_level} {r.uom}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold text-red-600">{stockByItem[r.item_code] || 0} {r.uom}</p>
-                    <p className="text-xs text-slate-400">Current stock</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Expiry Alerts */}
-        <div className="bg-white rounded-xl border border-slate-200 p-4">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-sm font-semibold text-slate-700 flex items-center gap-2"><CalendarClock className="w-4 h-4 text-orange-500" /> Expiry Alerts (30 days)</p>
-          </div>
-          {expiryAlerts.length === 0 ? (
-            <p className="text-sm text-slate-400 py-4 text-center">No lots expiring in next 30 days</p>
-          ) : (
-            <div className="space-y-2">
-              {expiryAlerts.slice(0, 5).map(l => (
-                <div key={l.id} className="flex items-center justify-between bg-orange-50 rounded-lg px-3 py-2">
-                  <div>
-                    <p className="text-sm font-medium text-slate-800">{l.item_name}</p>
-                    <p className="text-xs text-slate-500">{l.lot_id}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold text-orange-600">{l.expiry_date}</p>
-                    <WeekBadge weeks={l.weeks_elapsed || 1} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Pending QC Lots */}
-      {pendingQC > 0 && (
-        <div className="bg-white rounded-xl border border-yellow-200 p-4">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-sm font-semibold text-yellow-700 flex items-center gap-2"><Clock className="w-4 h-4" /> {pendingQC} Lots Awaiting QC Approval</p>
-            <Link to="/SMSLotManager" className="text-xs text-blue-600 hover:underline flex items-center gap-1">Go to Lots <ArrowRight className="w-3 h-3" /></Link>
-          </div>
-          <div className="space-y-1.5">
-            {lots.filter(l => l.status === 'qc_pending').slice(0, 4).map(l => (
-              <div key={l.id} className="flex items-center justify-between bg-yellow-50 rounded px-3 py-1.5 text-sm">
-                <span className="font-medium text-slate-800">{l.lot_id}</span>
-                <span className="text-slate-500">{l.item_name} — {l.quantity} {l.uom}</span>
-              </div>
-            ))}
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead><tr className="bg-slate-100 text-xs text-slate-600"><th className="text-left px-3 py-2">Item</th><th className="text-left px-3 py-2">Lot</th><th className="text-left px-3 py-2">Location</th><th className="text-right px-3 py-2">Quantity</th></tr></thead>
+              <tbody className="divide-y divide-slate-50">
+                {stock.slice(0, 10).map(s => (
+                  <tr key={s.id} className="hover:bg-slate-50">
+                    <td className="px-3 py-2"><p className="font-medium text-slate-800">{s.item_name}</p></td>
+                    <td className="px-3 py-2 font-mono text-xs text-slate-600">{s.lot_id}</td>
+                    <td className="px-3 py-2 font-mono text-xs text-slate-600">{s.location_code}</td>
+                    <td className="px-3 py-2 text-right font-bold text-slate-800">{s.quantity} {s.uom}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {stock.length > 10 && <p className="text-xs text-slate-400 text-center py-2">Showing 10 of {stock.length} — View full report for all</p>}
           </div>
         </div>
       )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Low Stock */}
+        <div className="bg-white rounded-xl border border-slate-200 p-4">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-semibold text-slate-700 flex items-center gap-2"><TrendingDown className="w-4 h-4 text-red-500" /> Low Stock Alerts</p>
+          </div>
+          {lowStockAlerts.length === 0 ? (
+            <p className="text-sm text-slate-400 py-4 text-center">All items adequately stocked</p>
+          ) : lowStockAlerts.slice(0, 5).map(r => (
+            <div key={r.item_code} className="flex items-center justify-between bg-red-50 rounded-lg px-3 py-2 mb-2">
+              <div><p className="text-sm font-medium text-slate-800">{r.item_name || r.item_code}</p><p className="text-xs text-slate-500">Reorder at: {r.reorder_level} {r.uom}</p></div>
+              <p className="text-sm font-bold text-red-600">{stockByItem[r.item_code] || 0}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Expiry */}
+        <div className="bg-white rounded-xl border border-slate-200 p-4">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-semibold text-slate-700 flex items-center gap-2"><CalendarClock className="w-4 h-4 text-orange-500" /> Expiry Alerts</p>
+          </div>
+          {expiryAlerts.length === 0 ? (
+            <p className="text-sm text-slate-400 py-4 text-center">No lots expiring soon</p>
+          ) : expiryAlerts.slice(0, 5).map(l => (
+            <div key={l.id} className="flex items-center justify-between bg-orange-50 rounded-lg px-3 py-2 mb-2">
+              <div><p className="text-sm font-medium text-slate-800">{l.item_name}</p><p className="text-xs text-slate-500">{l.lot_id}</p></div>
+              <div className="text-right"><p className="text-sm font-bold text-orange-600">{l.expiry_date}</p><WeekBadge weeks={l.weeks_elapsed || 1} /></div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Pending QC */}
+      {pendingQC > 0 && (
+        <div className="bg-white rounded-xl border border-yellow-200 p-4">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-semibold text-yellow-700 flex items-center gap-2"><Clock className="w-4 h-4" /> {pendingQC} Lots Awaiting QC</p>
+            <Link to="/SMSLotManager" className="text-xs text-blue-600 hover:underline flex items-center gap-1">View <ArrowRight className="w-3 h-3" /></Link>
+          </div>
+          {lots.filter(l => l.status === 'qc_pending').slice(0, 4).map(l => (
+            <div key={l.id} className="flex items-center justify-between bg-yellow-50 rounded px-3 py-1.5 text-sm mb-1">
+              <span className="font-medium text-slate-800">{l.lot_id}</span>
+              <span className="text-slate-500">{l.item_name} — {l.quantity} {l.uom}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {showAccessMgr && <StorePageAccessManager onClose={() => setShowAccessMgr(false)} />}
     </div>
   );
 }

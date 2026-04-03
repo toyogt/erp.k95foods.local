@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { QrCode, CheckCircle2, XCircle, Search, Package } from 'lucide-react';
+import ExportButton from '@/components/store/ExportButton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
@@ -116,6 +117,11 @@ export default function SMSLotManager() {
           <h1 className="text-xl font-bold text-slate-900">Lot Manager</h1>
           <p className="text-sm text-slate-500">Track all lots with QR codes and week-based aging</p>
         </div>
+        <ExportButton data={filtered} columns={[
+          { key: 'lot_id', label: 'Lot ID' }, { key: 'item_name', label: 'Item' }, { key: 'item_code', label: 'Code' },
+          { key: 'supplier_name', label: 'Supplier' }, { key: 'quantity', label: 'Quantity' }, { key: 'remaining_quantity', label: 'Remaining' },
+          { key: 'uom', label: 'Unit' }, { key: 'mfg_date', label: 'Manufacture Date' }, { key: 'expiry_date', label: 'Expiry' }, { key: 'status', label: 'Status' },
+        ]} filename="lots" />
       </div>
 
       {/* Week Color Legend */}

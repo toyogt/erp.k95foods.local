@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { ArrowRight, CheckCircle2, AlertCircle } from 'lucide-react';
+import ExportButton from '@/components/store/ExportButton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
+import QRScanner from '@/components/store/QRScanner';
 
 export default function SMSTransfer() {
   const { toast } = useToast();
@@ -101,7 +103,10 @@ export default function SMSTransfer() {
         {/* Source */}
         <div>
           <Label className="text-xs font-medium text-slate-700">Step 1 — Source Location QR *</Label>
-          <Input className="h-11 text-base mt-1 font-mono" placeholder="Scan or type source location code" value={fromScan} onChange={e => setFromScan(e.target.value)} />
+          <div className="flex gap-2 mt-1">
+            <Input className="h-11 text-base flex-1 font-mono" placeholder="Scan or type source location code" value={fromScan} onChange={e => setFromScan(e.target.value)} />
+            <QRScanner onScan={setFromScan} label="Source Location" />
+          </div>
           {fromScan && (fromLoc ? (
             <div className="mt-1 flex items-center gap-2 text-green-600 text-xs"><CheckCircle2 className="w-3.5 h-3.5" />{fromLoc.location_code} — {fromLoc.display_name}</div>
           ) : <div className="mt-1 flex items-center gap-2 text-red-500 text-xs"><AlertCircle className="w-3.5 h-3.5" />Location not found</div>)}
@@ -110,7 +115,10 @@ export default function SMSTransfer() {
         {/* Lot */}
         <div>
           <Label className="text-xs font-medium text-slate-700">Step 2 — Lot QR *</Label>
-          <Input className="h-11 text-base mt-1 font-mono" placeholder="Scan or type Lot ID" value={toLotScan} onChange={e => setToLotScan(e.target.value)} disabled={!fromLoc} />
+          <div className="flex gap-2 mt-1">
+            <Input className="h-11 text-base flex-1 font-mono" placeholder="Scan or type Lot ID" value={toLotScan} onChange={e => setToLotScan(e.target.value)} disabled={!fromLoc} />
+            {fromLoc && <QRScanner onScan={setToLotScan} label="Lot QR" />}
+          </div>
           {toLotScan && (resolvedStock ? (
             <div className="mt-1 flex items-center gap-2 text-green-600 text-xs"><CheckCircle2 className="w-3.5 h-3.5" />{resolvedStock.item_name} — Available: {resolvedStock.quantity} {resolvedStock.uom}</div>
           ) : fromLoc && <div className="mt-1 flex items-center gap-2 text-red-500 text-xs"><AlertCircle className="w-3.5 h-3.5" />Lot not found at this location</div>)}
@@ -119,7 +127,10 @@ export default function SMSTransfer() {
         {/* Destination */}
         <div>
           <Label className="text-xs font-medium text-slate-700">Step 3 — Destination Location QR *</Label>
-          <Input className="h-11 text-base mt-1 font-mono" placeholder="Scan or type destination location code" value={toScan} onChange={e => setToScan(e.target.value)} disabled={!resolvedStock} />
+          <div className="flex gap-2 mt-1">
+            <Input className="h-11 text-base flex-1 font-mono" placeholder="Scan or type destination location code" value={toScan} onChange={e => setToScan(e.target.value)} disabled={!resolvedStock} />
+            {resolvedStock && <QRScanner onScan={setToScan} label="Destination" />}
+          </div>
           {toScan && (toLoc ? (
             <div className="mt-1 flex items-center gap-2 text-green-600 text-xs"><CheckCircle2 className="w-3.5 h-3.5" />{toLoc.location_code} — {toLoc.display_name}</div>
           ) : <div className="mt-1 flex items-center gap-2 text-red-500 text-xs"><AlertCircle className="w-3.5 h-3.5" />Destination not found</div>)}

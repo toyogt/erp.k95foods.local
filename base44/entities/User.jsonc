@@ -1,0 +1,49 @@
+{
+  "name": "User",
+  "type": "object",
+  "properties": {
+    "role": {
+      "type": "string",
+      "enum": [
+        "admin",
+        "user",
+        "production_manager",
+        "stores",
+        "recipe_operator",
+        "qa",
+        "filling_operator",
+        "chamber_operator",
+        "labelling_receiver",
+        "line_operator",
+        "labelling_supervisor",
+        "warehouse",
+        "label_operator",
+        "label_supervisor",
+        "pallet_builder",
+        "warehouse_ops",
+        "purchase_user",
+        "purchase_manager",
+        "dispatch_officer",
+        "security_guard",
+        "store_receiver",
+        "store_manager",
+        "qc_inspector",
+        "accounts_user",
+        "accounts_manager",
+        "process_designer",
+        "process_controller",
+        "sales_manager",
+        "sales_user",
+        "distributor"
+      ],
+      "default": "user"
+    },
+    "store_page_access": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Store module page keys this user can access"
+    }
+  }
+}

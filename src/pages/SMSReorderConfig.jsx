@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Plus, Edit2, X, Bell } from 'lucide-react';
+import ExportButton from '@/components/store/ExportButton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -83,7 +84,14 @@ export default function SMSReorderConfig() {
           <h1 className="text-xl font-bold text-slate-900">Reorder Configuration</h1>
           <p className="text-sm text-slate-500">Set minimum stock thresholds and alert levels per item</p>
         </div>
-        <Button onClick={() => { setEditing(null); setShowModal(true); }} className="gap-2 h-11"><Plus className="w-4 h-4" /> Add Alert</Button>
+        <div className="flex gap-2">
+          <ExportButton data={configs} columns={[
+            { key: 'item_code', label: 'Code' }, { key: 'item_name', label: 'Item' }, { key: 'uom', label: 'Unit' },
+            { key: 'reorder_level', label: 'Reorder Level' }, { key: 'reorder_quantity', label: 'Order Qty' },
+            { key: 'is_active', label: 'Active' },
+          ]} filename="reorder_config" />
+          <Button onClick={() => { setEditing(null); setShowModal(true); }} className="gap-2 h-11"><Plus className="w-4 h-4" /> Add Alert</Button>
+        </div>
       </div>
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
         <div className="overflow-x-auto">

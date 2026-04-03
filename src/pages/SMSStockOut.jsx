@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Plus, Trash2, AlertCircle, PackageOpen } from 'lucide-react';
+import ExportButton from '@/components/store/ExportButton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
+import QRScanner from '@/components/store/QRScanner';
 
 function ItemRow({ idx, item, stockByLot, onChange, onRemove }) {
   const available = item.lot_id ? (stockByLot[item.lot_id] || []) : [];

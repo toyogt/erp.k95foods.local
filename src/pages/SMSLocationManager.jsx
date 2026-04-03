@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Plus, QrCode, Edit2, Building2, Search, X } from 'lucide-react';
+import ExportButton from '@/components/store/ExportButton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -140,9 +141,17 @@ export default function SMSLocationManager() {
           <h1 className="text-xl font-bold text-slate-900">Location Manager</h1>
           <p className="text-sm text-slate-500">Warehouse → Floor → Section → Place → Slab → Rack</p>
         </div>
-        <Button onClick={() => { setEditLoc(null); setShowModal(true); }} className="gap-2 h-11">
-          <Plus className="w-4 h-4" /> Add Location
-        </Button>
+        <div className="flex gap-2">
+          <ExportButton data={filtered} columns={[
+            { key: 'location_code', label: 'Code' }, { key: 'warehouse', label: 'Warehouse' },
+            { key: 'floor', label: 'Floor' }, { key: 'section', label: 'Section' },
+            { key: 'place', label: 'Place' }, { key: 'slab', label: 'Slab' }, { key: 'rack', label: 'Rack' },
+            { key: 'location_type', label: 'Type' }, { key: 'capacity_limit', label: 'Capacity' },
+          ]} filename="locations" />
+          <Button onClick={() => { setEditLoc(null); setShowModal(true); }} className="gap-2 h-11">
+            <Plus className="w-4 h-4" /> Add Location
+          </Button>
+        </div>
       </div>
 
       <div className="flex gap-3">
