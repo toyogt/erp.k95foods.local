@@ -1,0 +1,57 @@
+{
+  "name": "StoreIssueLine",
+  "type": "object",
+  "title": "Store Issue Line",
+  "description": "Individual item lines for a stock issue",
+  "properties": {
+    "issue_id": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "lot_id": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "location_id": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "location_code": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "item_code": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "item_name": {
+      "type": "string",
+      "maxLength": 300
+    },
+    "uom": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "requested_quantity": {
+      "type": "number",
+      "minimum": 0
+    },
+    "issued_quantity": {
+      "type": "number",
+      "minimum": 0
+    },
+    "issue_type": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "issued_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "issue_id",
+    "lot_id",
+    "issued_quantity"
+  ]
+}

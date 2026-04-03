@@ -1,0 +1,180 @@
+import { useState, useEffect } from 'react';
+import { base44 } from '@/api/base44Client';
+import { Plus, CheckCircle2, X, ClipboardCheck } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/components/ui/use-toast';
+
+function CountRow({ entry, onCount }) {
+  const [physical, setPhysical] = useState('');
+  const [notes, setNotes] = useState('');
+  const [saving, setSaving] = useState(false);
+  const { toast } = useToast();
+
+  async function submit() {
+    if (physical === '') return;
+    setSaving(true);
+    const user = await base44.auth.me();
+    const phyQty = parseFloat(physical);
+    const variance = phyQty - entry.system_quantity;
+    await base44.entities.StoreCycleCount.update(entry.id, {
+      physical_quantity: phyQty, variance, status: 'counted',
+      counted_by: user?.email, counted_at: new Date().toISOString(), notes,
+    });
+    toast({ title: 'Count recorded', description: `Variance: ${variance > 0 ? '+' : ''}${variance}` });
+    onCount();
+    setSaving(false);
+  }
+
+  if (entry.status !== 'pending') {
+    return (
+      <div className="flex items-center justify-between px-4 py-3 hover:bg-slate-50">
+        <div>
+          <p className="text-sm font-medium text-slate-800">{entry.item_name}</p>
+          <p className="text-xs text-slate-400">{entry.lot_id} · {entry.location_code}</p>
+        </div>
+        <div className="flex items-center gap-4 text-sm">
+          <div className="text-right"><p className="text-slate-500 text-xs">System</p><p className="font-medium">{entry.system_quantity}</p></div>
+          <div className="text-right"><p className="text-slate-500 text-xs">Physical</p><p className="font-medium">{entry.physical_quantity ?? '—'}</p></div>
+          <div className="text-right"><p className="text-slate-500 text-xs">Variance</p><p className={`font-bold ${(entry.variance || 0) === 0 ? 'text-green-600' : 'text-red-500'}`}>{entry.variance > 0 ? '+' : ''}{entry.variance ?? '—'}</p></div>
+          <span className="px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700">Counted</span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="px-4 py-3 border-b border-slate-100">
+      <div className="flex items-center justify-between mb-2">
+        <div>
+          <p className="text-sm font-medium text-slate-800">{entry.item_name}</p>
+          <p className="text-xs text-slate-400">{entry.lot_id} · {entry.location_code} · System: {entry.system_quantity} {entry.uom}</p>
+        </div>
+      </div>
+      <div className="flex gap-3 items-end">
+        <div className="flex-1">
+          <Label className="text-xs font-medium text-slate-700">Physical Count *</Label>
+          <Input type="number" className="h-9 text-sm mt-1" value={physical} onChange={e => setPhysical(e.target.value)} placeholder="Actual counted quantity" />
+        </div>
+        <div className="flex-1">
+          <Label className="text-xs font-medium text-slate-700">Notes</Label>
+          <Input className="h-9 text-sm mt-1" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Optional remarks" />
+        </div>
+        <Button size="sm" className="h-9 gap-1.5" disabled={physical === '' || saving} onClick={submit}><CheckCircle2 className="w-4 h-4" />Record</Button>
+      </div>
+    </div>
+  );
+}
+
+export default function SMSCycleCount() {
+  const { toast } = useToast();
+  const [sessions, setSessions] = useState([]);
+  const [activeSession, setActiveSession] = useState('');
+  const [entries, setEntries] = useState([]);
+  const [stock, setStock] = useState([]);
+  const [sessionName, setSessionName] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  async function load() {
+    setLoading(true);
+    const [counts, stk] = await Promise.all([
+      base44.entities.StoreCycleCount.list('-created_date', 500),
+      base44.entities.StoreStockBalance.list('-created_date', 500),
+    ]);
+    setStock(stk);
+    const grouped = {};
+    counts.forEach(c => { if (!grouped[c.session_name]) grouped[c.session_name] = []; grouped[c.session_name].push(c); });
+    setSessions(Object.entries(grouped).map(([name, items]) => ({ name, items })));
+    setLoading(false);
+  }
+
+  useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    if (!activeSession) { setEntries([]); return; }
+    base44.entities.StoreCycleCount.filter({ session_name: activeSession }).then(setEntries);
+  }, [activeSession]);
+
+  async function createSession() {
+    if (!sessionName.trim()) return;
+    setCreating(true);
+    // Create entries for all current stock balances
+    const user = await base44.auth.me();
+    for (const bal of stock) {
+      await base44.entities.StoreCycleCount.create({
+        count_id: `CC-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        session_name: sessionName.trim(),
+        location_id: bal.location_id, location_code: bal.location_code,
+        lot_id: bal.lot_id, item_code: bal.item_code, item_name: bal.item_name, uom: bal.uom,
+        system_quantity: bal.quantity, status: 'pending',
+      });
+    }
+    toast({ title: 'Cycle count session started', description: `${stock.length} items to count` });
+    setSessionName('');
+    setCreating(false);
+    load();
+    setActiveSession(sessionName.trim());
+  }
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h1 className="text-xl font-bold text-slate-900">Cycle Count</h1>
+        <p className="text-sm text-slate-500">Physical stock verification with discrepancy tracking</p>
+      </div>
+
+      {/* Start new session */}
+      <div className="bg-white rounded-xl border border-slate-200 p-4 flex gap-3 items-end">
+        <div className="flex-1">
+          <Label className="text-xs font-medium text-slate-700">New Count Session Name</Label>
+          <Input className="h-9 text-sm mt-1" placeholder="e.g. Monthly Count Jan 2025" value={sessionName} onChange={e => setSessionName(e.target.value)} />
+        </div>
+        <Button className="h-9 gap-2" disabled={!sessionName.trim() || creating || stock.length === 0} onClick={createSession}>
+          <Plus className="w-4 h-4" />{creating ? 'Creating...' : 'Start Session'}
+        </Button>
+      </div>
+
+      {/* Session list */}
+      {sessions.length > 0 && (
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+          <div className="px-4 py-3 border-b bg-slate-50">
+            <p className="text-sm font-semibold text-slate-700">Count Sessions</p>
+          </div>
+          <div className="divide-y divide-slate-100">
+            {sessions.map(s => {
+              const counted = s.items.filter(i => i.status !== 'pending').length;
+              const total = s.items.length;
+              const discrepancies = s.items.filter(i => i.variance !== 0 && i.variance !== null).length;
+              return (
+                <div key={s.name} className={`px-4 py-3 cursor-pointer hover:bg-slate-50 flex items-center justify-between ${activeSession === s.name ? 'bg-blue-50' : ''}`} onClick={() => setActiveSession(s.name)}>
+                  <div>
+                    <p className="text-sm font-medium text-slate-800">{s.name}</p>
+                    <p className="text-xs text-slate-500">{counted}/{total} counted · {discrepancies} discrepancies</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-24 bg-slate-100 rounded-full h-2"><div className="bg-blue-500 h-2 rounded-full" style={{ width: `${(counted / total) * 100}%` }} /></div>
+                    <span className="text-xs text-slate-500">{Math.round((counted / total) * 100)}%</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Count entries */}
+      {activeSession && entries.length > 0 && (
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+          <div className="px-4 py-3 border-b bg-slate-50">
+            <p className="text-sm font-semibold text-slate-700">{activeSession} — Physical Count</p>
+          </div>
+          <div className="divide-y divide-slate-100">
+            {entries.map(e => <CountRow key={e.id} entry={e} onCount={() => base44.entities.StoreCycleCount.filter({ session_name: activeSession }).then(setEntries)} />)}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

@@ -1,0 +1,81 @@
+{
+  "name": "StoreLocation",
+  "type": "object",
+  "title": "Store Location",
+  "description": "Hierarchical warehouse location: Warehouse \u2192 Floor \u2192 Section \u2192 Place \u2192 Slab \u2192 Rack",
+  "properties": {
+    "location_code": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "description": "Unique code e.g. WH1-F1-S2-P3-SL1-R4"
+    },
+    "qr_code": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "QR payload (same as location_code)"
+    },
+    "warehouse": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "floor": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "section": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "section_remarks": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "place": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "slab": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "rack": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "display_name": {
+      "type": "string",
+      "maxLength": 300
+    },
+    "capacity_limit": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Max units this rack can hold"
+    },
+    "current_utilization": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0
+    },
+    "location_type": {
+      "type": "string",
+      "enum": [
+        "storage",
+        "rejected",
+        "quarantine",
+        "dispatch"
+      ],
+      "default": "storage"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "location_code",
+    "warehouse",
+    "rack"
+  ]
+}

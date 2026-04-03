@@ -1,0 +1,50 @@
+{
+  "name": "StoreReorderConfig",
+  "type": "object",
+  "title": "Store Reorder Configuration",
+  "description": "Reorder level and alert configuration per item",
+  "properties": {
+    "item_code": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "item_name": {
+      "type": "string",
+      "maxLength": 300
+    },
+    "uom": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "reorder_level": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Alert triggered when stock falls to this level"
+    },
+    "reorder_quantity": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Suggested order quantity"
+    },
+    "alert_emails": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Email recipients for alerts"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "last_alert_sent_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "item_code",
+    "reorder_level"
+  ]
+}

@@ -1,0 +1,87 @@
+{
+  "name": "StoreAdjustment",
+  "type": "object",
+  "title": "Store Stock Adjustment",
+  "description": "Manual stock correction requiring approval",
+  "properties": {
+    "adjustment_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "lot_id": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "location_id": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "location_code": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "item_code": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "item_name": {
+      "type": "string",
+      "maxLength": 300
+    },
+    "uom": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "adjustment_type": {
+      "type": "string",
+      "enum": [
+        "increase",
+        "decrease"
+      ]
+    },
+    "quantity_before": {
+      "type": "number"
+    },
+    "adjustment_quantity": {
+      "type": "number",
+      "minimum": 0.01
+    },
+    "quantity_after": {
+      "type": "number"
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1000
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "rejected"
+      ],
+      "default": "pending"
+    },
+    "requested_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "approved_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "approved_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "adjustment_id",
+    "lot_id",
+    "adjustment_type",
+    "adjustment_quantity",
+    "reason"
+  ]
+}

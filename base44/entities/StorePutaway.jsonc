@@ -1,0 +1,60 @@
+{
+  "name": "StorePutaway",
+  "type": "object",
+  "title": "Store Putaway",
+  "description": "Maps a lot to a physical rack location via QR scan",
+  "properties": {
+    "putaway_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "lot_id": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "location_id": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "location_code": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "item_code": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "item_name": {
+      "type": "string",
+      "maxLength": 300
+    },
+    "uom": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "quantity": {
+      "type": "number",
+      "minimum": 0.01,
+      "description": "Quantity placed at this location"
+    },
+    "putaway_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "putaway_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 500
+    }
+  },
+  "required": [
+    "putaway_id",
+    "lot_id",
+    "location_id",
+    "quantity"
+  ]
+}

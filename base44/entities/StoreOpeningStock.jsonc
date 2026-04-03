@@ -1,0 +1,74 @@
+{
+  "name": "StoreOpeningStock",
+  "type": "object",
+  "title": "Store Opening Stock",
+  "description": "One-time opening stock entry \u2014 locked after submission",
+  "properties": {
+    "entry_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "item_code": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "item_name": {
+      "type": "string",
+      "maxLength": 300
+    },
+    "uom": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "lot_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Auto-created lot for this entry"
+    },
+    "quantity": {
+      "type": "number",
+      "minimum": 0.01
+    },
+    "location_id": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "location_code": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "mfg_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "expiry_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "supplier_name": {
+      "type": "string",
+      "maxLength": 300
+    },
+    "is_locked": {
+      "type": "boolean",
+      "default": false,
+      "description": "Cannot be modified once locked"
+    },
+    "entered_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "session_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Opening stock session grouping"
+    }
+  },
+  "required": [
+    "entry_id",
+    "item_code",
+    "quantity",
+    "location_id"
+  ]
+}

@@ -1,0 +1,85 @@
+{
+  "name": "StoreCycleCount",
+  "type": "object",
+  "title": "Store Cycle Count",
+  "description": "Physical verification record per location-lot",
+  "properties": {
+    "count_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "session_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "location_id": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "location_code": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "lot_id": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "item_code": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "item_name": {
+      "type": "string",
+      "maxLength": 300
+    },
+    "uom": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "system_quantity": {
+      "type": "number",
+      "minimum": 0
+    },
+    "physical_quantity": {
+      "type": "number",
+      "minimum": 0
+    },
+    "variance": {
+      "type": "number",
+      "description": "physical - system"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "counted",
+        "approved",
+        "adjusted"
+      ],
+      "default": "pending"
+    },
+    "counted_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "counted_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "approved_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 1000
+    }
+  },
+  "required": [
+    "count_id",
+    "location_id",
+    "lot_id",
+    "system_quantity"
+  ]
+}

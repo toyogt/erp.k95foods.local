@@ -1,0 +1,73 @@
+{
+  "name": "StoreDamageReport",
+  "type": "object",
+  "title": "Store Damage Report",
+  "description": "Damage report \u2014 allowed only within 2 hours of stock issue",
+  "properties": {
+    "damage_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "issue_id": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "issue_line_id": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "lot_id": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "item_code": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "item_name": {
+      "type": "string",
+      "maxLength": 300
+    },
+    "uom": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "issued_quantity": {
+      "type": "number",
+      "minimum": 0
+    },
+    "damaged_quantity": {
+      "type": "number",
+      "minimum": 0.01
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1000
+    },
+    "issue_time": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "is_within_window": {
+      "type": "boolean",
+      "default": true,
+      "description": "Was reported within 2-hour window"
+    },
+    "reported_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "reported_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "damage_id",
+    "issue_id",
+    "damaged_quantity",
+    "reason"
+  ]
+}

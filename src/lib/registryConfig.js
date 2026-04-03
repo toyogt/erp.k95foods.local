@@ -17,6 +17,8 @@ import {
   PackageSearch, Zap, Box, TestTube2, ShieldCheck,
   Archive, FileText, ClipboardList, Shield, Zap as ZapIcon,
   Activity, BarChart4, AlertCircle, AlertTriangle,
+  Store, MapPin, QrCode, ArrowLeftRight, TrendingDown,
+  RotateCcw, SlidersHorizontal,
 } from 'lucide-react';
 
 /**
@@ -65,11 +67,7 @@ export const pageRegistry = [
    { pageKey: 'SupplierManager', title: 'Suppliers', moduleKey: 'PURCHASE', icon: Truck, roles: ['admin', 'purchase_manager'], adminOnly: true },
    { pageKey: 'ApprovalsInbox', title: 'Approvals Inbox', moduleKey: 'PURCHASE', icon: ClipboardCheck, roles: ['admin', 'purchase_manager', 'accounts_manager', 'production_manager', 'user'] },
 
-  // ─── GOODS RECEIPT (GRN) ───
-  { pageKey: 'GateEntry', title: 'Gate Entry', moduleKey: 'GRN', icon: ShieldCheck, roles: ['admin', 'security_guard', 'purchase_manager', 'user'] },
-  { pageKey: 'GateInbox', title: 'Gate Inbox', moduleKey: 'GRN', icon: Truck, roles: ['admin', 'store_receiver', 'purchase_manager', 'user'] },
-  { pageKey: 'GRNReceive', title: 'GRN Receive', moduleKey: 'GRN', icon: PackageOpen, roles: ['admin', 'store_receiver', 'purchase_manager', 'user'] },
-  { pageKey: 'Putaway', title: 'Putaway', moduleKey: 'GRN', icon: Archive, roles: ['admin', 'store_receiver', 'purchase_manager', 'user'] },
+  // GRN pages moved to STORE module above
 
   // ─── QUALITY ───
   { pageKey: 'QCInbox', title: 'QC Inbox', moduleKey: 'QUALITY', icon: TestTube2, roles: ['admin', 'qc_inspector', 'purchase_manager', 'user'] },
@@ -104,6 +102,22 @@ export const pageRegistry = [
   { pageKey: 'AuditLogPage', title: 'Audit Log', moduleKey: 'ADMIN', icon: ScrollText, roles: ['admin', 'production_manager', 'qa', 'user'] },
   { pageKey: 'TraceabilityExplorer', title: 'Traceability Explorer', moduleKey: 'ADMIN', icon: Search, roles: ['admin', 'production_manager', 'qa', 'warehouse_ops', 'user'] },
   { pageKey: 'ReconciliationDashboard', title: 'Reconciliation Dashboard', moduleKey: 'ADMIN', icon: AlertTriangle, roles: ['admin', 'production_manager', 'warehouse_ops', 'supervisor'] },
+
+  // ─── STORE MANAGEMENT ───
+  { pageKey: 'SMSDashboard',       title: 'Store Dashboard',    moduleKey: 'STORE', icon: Store,           roles: ['admin', 'store_manager', 'store_receiver', 'user'] },
+  { pageKey: 'GateEntry',          title: 'Gate Entry',         moduleKey: 'STORE', icon: ShieldCheck,     roles: ['admin', 'security_guard', 'store_receiver', 'user'] },
+  { pageKey: 'GateInbox',          title: 'Gate Inbox',         moduleKey: 'STORE', icon: Truck,           roles: ['admin', 'store_receiver', 'user'] },
+  { pageKey: 'GRNReceive',         title: 'GRN Receive',        moduleKey: 'STORE', icon: PackageOpen,     roles: ['admin', 'store_receiver', 'user'] },
+  { pageKey: 'SMSLotManager',      title: 'Lot Manager',        moduleKey: 'STORE', icon: QrCode,          roles: ['admin', 'store_manager', 'store_receiver', 'qc_inspector', 'user'] },
+  { pageKey: 'SMSPutaway',         title: 'Putaway',            moduleKey: 'STORE', icon: Archive,         roles: ['admin', 'store_manager', 'store_receiver', 'user'] },
+  { pageKey: 'SMSStockOut',        title: 'Stock Issue',        moduleKey: 'STORE', icon: PackageOpen,     roles: ['admin', 'store_manager', 'user'] },
+  { pageKey: 'SMSTransfer',        title: 'Internal Transfer',  moduleKey: 'STORE', icon: ArrowLeftRight,  roles: ['admin', 'store_manager', 'store_receiver', 'user'] },
+  { pageKey: 'SMSOpeningStock',    title: 'Opening Stock',      moduleKey: 'STORE', icon: BarChart3,       roles: ['admin', 'store_manager'] },
+  { pageKey: 'SMSReorderConfig',   title: 'Reorder Alerts',     moduleKey: 'STORE', icon: TrendingDown,    roles: ['admin', 'store_manager'] },
+  { pageKey: 'SMSCycleCount',      title: 'Cycle Count',        moduleKey: 'STORE', icon: ClipboardCheck,  roles: ['admin', 'store_manager', 'user'] },
+  { pageKey: 'SMSAdjustments',     title: 'Adjustments',        moduleKey: 'STORE', icon: SlidersHorizontal, roles: ['admin', 'store_manager', 'user'] },
+  { pageKey: 'SMSLocationManager', title: 'Locations',          moduleKey: 'STORE', icon: MapPin,          roles: ['admin', 'store_manager'] },
+  { pageKey: 'SMSReports',         title: 'Store Reports',      moduleKey: 'STORE', icon: BarChart3,       roles: ['admin', 'store_manager', 'user'] },
 
   // ─── SALES ───
   { pageKey: 'SalesOrders',         title: 'Sales Orders',    moduleKey: 'SALES', icon: ShoppingCart, roles: ['admin', 'sales_manager', 'sales_user', 'user'] },
@@ -186,9 +200,9 @@ export const moduleRegistry = [
     sortOrder: 5,
   },
   {
-    moduleKey: 'GRN',
-    label: 'Goods Receipt',
-    icon: PackageOpen,
+    moduleKey: 'STORE',
+    label: 'Store Management',
+    icon: Store,
     color: 'text-teal-600',
     bgColor: 'bg-teal-50',
     adminOnly: false,

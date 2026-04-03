@@ -1,0 +1,56 @@
+{
+  "name": "StoreIssue",
+  "type": "object",
+  "title": "Store Issue",
+  "description": "Stock issue header for production or dispatch",
+  "properties": {
+    "issue_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "issue_type": {
+      "type": "string",
+      "enum": [
+        "production",
+        "dispatch",
+        "internal"
+      ],
+      "default": "production"
+    },
+    "reference_number": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Production Order or Dispatch ref"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "confirmed",
+        "cancelled"
+      ],
+      "default": "confirmed"
+    },
+    "total_items": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 1000
+    },
+    "issued_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "issued_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "issue_id",
+    "issue_type"
+  ]
+}

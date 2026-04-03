@@ -98,6 +98,17 @@ import SalesGRNReconciliation from './pages/SalesGRNReconciliation';
 import TransportRateCards from './pages/TransportRateCards';
 import SalesPicklists from './pages/SalesPicklists';
 import SalesInvoices from './pages/SalesInvoices';
+import SMSDashboard from './pages/SMSDashboard';
+import SMSLocationManager from './pages/SMSLocationManager';
+import SMSLotManager from './pages/SMSLotManager';
+import SMSPutaway from './pages/SMSPutaway';
+import SMSStockOut from './pages/SMSStockOut';
+import SMSTransfer from './pages/SMSTransfer';
+import SMSOpeningStock from './pages/SMSOpeningStock';
+import SMSReorderConfig from './pages/SMSReorderConfig';
+import SMSCycleCount from './pages/SMSCycleCount';
+import SMSAdjustments from './pages/SMSAdjustments';
+import SMSReports from './pages/SMSReports';
 
 // Page component lookup table
 const PAGE_COMPONENTS = {
@@ -117,6 +128,8 @@ const PAGE_COMPONENTS = {
   SalesPicklistDetail, SalesDeliveryNoteDetail, SalesInvoiceDetail,
   SalesCustomerManager, SalesPriceListView, SalesGRNReconciliation, TransportRateCards,
   SalesPicklists, SalesInvoices,
+  SMSDashboard, SMSLocationManager, SMSLotManager, SMSPutaway, SMSStockOut,
+  SMSTransfer, SMSOpeningStock, SMSReorderConfig, SMSCycleCount, SMSAdjustments, SMSReports,
 };
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -262,6 +275,18 @@ const AuthenticatedApp = () => {
           </LayoutWrapper>
         }
       />
+
+      {/* Store Management System Routes */}
+      {[
+        ['SMSDashboard', SMSDashboard], ['SMSLocationManager', SMSLocationManager],
+        ['SMSLotManager', SMSLotManager], ['SMSPutaway', SMSPutaway],
+        ['SMSStockOut', SMSStockOut], ['SMSTransfer', SMSTransfer],
+        ['SMSOpeningStock', SMSOpeningStock], ['SMSReorderConfig', SMSReorderConfig],
+        ['SMSCycleCount', SMSCycleCount], ['SMSAdjustments', SMSAdjustments],
+        ['SMSReports', SMSReports],
+      ].map(([key, Comp]) => (
+        <Route key={key} path={`/${key}`} element={<LayoutWrapper currentPageName={key}><Comp /></LayoutWrapper>} />
+      ))}
 
       {/* Auto-generated routes from unified registry */}
       {getAllRoutablePages().map((pageEntry) => {
