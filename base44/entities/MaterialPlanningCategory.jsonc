@@ -1,0 +1,32 @@
+{
+  "name": "MaterialPlanningCategory",
+  "type": "object",
+  "title": "Material Planning Category",
+  "description": "Configurable list of ItemMaster categories to include in production-driven material planning",
+  "properties": {
+    "category_key": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50,
+      "description": "Must match an ItemMaster.category value (e.g. INGREDIENT, CONTAINER, CAP, PACKAGING_BOX, CONSUMABLE)"
+    },
+    "category_label": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Human-readable label"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether this category is included in material planning"
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 500
+    }
+  },
+  "required": [
+    "category_key",
+    "category_label"
+  ]
+}

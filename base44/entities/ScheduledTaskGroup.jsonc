@@ -1,0 +1,42 @@
+{
+  "name": "ScheduledTaskGroup",
+  "type": "object",
+  "title": "Scheduled Task Group",
+  "description": "Groups of recurring tasks with a process coordinator for monitoring",
+  "properties": {
+    "group_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "description": "Unique group identifier"
+    },
+    "group_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "Human-readable group name (e.g. Accounts Tasks, Production Tasks)"
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "coordinator_email": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Process Coordinator email \u2014 monitors all tasks in this group"
+    },
+    "coordinator_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "group_id",
+    "group_name",
+    "coordinator_email"
+  ]
+}

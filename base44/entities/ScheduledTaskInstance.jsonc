@@ -1,0 +1,87 @@
+{
+  "name": "ScheduledTaskInstance",
+  "type": "object",
+  "title": "Scheduled Task Instance",
+  "description": "Generated task instance from a recurring template, shown in My Tasks",
+  "properties": {
+    "instance_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "template_id": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "task_name": {
+      "type": "string",
+      "maxLength": 300
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 1000
+    },
+    "group_id": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "group_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "assignee_email": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "assignee_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "coordinator_email": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "due_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "LOW",
+        "MEDIUM",
+        "HIGH"
+      ],
+      "default": "MEDIUM"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "PENDING",
+        "COMPLETED",
+        "OVERDUE",
+        "SKIPPED"
+      ],
+      "default": "PENDING"
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "completed_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "completion_note": {
+      "type": "string",
+      "maxLength": 1000
+    }
+  },
+  "required": [
+    "instance_id",
+    "template_id",
+    "task_name",
+    "assignee_email",
+    "due_at"
+  ]
+}

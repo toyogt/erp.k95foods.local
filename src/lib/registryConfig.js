@@ -83,12 +83,14 @@ export const pageRegistry = [
   { pageKey: 'FMSMonitor', title: 'Monitor', moduleKey: 'FMS', icon: MonitorDot, roles: ['admin', 'process_controller', 'user'] },
   { pageKey: 'FMSProcesses', title: 'Processes', moduleKey: 'FMS', icon: GitBranch, roles: ['admin', 'process_designer'], adminOnly: true },
   { pageKey: 'FMSHealthDashboard', title: 'FMS Health', moduleKey: 'FMS', icon: BarChart4, roles: ['admin'], adminOnly: true },
+  { pageKey: 'ScheduledTaskManager', title: 'Scheduled Tasks', moduleKey: 'FMS', icon: ClipboardList, roles: ['admin', 'process_controller', 'process_designer', 'user'] },
 
   // ─── ADMIN / MASTER DATA ───
   { pageKey: 'MasterData', title: 'Master Data', moduleKey: 'ADMIN', icon: Settings, roles: ['admin', 'production_manager', 'user'] },
   { pageKey: 'SKUSetup', title: 'SKU Setup', moduleKey: 'ADMIN', icon: PackageSearch, roles: ['admin'], adminOnly: true },
   { pageKey: 'RecipeBuilder', title: 'Recipe Builder', moduleKey: 'ADMIN', icon: FlaskConical, roles: ['admin'], adminOnly: true },
   { pageKey: 'ItemMasterManager', title: 'Item Master', moduleKey: 'ADMIN', icon: PackageSearch, roles: ['admin'], adminOnly: true },
+  { pageKey: 'SKUBOMConfig', title: 'Material Planning Config', moduleKey: 'ADMIN', icon: PackageSearch, roles: ['admin'], adminOnly: true },
   { pageKey: 'IngredientManager', title: 'Ingredients', moduleKey: 'ADMIN', icon: Zap, roles: ['admin'], adminOnly: true },
   { pageKey: 'IngredientGroupManager', title: 'Ingredient Groups', moduleKey: 'ADMIN', icon: Zap, roles: ['admin'], adminOnly: true },
   { pageKey: 'UOMManager', title: 'UOMs', moduleKey: 'ADMIN', icon: Tag, roles: ['admin'], adminOnly: true },

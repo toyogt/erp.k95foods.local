@@ -109,6 +109,8 @@ import SMSReorderConfig from './pages/SMSReorderConfig';
 import SMSCycleCount from './pages/SMSCycleCount';
 import SMSAdjustments from './pages/SMSAdjustments';
 import SMSReports from './pages/SMSReports';
+import SKUBOMConfig from './pages/SKUBOMConfig';
+import ScheduledTaskManager from './pages/ScheduledTaskManager';
 
 // Page component lookup table
 const PAGE_COMPONENTS = {
@@ -130,6 +132,7 @@ const PAGE_COMPONENTS = {
   SalesPicklists, SalesInvoices,
   SMSDashboard, SMSLocationManager, SMSLotManager, SMSPutaway, SMSStockOut,
   SMSTransfer, SMSOpeningStock, SMSReorderConfig, SMSCycleCount, SMSAdjustments, SMSReports,
+  SKUBOMConfig, ScheduledTaskManager,
 };
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -274,6 +277,18 @@ const AuthenticatedApp = () => {
             <SalesInvoiceDetail />
           </LayoutWrapper>
         }
+      />
+
+      {/* Material Planning Configuration */}
+      <Route
+        path="/SKUBOMConfig"
+        element={<LayoutWrapper currentPageName="SKUBOMConfig"><SKUBOMConfig /></LayoutWrapper>}
+      />
+
+      {/* Scheduled Tasks */}
+      <Route
+        path="/ScheduledTaskManager"
+        element={<LayoutWrapper currentPageName="ScheduledTaskManager"><ScheduledTaskManager /></LayoutWrapper>}
       />
 
       {/* Store Management System Routes */}

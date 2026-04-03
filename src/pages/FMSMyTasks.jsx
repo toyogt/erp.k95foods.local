@@ -4,9 +4,10 @@ import TATBadge from '@/components/fms/TATBadge';
 import StepChecklistRunner from '@/components/fms/StepChecklistRunner';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { CheckCircle2, ChevronDown, ChevronUp, Loader2, ClipboardList, ClipboardCheck } from 'lucide-react';
+import { CheckCircle2, ChevronDown, ChevronUp, Loader2, ClipboardList, ClipboardCheck, Clock, AlertTriangle } from 'lucide-react';
 import { formatDateTime, getTATStatus } from '@/lib/fmsHelpers';
 import { Input } from '@/components/ui/input';
+import moment from 'moment';
 
 function TaskCard({ step, onComplete, onOpenChecklist, completing }) {
   const [expanded, setExpanded] = useState(false);
@@ -117,17 +118,90 @@ function MarkDoneModal({ step, onConfirm, onCancel, loading }) {
   );
 }
 
+// Scheduled Task Card for My Tasks
+function ScheduledTaskCard({ task, user, onComplete }) {
+  const [completing, setCompleting] = useState(false);
+  const [note, setNote] = useState('');
+  const [showComplete, setShowComplete] = useState(false);
+  const isOverdue = task.due_at && new Date(task.due_at) < new Date();
+  const dueMoment = task.due_at ? moment(task.due_at) : null;
+  const borderColor = isOverdue ? 'border-l-red-500' : 'border-l-blue-400';
+
+  const handleComplete = async () => {
+    setCompleting(true);
+    await base44.entities.ScheduledTaskInstance.update(task.id, {
+      status: 'COMPLETED', completed_at: new Date().toISOString(),
+      completed_by: user?.email, completion_note: note,
+    });
+    setCompleting(false);
+    setShowComplete(false);
+    onComplete?.();
+  };
+
+  return (
+    <div className={`bg-white rounded-xl border border-slate-200 border-l-4 ${borderColor} shadow-sm`}>
+      <div className="p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                <Clock className="w-3 h-3" /> Scheduled Task
+              </span>
+              {task.group_name && (
+                <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-medium">{task.group_name}</span>
+              )}
+            </div>
+            <h3 className="font-semibold text-slate-800 mt-1 text-base">{task.task_name}</h3>
+            {task.description && <p className="text-sm text-slate-500 mt-1 line-clamp-2">{task.description}</p>}
+            <div className="flex items-center gap-3 mt-2 flex-wrap">
+              {dueMoment && (
+                <span className={`text-xs font-medium flex items-center gap-1 ${isOverdue ? 'text-red-500' : 'text-slate-400'}`}>
+                  {isOverdue ? <AlertTriangle className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
+                  Due: {dueMoment.format('DD/MM/YYYY HH:mm')}
+                  {isOverdue && ` (${dueMoment.fromNow()})`}
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="flex flex-col gap-2 items-end shrink-0">
+            {!showComplete ? (
+              <Button size="sm" onClick={() => setShowComplete(true)}
+                className="gap-1.5 min-h-[44px] min-w-[120px] bg-green-600 hover:bg-green-700">
+                <CheckCircle2 className="w-4 h-4" /> Mark Done
+              </Button>
+            ) : (
+              <div className="space-y-2 w-56">
+                <Input value={note} onChange={e => setNote(e.target.value)} placeholder="Note (optional)" className="h-9 text-sm" />
+                <div className="flex gap-1.5">
+                  <Button size="sm" variant="outline" className="flex-1 h-9" onClick={() => setShowComplete(false)}>Cancel</Button>
+                  <Button size="sm" className="flex-1 h-9 bg-green-600 hover:bg-green-700" onClick={handleComplete} disabled={completing}>
+                    {completing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Done'}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function FMSMyTasks() {
   const [user, setUser] = useState(null);
   const [tasks, setTasks] = useState([]);
+  const [scheduledTasks, setScheduledTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [completing, setCompleting] = useState(null);
-  const [activeModal, setActiveModal] = useState(null); // { step, type: 'markdone' | 'checklist' }
+  const [activeModal, setActiveModal] = useState(null);
 
   const load = useCallback(async () => {
     const me = await base44.auth.me();
     setUser(me);
-    const allSteps = await base44.entities.FMSStepInstance.filter({ assignee_email: me.email, status: 'active' }, '-deadline', 100);
+    const [allSteps, myScheduled] = await Promise.all([
+      base44.entities.FMSStepInstance.filter({ assignee_email: me.email, status: 'active' }, '-deadline', 100),
+      base44.entities.ScheduledTaskInstance.filter({ assignee_email: me.email, status: 'PENDING' }, '-due_at', 100).catch(() => []),
+    ]);
     const instanceIds = [...new Set(allSteps.map(s => s.instance_id))];
     const instances = await Promise.all(instanceIds.map(id => base44.entities.FMSProcessInstance.filter({ id })));
     const instanceMap = {};
@@ -145,6 +219,15 @@ export default function FMSMyTasks() {
       return new Date(a.deadline || 0) - new Date(b.deadline || 0);
     });
     setTasks(enriched);
+    // Sort scheduled: overdue first
+    const sorted = [...myScheduled].sort((a, b) => {
+      const aOD = a.due_at && new Date(a.due_at) < new Date();
+      const bOD = b.due_at && new Date(b.due_at) < new Date();
+      if (aOD && !bOD) return -1;
+      if (!aOD && bOD) return 1;
+      return new Date(a.due_at || 0) - new Date(b.due_at || 0);
+    });
+    setScheduledTasks(sorted);
     setLoading(false);
   }, []);
 
@@ -226,6 +309,18 @@ export default function FMSMyTasks() {
                 <h2 className="text-sm font-semibold text-green-600 uppercase tracking-wider mb-3">✓ On Track ({onTime.length})</h2>
                 <div className="space-y-3">
                   {onTime.map(t => <TaskCard key={t.id} step={t} onComplete={handleMarkDone} onOpenChecklist={handleOpenChecklist} completing={completing} />)}
+                </div>
+              </div>
+            )}
+
+            {/* Scheduled Tasks Section */}
+            {scheduledTasks.length > 0 && (
+              <div>
+                <h2 className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                  <Clock className="w-4 h-4" /> Scheduled Tasks ({scheduledTasks.length})
+                </h2>
+                <div className="space-y-3">
+                  {scheduledTasks.map(t => <ScheduledTaskCard key={t.id} task={t} user={user} onComplete={load} />)}
                 </div>
               </div>
             )}

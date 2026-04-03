@@ -1,0 +1,101 @@
+{
+  "name": "ScheduledTaskTemplate",
+  "type": "object",
+  "title": "Scheduled Task Template",
+  "description": "Recurring task definition with schedule, assignee, and group",
+  "properties": {
+    "template_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "task_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300,
+      "description": "Task title shown to the assignee"
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Detailed instructions for the task"
+    },
+    "group_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Reference to ScheduledTaskGroup.group_id"
+    },
+    "group_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "assignee_email": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "User who will receive this task"
+    },
+    "assignee_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "schedule_type": {
+      "type": "string",
+      "enum": [
+        "daily",
+        "weekly",
+        "monthly"
+      ],
+      "description": "How often the task recurs"
+    },
+    "schedule_time": {
+      "type": "string",
+      "maxLength": 10,
+      "description": "Time of day in HH:MM format (24h)"
+    },
+    "schedule_days_of_week": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "description": "For weekly: 0=Sun, 1=Mon...6=Sat"
+    },
+    "schedule_day_of_month": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 31,
+      "description": "For monthly: day of month"
+    },
+    "due_hours": {
+      "type": "number",
+      "minimum": 1,
+      "default": 24,
+      "description": "Hours after creation by which task must be completed"
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "LOW",
+        "MEDIUM",
+        "HIGH"
+      ],
+      "default": "MEDIUM"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "last_generated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Last time a task instance was generated from this template"
+    }
+  },
+  "required": [
+    "template_id",
+    "task_name",
+    "group_id",
+    "assignee_email",
+    "schedule_type",
+    "schedule_time"
+  ]
+}

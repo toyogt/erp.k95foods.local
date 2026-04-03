@@ -1,0 +1,59 @@
+{
+  "name": "SKUBOMLine",
+  "type": "object",
+  "title": "SKU Bill of Materials Line",
+  "description": "Per-SKU material requirement line linking a product to an item from Item Master with quantity per unit",
+  "properties": {
+    "sku_code": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "description": "Reference to ProductMaster.item_code"
+    },
+    "sku_name": {
+      "type": "string",
+      "maxLength": 300,
+      "description": "Denormalized SKU name for display"
+    },
+    "item_code": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "description": "Reference to ItemMaster.item_code"
+    },
+    "item_name": {
+      "type": "string",
+      "maxLength": 300,
+      "description": "Denormalized item name for display"
+    },
+    "category": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Item category from ItemMaster"
+    },
+    "qty_per_unit": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Quantity of this material needed per single bottle/unit of the SKU"
+    },
+    "uom": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Unit of measure for this material"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 500
+    }
+  },
+  "required": [
+    "sku_code",
+    "item_code",
+    "qty_per_unit",
+    "uom"
+  ]
+}
