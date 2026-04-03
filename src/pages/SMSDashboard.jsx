@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
-import { Building2, Package, AlertTriangle, Clock, ArrowRight, TrendingDown, CalendarClock, Users, Settings } from 'lucide-react';
+import { Building2, Package, AlertTriangle, Clock, ArrowRight, TrendingDown, CalendarClock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import StorePageAccessManager from '@/components/store/StorePageAccessManager';
+
 import ExportButton from '@/components/store/ExportButton';
 
 function StatCard({ icon: Icon, label, value, color, sub }) {
@@ -37,7 +37,6 @@ export default function SMSDashboard() {
   const [reorderConfigs, setReorderConfigs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
-  const [showAccessMgr, setShowAccessMgr] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -92,11 +91,6 @@ export default function SMSDashboard() {
         </div>
         <div className="flex gap-2">
           <ExportButton data={stock} columns={stockExportCols} filename="current_stock" />
-          {isAdmin && (
-            <Button variant="outline" size="sm" className="gap-2" onClick={() => setShowAccessMgr(true)}>
-              <Users className="w-4 h-4" /> Page Access
-            </Button>
-          )}
           <Link to="/SMSLocationManager">
             <Button variant="outline" size="sm" className="gap-2"><Building2 className="w-4 h-4" /> Locations</Button>
           </Link>
@@ -197,7 +191,7 @@ export default function SMSDashboard() {
         </div>
       )}
 
-      {showAccessMgr && <StorePageAccessManager onClose={() => setShowAccessMgr(false)} />}
+
     </div>
   );
 }
