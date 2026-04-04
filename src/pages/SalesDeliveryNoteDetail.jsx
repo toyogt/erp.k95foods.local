@@ -1,6 +1,6 @@
 /**
  * Delivery Note Detail Page — dedicated page for a single Delivery Note.
- * Full DN workflow: Waiting for Transporter → Loading → Bills Generated → Cancelled
+ * Full DN workflow: Waiting for Transporter → Vehicle Arrived → Loading → Bills Generated → Cancelled
  */
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -12,16 +12,19 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
 import { fireFMSEvent } from '@/lib/useFMSAutoComplete';
+import SalesAuditLogViewer from '@/components/sales/SalesAuditLogViewer';
 
 const WORKFLOW_STEPS = [
   { key: 'waiting_for_transporter', label: 'Waiting for Transporter' },
+  { key: 'vehicle_arrived',         label: 'Vehicle Arrived' },
   { key: 'waiting_for_loading',     label: 'Waiting for Loading' },
   { key: 'loading_completed',       label: 'Loading Completed' },
   { key: 'bills_generated',         label: 'Bills Generated' },
 ];
 
 const TRANSITIONS = [
-  { from: 'waiting_for_transporter', action: 'Transporter Arrived', next: 'waiting_for_loading' },
+  { from: 'waiting_for_transporter', action: 'Mark Vehicle Arrived', next: 'vehicle_arrived' },
+  { from: 'vehicle_arrived',         action: 'Start Loading',       next: 'waiting_for_loading' },
   { from: 'waiting_for_loading',     action: 'Loading Completed',   next: 'loading_completed' },
   { from: 'loading_completed',       action: 'Bills Generated',     next: 'bills_generated' },
 ];
@@ -32,6 +35,7 @@ const REVERSE = [
 
 const STATUS_COLOR = {
   waiting_for_transporter: 'bg-amber-100 text-amber-800',
+  vehicle_arrived:         'bg-blue-100 text-blue-800',
   waiting_for_loading:     'bg-blue-100 text-blue-800',
   loading_completed:       'bg-indigo-100 text-indigo-800',
   bills_generated:         'bg-green-100 text-green-700',
@@ -69,7 +73,7 @@ export default function SalesDeliveryNoteDetail() {
       return;
     }
     setSaving(true);
-    const statusMap = { waiting_for_loading: 'loading', loading_completed: 'loaded', bills_generated: 'dispatched' };
+    const statusMap = { vehicle_arrived: 'vehicle_arrived', waiting_for_loading: 'loading', loading_completed: 'loaded', bills_generated: 'dispatched' };
     await base44.entities.SalesDeliveryNote.update(dnId, {
       workflow_state: nextState, status: statusMap[nextState] || dn.status,
     });
@@ -211,6 +215,9 @@ export default function SalesDeliveryNoteDetail() {
           <p className="text-sm text-slate-800 whitespace-pre-line">{dn.shipping_address}</p>
         </div>
       )}
+
+      {/* Activity Log */}
+      <SalesAuditLogViewer entityType="SalesDeliveryNote" entityId={dnId} referenceNumber={dn.dn_number} />
     </div>
   );
 }
