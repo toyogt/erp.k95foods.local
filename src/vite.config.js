@@ -20,12 +20,8 @@ export default defineConfig({
     dedupe: ['react', 'react-dom', 'react/jsx-runtime'],
   },
   optimizeDeps: {
-    include: [
-      'react',
-      'react-dom',
-      'react/jsx-runtime',
-      '@base44/sdk',
-    ],
+    include: ['react', 'react-dom', 'react/jsx-runtime'],
+    exclude: ['@base44/sdk', '@base44/vite-plugin'],
     esbuildOptions: {
       alias: {
         'react': reactPath,
