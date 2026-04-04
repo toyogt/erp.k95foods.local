@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Plus, Trash2, AlertCircle, PackageOpen, QrCode, Lock } from 'lucide-react';
+import { Plus, Trash2, AlertCircle, PackageOpen, QrCode, Lock, Camera } from 'lucide-react';
+import QRScanner from '@/components/store/QRScanner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -61,34 +62,58 @@ function ItemSearchField({ value, onSelect }) {
 
 // ── Lot scan field ────────────────────────────────────────────────────────────
 function LotScanField({ value, onChange, manualAllowed, availableLots }) {
-  const inputRef = useRef(null);
+  const [showScanner, setShowScanner] = useState(false);
+
+  function handleScan(val) {
+    onChange(val);
+    setShowScanner(false);
+  }
 
   return (
-    <div>
-      <div className="flex items-center gap-1.5 mb-1">
-        <QrCode className="w-3.5 h-3.5 text-teal-600" />
-        <span className="text-xs text-slate-500">
-          {manualAllowed ? 'Scan or type Lot ID' : 'Scan Lot QR Code'}
-        </span>
-        {!manualAllowed && <Lock className="w-3 h-3 text-slate-400" />}
-      </div>
-      <Input
-        ref={inputRef}
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        className="h-9 text-sm font-mono"
-        placeholder={manualAllowed ? 'LOT-YYYYMMDD-XXXX' : 'Point QR scanner here…'}
-        readOnly={!manualAllowed}
-        style={!manualAllowed ? { caretColor: 'transparent', cursor: 'default' } : {}}
-        onFocus={e => { if (!manualAllowed) inputRef.current?.blur(); }}
-      />
+    <div className="space-y-2">
+      {/* Big prominent camera button — impossible to miss */}
+      <button
+        type="button"
+        onClick={() => setShowScanner(true)}
+        className="w-full h-14 flex items-center justify-center gap-3 bg-teal-600 hover:bg-teal-700 active:bg-teal-800 text-white rounded-xl font-semibold text-base transition-colors shadow-sm"
+      >
+        <Camera className="w-6 h-6" />
+        Tap to Scan Lot QR
+      </button>
+
+      {/* Full-screen scanner */}
+      {showScanner && (
+        <QRScanner onScan={handleScan} label="Scan Lot QR Code" />
+      )}
+
+      {/* Value display / manual input */}
+      {value ? (
+        <div className="flex items-center justify-between bg-teal-50 border border-teal-300 rounded-lg px-3 py-2">
+          <div className="flex items-center gap-2">
+            <QrCode className="w-4 h-4 text-teal-600 shrink-0" />
+            <span className="text-sm font-mono font-semibold text-teal-800 truncate">{value}</span>
+          </div>
+          <button type="button" onClick={() => onChange('')} className="text-xs text-slate-400 hover:text-red-500 ml-2 shrink-0">Clear</button>
+        </div>
+      ) : (
+        manualAllowed && (
+          <input
+            value={value}
+            onChange={e => onChange(e.target.value)}
+            placeholder="Or type Lot ID manually…"
+            className="w-full h-9 border border-slate-200 rounded-md px-3 text-sm font-mono text-slate-600"
+          />
+        )
+      )}
+
+      {/* Available lots chips */}
       {!value && availableLots.length > 0 && (
-        <div className="mt-1">
-          <p className="text-xs text-slate-400 mb-1">Available lots for this item:</p>
+        <div>
+          <p className="text-xs text-slate-400 mb-1">Available lots:</p>
           <div className="flex flex-wrap gap-1">
             {availableLots.slice(0, 5).map(lotId => (
               <button key={lotId} type="button" onClick={() => onChange(lotId)}
-                className="text-xs bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-200 rounded px-2 py-0.5 font-mono">
+                className="text-xs bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-200 rounded px-2 py-1 font-mono h-8">
                 {lotId}
               </button>
             ))}
