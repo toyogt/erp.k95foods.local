@@ -4,6 +4,9 @@ import path from 'path'
 
 export default defineConfig({
   logLevel: 'error',
+  // CRITICAL: visualEditAgent MUST be false — it injects code that creates duplicate React instances
+  // causing "Cannot read properties of null (reading 'useState')" errors.
+  // If you re-enable it, the app will break immediately.
   plugins: [
     base44({
       legacySDKImports: process.env.BASE44_LEGACY_SDK_IMPORTS === 'true',
