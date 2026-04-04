@@ -72,14 +72,13 @@
     "status": {
       "type": "string",
       "enum": [
-        "qc_pending",
         "approved",
         "rejected",
         "putaway",
         "consumed",
         "damaged"
       ],
-      "default": "qc_pending"
+      "default": "approved"
     },
     "qc_notes": {
       "type": "string",
