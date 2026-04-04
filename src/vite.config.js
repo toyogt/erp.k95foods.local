@@ -9,7 +9,7 @@ const reactJsxPath = path.resolve(__dirname, 'node_modules/react/jsx-runtime');
 
 export default defineConfig({
   plugins: [react(), base44Plugin()],
-  cacheDir: 'node_modules/.vite2',
+  cacheDir: 'node_modules/.vite3',
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -20,8 +20,9 @@ export default defineConfig({
     dedupe: ['react', 'react-dom', 'react/jsx-runtime'],
   },
   optimizeDeps: {
-    include: ['react', 'react-dom', 'react/jsx-runtime'],
-    exclude: ['@base44/sdk', '@base44/vite-plugin'],
+    noDiscovery: true,
+    include: [],
+    exclude: ['@base44/sdk', '@base44/vite-plugin', 'react', 'react-dom', 'react/jsx-runtime'],
     esbuildOptions: {
       alias: {
         'react': reactPath,
