@@ -16,8 +16,8 @@ export default defineConfig({
     middlewareMode: true,
     hmr: {
       protocol: 'wss',
-      host: 'localhost',
-      port: 5173,
+      host: typeof location !== 'undefined' ? location.hostname : undefined,
+      port: typeof location !== 'undefined' ? location.port : undefined,
     },
   },
   build: {
