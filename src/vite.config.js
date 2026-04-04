@@ -13,7 +13,12 @@ export default defineConfig({
     }),
   ],
   server: {
-    allowedHosts: 'ta-01knbq228hc493whhndegs9r4x-5173-0dgromorx38ebrbkgm9mmu95s.w.modal.host',
+    middlewareMode: true,
+    hmr: {
+      protocol: 'wss',
+      host: 'localhost',
+      port: 5173,
+    },
   },
   build: {
     rollupOptions: {
