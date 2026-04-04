@@ -150,6 +150,18 @@ const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
   const [redirectedToLogin, setRedirectedToLogin] = React.useState(false);
 
+  // Must run before any early return — same hook order on every render
+  React.useEffect(() => {
+    if (isLoadingPublicSettings || isLoadingAuth) return;
+    if (authError?.type === 'user_not_registered') {
+      return;
+    }
+    if (authError?.type === 'auth_required' && !redirectedToLogin) {
+      setRedirectedToLogin(true);
+      navigateToLogin();
+    }
+  }, [isLoadingPublicSettings, isLoadingAuth, authError, navigateToLogin, redirectedToLogin]);
+
   // Show loading spinner while checking app public settings or auth
   if (isLoadingPublicSettings || isLoadingAuth) {
     return (
@@ -158,16 +170,6 @@ const AuthenticatedApp = () => {
       </div>
     );
   }
-
-  // Handle authentication errors via useEffect (not during render)
-  React.useEffect(() => {
-    if (authError?.type === 'user_not_registered') {
-      // User not registered — UI will show error message
-    } else if (authError?.type === 'auth_required' && !redirectedToLogin) {
-      setRedirectedToLogin(true);
-      navigateToLogin();
-    }
-  }, [authError, navigateToLogin, redirectedToLogin]);
 
   if (authError?.type === 'user_not_registered') {
     return <UserNotRegisteredError />;
@@ -252,7 +254,12 @@ function App() {
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>
         <ToastContextProvider>
-          <Router>
+          <Router
+            future={{
+              v7_startTransition: true,
+              v7_relativeSplatPath: true,
+            }}
+          >
             <NavigationTracker />
             <AuthenticatedApp />
           </Router>
