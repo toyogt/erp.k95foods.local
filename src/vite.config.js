@@ -9,8 +9,7 @@ export default defineConfig({
       legacySDKImports: process.env.BASE44_LEGACY_SDK_IMPORTS === 'true',
       hmrNotifier: true,
       navigationNotifier: true,
-      visualEditAgent: true,
-      injectReact: false
+      visualEditAgent: false
     }),
   ],
   ssr: false,
@@ -31,7 +30,7 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, 'src'),
     },
-    dedupe: ['react', 'react-dom'],
+    dedupe: ['react', 'react-dom', 'react/jsx-runtime', 'react-dom/client'],
   },
   optimizeDeps: {
     include: ['react', 'react-dom'],
