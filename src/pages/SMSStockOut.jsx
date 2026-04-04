@@ -1,129 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Plus, Trash2, AlertCircle, PackageOpen, QrCode, Lock, Camera } from 'lucide-react';
+import { Plus, Trash2, AlertCircle, PackageOpen, QrCode, Camera, Search } from 'lucide-react';
 import QRScanner from '@/components/store/QRScanner';
+import ItemSearchDropdown from '@/components/store/ItemSearchDropdown';
+import LotSearchField from '@/components/store/LotSearchField';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 
-// ── Inline item search dropdown ──────────────────────────────────────────────
-function ItemSearchField({ value, onSelect }) {
-  const [query, setQuery] = useState(value?.item_name || '');
-  const [results, setResults] = useState([]);
-  const [open, setOpen] = useState(false);
-  const [allItems, setAllItems] = useState([]);
-
-  useEffect(() => {
-    base44.entities.ItemMaster.filter({ is_active: true }, 'item_name', 200).then(setAllItems);
-  }, []);
-
-  useEffect(() => {
-    if (!query.trim()) { setResults([]); return; }
-    const q = query.toLowerCase();
-    setResults(
-      allItems.filter(i =>
-        i.item_name?.toLowerCase().includes(q) ||
-        i.item_code?.toLowerCase().includes(q)
-      ).slice(0, 8)
-    );
-  }, [query, allItems]);
-
-  return (
-    <div className="relative">
-      <input
-        value={query}
-        onChange={e => { setQuery(e.target.value); setOpen(true); }}
-        onBlur={() => setTimeout(() => setOpen(false), 150)}
-        onFocus={() => query && setOpen(true)}
-        placeholder="Search item name or code…"
-        className="w-full h-9 border border-slate-200 rounded-md px-3 text-sm"
-      />
-      {open && results.length > 0 && (
-        <div className="absolute z-30 w-full bg-white border border-slate-200 rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto">
-          {results.map(item => (
-            <button key={item.id} type="button"
-              className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 flex items-center justify-between"
-              onMouseDown={() => { onSelect(item); setQuery(item.item_name); setOpen(false); }}>
-              <span className="font-medium text-slate-900">{item.item_name}</span>
-              <span className="text-xs text-slate-400 ml-2 font-mono">{item.item_code}</span>
-            </button>
-          ))}
-        </div>
-      )}
-      {open && query && results.length === 0 && (
-        <div className="absolute z-30 w-full bg-white border border-slate-200 rounded-lg shadow-lg mt-1 px-3 py-2 text-sm text-slate-400">
-          No items found
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ── Lot scan field ────────────────────────────────────────────────────────────
-function LotScanField({ value, onChange, manualAllowed, availableLots }) {
-  const [showScanner, setShowScanner] = useState(false);
-
-  function handleScan(val) {
-    onChange(val);
-    setShowScanner(false);
-  }
-
-  return (
-    <div className="space-y-2">
-      {/* Big prominent camera button — impossible to miss */}
-      <button
-        type="button"
-        onClick={() => setShowScanner(true)}
-        className="w-full h-14 flex items-center justify-center gap-3 bg-teal-600 hover:bg-teal-700 active:bg-teal-800 text-white rounded-xl font-semibold text-base transition-colors shadow-sm"
-      >
-        <Camera className="w-6 h-6" />
-        Tap to Scan Lot QR
-      </button>
-
-      {/* Full-screen scanner */}
-      {showScanner && (
-        <QRScanner onScan={handleScan} label="Scan Lot QR Code" />
-      )}
-
-      {/* Value display / manual input */}
-      {value ? (
-        <div className="flex items-center justify-between bg-teal-50 border border-teal-300 rounded-lg px-3 py-2">
-          <div className="flex items-center gap-2">
-            <QrCode className="w-4 h-4 text-teal-600 shrink-0" />
-            <span className="text-sm font-mono font-semibold text-teal-800 truncate">{value}</span>
-          </div>
-          <button type="button" onClick={() => onChange('')} className="text-xs text-slate-400 hover:text-red-500 ml-2 shrink-0">Clear</button>
-        </div>
-      ) : (
-        manualAllowed && (
-          <input
-            value={value}
-            onChange={e => onChange(e.target.value)}
-            placeholder="Or type Lot ID manually…"
-            className="w-full h-9 border border-slate-200 rounded-md px-3 text-sm font-mono text-slate-600"
-          />
-        )
-      )}
-
-      {/* Available lots chips */}
-      {!value && availableLots.length > 0 && (
-        <div>
-          <p className="text-xs text-slate-400 mb-1">Available lots:</p>
-          <div className="flex flex-wrap gap-1">
-            {availableLots.slice(0, 5).map(lotId => (
-              <button key={lotId} type="button" onClick={() => onChange(lotId)}
-                className="text-xs bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-200 rounded px-2 py-1 font-mono h-8">
-                {lotId}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ── Item row ──────────────────────────────────────────────────────────────────
 function ItemRow({ idx, item, balances, onChange, onRemove, manualAllowed }) {
   const balancesForItem = balances.filter(b => b.item_code === item.item_code);
@@ -142,33 +28,34 @@ function ItemRow({ idx, item, balances, onChange, onRemove, manualAllowed }) {
         </button>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div>
-          <Label className="text-xs font-medium text-slate-700">Item Name *</Label>
-          <div className="mt-1">
-            <ItemSearchField
-              value={{ item_name: item.item_name }}
-              onSelect={selected => onChange(idx, { item_code: selected.item_code, item_name: selected.item_name, uom: selected.base_uom })}
-            />
-          </div>
-          {item.item_code && <p className="text-xs text-slate-400 mt-0.5 font-mono">{item.item_code}</p>}
+      <div>
+        <Label className="text-xs font-medium text-slate-700">Item Name *</Label>
+        <div className="mt-1">
+          <ItemSearchDropdown
+            value={item.item_name}
+            onSelect={selected => onChange(idx, { item_code: selected.item_code, item_name: selected.item_name, uom: selected.base_uom, lot_id: '' })}
+            onClear={() => onChange(idx, { item_code: '', item_name: '', uom: '', lot_id: '' })}
+          />
         </div>
-        <div>
-          <Label className="text-xs font-medium text-slate-700">Lot ID *</Label>
-          <div className="mt-1">
-            <LotScanField
-              value={item.lot_id || ''}
-              onChange={val => onChange(idx, { lot_id: val })}
-              manualAllowed={manualAllowed}
-              availableLots={uniqueLots}
-            />
-          </div>
-          {item.lot_id && (
-            <p className="text-xs mt-0.5">
-              {totalAvail > 0
-                ? <span className="text-green-600">Available: {totalAvail.toFixed(2)} {item.uom || 'units'}</span>
-                : <span className="text-red-500">Lot not found in stock</span>}
-            </p>
-          )}
+        {item.item_code && <p className="text-xs text-slate-400 mt-0.5 font-mono">{item.item_code}</p>}
+      </div>
+      <div>
+        <Label className="text-xs font-medium text-slate-700">Lot ID *</Label>
+        <div className="mt-1">
+          <LotSearchField
+            value={item.lot_id || ''}
+            onChange={val => onChange(idx, { lot_id: val })}
+            availableLots={uniqueLots}
+            manualAllowed={manualAllowed}
+          />
+        </div>
+        {item.lot_id && (
+          <p className="text-xs mt-0.5">
+            {totalAvail > 0
+              ? <span className="text-green-600">Available: {totalAvail.toFixed(2)} {item.uom || 'units'}</span>
+              : <span className="text-red-500">Lot not found in stock</span>}
+          </p>
+        )}
         </div>
         <div>
           <Label className="text-xs font-medium text-slate-700">Quantity *</Label>
