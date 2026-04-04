@@ -14,13 +14,6 @@ export async function getAllowedPagesFromDB(user) {
     return ['*']; // Wildcard means all pages
   }
 
-  // Check user-level page overrides first (stored on user.data)
-  // This is set by admin in User Management for per-user page access
-  const userPageAccess = user?.store_page_access || user?.data?.store_page_access;
-  if (userPageAccess?.length > 0) {
-    return userPageAccess;
-  }
-
   try {
     // Fetch the AppRole record for this user's role
     const roles = await base44.entities.AppRole.filter({ 
@@ -29,19 +22,21 @@ export async function getAllowedPagesFromDB(user) {
     });
 
     const role = roles?.[0];
-
-    // If explicit page_access is set, always use it (highest priority)
-    if (role?.page_access?.length > 0) {
-      return role.page_access;
-    }
-
-    // Otherwise expand from module_access
     if (role?.module_access?.length > 0) {
+      // New system: convert module_access to page names
       const allowedPages = new Set();
+      
+      // Add all pages from allowed modules
       role.module_access.forEach(mod => {
         const pages = getPagesInModule(mod);
         pages.forEach(p => allowedPages.add(p.pageKey));
       });
+      
+      // If page_access overrides are set, replace module pages with only those pages
+      if (role.page_access?.length > 0) {
+        return role.page_access;
+      }
+      
       return Array.from(allowedPages);
     }
   } catch (err) {

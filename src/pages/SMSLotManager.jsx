@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import { QrCode, Search } from 'lucide-react';
+import { QrCode, CheckCircle2, XCircle, Search, Package } from 'lucide-react';
 import ExportButton from '@/components/store/ExportButton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useToast } from '@/components/ui/use-toast';
 import QRCode from 'react-qr-code';
 
 function WeekBadge({ weeks }) {
@@ -15,14 +16,56 @@ function WeekBadge({ weeks }) {
 
 function StatusBadge({ status }) {
   const map = {
+    qc_pending: 'bg-yellow-100 text-yellow-700',
     approved: 'bg-green-100 text-green-700',
     rejected: 'bg-red-100 text-red-700',
     putaway: 'bg-blue-100 text-blue-700',
     consumed: 'bg-slate-100 text-slate-500',
     damaged: 'bg-orange-100 text-orange-700',
   };
-  const labels = { approved: 'Approved', rejected: 'Rejected', putaway: 'Stored', consumed: 'Consumed', damaged: 'Damaged' };
+  const labels = { qc_pending: 'QC Pending', approved: 'Approved', rejected: 'Rejected', putaway: 'Stored', consumed: 'Consumed', damaged: 'Damaged' };
   return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${map[status] || 'bg-slate-100 text-slate-600'}`}>{labels[status] || status}</span>;
+}
+
+function QCModal({ lot, onDone, onClose }) {
+  const [notes, setNotes] = useState('');
+  const [saving, setSaving] = useState(false);
+  const { toast } = useToast();
+
+  async function decide(approved) {
+    setSaving(true);
+    const user = await base44.auth.me();
+    await base44.entities.StoreLot.update(lot.id, {
+      status: approved ? 'approved' : 'rejected',
+      qc_notes: notes,
+      qc_by: user?.email,
+      qc_at: new Date().toISOString(),
+    });
+    toast({ title: approved ? 'Lot Approved' : 'Lot Rejected' });
+    onDone();
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-sm">
+        <div className="px-5 py-4 border-b">
+          <h2 className="font-semibold text-slate-900">QC Decision — {lot.lot_id}</h2>
+          <p className="text-sm text-slate-500">{lot.item_name} · {lot.quantity} {lot.uom}</p>
+        </div>
+        <div className="p-5 space-y-3">
+          <div>
+            <label className="text-xs font-medium text-slate-700">QC Notes (optional)</label>
+            <textarea className="w-full border border-slate-200 rounded-md p-2 text-sm mt-1 h-20" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Enter inspection notes..." />
+          </div>
+        </div>
+        <div className="flex gap-3 px-5 py-4 border-t">
+          <Button variant="outline" className="flex-1" onClick={onClose}>Cancel</Button>
+          <Button variant="destructive" className="flex-1 gap-2" disabled={saving} onClick={() => decide(false)}><XCircle className="w-4 h-4" /> Reject</Button>
+          <Button className="flex-1 gap-2 bg-green-600 hover:bg-green-700" disabled={saving} onClick={() => decide(true)}><CheckCircle2 className="w-4 h-4" /> Approve</Button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function QRModal({ lot, onClose }) {
@@ -48,6 +91,7 @@ export default function SMSLotManager() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [qcLot, setQcLot] = useState(null);
   const [qrLot, setQrLot] = useState(null);
 
   async function load() {
@@ -84,7 +128,7 @@ export default function SMSLotManager() {
       <div className="bg-white rounded-xl border border-slate-200 p-3">
         <p className="text-xs font-semibold text-slate-500 mb-2">Week Aging Legend</p>
         <div className="flex flex-wrap gap-2">
-          {[{ label: 'Week 1 (Current)', cls: 'bg-green-100 text-green-700' }, { label: 'Week 2', cls: 'bg-yellow-100 text-yellow-700' }, { label: 'Week 3', cls: 'bg-orange-100 text-orange-700' }, { label: 'Week 4+', cls: 'bg-red-100 text-red-700' }].map((w) => (
+          {[{ label: 'Week 1 (Current)', cls: 'bg-green-100 text-green-700' }, { label: 'Week 2', cls: 'bg-yellow-100 text-yellow-700' }, { label: 'Week 3', cls: 'bg-orange-100 text-orange-700' }, { label: 'Week 4+', cls: 'bg-red-100 text-red-700' }].map(w => (
             <span key={w.label} className={`px-3 py-1 rounded-full text-xs font-medium ${w.cls}`}>{w.label}</span>
           ))}
         </div>
@@ -97,6 +141,7 @@ export default function SMSLotManager() {
         </div>
         <select className="h-9 border border-slate-200 rounded-md px-3 text-sm" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
           <option value="">All Statuses</option>
+          <option value="qc_pending">QC Pending</option>
           <option value="approved">Approved</option>
           <option value="rejected">Rejected</option>
           <option value="putaway">Stored</option>
@@ -143,6 +188,9 @@ export default function SMSLotManager() {
                   <td className="px-4 py-3">
                     <div className="flex gap-2">
                       <button onClick={() => setQrLot(lot)} className="p-1.5 rounded hover:bg-slate-100 text-slate-500" title="QR Code"><QrCode className="w-4 h-4" /></button>
+                      {lot.status === 'qc_pending' && (
+                        <button onClick={() => setQcLot(lot)} className="p-1.5 rounded hover:bg-yellow-100 text-yellow-600" title="QC Decision"><Package className="w-4 h-4" /></button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -153,6 +201,7 @@ export default function SMSLotManager() {
         <div className="px-4 py-2 bg-slate-50 border-t text-xs text-slate-400">{filtered.length} lot(s)</div>
       </div>
 
+      {qcLot && <QCModal lot={qcLot} onDone={() => { setQcLot(null); load(); }} onClose={() => setQcLot(null)} />}
       {qrLot && <QRModal lot={qrLot} onClose={() => setQrLot(null)} />}
     </div>
   );

@@ -1,4 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
+import { base44 } from '@/api/base44Client';
+import { appParams } from '@/lib/app-params';
+import { createAxiosClient } from '@base44/sdk/dist/utils/axios-client';
 
 const AuthContext = createContext();
 
@@ -21,24 +24,21 @@ export const AuthProvider = ({ children }) => {
       
       // First, check app public settings (with token if available)
       // This will tell us if auth is required, user not registered, etc.
+      const appClient = createAxiosClient({
+        baseURL: `/api/apps/public`,
+        headers: {
+          'X-App-Id': appParams.appId
+        },
+        token: appParams.token, // Include token if available
+        interceptResponses: true
+      });
+      
       try {
-        const { appParams } = await import('@/lib/app-params');
-        const headers = { 'X-App-Id': appParams.appId };
-        if (appParams.token) headers['Authorization'] = `Bearer ${appParams.token}`;
-        const res = await fetch(`/api/apps/public/prod/public-settings/by-id/${appParams.appId}`, { headers });
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          const err = new Error(data?.message || 'Failed to load app');
-          err.status = res.status;
-          err.data = data;
-          throw err;
-        }
-        const publicSettings = await res.json();
+        const publicSettings = await appClient.get(`/prod/public-settings/by-id/${appParams.appId}`);
         setAppPublicSettings(publicSettings);
         
         // If we got the app public settings successfully, check if user is authenticated
-        const { appParams: freshAppParams } = await import('@/lib/app-params');
-        if (freshAppParams.token) {
+        if (appParams.token) {
           await checkUserAuth();
         } else {
           setIsLoadingAuth(false);
@@ -91,7 +91,6 @@ export const AuthProvider = ({ children }) => {
     try {
       // Now check if the user is authenticated
       setIsLoadingAuth(true);
-      const { base44 } = await import('@/api/base44Client');
       const currentUser = await base44.auth.me();
       setUser(currentUser);
       setIsAuthenticated(true);
@@ -111,24 +110,21 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = async (shouldRedirect = true) => {
+  const logout = (shouldRedirect = true) => {
     setUser(null);
     setIsAuthenticated(false);
     
     if (shouldRedirect) {
       // Use the SDK's logout method which handles token cleanup and redirect
-      const { base44 } = await import('@/api/base44Client');
       base44.auth.logout(window.location.href);
     } else {
       // Just remove the token without redirect
-      const { base44 } = await import('@/api/base44Client');
       base44.auth.logout();
     }
   };
 
-  const navigateToLogin = async () => {
+  const navigateToLogin = () => {
     // Use the SDK's redirectToLogin method
-    const { base44 } = await import('@/api/base44Client');
     base44.auth.redirectToLogin(window.location.href);
   };
 

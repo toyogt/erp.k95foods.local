@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
@@ -59,25 +59,10 @@ export default function Layout({ children, currentPageName }) {
   const isOperator = isOperatorLayout(role);
   const isDashboard = currentPageName === 'Dashboard';
   
-  // Check if user has access to current page
-  const canAccessDashboard = isAdmin || allowedPages.includes('*') || allowedPages.includes('Dashboard') || allowedPages.includes('SMSDashboard');
-  const hasAccess = allowedPages.includes('*') || allowedPages.includes(currentPageName) || (isDashboard && canAccessDashboard);
+  // Check if user has access to current page using unified resolver
+  const hasAccess = isDashboard || allowedPages.includes('*') || allowedPages.includes(currentPageName);
 
   if (userLoading) return null;
-
-  // Redirect from Dashboard to first allowed page for non-admin users
-  // who don't have Dashboard access
-  if (isDashboard && !isAdmin && !isOperator && allowedPages.length > 0 && !allowedPages.includes('*') && !allowedPages.includes('Dashboard')) {
-    const firstPage = allowedPages[0];
-    if (firstPage) {
-      window.location.href = createPageUrl(firstPage);
-      return (
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
-        </div>
-      );
-    }
-  }
   
   // Block access to unauthorized pages
   if (!hasAccess && !isOperator) {
@@ -113,19 +98,17 @@ export default function Layout({ children, currentPageName }) {
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
-        {/* Dashboard — only show if user has access */}
-        {(isAdmin || allowedPages.includes('*') || allowedPages.includes('Dashboard')) && (
-          <Link
-            to={createPageUrl('Dashboard')}
-            onClick={onNavigate}
-            className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-              isDashboard ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-            }`}
-          >
-            <LayoutDashboard className="w-4 h-4 shrink-0" />
-            {!sidebarCollapsed && <span>Dashboard</span>}
-          </Link>
-        )}
+        {/* Dashboard */}
+        <Link
+          to={createPageUrl('Dashboard')}
+          onClick={onNavigate}
+          className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+            isDashboard ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+          }`}
+        >
+          <LayoutDashboard className="w-4 h-4 shrink-0" />
+          {!sidebarCollapsed && <span>Dashboard</span>}
+        </Link>
 
         {/* Module groups */}
         {visibleModules.filter(m => m.moduleKey !== 'DASHBOARD').map(mod => {

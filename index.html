@@ -2,38 +2,17 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/icon-192.png" />
-    <link rel="manifest" href="/manifest.json" />
-    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <link rel="icon" type="image/svg+xml" href="https://base44.com/logo_v2.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0f172a" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="Toyo Kombucha" />
+    <meta name="apple-mobile-web-app-title" content="K95 ERP" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="description" content="K95 Enterprise Resource Planning System" />
-    <title>Toyo Kombucha</title>
+    <title>K95 ERP</title>
   </head>
   <body>
     <div id="root"></div>
-    <script>
-      // Register Service Worker early
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
-            .then(reg => console.log('SW Auto Registered ✅', reg))
-            .catch(err => console.error('SW Auto Register Error ❌', err));
-        });
-      }
-
-      // Capture install prompt BEFORE React loads
-      window.__pwaInstallPrompt = null;
-      window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault();
-        window.__pwaInstallPrompt = e;
-        console.log('PWA install prompt captured ✅');
-      });
-    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

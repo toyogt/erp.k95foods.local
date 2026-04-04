@@ -1,3 +1,4 @@
+// Inspired by react-hot-toast library
 import { useState, useEffect } from "react";
 
 const TOAST_LIMIT = 20;
@@ -20,7 +21,9 @@ function genId() {
 const toastTimeouts = new Map();
 
 const addToRemoveQueue = (toastId) => {
-  if (toastTimeouts.has(toastId)) return;
+  if (toastTimeouts.has(toastId)) {
+    return;
+  }
 
   const timeout = setTimeout(() => {
     toastTimeouts.delete(toastId);
@@ -31,6 +34,14 @@ const addToRemoveQueue = (toastId) => {
   }, TOAST_REMOVE_DELAY);
 
   toastTimeouts.set(toastId, timeout);
+};
+
+const _clearFromRemoveQueue = (toastId) => {
+  const timeout = toastTimeouts.get(toastId);
+  if (timeout) {
+    clearTimeout(timeout);
+    toastTimeouts.delete(toastId);
+  }
 };
 
 export const reducer = (state, action) => {
@@ -52,45 +63,54 @@ export const reducer = (state, action) => {
     case actionTypes.DISMISS_TOAST: {
       const { toastId } = action;
 
+      // ! Side effects ! - This could be extracted into a dismissToast() action,
+      // but I'll keep it here for simplicity
       if (toastId) {
         addToRemoveQueue(toastId);
       } else {
-        state.toasts.forEach((toast) => addToRemoveQueue(toast.id));
+        state.toasts.forEach((toast) => {
+          addToRemoveQueue(toast.id);
+        });
       }
 
       return {
         ...state,
         toasts: state.toasts.map((t) =>
           t.id === toastId || toastId === undefined
-            ? { ...t, open: false }
+            ? {
+                ...t,
+                open: false,
+              }
             : t
         ),
       };
     }
-
     case actionTypes.REMOVE_TOAST:
+      if (action.toastId === undefined) {
+        return {
+          ...state,
+          toasts: [],
+        };
+      }
       return {
         ...state,
-        toasts:
-          action.toastId === undefined
-            ? []
-            : state.toasts.filter((t) => t.id !== action.toastId),
+        toasts: state.toasts.filter((t) => t.id !== action.toastId),
       };
-
-    default:
-      return state;
   }
 };
 
 const listeners = [];
+
 let memoryState = { toasts: [] };
 
 function dispatch(action) {
   memoryState = reducer(memoryState, action);
-  listeners.forEach((listener) => listener(memoryState));
+  listeners.forEach((listener) => {
+    listener(memoryState);
+  });
 }
 
-function toast(props) {
+function toast({ ...props }) {
   const id = genId();
 
   const update = (props) =>
@@ -114,7 +134,11 @@ function toast(props) {
     },
   });
 
-  return { id, dismiss, update };
+  return {
+    id,
+    dismiss,
+    update,
+  };
 }
 
 function useToast() {
@@ -122,21 +146,19 @@ function useToast() {
 
   useEffect(() => {
     listeners.push(setState);
-
     return () => {
       const index = listeners.indexOf(setState);
       if (index > -1) {
         listeners.splice(index, 1);
       }
     };
-  }, []); // ✅ FIXED
+  }, [state]);
 
   return {
     ...state,
     toast,
-    dismiss: (toastId) =>
-      dispatch({ type: actionTypes.DISMISS_TOAST, toastId }),
+    dismiss: (toastId) => dispatch({ type: actionTypes.DISMISS_TOAST, toastId }),
   };
 }
 
-export { useToast, toast };
+export { useToast, toast }; 

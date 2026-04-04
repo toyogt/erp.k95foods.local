@@ -69,8 +69,8 @@ export const pageRegistry = [
 
   // GRN pages moved to STORE module above
 
-  // ─── QUALITY CONTROL ───
-  { pageKey: 'QCInbox', title: 'Quality Control Inbox', moduleKey: 'STORE', icon: ClipboardCheck, roles: ['admin', 'qc_inspector', 'store_manager', 'user'] },
+  // ─── QUALITY ───
+  { pageKey: 'QCInbox', title: 'QC Inbox', moduleKey: 'QUALITY', icon: TestTube2, roles: ['admin', 'qc_inspector', 'purchase_manager', 'user'] },
 
   // ─── ACCOUNTS ───
   { pageKey: 'InvoiceCapture', title: 'Invoice Capture', moduleKey: 'ACCOUNTS', icon: FileText, roles: ['admin', 'accounts_user', 'accounts_manager', 'user'] },
@@ -107,8 +107,8 @@ export const pageRegistry = [
 
   // ─── STORE MANAGEMENT ───
   { pageKey: 'SMSDashboard',       title: 'Store Dashboard',    moduleKey: 'STORE', icon: Store,           roles: ['admin', 'store_manager', 'store_receiver', 'user'] },
-  { pageKey: 'GateEntry',          title: 'Gate Entry',         moduleKey: 'STORE', icon: ShieldCheck,     roles: ['admin', 'security_guard', 'store_receiver', 'store_manager', 'user'] },
-  { pageKey: 'GRNReceive',         title: 'Goods Receipt',      moduleKey: 'STORE', icon: PackageOpen,     roles: ['admin', 'store_receiver', 'store_manager', 'user'] },
+  { pageKey: 'GateEntry',          title: 'Gate Entry',         moduleKey: 'STORE', icon: ShieldCheck,     roles: ['admin', 'security_guard', 'store_receiver', 'user'] },
+  { pageKey: 'GRNReceive',         title: 'Goods Receipt',      moduleKey: 'STORE', icon: PackageOpen,     roles: ['admin', 'store_receiver', 'user'] },
   { pageKey: 'SMSLotManager',      title: 'Lot Manager',        moduleKey: 'STORE', icon: QrCode,          roles: ['admin', 'store_manager', 'store_receiver', 'qc_inspector', 'user'] },
   { pageKey: 'SMSPutaway',         title: 'Putaway',            moduleKey: 'STORE', icon: Archive,         roles: ['admin', 'store_manager', 'store_receiver', 'user'] },
   { pageKey: 'SMSStockOut',        title: 'Stock Issue',        moduleKey: 'STORE', icon: PackageOpen,     roles: ['admin', 'store_manager', 'user'] },
@@ -119,7 +119,6 @@ export const pageRegistry = [
   { pageKey: 'SMSAdjustments',     title: 'Adjustments',        moduleKey: 'STORE', icon: SlidersHorizontal, roles: ['admin', 'store_manager', 'user'] },
   { pageKey: 'SMSLocationManager', title: 'Locations',          moduleKey: 'STORE', icon: MapPin,          roles: ['admin', 'store_manager'] },
   { pageKey: 'SMSReports',         title: 'Store Reports',      moduleKey: 'STORE', icon: BarChart3,       roles: ['admin', 'store_manager', 'user'] },
-  { pageKey: 'SMSStoreSettings',   title: 'Store Settings',     moduleKey: 'STORE', icon: Settings,        roles: ['admin'], adminOnly: true },
 
   // ─── SALES ───
   { pageKey: 'SalesOrders',         title: 'Sales Orders',    moduleKey: 'SALES', icon: ShoppingCart, roles: ['admin', 'sales_manager', 'sales_user', 'user'] },
@@ -210,7 +209,15 @@ export const moduleRegistry = [
     adminOnly: false,
     sortOrder: 6,
   },
-  // QUALITY module removed — QC bypassed
+  {
+    moduleKey: 'QUALITY',
+    label: 'Quality',
+    icon: TestTube2,
+    color: 'text-orange-600',
+    bgColor: 'bg-orange-50',
+    adminOnly: false,
+    sortOrder: 7,
+  },
   {
     moduleKey: 'ACCOUNTS',
     label: 'Accounts',

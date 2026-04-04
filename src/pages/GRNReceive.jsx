@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Loader2, RefreshCw, CheckCircle2, Camera, Search } from 'lucide-react';
-import { GRN_STATUS_COLOR, logGrnAudit } from '@/components/grn/grnHelpers';
-import { fireFMSEvent } from '@/lib/useFMSAutoComplete';
+import { GRN_STATUS_COLOR, logGrnAudit, getChecklistTemplate } from '@/components/grn/grnHelpers';
+import { fireFMSEvent, findFMSInstanceByRef, linkFMSRef } from '@/lib/useFMSAutoComplete';
+import { postGRNtoQCHold } from '@/components/grn/stockLedger';
+import ChecklistGate from '@/components/grn/ChecklistGate';
 
 function GRNItemRow({ item, onChange }) {
   const [receivedQty, setReceivedQty] = useState(String(item.received_qty ?? ''));
@@ -82,6 +84,8 @@ export default function GRNReceive() {
   const [itemEdits, setItemEdits] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const [checklistTemplate, setChecklistTemplate] = useState(null);
+  const [showChecklist, setShowChecklist] = useState(false);
   const [search, setSearch] = useState('');
 
   async function load() {
@@ -100,20 +104,37 @@ export default function GRNReceive() {
   async function selectGRN(grn) {
     setSelected(grn);
     setDone(false);
+    setShowChecklist(false);
     setItemEdits({});
     const its = await base44.entities.GRNItem.filter({ grn_id: grn.grn_id });
     setGrnItems(its);
     const edits = {};
     its.forEach(it => { edits[it.id] = it; });
     setItemEdits(edits);
+    // Pre-load checklist config
+    const tmpl = await getChecklistTemplate('GRN', 'RECEIVE');
+    setChecklistTemplate(tmpl);
   }
 
   function handleItemChange(updated) {
     setItemEdits(prev => ({ ...prev, [updated.id]: updated }));
   }
 
-  async function handleSubmit() {
+  async function handleChecklistDone(runId) {
+    await finalizeSubmit(runId);
+  }
+
+  async function handleSubmitClick() {
+    if (checklistTemplate) {
+      setShowChecklist(true);
+    } else {
+      await finalizeSubmit(null);
+    }
+  }
+
+  async function finalizeSubmit(checklistRunId) {
     setSubmitting(true);
+    // Save all item edits
     const updates = Object.values(itemEdits);
     await Promise.all(updates.map(it =>
       base44.entities.GRNItem.update(it.id, {
@@ -124,22 +145,28 @@ export default function GRNReceive() {
         photos_json: it.photos_json || '',
       })
     ));
-
-    await base44.entities.GRNHeader.update(selected.id, {
-      status: 'RECEIVED',
+    // Update GRN header
+    const headerUpdate = {
+      status: 'SUBMITTED_TO_QC',
       received_at: new Date().toISOString(),
       received_by: user?.email || '',
-      notes: selected.notes || '',
-    });
+    };
+    if (checklistRunId) headerUpdate.checklist_run_id = checklistRunId;
+    await base44.entities.GRNHeader.update(selected.id, headerUpdate);
+
+    // Post received items into QC_HOLD bin
+    const finalItems = Object.values(itemEdits).filter(it => (it.received_qty || 0) > 0);
+    await postGRNtoQCHold({ grn_id: selected.grn_id }, finalItems, user?.email || '').catch(e => console.warn('Stock post error:', e.message));
 
     await logGrnAudit({
-      action: 'GRN_RECEIVED',
+      action: 'GRN_SUBMITTED_TO_QC',
       entity_type: 'GRNHeader',
       entity_id: selected.grn_id,
       details: { po_id: selected.po_id, item_count: updates.length },
       user,
     });
 
+    // FMS: fire grn_received using grn.id (in chain)
     await fireFMSEvent('grn_received', selected.id);
 
     setDone(true);
@@ -158,7 +185,7 @@ export default function GRNReceive() {
   return (
     <div className="max-w-2xl mx-auto space-y-4 pb-12">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-900">Goods Receipt</h1>
+        <h1 className="text-2xl font-bold text-slate-900">GRN Receive</h1>
         <button onClick={load} className="p-2 rounded-xl hover:bg-slate-100 text-slate-400">
           <RefreshCw className="w-5 h-5" />
         </button>
@@ -169,15 +196,15 @@ export default function GRNReceive() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="Search Goods Receipt ID, supplier, Purchase Order, gate ID…"
+              placeholder="Search GRN ID, supplier, PO, gate ID…"
               className="w-full border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-sm" />
           </div>
           {loading ? (
             <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-slate-300" /></div>
           ) : filteredGrns.length === 0 ? (
             <div className="text-center py-12 text-slate-400">
-              <p className="font-semibold">No pending Goods Receipts found.</p>
-              <p className="text-xs mt-1">Create entries from Gate Inbox first.</p>
+              <p className="font-semibold">No draft GRNs found.</p>
+              <p className="text-xs mt-1">Create GRNs from Gate Inbox first.</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -188,10 +215,10 @@ export default function GRNReceive() {
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-slate-900 font-mono">{g.grn_id}</span>
-                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${GRN_STATUS_COLOR[g.status] || 'bg-slate-100 text-slate-600'}`}>{g.status}</span>
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${GRN_STATUS_COLOR[g.status]}`}>{g.status}</span>
                       </div>
                       <p className="text-sm text-slate-600 mt-0.5">{g.supplier_name || '—'}</p>
-                      <p className="text-xs text-slate-400">{g.po_id ? `Purchase Order: ${g.po_id}` : 'No Purchase Order linked'} · Gate: {g.gate_id || '—'}</p>
+                      <p className="text-xs text-slate-400">{g.po_id ? `PO: ${g.po_id}` : 'No PO linked'} · Gate: {g.gate_id || '—'}</p>
                     </div>
                     <span className="text-blue-500 text-sm font-semibold">Open →</span>
                   </div>
@@ -203,20 +230,31 @@ export default function GRNReceive() {
       ) : done ? (
         <div className="text-center space-y-4 py-12">
           <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto" />
-          <h2 className="text-2xl font-bold text-slate-900">Goods Received</h2>
-          <p className="text-slate-500">{selected.grn_id} has been marked as received.</p>
-          <Button onClick={() => { setSelected(null); setDone(false); }} className="w-full h-12 bg-slate-900">
-            Back to List
-          </Button>
+          <h2 className="text-2xl font-bold text-slate-900">Submitted to QC</h2>
+          <p className="text-slate-500">{selected.grn_id}</p>
+          <Button onClick={() => { setSelected(null); setDone(false); }} className="w-full h-12 bg-slate-900">Back to GRN List</Button>
+        </div>
+      ) : showChecklist && checklistTemplate ? (
+        <div className="space-y-4">
+          <h2 className="text-lg font-bold text-slate-900">GRN Checklist</h2>
+          <ChecklistGate
+            template={checklistTemplate}
+            entityId={selected.grn_id}
+            entityType="GRNHeader"
+            user={user}
+            onComplete={handleChecklistDone}
+            onSkip={() => finalizeSubmit(null)}
+          />
         </div>
       ) : (
         <div className="space-y-4">
+          {/* Header */}
           <div className="flex items-center gap-2">
             <button onClick={() => setSelected(null)} className="text-blue-500 text-sm font-semibold">← Back</button>
             <div>
               <span className="font-bold text-slate-900">{selected.grn_id}</span>
-              {selected.po_id && <span className="text-xs text-slate-400 ml-2">Purchase Order: {selected.po_id}</span>}
-              {!selected.po_id && <span className="text-xs text-amber-600 ml-2 font-semibold">No Purchase Order linked</span>}
+              {selected.po_id && <span className="text-xs text-slate-400 ml-2">PO: {selected.po_id}</span>}
+              {!selected.po_id && <span className="text-xs text-amber-600 ml-2 font-semibold">No PO linked</span>}
             </div>
           </div>
 
@@ -227,11 +265,12 @@ export default function GRNReceive() {
             </div>
           </div>
 
+          {/* Items */}
           <div className="space-y-3">
             {grnItems.length === 0 && (
               <div className="text-center py-6 text-slate-400">
-                <p className="text-sm">No items linked. Goods Receipt was created without a Purchase Order.</p>
-                <p className="text-xs mt-1">You can still confirm receipt and note details manually.</p>
+                <p className="text-sm">No items. GRN was created without a PO.</p>
+                <p className="text-xs mt-1">You can still submit and note details manually.</p>
               </div>
             )}
             {grnItems.map(it => (
@@ -239,17 +278,18 @@ export default function GRNReceive() {
             ))}
           </div>
 
+          {/* Notes */}
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1">Notes</label>
+            <label className="block text-sm font-semibold text-slate-700 mb-1">GRN Notes</label>
             <textarea rows={2} placeholder="Overall notes, discrepancies…"
               className="w-full border border-slate-200 rounded-xl px-4 py-2 text-sm resize-none"
               onChange={e => setSelected(prev => ({ ...prev, notes: e.target.value }))} />
           </div>
 
-          <Button onClick={handleSubmit} disabled={submitting}
+          <Button onClick={handleSubmitClick} disabled={submitting}
             className="w-full h-12 bg-green-600 hover:bg-green-700">
             {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
-            Confirm Goods Received
+            {checklistTemplate ? 'Next: Complete Checklist →' : 'Submit GRN to QC'}
           </Button>
         </div>
       )}

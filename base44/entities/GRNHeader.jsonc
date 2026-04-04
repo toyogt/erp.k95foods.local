@@ -28,7 +28,10 @@
       "type": "string",
       "enum": [
         "DRAFT",
-        "RECEIVED",
+        "SUBMITTED_TO_QC",
+        "QC_HOLD",
+        "QC_PASSED",
+        "QC_FAILED",
         "CANCELLED"
       ],
       "default": "DRAFT"
@@ -44,6 +47,10 @@
     "notes": {
       "type": "string",
       "maxLength": 2000
+    },
+    "checklist_run_id": {
+      "type": "string",
+      "maxLength": 100
     },
     "erp_sync_status": {
       "type": "string",
