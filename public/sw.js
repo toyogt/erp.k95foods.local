@@ -1,17 +1,56 @@
-// K95 ERP Service Worker — enables PWA installability
-const CACHE_NAME = 'k95-erp-v1';
+// K95 ERP / Flowmative — Service Worker
+const CACHE_NAME = 'flowmative-v1';
+const STATIC_ASSETS = ['/', '/index.html', '/manifest.json'];
 
+// Install: cache static shell
 self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_ASSETS))
+  );
   self.skipWaiting();
 });
 
+// Activate: clean up old caches
 self.addEventListener('activate', (event) => {
-  event.waitUntil(clients.claim());
+  event.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
+    )
+  );
+  clients.claim();
 });
 
-// Network-first strategy — always fetch fresh data
+// Fetch: network-first, fallback to cache for navigation
 self.addEventListener('fetch', (event) => {
-  // Only handle GET requests
   if (event.request.method !== 'GET') return;
-  event.respondWith(fetch(event.request).catch(() => caches.match(event.request)));
+
+  const url = new URL(event.request.url);
+
+  // API / backend calls — always network only, never cache
+  if (url.pathname.startsWith('/api') || url.pathname.startsWith('/functions')) {
+    return;
+  }
+
+  // Navigation requests — serve index.html from cache if offline (SPA fallback)
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match('/index.html'))
+    );
+    return;
+  }
+
+  // Static assets — cache-first
+  event.respondWith(
+    caches.match(event.request).then(cached => {
+      if (cached) return cached;
+      return fetch(event.request).then(response => {
+        if (!response || response.status !== 200 || response.type === 'opaque') {
+          return response;
+        }
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+        return response;
+      }).catch(() => caches.match('/index.html'));
+    })
+  );
 });

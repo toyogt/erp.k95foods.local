@@ -1,6 +1,6 @@
 {
-  "name": "K95 ERP",
-  "short_name": "K95 ERP",
+  "name": "Flowmative",
+  "short_name": "Flow",
   "description": "K95 Enterprise Resource Planning System",
   "start_url": "/",
   "scope": "/",
@@ -8,20 +8,32 @@
   "background_color": "#0f172a",
   "theme_color": "#0f172a",
   "orientation": "any",
+  "lang": "en",
+  "categories": ["business", "productivity"],
   "icons": [
     {
       "src": "https://base44.com/logo_v2.svg",
-      "sizes": "any",
+      "sizes": "192x192",
       "type": "image/svg+xml",
       "purpose": "any"
     },
     {
       "src": "https://base44.com/logo_v2.svg",
-      "sizes": "192x192",
+      "sizes": "512x512",
       "type": "image/svg+xml",
-      "purpose": "maskable"
+      "purpose": "any maskable"
     }
   ],
-  "categories": ["business", "productivity"],
-  "lang": "en"
+  "shortcuts": [
+    {
+      "name": "Store Dashboard",
+      "url": "/SMSDashboard",
+      "description": "Open Store Management Dashboard"
+    },
+    {
+      "name": "Stock Issue",
+      "url": "/SMSStockOut",
+      "description": "Issue stock"
+    }
+  ]
 }

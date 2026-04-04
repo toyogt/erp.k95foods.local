@@ -21,6 +21,19 @@ export default function UserManagement() {
   const [inviteError, setInviteError] = useState('');
   const [savingRole, setSavingRole] = useState(null);
 
+  const FALLBACK_ROLES = [
+    { role_key: 'admin', label: 'Admin', color: 'red' },
+    { role_key: 'store_manager', label: 'Store Manager', color: 'teal' },
+    { role_key: 'store_receiver', label: 'Store Receiver', color: 'green' },
+    { role_key: 'purchase_manager', label: 'Purchase Manager', color: 'purple' },
+    { role_key: 'purchase_user', label: 'Purchase User', color: 'indigo' },
+    { role_key: 'accounts_manager', label: 'Accounts Manager', color: 'blue' },
+    { role_key: 'accounts_user', label: 'Accounts User', color: 'blue' },
+    { role_key: 'production_manager', label: 'Production Manager', color: 'orange' },
+    { role_key: 'security_guard', label: 'Security Guard', color: 'slate' },
+    { role_key: 'user', label: 'User', color: 'slate' },
+  ];
+
   const load = useCallback(async () => {
     setLoading(true);
     const [me, userList, roleList] = await Promise.all([
@@ -30,7 +43,8 @@ export default function UserManagement() {
     ]);
     setUser(me);
     setUsers(userList);
-    setRoles(roleList);
+    // Use DB roles if available, otherwise fall back to built-in list
+    setRoles(roleList.length > 0 ? roleList : FALLBACK_ROLES);
     setLoading(false);
   }, []);
 
