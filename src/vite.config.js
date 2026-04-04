@@ -4,7 +4,7 @@ import path from 'path';
 import base44Plugin from '@base44/vite-plugin';
 
 export default defineConfig({
-  plugins: [base44Plugin(), react()],
+  plugins: [react(), base44Plugin()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
