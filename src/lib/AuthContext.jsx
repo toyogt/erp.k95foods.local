@@ -1,6 +1,4 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
-import { appParams } from '@/lib/app-params';
 
 const AuthContext = createContext();
 
@@ -24,6 +22,7 @@ export const AuthProvider = ({ children }) => {
       // First, check app public settings (with token if available)
       // This will tell us if auth is required, user not registered, etc.
       try {
+        const { appParams } = await import('@/lib/app-params');
         const headers = { 'X-App-Id': appParams.appId };
         if (appParams.token) headers['Authorization'] = `Bearer ${appParams.token}`;
         const res = await fetch(`/api/apps/public/prod/public-settings/by-id/${appParams.appId}`, { headers });
@@ -38,7 +37,8 @@ export const AuthProvider = ({ children }) => {
         setAppPublicSettings(publicSettings);
         
         // If we got the app public settings successfully, check if user is authenticated
-        if (appParams.token) {
+        const { appParams: freshAppParams } = await import('@/lib/app-params');
+        if (freshAppParams.token) {
           await checkUserAuth();
         } else {
           setIsLoadingAuth(false);
@@ -91,6 +91,7 @@ export const AuthProvider = ({ children }) => {
     try {
       // Now check if the user is authenticated
       setIsLoadingAuth(true);
+      const { base44 } = await import('@/api/base44Client');
       const currentUser = await base44.auth.me();
       setUser(currentUser);
       setIsAuthenticated(true);
@@ -110,21 +111,24 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = (shouldRedirect = true) => {
+  const logout = async (shouldRedirect = true) => {
     setUser(null);
     setIsAuthenticated(false);
     
     if (shouldRedirect) {
       // Use the SDK's logout method which handles token cleanup and redirect
+      const { base44 } = await import('@/api/base44Client');
       base44.auth.logout(window.location.href);
     } else {
       // Just remove the token without redirect
+      const { base44 } = await import('@/api/base44Client');
       base44.auth.logout();
     }
   };
 
-  const navigateToLogin = () => {
+  const navigateToLogin = async () => {
     // Use the SDK's redirectToLogin method
+    const { base44 } = await import('@/api/base44Client');
     base44.auth.redirectToLogin(window.location.href);
   };
 
