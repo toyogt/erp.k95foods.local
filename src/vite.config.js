@@ -9,6 +9,7 @@ const reactJsxPath = path.resolve(__dirname, 'node_modules/react/jsx-runtime');
 
 export default defineConfig({
   plugins: [react(), base44Plugin()],
+  cacheDir: 'node_modules/.vite2',
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
