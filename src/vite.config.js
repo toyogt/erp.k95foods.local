@@ -1,18 +1,18 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import path from 'path';
 import base44Plugin from '@base44/vite-plugin';
+const __dirname = new URL('.', import.meta.url).pathname;
 
-const reactPath = path.resolve(__dirname, 'node_modules/react');
-const reactDomPath = path.resolve(__dirname, 'node_modules/react-dom');
-const reactJsxPath = path.resolve(__dirname, 'node_modules/react/jsx-runtime');
+const reactPath = new URL('./node_modules/react', import.meta.url).pathname;
+const reactDomPath = new URL('./node_modules/react-dom', import.meta.url).pathname;
+const reactJsxPath = new URL('./node_modules/react/jsx-runtime', import.meta.url).pathname;
 
 export default defineConfig({
   plugins: [react(), base44Plugin()],
   cacheDir: 'node_modules/.vite3',
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
+      '@': new URL('./src', import.meta.url).pathname,
       'react': reactPath,
       'react-dom': reactDomPath,
       'react/jsx-runtime': reactJsxPath,
