@@ -1,5 +1,5 @@
 // Toyo Kombucha ERP — Service Worker
-const CACHE_NAME = 'toyo-kombucha-v1';
+const CACHE_NAME = 'toyo-kombucha-v3';
 const STATIC_ASSETS = ['/', '/index.html', '/manifest.json'];
 
 // Install: cache static shell
@@ -39,7 +39,21 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Static assets — cache-first
+  // JS/CSS assets — network-first to prevent stale bundle issues
+  if (url.pathname.match(/\.(js|css|mjs)$/)) {
+    event.respondWith(
+      fetch(event.request).then(response => {
+        if (response && response.status === 200) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+        }
+        return response;
+      }).catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  // Other static assets — cache-first
   event.respondWith(
     caches.match(event.request).then(cached => {
       if (cached) return cached;
