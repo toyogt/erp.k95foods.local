@@ -1,5 +1,5 @@
 // Toyo Kombucha ERP — Service Worker
-const CACHE_NAME = 'toyo-kombucha-v3';
+const CACHE_NAME = 'toyo-kombucha-v5';
 const STATIC_ASSETS = ['/', '/index.html', '/manifest.json'];
 
 // Install: cache static shell
