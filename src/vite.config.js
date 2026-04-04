@@ -14,7 +14,11 @@ export default defineConfig({
   ],
   server: {
     middlewareMode: true,
-    hmr: false,
+    hmr: {
+      protocol: 'wss',
+      host: 'localhost',
+      port: 5173,
+    },
   },
   build: {
     rollupOptions: {
@@ -26,5 +30,8 @@ export default defineConfig({
       '@': path.resolve(__dirname, 'src'),
     },
     dedupe: ['react', 'react-dom'],
+  },
+  optimizeDeps: {
+    include: ['react', 'react-dom'],
   },
 });
