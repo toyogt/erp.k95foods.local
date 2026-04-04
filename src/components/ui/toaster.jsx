@@ -1,18 +1,18 @@
-import { useToast } from "@/components/ui/use-toast";
+import { useToastContext } from "@/components/ui/toast-provider";
 import {
   Toast,
   ToastClose,
   ToastDescription,
-  ToastProvider,
   ToastTitle,
   ToastViewport,
 } from "@/components/ui/toast";
 
 export function Toaster() {
-  const { toasts } = useToast();
+  const { state } = useToastContext();
+  const { toasts } = state;
 
   return (
-    <ToastProvider>
+    <>
       {toasts.map(function ({ id, title, description, action, ...props }) {
         return (
           <Toast key={id} {...props}>
@@ -28,6 +28,6 @@ export function Toaster() {
         );
       })}
       <ToastViewport />
-    </ToastProvider>
+      </>
   );
-} 
+}
