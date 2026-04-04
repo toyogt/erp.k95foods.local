@@ -1,6 +1,7 @@
 import base44 from "@base44/vite-plugin"
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
+import path from 'path'
 
 export default defineConfig({
   logLevel: 'error',
@@ -17,6 +18,9 @@ export default defineConfig({
     allowedHosts: ['**'],
   },
   resolve: {
+    alias: {
+      '@': path.resolve(__dirname, 'src'),
+    },
     dedupe: ['react', 'react-dom'],
   },
 });
