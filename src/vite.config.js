@@ -12,6 +12,7 @@ export default defineConfig({
       visualEditAgent: true
     }),
   ],
+  ssr: false,
   server: {
     middlewareMode: true,
     hmr: {
@@ -33,5 +34,6 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: ['react', 'react-dom'],
+    exclude: [],
   },
 });
