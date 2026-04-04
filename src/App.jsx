@@ -338,8 +338,8 @@ function App() {
         <Router>
           <NavigationTracker />
           <AuthenticatedApp />
+          <Toaster />
         </Router>
-        <Toaster />
       </QueryClientProvider>
     </AuthProvider>
   )
