@@ -256,8 +256,8 @@ function App() {
             <NavigationTracker />
             <AuthenticatedApp />
           </Router>
+          <Toaster />
         </ToastContextProvider>
-        <Toaster />
       </QueryClientProvider>
     </AuthProvider>
   )
