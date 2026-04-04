@@ -88,9 +88,9 @@ export default function SMSLotManager() {
       <div className="bg-white rounded-xl border border-slate-200 p-3">
         <p className="text-xs font-semibold text-slate-500 mb-2">Week Aging Legend</p>
         <div className="flex flex-wrap gap-2">
-          {[{ label: 'Week 1 (Current)', cls: 'bg-green-100 text-green-700' }, { label: 'Week 2', cls: 'bg-yellow-100 text-yellow-700' }, { label: 'Week 3', cls: 'bg-orange-100 text-orange-700' }, { label: 'Week 4+', cls: 'bg-red-100 text-red-700' }].map(w => (
-            <span key={w.label} className={`px-3 py-1 rounded-full text-xs font-medium ${w.cls}`}>{w.label}</span>
-          ))}
+          {[{ label: 'Week 1 (Current)', cls: 'bg-green-100 text-green-700' }, { label: 'Week 2', cls: 'bg-yellow-100 text-yellow-700' }, { label: 'Week 3', cls: 'bg-orange-100 text-orange-700' }, { label: 'Week 4+', cls: 'bg-red-100 text-red-700' }].map((w) => {
+            return <span key={w.label} className={`px-3 py-1 rounded-full text-xs font-medium ${w.cls}`}>{w.label}</span>;
+          })}
         </div>
       </div>
 
