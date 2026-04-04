@@ -10,14 +10,16 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-// Activate: clean up old caches
+// Activate: clean up old caches + force takeover
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-    )
+      Promise.all(keys.map(k => caches.delete(k))) // Delete ALL old caches, including current version's old caches
+    ).then(() => clients.claim())
   );
-  clients.claim();
+  self.clients.matchAll().then(clients => {
+    clients.forEach(client => client.navigate(client.url));
+  });
 });
 
 // Fetch: network-first for navigation, cache-first for static assets
