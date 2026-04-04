@@ -1,0 +1,73 @@
+{
+  "name": "GateEntry",
+  "type": "object",
+  "title": "Gate Entry",
+  "properties": {
+    "gate_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "arrived_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "supplier_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "supplier_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "supplier_name_text": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "vehicle_number": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "driver_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "invoice_photo": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "vehicle_photo": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "weighbridge_slip_photo": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 1000
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "OPEN",
+        "IN_REVIEW",
+        "LINKED_TO_PO",
+        "CLOSED"
+      ],
+      "default": "OPEN"
+    },
+    "linked_po_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "checklist_run_id": {
+      "type": "string",
+      "maxLength": 100
+    }
+  },
+  "required": [
+    "gate_id"
+  ]
+}
