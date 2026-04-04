@@ -16,6 +16,24 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Register Service Worker early
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then(reg => console.log('SW Auto Registered ✅', reg))
+            .catch(err => console.error('SW Auto Register Error ❌', err));
+        });
+      }
+
+      // Capture install prompt BEFORE React loads
+      window.__pwaInstallPrompt = null;
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        window.__pwaInstallPrompt = e;
+        console.log('PWA install prompt captured ✅');
+      });
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
