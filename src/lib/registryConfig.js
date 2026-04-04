@@ -107,8 +107,8 @@ export const pageRegistry = [
 
   // ─── STORE MANAGEMENT ───
   { pageKey: 'SMSDashboard',       title: 'Store Dashboard',    moduleKey: 'STORE', icon: Store,           roles: ['admin', 'store_manager', 'store_receiver', 'user'] },
-  { pageKey: 'GateEntry',          title: 'Gate Entry',         moduleKey: 'STORE', icon: ShieldCheck,     roles: ['admin', 'security_guard', 'store_receiver', 'user'] },
-  { pageKey: 'GRNReceive',         title: 'Goods Receipt',      moduleKey: 'STORE', icon: PackageOpen,     roles: ['admin', 'store_receiver', 'user'] },
+  { pageKey: 'GateEntry',          title: 'Gate Entry',         moduleKey: 'STORE', icon: ShieldCheck,     roles: ['admin', 'security_guard', 'store_receiver', 'store_manager', 'user'] },
+  { pageKey: 'GRNReceive',         title: 'Goods Receipt',      moduleKey: 'STORE', icon: PackageOpen,     roles: ['admin', 'store_receiver', 'store_manager', 'user'] },
   { pageKey: 'SMSLotManager',      title: 'Lot Manager',        moduleKey: 'STORE', icon: QrCode,          roles: ['admin', 'store_manager', 'store_receiver', 'qc_inspector', 'user'] },
   { pageKey: 'SMSPutaway',         title: 'Putaway',            moduleKey: 'STORE', icon: Archive,         roles: ['admin', 'store_manager', 'store_receiver', 'user'] },
   { pageKey: 'SMSStockOut',        title: 'Stock Issue',        moduleKey: 'STORE', icon: PackageOpen,     roles: ['admin', 'store_manager', 'user'] },

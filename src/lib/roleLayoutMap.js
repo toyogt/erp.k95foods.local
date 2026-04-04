@@ -27,6 +27,8 @@ const ROLE_LAYOUT_MAP = {
   'process_controller': 'MANAGER',
   'process_designer': 'MANAGER',
   'label_supervisor': 'MANAGER',
+  'store_manager': 'MANAGER',
+  'sales_manager': 'MANAGER',
 
   // VIEWERS — Use assigned role's layout
   'user': 'VIEWER',

@@ -14,6 +14,13 @@ export async function getAllowedPagesFromDB(user) {
     return ['*']; // Wildcard means all pages
   }
 
+  // Check user-level page overrides first (stored on user.data)
+  // This is set by admin in User Management for per-user page access
+  const userPageAccess = user?.store_page_access || user?.data?.store_page_access;
+  if (userPageAccess?.length > 0) {
+    return userPageAccess;
+  }
+
   try {
     // Fetch the AppRole record for this user's role
     const roles = await base44.entities.AppRole.filter({ 
