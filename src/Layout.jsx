@@ -3,7 +3,7 @@ import { createPageUrl } from '@/utils';
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import OfflineProvider, { OfflineBanner } from '@/components/OfflineProvider';
-import { getVisibleModules, getVisiblePagesInModule, getModuleForPage, getAllPages } from '@/lib/registryConfig';
+import { getVisibleModules, getVisiblePagesInModule, getModuleForPage, getAllPages, getPagesInModule } from '@/lib/registryConfig';
 import { isOperatorLayout } from '@/lib/roleLayoutMap';
 import OperatorLayout from '@/components/layouts/OperatorLayout';
 import AccessDenied from '@/components/AccessDenied';
@@ -75,9 +75,16 @@ export default function Layout({ children, currentPageName }) {
   }
 
   // Get modules from database (AppRole.module_access) for non-admins, otherwise use registry
-  const visibleModules = isAdmin 
-    ? getVisibleModules(role) 
-    : getVisibleModules(role).filter(m => roleModuleAccess?.includes(m.moduleKey));
+  // If no module_access set, derive visible modules from allowedPages (page_access only scenario)
+  const visibleModules = isAdmin
+    ? getVisibleModules(role)
+    : roleModuleAccess?.length > 0
+      ? getVisibleModules(role).filter(m => roleModuleAccess.includes(m.moduleKey))
+      : getVisibleModules(role).filter(m =>
+          getPagesInModule(m.moduleKey).some(p =>
+            allowedPages.includes('*') || allowedPages.includes(p.pageKey)
+          )
+        );
   const activeModule = getModuleForPage(currentPageName);
 
   const toggleModule = (moduleKey) => {
@@ -113,10 +120,9 @@ export default function Layout({ children, currentPageName }) {
         {/* Module groups */}
         {visibleModules.filter(m => m.moduleKey !== 'DASHBOARD').map(mod => {
           const Icon = mod.icon;
-          const pages = getVisiblePagesInModule(mod.moduleKey, role);
-          
-          // Filter pages by allowedPages (respects page_access overrides)
-          const visiblePages = pages.filter(p => allowedPages.includes('*') || allowedPages.includes(p.pageKey));
+          // Use all pages in module if user has explicit page_access grants (not role-registry filtered)
+          const allModulePages = getPagesInModule(mod.moduleKey);
+          const visiblePages = allModulePages.filter(p => allowedPages.includes('*') || allowedPages.includes(p.pageKey));
           if (visiblePages.length === 0) return null; // Hide module if no pages visible
           const isActive = activeModule?.moduleKey === mod.moduleKey;
           const isExpanded = expandedModules[mod.moduleKey];
