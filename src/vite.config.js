@@ -5,7 +5,7 @@ import base44Plugin from '@base44/vite-plugin';
 
 export default defineConfig({
   plugins: [
-    react(), // react() MUST come before base44Plugin
+    react(),
     base44Plugin(),
   ],
   resolve: {
@@ -16,11 +16,17 @@ export default defineConfig({
       'react/jsx-runtime': path.resolve(__dirname, './node_modules/react/jsx-runtime'),
       'react/jsx-dev-runtime': path.resolve(__dirname, './node_modules/react/jsx-dev-runtime'),
     },
-    dedupe: ['react', 'react-dom', 'react/jsx-runtime', 'react/jsx-dev-runtime'],
+    dedupe: ['react', 'react-dom'],
   },
   optimizeDeps: {
-    force: true,
-    include: ['react', 'react-dom', 'react/jsx-runtime', 'react/jsx-dev-runtime'],
-    exclude: ['@base44/sdk'],
+    // Do NOT exclude @base44/sdk — let Vite pre-bundle it so React gets
+    // deduplicated into the single canonical instance via resolve.dedupe
+    include: [
+      'react',
+      'react-dom',
+      'react/jsx-runtime',
+      'react/jsx-dev-runtime',
+      '@base44/sdk',
+    ],
   },
 });
