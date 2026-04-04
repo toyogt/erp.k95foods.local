@@ -1,7 +1,7 @@
 {
-  "name": "Flowmative",
-  "short_name": "Flow",
-  "description": "K95 Enterprise Resource Planning System",
+  "name": "Toyo Kombucha",
+  "short_name": "Toyo",
+  "description": "Toyo Kombucha — K95 Enterprise Resource Planning System",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
