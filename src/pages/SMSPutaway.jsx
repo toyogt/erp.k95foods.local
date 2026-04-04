@@ -1,25 +1,14 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import { QrCode, CheckCircle2, Package, AlertCircle } from 'lucide-react';
+import { CheckCircle2, Package, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
-import QRScanner from '@/components/store/QRScanner';
+import UnifiedScanInput from '@/components/store/UnifiedScanInput';
 import ExportButton from '@/components/store/ExportButton';
 
-function ScanField({ label, value, onChange, placeholder, hint, onQRScan }) {
-  return (
-    <div>
-      <Label className="text-xs font-medium text-slate-700 flex items-center gap-1"><QrCode className="w-3.5 h-3.5" />{label}</Label>
-      <div className="flex gap-2 mt-1">
-        <Input className="h-11 text-base flex-1 font-mono" value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} />
-        <QRScanner onScan={onQRScan || onChange} label={label} />
-      </div>
-      {hint && <p className="text-xs text-slate-400 mt-1">{hint}</p>}
-    </div>
-  );
-}
+
 
 export default function SMSPutaway() {
   const { toast } = useToast();
@@ -40,7 +29,7 @@ export default function SMSPutaway() {
   async function load() {
     setLoading(true);
     const [lots, locs, history] = await Promise.all([
-      base44.entities.StoreLot.filter({ status: 'approved' }),
+      base44.entities.StoreLot.filter({ status: 'approved' }), // QC approval NOT required for putaway
       base44.entities.StoreLocation.filter({ is_active: true }),
       base44.entities.StorePutaway.list('-created_date', 50),
     ]);
@@ -136,7 +125,7 @@ export default function SMSPutaway() {
       )}
 
       <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-4">
-        <ScanField label="Step 1 — Scan Location QR" value={locationScan} onChange={setLocationScan} onQRScan={setLocationScan} placeholder="Scan or type location code" hint="Point phone camera at rack QR code" />
+        <UnifiedScanInput label="Step 1 — Scan Location QR" value={locationScan} onChange={setLocationScan} placeholder="Scan or type location code" hint="Point phone camera at location QR code" />
 
         {locationScan && (
           resolvedLocation ? (
@@ -150,7 +139,7 @@ export default function SMSPutaway() {
           ) : <div className="flex items-center gap-2 text-red-500 text-sm"><AlertCircle className="w-4 h-4" /> Location not found</div>
         )}
 
-        <ScanField label="Step 2 — Scan Lot QR" value={lotScan} onChange={setLotScan} onQRScan={setLotScan} placeholder="Scan or type Lot ID" hint="Point phone camera at lot QR code" />
+        <UnifiedScanInput label="Step 2 — Scan Lot QR" value={lotScan} onChange={setLotScan} placeholder="Scan or type Lot ID" hint="Point phone camera at lot QR code" />
 
         {lotScan && (
           resolvedLot ? (

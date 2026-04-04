@@ -28,49 +28,49 @@ function ItemRow({ idx, item, balances, onChange, onRemove, manualAllowed }) {
         </button>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-      <div>
-        <Label className="text-xs font-medium text-slate-700">Item Name *</Label>
-        <div className="mt-1">
-          <ItemSearchDropdown
+        <div>
+          <Label className="text-xs font-medium text-slate-700">Item Name *</Label>
+          <div className="mt-1">
+            <ItemSearchDropdown
             value={item.item_name}
             onSelect={selected => onChange(idx, { item_code: selected.item_code, item_name: selected.item_name, uom: selected.base_uom, lot_id: '' })}
             onClear={() => onChange(idx, { item_code: '', item_name: '', uom: '', lot_id: '' })}
-          />
-        </div>
-        {item.item_code && <p className="text-xs text-slate-400 mt-0.5 font-mono">{item.item_code}</p>}
-      </div>
-      <div>
-        <Label className="text-xs font-medium text-slate-700">Lot ID *</Label>
-        <div className="mt-1">
-          <LotSearchField
+              />
+            </div>
+            {item.item_code && <p className="text-xs text-slate-400 mt-0.5 font-mono">{item.item_code}</p>}
+          </div>
+          <div>
+            <Label className="text-xs font-medium text-slate-700">Lot ID *</Label>
+            <div className="mt-1">
+              <LotSearchField
             value={item.lot_id || ''}
             onChange={val => onChange(idx, { lot_id: val })}
             availableLots={uniqueLots}
             manualAllowed={manualAllowed}
-          />
-        </div>
-        {item.lot_id && (
-          <p className="text-xs mt-0.5">
+            />
+            </div>
+            {item.lot_id && (
+            <p className="text-xs mt-0.5">
             {totalAvail > 0
               ? <span className="text-green-600">Available: {totalAvail.toFixed(2)} {item.uom || 'units'}</span>
               : <span className="text-red-500">Lot not found in stock</span>}
-          </p>
-        )}
-        </div>
-        <div>
-          <Label className="text-xs font-medium text-slate-700">Quantity *</Label>
-          <Input type="number" className="h-9 text-sm mt-1" min="0.01" placeholder="0"
+            </p>
+            )}
+            </div>
+            <div>
+            <Label className="text-xs font-medium text-slate-700">Quantity *</Label>
+            <Input type="number" className="h-9 text-sm mt-1" min="0.01" placeholder="0"
             value={item.quantity || ''}
             onChange={e => onChange(idx, { quantity: e.target.value })} />
-          {item.lot_id && item.quantity && parseFloat(item.quantity) > totalAvail && (
+            {item.lot_id && item.quantity && parseFloat(item.quantity) > totalAvail && (
             <p className="text-xs text-red-500 mt-0.5">Exceeds available stock</p>
-          )}
-        </div>
-      </div>
+            )}
+            </div>
+            </div>
 
-      {balancesForLot.length > 0 && (
-        <div className="bg-slate-50 rounded-lg p-3">
-          <p className="text-xs font-medium text-slate-500 mb-1">Stock locations (FIFO order):</p>
+        {balancesForLot.length > 0 && (
+          <div className="bg-slate-50 rounded-lg p-3">
+            <p className="text-xs font-medium text-slate-500 mb-1">Stock locations (FIFO order):</p>
           <div className="space-y-1">
             {balancesForLot
               .sort((a, b) => (a.mfg_date || '') < (b.mfg_date || '') ? -1 : 1)
@@ -81,10 +81,10 @@ function ItemRow({ idx, item, balances, onChange, onRemove, manualAllowed }) {
                 </div>
               ))}
           </div>
-        </div>
-      )}
-    </div>
-  );
+          </div>
+          )}
+          </div>
+          );
 }
 
 // ── Main page ─────────────────────────────────────────────────────────────────
@@ -104,12 +104,20 @@ export default function SMSStockOut() {
       .then(r => setManualAllowed(r[0]?.value === 'true'));
   }, []);
 
-  // Load stock balances for all selected item codes
+  // Load stock balances ONLY for lots with 'putaway' status (already stored)
   useEffect(() => {
     const codes = [...new Set(items.map(i => i.item_code).filter(Boolean))];
     if (codes.length === 0) { setBalances([]); return; }
-    Promise.all(codes.map(code => base44.entities.StoreStockBalance.filter({ item_code: code })))
-      .then(results => setBalances(results.flat()));
+    Promise.all(codes.map(code => 
+      base44.entities.StoreStockBalance.filter({ item_code: code })
+    )).then(async results => {
+      const allBalances = results.flat();
+      // Filter to only show lots with 'putaway' status
+      const putawayLots = await base44.entities.StoreLot.filter({ status: 'putaway' });
+      const putawayLotIds = new Set(putawayLots.map(l => l.lot_id));
+      const filtered = allBalances.filter(b => putawayLotIds.has(b.lot_id));
+      setBalances(filtered);
+    });
   }, [items.map(i => i.item_code).join(',')]);
 
   function addItem() {
@@ -206,7 +214,7 @@ export default function SMSStockOut() {
       )}
 
       <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div>
             <Label className="text-xs font-medium text-slate-700">Issue Type *</Label>
             <select className="w-full h-9 border border-slate-200 rounded-md px-3 text-sm mt-1"
@@ -214,19 +222,19 @@ export default function SMSStockOut() {
               <option value="production">Production Issue</option>
               <option value="dispatch">Dispatch</option>
               <option value="internal">Internal Use</option>
-            </select>
-          </div>
-          <div>
-            <Label className="text-xs font-medium text-slate-700">Reference Number</Label>
-            <Input className="h-9 text-sm mt-1" placeholder="Production Order / Dispatch ref"
+              </select>
+              </div>
+              <div>
+              <Label className="text-xs font-medium text-slate-700">Reference Number</Label>
+              <Input className="h-9 text-sm mt-1" placeholder="Production Order / Dispatch ref"
               value={referenceNumber} onChange={e => setReferenceNumber(e.target.value)} />
-          </div>
-          <div>
-            <Label className="text-xs font-medium text-slate-700">Notes</Label>
-            <Input className="h-9 text-sm mt-1" placeholder="Optional notes"
+              </div>
+              <div>
+              <Label className="text-xs font-medium text-slate-700">Notes</Label>
+              <Input className="h-9 text-sm mt-1" placeholder="Optional notes"
               value={notes} onChange={e => setNotes(e.target.value)} />
-          </div>
-        </div>
+              </div>
+              </div>
 
         <div className="space-y-3">
           {items.map((item, idx) => (
