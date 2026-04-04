@@ -14,11 +14,7 @@ export default defineConfig({
   ],
   server: {
     middlewareMode: true,
-    hmr: {
-      protocol: 'wss',
-      host: typeof location !== 'undefined' ? location.hostname : undefined,
-      port: typeof location !== 'undefined' ? location.port : undefined,
-    },
+    hmr: false,
   },
   build: {
     rollupOptions: {
