@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import { QrCode, CheckCircle2, XCircle, Search, Package } from 'lucide-react';
+import { QrCode, Search } from 'lucide-react';
 import ExportButton from '@/components/store/ExportButton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useToast } from '@/components/ui/use-toast';
 import QRCode from 'react-qr-code';
 
 function WeekBadge({ weeks }) {
@@ -23,11 +22,8 @@ function StatusBadge({ status }) {
     damaged: 'bg-orange-100 text-orange-700',
   };
   const labels = { approved: 'Approved', rejected: 'Rejected', putaway: 'Stored', consumed: 'Consumed', damaged: 'Damaged' };
-  return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${map[status] || 'bg-slate-100 text-slate-600'}`}>{labels[status] || status}</span>
-}`}>{labels[status] || status}</span>;
+  return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${map[status] || 'bg-slate-100 text-slate-600'}`}>{labels[status] || status}</span>;
 }
-
-
 
 function QRModal({ lot, onClose }) {
   return (
@@ -91,7 +87,6 @@ export default function SMSLotManager() {
           {[{ label: 'Week 1 (Current)', cls: 'bg-green-100 text-green-700' }, { label: 'Week 2', cls: 'bg-yellow-100 text-yellow-700' }, { label: 'Week 3', cls: 'bg-orange-100 text-orange-700' }, { label: 'Week 4+', cls: 'bg-red-100 text-red-700' }].map((w) => (
             <span key={w.label} className={`px-3 py-1 rounded-full text-xs font-medium ${w.cls}`}>{w.label}</span>
           ))}
-        </div>}
         </div>
       </div>
 
