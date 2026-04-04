@@ -147,6 +147,7 @@ const LayoutWrapper = ({ children, currentPageName }) => Layout ?
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
+  const [redirectedToLogin, setRedirectedToLogin] = React.useState(false);
 
   // Show loading spinner while checking app public settings or auth
   if (isLoadingPublicSettings || isLoadingAuth) {
@@ -157,16 +158,34 @@ const AuthenticatedApp = () => {
     );
   }
 
-  // Handle authentication errors
-  if (authError) {
-    if (authError.type === 'user_not_registered') {
-      return <UserNotRegisteredError />;
-    } else if (authError.type === 'auth_required') {
-      // Redirect to login automatically
+  // Handle authentication errors via useEffect (not during render)
+  React.useEffect(() => {
+    if (authError?.type === 'user_not_registered') {
+      // User not registered — UI will show error message
+    } else if (authError?.type === 'auth_required' && !redirectedToLogin) {
+      setRedirectedToLogin(true);
       navigateToLogin();
-      return null;
     }
+  }, [authError, navigateToLogin, redirectedToLogin]);
+
+  if (authError?.type === 'user_not_registered') {
+    return <UserNotRegisteredError />;
   }
+
+  if (authError?.type === 'auth_required') {
+    return null;
+  }
+
+  // Manually excluded routes (avoid duplication in registry loop)
+  const MANUAL_ROUTES = new Set([
+    'AuditLogViewer', 'TransferReceiving', 'SLAConfigManager', 'SLAEscalationDashboard',
+    'DistributorPortal', 'SalesOrderDetail', 'SalesCustomerManager', 'SalesPriceListView',
+    'SalesPicklistDetail', 'SalesDeliveryNoteDetail', 'SalesGRNReconciliation',
+    'SalesPicklists', 'SalesInvoices', 'SalesInvoiceDetail', 'SKUBOMConfig', 'ScheduledTaskManager',
+    'SMSDashboard', 'SMSLocationManager', 'SMSLotManager', 'SMSPutaway', 'SMSStockOut',
+    'SMSTransfer', 'SMSOpeningStock', 'SMSReorderConfig', 'SMSCycleCount', 'SMSAdjustments',
+    'SMSReports', 'SMSStoreSettings'
+  ]);
 
   // Render the main app with auto-generated routes from registry
   return (
@@ -177,7 +196,7 @@ const AuthenticatedApp = () => {
         </LayoutWrapper>
       } />
       
-      {/* Explicit route for Audit Log Viewer */}
+      {/* Explicit route for Audit Log Viewer with params */}
       <Route
         path="/AuditLogViewer"
         element={
@@ -197,133 +216,28 @@ const AuthenticatedApp = () => {
         }
       />
 
-      {/* SLA Routes */}
-      <Route
-        path="/SLAConfigManager"
-        element={
-          <LayoutWrapper currentPageName="SLAConfigManager">
-            <SLAConfigManager />
-          </LayoutWrapper>
-        }
-      />
-      <Route
-        path="/SLAEscalationDashboard"
-        element={
-          <LayoutWrapper currentPageName="SLAEscalationDashboard">
-            <SLAEscalationDashboard />
-          </LayoutWrapper>
-        }
-      />
-
-      {/* Distributor Portal */}
-      <Route
-        path="/DistributorPortal"
-        element={
-          <LayoutWrapper currentPageName="DistributorPortal">
-            <DistributorPortal />
-          </LayoutWrapper>
-        }
-      />
-
-      {/* Sales Order Detail — not in auto-registry loop */}
-      <Route
-        path="/SalesOrderDetail"
-        element={
-          <LayoutWrapper currentPageName="SalesOrderDetail">
-            <SalesOrderDetail />
-          </LayoutWrapper>
-        }
-      />
-
-      {/* Sales document detail pages */}
-      <Route
-        path="/SalesCustomerManager"
-        element={<LayoutWrapper currentPageName="SalesCustomerManager"><SalesCustomerManager /></LayoutWrapper>}
-      />
-      <Route
-        path="/SalesPriceListView"
-        element={<LayoutWrapper currentPageName="SalesPriceListView"><SalesPriceListView /></LayoutWrapper>}
-      />
-      <Route
-        path="/SalesPicklistDetail"
-        element={
-          <LayoutWrapper currentPageName="SalesPicklistDetail">
-            <SalesPicklistDetail />
-          </LayoutWrapper>
-        }
-      />
-      <Route
-        path="/SalesDeliveryNoteDetail"
-        element={
-          <LayoutWrapper currentPageName="SalesDeliveryNoteDetail">
-            <SalesDeliveryNoteDetail />
-          </LayoutWrapper>
-        }
-      />
-      <Route
-        path="/SalesGRNReconciliation"
-        element={<LayoutWrapper currentPageName="SalesGRNReconciliation"><SalesGRNReconciliation /></LayoutWrapper>}
-      />
-      <Route
-        path="/SalesPicklists"
-        element={<LayoutWrapper currentPageName="SalesPicklists"><SalesPicklists /></LayoutWrapper>}
-      />
-      <Route
-        path="/SalesInvoices"
-        element={<LayoutWrapper currentPageName="SalesInvoices"><SalesInvoices /></LayoutWrapper>}
-      />
-      <Route
-        path="/SalesInvoiceDetail"
-        element={
-          <LayoutWrapper currentPageName="SalesInvoiceDetail">
-            <SalesInvoiceDetail />
-          </LayoutWrapper>
-        }
-      />
-
-      {/* Material Planning Configuration */}
-      <Route
-        path="/SKUBOMConfig"
-        element={<LayoutWrapper currentPageName="SKUBOMConfig"><SKUBOMConfig /></LayoutWrapper>}
-      />
-
-      {/* Scheduled Tasks */}
-      <Route
-        path="/ScheduledTaskManager"
-        element={<LayoutWrapper currentPageName="ScheduledTaskManager"><ScheduledTaskManager /></LayoutWrapper>}
-      />
-
-      {/* Store Management System Routes */}
-      {[
-        ['SMSDashboard', SMSDashboard], ['SMSLocationManager', SMSLocationManager],
-        ['SMSLotManager', SMSLotManager], ['SMSPutaway', SMSPutaway],
-        ['SMSStockOut', SMSStockOut], ['SMSTransfer', SMSTransfer],
-        ['SMSOpeningStock', SMSOpeningStock], ['SMSReorderConfig', SMSReorderConfig],
-        ['SMSCycleCount', SMSCycleCount], ['SMSAdjustments', SMSAdjustments],
-        ['SMSReports', SMSReports], ['SMSStoreSettings', SMSStoreSettings],
-      ].map(([key, Comp]) => (
-        <Route key={key} path={`/${key}`} element={<LayoutWrapper currentPageName={key}><Comp /></LayoutWrapper>} />
-      ))}
-
-      {/* Auto-generated routes from unified registry */}
-      {getAllRoutablePages().map((pageEntry) => {
+      {/* Auto-generated routes from unified registry (excluding manual overrides) */}
+      {getAllRoutablePages()
+        .filter(p => !MANUAL_ROUTES.has(p.pageKey))
+        .map((pageEntry) => {
         const Component = PAGE_COMPONENTS[pageEntry.pageKey];
         if (!Component) {
           console.warn(`Page component not found for ${pageEntry.pageKey}`);
           return null;
         }
-        return (
-          <Route
-            key={pageEntry.pageKey}
-            path={`/${pageEntry.pageKey}`}
-            element={
-              <LayoutWrapper currentPageName={pageEntry.pageKey}>
-                <Component />
-              </LayoutWrapper>
-            }
-          />
-        );
-      })}
+         const routePath = pageEntry.pageKey === 'TransferReceiving' ? `/${pageEntry.pageKey}/:transferId` : `/${pageEntry.pageKey}`;
+          return (
+            <Route
+              key={pageEntry.pageKey}
+              path={routePath}
+              element={
+                <LayoutWrapper currentPageName={pageEntry.pageKey}>
+                  <Component />
+                </LayoutWrapper>
+              }
+            />
+          );
+        })}
       
       <Route path="*" element={<PageNotFound />} />
     </Routes>
