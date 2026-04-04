@@ -69,7 +69,8 @@ export const pageRegistry = [
 
   // GRN pages moved to STORE module above
 
-  // QC Inbox removed — Quality Control bypassed
+  // ─── QUALITY CONTROL ───
+  { pageKey: 'QCInbox', title: 'Quality Control Inbox', moduleKey: 'STORE', icon: ClipboardCheck, roles: ['admin', 'qc_inspector', 'store_manager', 'user'] },
 
   // ─── ACCOUNTS ───
   { pageKey: 'InvoiceCapture', title: 'Invoice Capture', moduleKey: 'ACCOUNTS', icon: FileText, roles: ['admin', 'accounts_user', 'accounts_manager', 'user'] },

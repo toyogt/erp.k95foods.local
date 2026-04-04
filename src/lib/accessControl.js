@@ -22,21 +22,19 @@ export async function getAllowedPagesFromDB(user) {
     });
 
     const role = roles?.[0];
+
+    // If explicit page_access is set, always use it (highest priority)
+    if (role?.page_access?.length > 0) {
+      return role.page_access;
+    }
+
+    // Otherwise expand from module_access
     if (role?.module_access?.length > 0) {
-      // New system: convert module_access to page names
       const allowedPages = new Set();
-      
-      // Add all pages from allowed modules
       role.module_access.forEach(mod => {
         const pages = getPagesInModule(mod);
         pages.forEach(p => allowedPages.add(p.pageKey));
       });
-      
-      // If page_access overrides are set, replace module pages with only those pages
-      if (role.page_access?.length > 0) {
-        return role.page_access;
-      }
-      
       return Array.from(allowedPages);
     }
   } catch (err) {
