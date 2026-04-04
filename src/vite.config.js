@@ -9,13 +9,22 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
-    dedupe: ['react', 'react-dom']
+    // Force single React instance - eliminates duplicate React errors
+    dedupe: ['react', 'react-dom', 'react-router-dom'],
+    // Prevent multiple node_modules resolution
+    preferBuiltins: false,
   },
   server: {
+    // HMR configuration for preview environment
     hmr: {
       protocol: 'wss',
       host: 'preview-sandbox--69c237f5cfd7eab4cd2d386a.base44.app',
-      port: 443
-    }
-  }
+      port: 443,
+    },
+  },
+  // Optimize dependencies to prevent duplicate installations
+  optimizeDeps: {
+    include: ['react', 'react-dom', 'react-router-dom'],
+    exclude: ['@base44/sdk'],
+  },
 })
