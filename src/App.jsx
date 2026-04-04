@@ -106,6 +106,7 @@ import SMSStockOut from './pages/SMSStockOut';
 import SMSTransfer from './pages/SMSTransfer';
 import SMSOpeningStock from './pages/SMSOpeningStock';
 import SMSReorderConfig from './pages/SMSReorderConfig';
+import SMSStoreSettings from './pages/SMSStoreSettings';
 import SMSCycleCount from './pages/SMSCycleCount';
 import SMSAdjustments from './pages/SMSAdjustments';
 import SMSReports from './pages/SMSReports';
@@ -131,7 +132,7 @@ const PAGE_COMPONENTS = {
   SalesCustomerManager, SalesPriceListView, SalesGRNReconciliation, TransportRateCards,
   SalesPicklists, SalesInvoices,
   SMSDashboard, SMSLocationManager, SMSLotManager, SMSPutaway, SMSStockOut,
-  SMSTransfer, SMSOpeningStock, SMSReorderConfig, SMSCycleCount, SMSAdjustments, SMSReports,
+  SMSTransfer, SMSOpeningStock, SMSReorderConfig, SMSCycleCount, SMSAdjustments, SMSReports, SMSStoreSettings,
   SKUBOMConfig, ScheduledTaskManager,
 };
 
@@ -298,7 +299,7 @@ const AuthenticatedApp = () => {
         ['SMSStockOut', SMSStockOut], ['SMSTransfer', SMSTransfer],
         ['SMSOpeningStock', SMSOpeningStock], ['SMSReorderConfig', SMSReorderConfig],
         ['SMSCycleCount', SMSCycleCount], ['SMSAdjustments', SMSAdjustments],
-        ['SMSReports', SMSReports],
+        ['SMSReports', SMSReports], ['SMSStoreSettings', SMSStoreSettings],
       ].map(([key, Comp]) => (
         <Route key={key} path={`/${key}`} element={<LayoutWrapper currentPageName={key}><Comp /></LayoutWrapper>} />
       ))}

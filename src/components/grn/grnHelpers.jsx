@@ -21,12 +21,9 @@ export async function logGrnAudit({ action, entity_type, entity_id, details, use
 }
 
 export const GRN_STATUS_COLOR = {
-  DRAFT:            'bg-slate-100 text-slate-600',
-  SUBMITTED_TO_QC:  'bg-blue-100 text-blue-700',
-  QC_HOLD:          'bg-amber-100 text-amber-700',
-  QC_PASSED:        'bg-green-100 text-green-700',
-  QC_FAILED:        'bg-red-100 text-red-700',
-  CANCELLED:        'bg-slate-200 text-slate-500',
+  DRAFT:     'bg-slate-100 text-slate-600',
+  RECEIVED:  'bg-green-100 text-green-700',
+  CANCELLED: 'bg-slate-200 text-slate-500',
 };
 
 export const GATE_STATUS_COLOR = {
