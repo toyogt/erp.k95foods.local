@@ -15,7 +15,7 @@ export default defineConfig({
     react(),
   ],
   server: {
-    allowedHosts: ['**'],
+    allowedHosts: 'ta-01knbq228hc493whhndegs9r4x-5173-0dgromorx38ebrbkgm9mmu95s.w.modal.host',
   },
   resolve: {
     alias: {
