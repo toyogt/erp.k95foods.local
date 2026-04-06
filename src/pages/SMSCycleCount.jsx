@@ -3,6 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { Plus, CheckCircle2, X, ClipboardCheck } from 'lucide-react';
 import { SkeletonList } from '@/components/store/StoreSkeleton';
 import ExportButton from '@/components/store/ExportButton';
+import DiscrepancyModal from '@/components/store/DiscrepancyModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,10 +13,31 @@ function CountRow({ entry, onCount }) {
   const [physical, setPhysical] = useState('');
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
+  const [showDiscrepancy, setShowDiscrepancy] = useState(false);
   const { toast } = useToast();
 
   async function submit() {
     if (physical === '') return;
+    const phyQty = parseFloat(physical);
+    const variance = phyQty - entry.system_quantity;
+    // Show modal if discrepancy detected
+    if (variance !== 0) {
+      setShowDiscrepancy(true);
+      return;
+    }
+    // No variance: proceed normally
+    setSaving(true);
+    const user = await base44.auth.me();
+    await base44.entities.StoreCycleCount.update(entry.id, {
+      physical_quantity: phyQty, variance, status: 'counted',
+      counted_by: user?.email, counted_at: new Date().toISOString(), notes,
+    });
+    toast({ title: 'Count recorded', description: `Perfect count — no variance` });
+    onCount();
+    setSaving(false);
+  }
+
+  async function handleProceedWithDiscrepancy() {
     setSaving(true);
     const user = await base44.auth.me();
     const phyQty = parseFloat(physical);
@@ -24,7 +46,45 @@ function CountRow({ entry, onCount }) {
       physical_quantity: phyQty, variance, status: 'counted',
       counted_by: user?.email, counted_at: new Date().toISOString(), notes,
     });
-    toast({ title: 'Count recorded', description: `Variance: ${variance > 0 ? '+' : ''}${variance}` });
+    toast({ title: 'Count recorded', description: `Variance noted: ${variance > 0 ? '+' : ''}${variance}` });
+    setShowDiscrepancy(false);
+    onCount();
+    setSaving(false);
+  }
+
+  async function handleAdjustPutaway({ adjustedQty, reason }) {
+    setSaving(true);
+    const user = await base44.auth.me();
+    const phyQty = parseFloat(physical);
+    const variance = phyQty - entry.system_quantity;
+    
+    // Update cycle count
+    await base44.entities.StoreCycleCount.update(entry.id, {
+      physical_quantity: phyQty, variance, status: 'counted',
+      counted_by: user?.email, counted_at: new Date().toISOString(), notes,
+      adjustment_reason: reason, adjusted_quantity: adjustedQty,
+    });
+    
+    // Adjust the stock balance for this lot/location
+    const balances = await base44.entities.StoreStockBalance.filter({
+      lot_id: entry.lot_id,
+      location_id: entry.location_id,
+    });
+    
+    if (balances.length > 0) {
+      const bal = balances[0];
+      const adjustment = adjustedQty - bal.quantity;
+      const newQty = bal.quantity + adjustment;
+      
+      if (newQty <= 0) {
+        await base44.entities.StoreStockBalance.delete(bal.id);
+      } else {
+        await base44.entities.StoreStockBalance.update(bal.id, { quantity: newQty });
+      }
+    }
+    
+    toast({ title: 'Count & adjustment recorded', description: `Putaway lot adjusted to ${adjustedQty}` });
+    setShowDiscrepancy(false);
     onCount();
     setSaving(false);
   }
@@ -47,25 +107,36 @@ function CountRow({ entry, onCount }) {
   }
 
   return (
-    <div className="px-4 py-3 border-b border-slate-100">
-      <div className="flex items-center justify-between mb-2">
-        <div>
-          <p className="text-sm font-medium text-slate-800">{entry.item_name}</p>
-          <p className="text-xs text-slate-400">{entry.lot_id} · {entry.location_code} · System: {entry.system_quantity} {entry.uom}</p>
+    <>
+      <div className="px-4 py-3 border-b border-slate-100">
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <p className="text-sm font-medium text-slate-800">{entry.item_name}</p>
+            <p className="text-xs text-slate-400">{entry.lot_id} · {entry.location_code} · System: {entry.system_quantity} {entry.uom}</p>
+          </div>
+        </div>
+        <div className="flex gap-3 items-end">
+          <div className="flex-1">
+            <Label className="text-xs font-medium text-slate-700">Physical Count *</Label>
+            <Input type="number" className="h-9 text-sm mt-1" value={physical} onChange={e => setPhysical(e.target.value)} placeholder="Actual counted quantity" />
+          </div>
+          <div className="flex-1">
+            <Label className="text-xs font-medium text-slate-700">Notes</Label>
+            <Input className="h-9 text-sm mt-1" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Optional remarks" />
+          </div>
+          <Button size="sm" className="h-9 gap-1.5" disabled={physical === '' || saving} onClick={submit}><CheckCircle2 className="w-4 h-4" />Record</Button>
         </div>
       </div>
-      <div className="flex gap-3 items-end">
-        <div className="flex-1">
-          <Label className="text-xs font-medium text-slate-700">Physical Count *</Label>
-          <Input type="number" className="h-9 text-sm mt-1" value={physical} onChange={e => setPhysical(e.target.value)} placeholder="Actual counted quantity" />
-        </div>
-        <div className="flex-1">
-          <Label className="text-xs font-medium text-slate-700">Notes</Label>
-          <Input className="h-9 text-sm mt-1" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Optional remarks" />
-        </div>
-        <Button size="sm" className="h-9 gap-1.5" disabled={physical === '' || saving} onClick={submit}><CheckCircle2 className="w-4 h-4" />Record</Button>
-      </div>
-    </div>
+      {showDiscrepancy && (
+        <DiscrepancyModal
+          entry={entry}
+          physicalQty={parseFloat(physical)}
+          onProceed={handleProceedWithDiscrepancy}
+          onAdjust={handleAdjustPutaway}
+          onCancel={() => setShowDiscrepancy(false)}
+        />
+      )}
+    </>
   );
 }
 
