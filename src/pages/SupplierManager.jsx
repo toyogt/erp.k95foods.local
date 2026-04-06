@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
-import { Loader2, Plus, Search, CheckCircle2, AlertTriangle, Ban, Edit2, X } from 'lucide-react';
+import { Loader2, Plus, Search, CheckCircle2, AlertTriangle, Ban, Edit2, X, Link2 } from 'lucide-react';
 import { STATUS_COLOR, logPurchaseAudit, genId } from '@/components/purchase/purchaseHelpers';
+import SupplierItemMappingPanel from '@/components/store/SupplierItemMappingPanel';
 
 const EMPTY = {
   supplier_id: '', supplier_name: '', approval_status: 'HOLD', is_approved: false,
@@ -252,6 +253,16 @@ export default function SupplierManager() {
                     Delete
                   </button>
                 </div>
+
+                {/* Item mapping (expandable) */}
+                <details className="mt-3 border-t border-slate-100 pt-3">
+                  <summary className="flex items-center gap-1.5 text-xs font-semibold text-teal-700 cursor-pointer hover:text-teal-800">
+                    <Link2 className="w-3.5 h-3.5" /> Item Mapping
+                  </summary>
+                  <div className="mt-3">
+                    <SupplierItemMappingPanel supplierId={s.supplier_id} supplierName={s.supplier_name} />
+                  </div>
+                </details>
               </div>
             ))}
             {filtered.length === 0 && <p className="text-center text-slate-400 py-8">No suppliers found.</p>}

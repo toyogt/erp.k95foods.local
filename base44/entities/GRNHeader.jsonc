@@ -28,6 +28,7 @@
       "type": "string",
       "enum": [
         "DRAFT",
+        "RECEIVED",
         "SUBMITTED_TO_QC",
         "QC_HOLD",
         "QC_PASSED",

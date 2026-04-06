@@ -1,0 +1,39 @@
+{
+  "name": "SupplierItemMapping",
+  "type": "object",
+  "title": "Supplier Item Mapping",
+  "description": "Maps suppliers to store items for GRN dropdown filtering",
+  "properties": {
+    "supplier_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Reference to Supplier.supplier_id"
+    },
+    "supplier_name": {
+      "type": "string",
+      "maxLength": 300
+    },
+    "item_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Reference to StoreItemMaster record id"
+    },
+    "item_code": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "item_name": {
+      "type": "string",
+      "maxLength": 300
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "supplier_id",
+    "item_id",
+    "item_name"
+  ]
+}

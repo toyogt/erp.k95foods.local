@@ -3,7 +3,9 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
-import { Plus, Pencil, Trash2, Search, PackageOpen } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, PackageOpen, ImageIcon } from 'lucide-react';
+import MaterialPhotoUpload from '@/components/store/MaterialPhotoUpload';
+import { SweetAlertModal } from '@/components/store/SweetAlert';
 
 const CATEGORIES = [
   { value: 'ingredient', label: 'Ingredient' },
@@ -15,6 +17,7 @@ const CATEGORIES = [
 
 const EMPTY_FORM = {
   item_name: '', item_category: 'other', uom: 'Nos',
+  material_photo: '',
   batch_required: false, expiry_required: false,
   mfg_date_required: false, qc_required: false,
   min_shelf_life_days: '', storage_notes: '', is_active: true,
@@ -30,6 +33,10 @@ function ItemFormModal({ item, onClose, onSaved }) {
   async function handleSave() {
     if (!form.item_name?.trim()) {
       toast({ title: 'Item name is required', variant: 'destructive' });
+      return;
+    }
+    if (!form.material_photo) {
+      toast({ title: 'Material photo is mandatory. Please upload a photo.', variant: 'destructive' });
       return;
     }
     setSaving(true);
@@ -65,6 +72,11 @@ function ItemFormModal({ item, onClose, onSaved }) {
             <label className="text-xs font-medium text-slate-700">Item Name *</label>
             <Input className="h-9 text-sm mt-1" value={form.item_name} onChange={e => setField('item_name', e.target.value)} placeholder="Enter item name" />
           </div>
+          <MaterialPhotoUpload
+            value={form.material_photo}
+            onChange={v => setField('material_photo', v)}
+            required
+          />
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-medium text-slate-700">Category</label>
@@ -133,15 +145,31 @@ export default function SMSItemMaster() {
 
   useEffect(() => { load(); }, []);
 
+  const [alertConfig, setAlertConfig] = useState(null);
+  const [pendingDeleteItem, setPendingDeleteItem] = useState(null);
+
   async function handleDelete(item) {
-    if (!confirm(`Delete "${item.item_name}"?`)) return;
-    try {
-      await base44.entities.StoreItemMaster.delete(item.id);
-      toast({ title: 'Item deleted successfully' });
-      load();
-    } catch (err) {
-      toast({ title: 'Failed to delete item', variant: 'destructive' });
-    }
+    setPendingDeleteItem(item);
+    setAlertConfig({
+      open: true,
+      type: 'warning',
+      title: 'Delete Item?',
+      message: `Are you sure you want to delete "${item.item_name}"? This cannot be undone.`,
+      showCancel: true,
+      confirmText: 'Delete',
+      onConfirm: async () => {
+        setAlertConfig(null);
+        try {
+          await base44.entities.StoreItemMaster.delete(item.id);
+          toast({ title: 'Item deleted successfully' });
+          load();
+        } catch (err) {
+          setAlertConfig({ open: true, type: 'error', title: 'Delete Failed', message: 'Could not delete this item. It may be referenced elsewhere.' });
+        }
+        setPendingDeleteItem(null);
+      },
+      onClose: () => { setAlertConfig(null); setPendingDeleteItem(null); },
+    });
   }
 
   const filtered = items.filter(i =>
@@ -152,6 +180,18 @@ export default function SMSItemMaster() {
   return (
     <div className="min-h-screen bg-slate-50 pb-12">
       <div className="max-w-5xl mx-auto space-y-4 px-3 md:px-4 lg:px-6 py-6">
+      {alertConfig && (
+        <SweetAlertModal
+          open={alertConfig.open}
+          type={alertConfig.type}
+          title={alertConfig.title}
+          message={alertConfig.message}
+          showCancel={alertConfig.showCancel}
+          confirmText={alertConfig.confirmText}
+          onConfirm={alertConfig.onConfirm}
+          onClose={alertConfig.onClose || (() => setAlertConfig(null))}
+        />
+      )}
       {modal && (
         <ItemFormModal
           item={modal === 'new' ? null : modal}
@@ -198,7 +238,18 @@ export default function SMSItemMaster() {
             <tbody className="divide-y divide-slate-100">
               {filtered.map(item => (
                 <tr key={item.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-3 font-medium text-slate-900">{item.item_name}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      {item.material_photo ? (
+                        <img src={item.material_photo} alt="" className="w-8 h-8 rounded object-cover border border-slate-200" />
+                      ) : (
+                        <div className="w-8 h-8 rounded bg-slate-100 flex items-center justify-center">
+                          <ImageIcon className="w-3.5 h-3.5 text-slate-400" />
+                        </div>
+                      )}
+                      <span className="font-medium text-slate-900">{item.item_name}</span>
+                    </div>
+                  </td>
                   <td className="px-4 py-3 text-slate-600 hidden md:table-cell capitalize">{item.item_category?.replace('_', ' ')}</td>
                   <td className="px-4 py-3 text-slate-600 hidden md:table-cell">{item.uom || 'Nos'}</td>
                   <td className="px-4 py-3 hidden lg:table-cell">

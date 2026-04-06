@@ -1,0 +1,76 @@
+{
+  "name": "StoreItemMaster",
+  "type": "object",
+  "title": "Store Item Master",
+  "description": "Centralized item master with validation rules for Store operations",
+  "properties": {
+    "item_code": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Auto-generated sequential code e.g. ITEM-0001"
+    },
+    "item_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300
+    },
+    "item_category": {
+      "type": "string",
+      "enum": [
+        "ingredient",
+        "box_type",
+        "cap_type",
+        "packaging",
+        "other"
+      ],
+      "default": "other"
+    },
+    "uom": {
+      "type": "string",
+      "maxLength": 50,
+      "default": "Nos"
+    },
+    "material_photo": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "URL of the uploaded material photo (mandatory)"
+    },
+    "batch_required": {
+      "type": "boolean",
+      "default": false,
+      "description": "Is batch number mandatory for this item?"
+    },
+    "expiry_required": {
+      "type": "boolean",
+      "default": false,
+      "description": "Is expiry date mandatory?"
+    },
+    "mfg_date_required": {
+      "type": "boolean",
+      "default": false,
+      "description": "Is manufacture date mandatory?"
+    },
+    "qc_required": {
+      "type": "boolean",
+      "default": false,
+      "description": "Does this item require QC inspection?"
+    },
+    "min_shelf_life_days": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Minimum required shelf life at time of receipt (days)"
+    },
+    "storage_notes": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "item_name",
+    "item_category"
+  ]
+}
