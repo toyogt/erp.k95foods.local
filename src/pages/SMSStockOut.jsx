@@ -405,19 +405,20 @@ export default function SMSStockOut() {
   }
 
   return (
-    <div className="space-y-4 max-w-3xl mx-auto px-2 md:px-0">
+    <div className="min-h-screen bg-slate-50 pb-12">
+      <div className="max-w-4xl mx-auto px-3 md:px-4 lg:px-6 py-6 space-y-4">
       <div>
-        <h1 className="text-xl font-bold text-slate-900">Stock Issue</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Stock Issue</h1>
         <p className="text-sm text-slate-500">Issue stored stock for production or dispatch using FIFO</p>
       </div>
 
       {/* Issue header */}
-      <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/70 shadow-sm p-4">
+      <div className="bg-white rounded-xl border border-slate-200 p-4 md:p-6">
         <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Issue Details</p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <Label className="text-xs font-medium text-slate-700">Issue Type *</Label>
-            <select className="w-full h-9 border border-slate-200 rounded-md px-3 text-sm mt-1" value={issueType} onChange={e => setIssueType(e.target.value)}>
+            <select className="w-full h-11 md:h-9 border border-slate-200 rounded-md px-3 text-base md:text-sm mt-2" value={issueType} onChange={e => setIssueType(e.target.value)}>
               <option value="production">Production Issue</option>
               <option value="dispatch">Dispatch</option>
               <option value="internal">Internal Use</option>
@@ -425,11 +426,11 @@ export default function SMSStockOut() {
           </div>
           <div>
             <Label className="text-xs font-medium text-slate-700">Reference Number</Label>
-            <Input className="h-9 text-sm mt-1" placeholder="Production Order / Dispatch ref" value={referenceNumber} onChange={e => setReferenceNumber(e.target.value)} />
+            <Input className="h-11 md:h-9 text-base md:text-sm mt-2" placeholder="Production Order / Dispatch ref" value={referenceNumber} onChange={e => setReferenceNumber(e.target.value)} />
           </div>
           <div>
             <Label className="text-xs font-medium text-slate-700">Notes</Label>
-            <Input className="h-9 text-sm mt-1" placeholder="Optional notes" value={notes} onChange={e => setNotes(e.target.value)} />
+            <Input className="h-11 md:h-9 text-base md:text-sm mt-2" placeholder="Optional notes" value={notes} onChange={e => setNotes(e.target.value)} />
           </div>
         </div>
       </div>
@@ -451,7 +452,7 @@ export default function SMSStockOut() {
       </div>
 
       {/* Issue form */}
-      <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/70 shadow-sm p-4 md:p-5">
+      <div className="bg-white rounded-xl border border-slate-200 p-4 md:p-6">
         {loading ? (
           <p className="text-sm text-slate-400 text-center py-6">Loading stored items...</p>
         ) : storedItems.length === 0 ? (

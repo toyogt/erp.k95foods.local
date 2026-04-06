@@ -21,22 +21,22 @@ function GateEntryHistory() {
     base44.entities.GateEntry.list('-created_date', 100).then(d => { setEntries(d); setLoading(false); }).catch(() => setLoading(false));
   }, []);
   if (loading) return <div className="py-8 text-center text-slate-400"><LoaderIcon className="w-5 h-5 animate-spin mx-auto" /></div>;
-  if (entries.length === 0) return <div className="py-8 text-center text-slate-400">No Gate Entry records yet.</div>;
+  if (entries.length === 0) return <div className="py-12 text-center text-slate-400">No Gate Entry records yet.</div>;
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 max-w-4xl">
       {entries.map(e => (
-        <div key={e.id} className="bg-white border border-slate-200 rounded-xl p-4">
-          <div className="flex items-start justify-between">
-            <span className="font-bold font-mono text-slate-900">{e.gate_id}</span>
-            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${e.status === 'PROCESSED' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>{e.status}</span>
+        <div key={e.id} className="bg-white border border-slate-200 rounded-xl p-4 md:p-5 hover:shadow-sm transition-shadow">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3">
+            <span className="font-bold font-mono text-slate-900 text-sm md:text-base">{e.gate_id}</span>
+            <span className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${e.status === 'PROCESSED' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>{e.status}</span>
           </div>
-          <div className="text-xs text-slate-500 grid grid-cols-2 gap-1 mt-2">
+          <div className="text-xs text-slate-500 grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
             <span>Arrived: {e.arrived_at ? new Date(e.arrived_at).toLocaleString('en-IN') : '—'}</span>
             {e.vehicle_number && <span>Vehicle: {e.vehicle_number}</span>}
             {e.driver_number && <span>Driver Mobile: {e.driver_number}</span>}
             {e.driver_name && <span>Driver: {e.driver_name}</span>}
           </div>
-          {e.vehicle_photo && <div className="flex gap-2 mt-2">
+          {e.vehicle_photo && <div className="flex gap-2 mt-3 flex-wrap">
             <img src={e.vehicle_photo} alt="vehicle" className="w-14 h-10 object-cover rounded border" />
             {e.invoice_photo && <img src={e.invoice_photo} alt="invoice" className="w-14 h-10 object-cover rounded border" />}
             {e.material_photo && <img src={e.material_photo} alt="material" className="w-14 h-10 object-cover rounded border" />}
@@ -177,16 +177,16 @@ export default function GateEntryPage() {
     setSubmitting(true);
     const gate_id = await nextSerial('GE');
     const gateEntry = await base44.entities.GateEntry.create({
-    gate_id,
-    arrived_at: new Date().toISOString(),
-    vehicle_number: form.vehicle_number.trim() || undefined,
-    driver_name: form.driver_name.trim() || undefined,
-    driver_number: form.driver_number.trim(),
-    notes: form.notes.trim() || undefined,
-    vehicle_photo: form.vehicle_photo || undefined,
-    material_photo: form.material_photo || undefined,
-    invoice_photo: form.invoice_photo || undefined,
-    status: 'OPEN',
+      gate_id,
+      arrived_at: new Date().toISOString(),
+      vehicle_number: form.vehicle_number.trim() || undefined,
+      driver_name: form.driver_name.trim() || undefined,
+      driver_number: form.driver_number.trim(),
+      notes: form.notes.trim() || undefined,
+      vehicle_photo: form.vehicle_photo || undefined,
+      material_photo: form.material_photo || undefined,
+      invoice_photo: form.invoice_photo || undefined,
+      status: 'OPEN',
     });
 
     await logGrnAudit({
@@ -194,6 +194,7 @@ export default function GateEntryPage() {
       entity_id: gate_id, details: { vehicle: form.vehicle_number }, user,
     });
     await fireFMSEvent('gate_entry_created', gateEntry.id);
+    toast({ title: lang === 'hi' ? 'गेट एंट्री बनाई गई' : 'Gate Entry created successfully!' });
 
     setLoadingCL(true);
     const tmpl = await getChecklistTemplate('GATE_ENTRY', 'CREATE');
@@ -216,6 +217,7 @@ export default function GateEntryPage() {
     await base44.entities.GateEntry.filter({ gate_id }).then(([ge]) => {
       if (ge) base44.entities.GateEntry.update(ge.id, { checklist_run_id: runId });
     });
+    toast({ title: lang === 'hi' ? 'चेकलिस्ट पूरी हुई' : 'Checklist completed!' });
     setDone({ gate_id });
   }
 
@@ -228,19 +230,21 @@ export default function GateEntryPage() {
   // ── Success screen ───────────────────────────────────────────────────────────
   if (done) {
     return (
-      <div className="max-w-2xl mx-auto pt-12 text-center space-y-5 px-4">
-        <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto" />
-        <h2 className="text-2xl font-bold text-slate-900">{t.success}</h2>
-        <p className="text-slate-500 font-mono text-lg">{done.gate_id}</p>
-        <Button
-          onClick={() => navigate(`/GRNReceive?gate_id=${done.gate_id}`)}
-          className="w-full h-12 bg-green-600 hover:bg-green-700 text-base"
-        >
-          {t.proceedGRN}
-        </Button>
-        <Button variant="outline" onClick={resetForm} className="w-full h-11">
-          {t.newEntry}
-        </Button>
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center px-3 md:px-4 py-12">
+        <div className="max-w-lg w-full bg-white rounded-2xl border border-slate-200 p-6 md:p-8 text-center space-y-6">
+          <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto" />
+          <h2 className="text-2xl font-bold text-slate-900">{t.success}</h2>
+          <p className="text-slate-500 font-mono text-lg">{done.gate_id}</p>
+          <Button
+            onClick={() => navigate(`/GRNReceive?gate_id=${done.gate_id}`)}
+            className="w-full h-11 md:h-12 bg-green-600 hover:bg-green-700 text-sm md:text-base"
+          >
+            {t.proceedGRN}
+          </Button>
+          <Button variant="outline" onClick={resetForm} className="w-full h-11 md:h-12 text-sm md:text-base">
+            {t.newEntry}
+          </Button>
+        </div>
       </div>
     );
   }
@@ -248,205 +252,209 @@ export default function GateEntryPage() {
   // ── Checklist screen ─────────────────────────────────────────────────────────
   if (checklistTemplate) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4 pb-12 px-2 md:px-0">
-        <h2 className="text-xl font-bold text-slate-900">Gate Entry Checklist</h2>
-        {loadingCL ? <Loader2 className="w-6 h-6 animate-spin mx-auto text-slate-400" /> : (
-          <ChecklistGate
-            template={checklistTemplate.tmpl}
-            entityId={checklistTemplate.gate_id}
-            entityType="GateEntry"
-            user={user}
-            onComplete={handleChecklistDone}
-            onSkip={() => setDone({ gate_id: checklistTemplate.gate_id })}
-          />
-        )}
+      <div className="min-h-screen bg-slate-50 pb-12">
+        <div className="max-w-4xl mx-auto px-3 md:px-4 lg:px-6 py-6 space-y-4">
+          <h2 className="text-2xl font-bold text-slate-900">Gate Entry Checklist</h2>
+          {loadingCL ? <Loader2 className="w-6 h-6 animate-spin mx-auto text-slate-400" /> : (
+            <ChecklistGate
+              template={checklistTemplate.tmpl}
+              entityId={checklistTemplate.gate_id}
+              entityType="GateEntry"
+              user={user}
+              onComplete={handleChecklistDone}
+              onSkip={() => setDone({ gate_id: checklistTemplate.gate_id })}
+            />
+          )}
+        </div>
       </div>
     );
   }
 
   // ── Main form ────────────────────────────────────────────────────────────────
   return (
-    <div className="max-w-2xl mx-auto space-y-4 pb-12 px-2 md:px-0">
-      {showInfo && <GateEntryInfoModal onClose={() => setShowInfo(false)} />}
+    <div className="min-h-screen bg-slate-50 pb-12">
+      <div className="max-w-4xl mx-auto px-3 md:px-4 lg:px-6 py-6 space-y-4">
+        {showInfo && <GateEntryInfoModal onClose={() => setShowInfo(false)} />}
 
-      {/* Header bar */}
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <h1 className="text-xl font-bold text-slate-900">{t.title}</h1>
-        <div className="flex items-center gap-2">
-          <InfoButton onClick={() => setShowInfo(true)} />
-          <button
-            onClick={() => setLang(l => l === 'en' ? 'hi' : 'en')}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200 text-slate-600 text-xs font-medium hover:bg-slate-50 transition-colors"
-          >
-            <Languages className="w-4 h-4" />
-            {lang === 'en' ? 'हिंदी' : 'English'}
-          </button>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex border-b border-slate-200">
-        {[{ id: 'new', label: 'New Gate Entry', icon: FileText }, { id: 'history', label: 'Documents / History', icon: History }].map(tab => (
-          <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === tab.id ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-700'
-            }`}>
-            <tab.icon className="w-4 h-4" />{tab.label}
-          </button>
-        ))}
-      </div>
-
-      {activeTab === 'history' && <GateEntryHistory />}
-
-      {/* Step indicator */}
-      {activeTab === 'new' && <div className="flex items-center gap-1">
-        {t.steps.map((s, i) => (
-          <div key={i} className="flex items-center gap-1 flex-1">
-            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-              i < step ? 'bg-green-500 text-white' : i === step ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-400'
-            }`}>
-              {i < step ? '✓' : i + 1}
-            </div>
-            <span className={`text-xs font-medium hidden sm:block ${i === step ? 'text-slate-900' : 'text-slate-400'}`}>{s}</span>
-            {i < t.steps.length - 1 && <div className={`flex-1 h-0.5 ${i < step ? 'bg-green-400' : 'bg-slate-200'}`} />}
-          </div>
-        ))}
-      </div>}
-
-      {/* ── Step 0: Photos ── */}
-      {activeTab === 'new' && step === 0 && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-5">
+        {/* Header bar */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+          <h1 className="text-2xl font-bold text-slate-900">{t.title}</h1>
           <div className="flex items-center gap-2">
-            <Camera className="w-5 h-5 text-slate-600" />
-            <h2 className="font-bold text-slate-900">{t.steps[0]}</h2>
-          </div>
-          <div>
-            <Label className="text-xs font-medium text-slate-700">{t.transportType} *</Label>
-            <select
-              value={form.transport_type}
-              onChange={e => setField('transport_type', e.target.value)}
-              className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm mt-1"
+            <InfoButton onClick={() => setShowInfo(true)} />
+            <button
+              onClick={() => setLang(l => l === 'en' ? 'hi' : 'en')}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-full border border-slate-200 text-slate-600 text-xs font-medium hover:bg-slate-50 transition-colors"
             >
-              <option value="vehicle">{t.transport.vehicle}</option>
-              <option value="bicycle">{t.transport.bicycle}</option>
-              <option value="manual">{t.transport.manual}</option>
-              <option value="other">{t.transport.other}</option>
-            </select>
+              <Languages className="w-4 h-4" />
+              {lang === 'en' ? 'हिंदी' : 'English'}
+            </button>
           </div>
-          <div className="space-y-4">
-            {form.transport_type === 'vehicle' && (
-              <PhotoUploader label={`${t.vehiclePhoto} *`} required value={form.vehicle_photo} onChange={v => setField('vehicle_photo', v)} />
-            )}
-            <PhotoUploader label={lang === 'hi' ? 'इनवॉयस / दस्तावेज़ फ़ोटो *' : 'Invoice / Document Photo *'} required value={form.invoice_photo} onChange={v => setField('invoice_photo', v)} />
-            <PhotoUploader label={t.materialPhoto} value={form.material_photo} onChange={v => setField('material_photo', v)} />
-          </div>
-          <Button onClick={() => { if (validateStep0()) setStep(1); }} className="w-full h-12 bg-slate-900 text-base">
-            {t.continue}
-          </Button>
         </div>
-      )}
 
-      {/* ── Step 1: Details ── */}
-      {activeTab === 'new' && step === 1 && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
-          <div className="flex items-center gap-2">
-            <Truck className="w-5 h-5 text-slate-600" />
-            <h2 className="font-bold text-slate-900">{t.steps[1]}</h2>
-          </div>
+        {/* Tabs */}
+        <div className="flex border-b border-slate-200 overflow-x-auto">
+          {[{ id: 'new', label: 'New Gate Entry', icon: FileText }, { id: 'history', label: 'Documents / History', icon: History }].map(tab => (
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                activeTab === tab.id ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-700'
+              }`}>
+              <tab.icon className="w-4 h-4" />{tab.label}
+            </button>
+          ))}
+        </div>
 
-          {form.transport_type === 'vehicle' && (
-            <div>
-              <Label className="text-xs font-medium text-slate-700">{t.vehicleNumber} *</Label>
-              <Input
-                className="h-11 text-base mt-1 font-mono uppercase"
-                value={form.vehicle_number}
-                onChange={e => setField('vehicle_number', e.target.value.toUpperCase())}
-                placeholder="e.g. MH12AB1234"
-              />
+        {activeTab === 'history' && <GateEntryHistory />}
+
+        {/* Step indicator */}
+        {activeTab === 'new' && <div className="flex items-center gap-1 overflow-x-auto pb-2">
+          {t.steps.map((s, i) => (
+            <div key={i} className="flex items-center gap-1 flex-1 min-w-max">
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                i < step ? 'bg-green-500 text-white' : i === step ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-400'
+              }`}>
+                {i < step ? '✓' : i + 1}
+              </div>
+              <span className={`text-xs font-medium hidden sm:block ${i === step ? 'text-slate-900' : 'text-slate-400'}`}>{s}</span>
+              {i < t.steps.length - 1 && <div className={`flex-1 h-0.5 hidden sm:block ${i < step ? 'bg-green-400' : 'bg-slate-200'}`} />}
             </div>
-          )}
+          ))}
+        </div>}
 
-          <div>
-            <Label className="text-xs font-medium text-slate-700">{t.driverName}</Label>
-            <Input
-              className="h-9 text-sm mt-1"
-              value={form.driver_name}
-              onChange={e => setField('driver_name', e.target.value)}
-              placeholder="Driver name"
-            />
-          </div>
-
-          <div>
-            <Label className="text-xs font-medium text-slate-700">{t.driverNumber} *</Label>
-            <Input
-              className="h-11 text-base mt-1"
-              type="tel"
-              inputMode="numeric"
-              maxLength={10}
-              value={form.driver_number}
-              onChange={e => setField('driver_number', e.target.value.replace(/\D/g, ''))}
-              placeholder={t.driverNumberPlaceholder}
-            />
-            {form.driver_number && !isValidIndianPhone(form.driver_number) && (
-              <p className="text-xs text-red-500 mt-1">Enter a valid 10-digit mobile number starting with 6–9</p>
-            )}
-          </div>
-
-          <div>
-            <Label className="text-xs font-medium text-slate-700">{t.notes}</Label>
-            <textarea
-              value={form.notes}
-              onChange={e => setField('notes', e.target.value)}
-              rows={2}
-              placeholder={t.notesPlaceholder}
-              className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm resize-none mt-1"
-            />
-          </div>
-
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setStep(0)} className="flex-1 h-11">{t.back}</Button>
-            <Button onClick={() => { if (validateStep1()) setStep(2); }} className="flex-1 h-11 bg-slate-900">{t.next}</Button>
-          </div>
-        </div>
-      )}
-
-      {/* ── Step 2: Review ── */}
-      {activeTab === 'new' && step === 2 && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
-          <div className="flex items-center gap-2">
-            <FileText className="w-5 h-5 text-slate-600" />
-            <h2 className="font-bold text-slate-900">{t.steps[2]}</h2>
-          </div>
-          <div className="space-y-2 text-sm">
-            <Row label="Transport" value={form.transport_type} />
-            {form.transport_type === 'vehicle' && <Row label="Vehicle Number" value={form.vehicle_number} />}
-            {form.driver_name && <Row label="Driver Name" value={form.driver_name} />}
-            <Row label="Driver Number" value={form.driver_number} />
-            {form.notes && <Row label="Notes" value={form.notes} />}
-          </div>
-          <div className="flex gap-3 flex-wrap">
-            {form.vehicle_photo && <img src={form.vehicle_photo} alt="vehicle" className="w-20 h-16 object-cover rounded-lg border" />}
-            {form.invoice_photo && <img src={form.invoice_photo} alt="invoice" className="w-20 h-16 object-cover rounded-lg border" />}
-            {form.material_photo && <img src={form.material_photo} alt="material" className="w-20 h-16 object-cover rounded-lg border" />}
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setStep(1)} className="flex-1 h-11">{t.back}</Button>
-            <Button onClick={handleSubmit} disabled={submitting} className="flex-1 h-11 bg-green-600 hover:bg-green-700">
-              {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
-              {submitting ? t.submitting : t.submit}
+        {/* ── Step 0: Photos ── */}
+        {activeTab === 'new' && step === 0 && (
+          <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-6 space-y-5">
+            <div className="flex items-center gap-2">
+              <Camera className="w-5 h-5 text-slate-600" />
+              <h2 className="font-bold text-slate-900">{t.steps[0]}</h2>
+            </div>
+            <div>
+              <Label className="text-xs font-medium text-slate-700">{t.transportType} *</Label>
+              <select
+                value={form.transport_type}
+                onChange={e => setField('transport_type', e.target.value)}
+                className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm mt-2"
+              >
+                <option value="vehicle">{t.transport.vehicle}</option>
+                <option value="bicycle">{t.transport.bicycle}</option>
+                <option value="manual">{t.transport.manual}</option>
+                <option value="other">{t.transport.other}</option>
+              </select>
+            </div>
+            <div className="space-y-4">
+              {form.transport_type === 'vehicle' && (
+                <PhotoUploader label={`${t.vehiclePhoto} *`} required value={form.vehicle_photo} onChange={v => setField('vehicle_photo', v)} />
+              )}
+              <PhotoUploader label={lang === 'hi' ? 'इनवॉयस / दस्तावेज़ फ़ोटो *' : 'Invoice / Document Photo *'} required value={form.invoice_photo} onChange={v => setField('invoice_photo', v)} />
+              <PhotoUploader label={t.materialPhoto} value={form.material_photo} onChange={v => setField('material_photo', v)} />
+            </div>
+            <Button onClick={() => { if (validateStep0()) setStep(1); }} className="w-full h-11 md:h-12 bg-slate-900 text-sm md:text-base">
+              {t.continue}
             </Button>
           </div>
-        </div>
-      )}
+        )}
+
+        {/* ── Step 1: Details ── */}
+        {activeTab === 'new' && step === 1 && (
+          <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-6 space-y-4">
+            <div className="flex items-center gap-2">
+              <Truck className="w-5 h-5 text-slate-600" />
+              <h2 className="font-bold text-slate-900">{t.steps[1]}</h2>
+            </div>
+
+            {form.transport_type === 'vehicle' && (
+              <div>
+                <Label className="text-xs font-medium text-slate-700">{t.vehicleNumber} *</Label>
+                <Input
+                  className="h-11 text-base md:text-sm mt-2 font-mono uppercase"
+                  value={form.vehicle_number}
+                  onChange={e => setField('vehicle_number', e.target.value.toUpperCase())}
+                  placeholder="e.g. MH12AB1234"
+                />
+              </div>
+            )}
+
+            <div>
+              <Label className="text-xs font-medium text-slate-700">{t.driverName}</Label>
+              <Input
+                className="h-11 md:h-9 text-base md:text-sm mt-2"
+                value={form.driver_name}
+                onChange={e => setField('driver_name', e.target.value)}
+                placeholder="Driver name"
+              />
+            </div>
+
+            <div>
+              <Label className="text-xs font-medium text-slate-700">{t.driverNumber} *</Label>
+              <Input
+                className="h-11 text-base mt-2"
+                type="tel"
+                inputMode="numeric"
+                maxLength={10}
+                value={form.driver_number}
+                onChange={e => setField('driver_number', e.target.value.replace(/\D/g, ''))}
+                placeholder={t.driverNumberPlaceholder}
+              />
+              {form.driver_number && !isValidIndianPhone(form.driver_number) && (
+                <p className="text-xs text-red-500 mt-1">Enter a valid 10-digit mobile number starting with 6–9</p>
+              )}
+            </div>
+
+            <div>
+              <Label className="text-xs font-medium text-slate-700">{t.notes}</Label>
+              <textarea
+                value={form.notes}
+                onChange={e => setField('notes', e.target.value)}
+                rows={2}
+                placeholder={t.notesPlaceholder}
+                className="w-full border border-slate-200 rounded-xl px-4 py-3 text-base md:text-sm resize-none mt-2"
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setStep(0)} className="flex-1 h-11 md:h-12 text-sm md:text-base">{t.back}</Button>
+              <Button onClick={() => { if (validateStep1()) setStep(2); }} className="flex-1 h-11 md:h-12 bg-slate-900 text-sm md:text-base">{t.next}</Button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Step 2: Review ── */}
+        {activeTab === 'new' && step === 2 && (
+          <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-6 space-y-4">
+            <div className="flex items-center gap-2">
+              <FileText className="w-5 h-5 text-slate-600" />
+              <h2 className="font-bold text-slate-900">{t.steps[2]}</h2>
+            </div>
+            <div className="space-y-2 text-sm">
+              <Row label="Transport" value={form.transport_type} />
+              {form.transport_type === 'vehicle' && <Row label="Vehicle Number" value={form.vehicle_number} />}
+              {form.driver_name && <Row label="Driver Name" value={form.driver_name} />}
+              <Row label="Driver Number" value={form.driver_number} />
+              {form.notes && <Row label="Notes" value={form.notes} />}
+            </div>
+            <div className="flex gap-3 flex-wrap">
+              {form.vehicle_photo && <img src={form.vehicle_photo} alt="vehicle" className="w-20 h-16 object-cover rounded-lg border" />}
+              {form.invoice_photo && <img src={form.invoice_photo} alt="invoice" className="w-20 h-16 object-cover rounded-lg border" />}
+              {form.material_photo && <img src={form.material_photo} alt="material" className="w-20 h-16 object-cover rounded-lg border" />}
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setStep(1)} className="flex-1 h-11 md:h-12 text-sm md:text-base">{t.back}</Button>
+              <Button onClick={handleSubmit} disabled={submitting} className="flex-1 h-11 md:h-12 bg-green-600 hover:bg-green-700 text-sm md:text-base">
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
+                {submitting ? t.submitting : t.submit}
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
 function Row({ label, value }) {
   return (
-    <div className="flex justify-between py-1 border-b border-slate-50">
-      <span className="text-slate-400">{label}</span>
-      <span className="font-semibold text-slate-800">{value}</span>
+    <div className="flex justify-between py-1.5 border-b border-slate-100">
+      <span className="text-slate-600 font-medium">{label}</span>
+      <span className="font-semibold text-slate-900">{value}</span>
     </div>
   );
 }

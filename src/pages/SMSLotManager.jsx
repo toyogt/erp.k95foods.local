@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import toast, { Toaster } from 'react-hot-toast';
+import { useToast } from '@/components/ui/use-toast';
 import { QrCode, Search, Printer } from 'lucide-react';
 import ExportButton from '@/components/store/ExportButton';
 import { Input } from '@/components/ui/input';
@@ -94,10 +94,11 @@ const LOT_HEADERS = [
 ];
 
 export default function SMSLotManager() {
+  const { toast } = useToast();
   const [lots, setLots] = useState([]);
-  const [storedByLot, setStoredByLot] = useState({});   // lot_id → current balance qty
-  const [issuedByLot, setIssuedByLot] = useState({});   // lot_id → total issued qty
-  const [locationsByLot, setLocationsByLot] = useState({}); // lot_id → location codes array
+  const [storedByLot, setStoredByLot] = useState({});
+  const [issuedByLot, setIssuedByLot] = useState({});
+  const [locationsByLot, setLocationsByLot] = useState({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -156,11 +157,11 @@ export default function SMSLotManager() {
   }));
 
   return (
-    <div className="space-y-4">
-      <Toaster position="top-right" />
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <div className="min-h-screen bg-slate-50 pb-12">
+      <div className="max-w-6xl mx-auto px-3 md:px-4 lg:px-6 py-6 space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">Lot Manager</h1>
+          <h1 className="text-2xl font-bold text-slate-900">Lot Manager</h1>
           <p className="text-sm text-slate-500">Track all lots with stored stock, issued quantities, and QR codes</p>
         </div>
         <ExportButton data={exportData} columns={[
@@ -189,9 +190,9 @@ export default function SMSLotManager() {
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <Input className="pl-9 h-9" placeholder="Search by Lot ID, Item, Supplier..." value={search} onChange={e => setSearch(e.target.value)} />
+          <Input className="pl-9 h-11 md:h-9 text-base md:text-sm" placeholder="Search by Lot ID, Item, Supplier..." value={search} onChange={e => setSearch(e.target.value)} />
         </div>
-        <select className="h-9 border border-slate-200 rounded-md px-3 text-sm" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+        <select className="h-11 md:h-9 border border-slate-200 rounded-md px-3 text-base md:text-sm" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
           <option value="">All Statuses</option>
           <option value="approved">Approved</option>
           <option value="putaway">Stored</option>
@@ -205,12 +206,12 @@ export default function SMSLotManager() {
         <SkeletonTable rows={6} cols={11} headers={LOT_HEADERS} />
       ) : (
         <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/70 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto -mx-3 md:-mx-4 lg:-mx-6">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-slate-100 text-slate-700 text-xs">
+                <tr className="bg-slate-100 text-slate-700 text-xs whitespace-nowrap">
                   {LOT_HEADERS.map(h => (
-                    <th key={h} className={`px-4 py-3 font-semibold ${['Stored Stock', 'Issued / Consumed', 'Original Qty'].includes(h) ? 'text-right' : 'text-left'}`}>{h}</th>
+                    <th key={h} className={`px-3 md:px-4 py-3 font-semibold ${['Stored Stock', 'Issued / Consumed', 'Original Qty'].includes(h) ? 'text-right' : 'text-left'}`}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -221,39 +222,39 @@ export default function SMSLotManager() {
                   const stored = storedByLot[lot.lot_id] ?? 0;
                   const issued = issuedByLot[lot.lot_id] ?? 0;
                   return (
-                    <tr key={lot.id} className="hover:bg-slate-50">
-                      <td className="px-4 py-3 font-mono text-xs font-bold text-slate-800">{lot.lot_id}</td>
-                      <td className="px-4 py-3">
-                        <p className="font-medium text-slate-800">{lot.item_name}</p>
+                    <tr key={lot.id} className="hover:bg-slate-50 whitespace-nowrap">
+                      <td className="px-3 md:px-4 py-3 font-mono text-xs font-bold text-slate-800">{lot.lot_id}</td>
+                      <td className="px-3 md:px-4 py-3">
+                        <p className="font-medium text-slate-800 truncate">{lot.item_name}</p>
                         <p className="text-xs text-slate-400">{lot.item_code}</p>
                       </td>
-                      <td className="px-4 py-3 text-slate-600">{lot.supplier_name || '—'}</td>
-                      <td className="px-4 py-3 text-right font-medium text-slate-800">
+                      <td className="px-3 md:px-4 py-3 text-slate-600 truncate text-sm">{lot.supplier_name || '—'}</td>
+                      <td className="px-3 md:px-4 py-3 text-right font-medium text-slate-800 text-sm">
                         {lot.quantity} <span className="text-xs text-slate-400">{lot.uom}</span>
                       </td>
                       {/* Stored Stock */}
-                      <td className="px-4 py-3 text-right">
+                      <td className="px-3 md:px-4 py-3 text-right">
                         <span className={`font-bold ${stored > 0 ? 'text-blue-700' : 'text-slate-400'}`}>
                           {stored.toFixed(2)}
                         </span>
                         <span className="text-xs text-slate-400 ml-1">{lot.uom}</span>
                       </td>
                       {/* Issued / Consumed */}
-                      <td className="px-4 py-3 text-right">
+                      <td className="px-3 md:px-4 py-3 text-right">
                         <span className={`font-bold ${issued > 0 ? 'text-orange-600' : 'text-slate-400'}`}>
                           {issued.toFixed(2)}
                         </span>
                         <span className="text-xs text-slate-400 ml-1">{lot.uom}</span>
                       </td>
                       {/* Remaining Qty */}
-                      <td className="px-4 py-3 text-right">
+                      <td className="px-3 md:px-4 py-3 text-right">
                         <span className={`font-bold ${(lot.remaining_quantity ?? lot.quantity) > 0 ? 'text-green-700' : 'text-slate-400'}`}>
                           {(lot.remaining_quantity ?? lot.quantity).toFixed(2)}
                         </span>
                         <span className="text-xs text-slate-400 ml-1">{lot.uom}</span>
                       </td>
                       {/* Stored At */}
-                      <td className="px-4 py-3">
+                      <td className="px-3 md:px-4 py-3">
                         {locationsByLot[lot.lot_id]?.length > 0 ? (
                           <div className="flex flex-col gap-0.5">
                             {locationsByLot[lot.lot_id].map((loc, i) => (
@@ -262,11 +263,11 @@ export default function SMSLotManager() {
                           </div>
                         ) : <span className="text-slate-400 text-xs">—</span>}
                       </td>
-                      <td className="px-4 py-3 text-slate-600 text-xs">{lot.mfg_date || '—'}</td>
-                      <td className="px-4 py-3 text-slate-600 text-xs">{lot.expiry_date || '—'}</td>
-                      <td className="px-4 py-3"><WeekBadge weeks={lot.weeks_elapsed} /></td>
-                      <td className="px-4 py-3"><StatusBadge status={lot.status} storedQty={stored} issuedQty={issued} originalQty={lot.quantity} /></td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 md:px-4 py-3 text-slate-600 text-xs">{lot.mfg_date || '—'}</td>
+                      <td className="px-3 md:px-4 py-3 text-slate-600 text-xs">{lot.expiry_date || '—'}</td>
+                      <td className="px-3 md:px-4 py-3"><WeekBadge weeks={lot.weeks_elapsed} /></td>
+                      <td className="px-3 md:px-4 py-3"><StatusBadge status={lot.status} storedQty={stored} issuedQty={issued} originalQty={lot.quantity} /></td>
+                      <td className="px-3 md:px-4 py-3">
                         <button onClick={() => setQrLot(lot)} className="p-1.5 rounded hover:bg-slate-100 text-slate-500" title="QR Code">
                           <QrCode className="w-4 h-4" />
                         </button>
@@ -282,6 +283,7 @@ export default function SMSLotManager() {
       )}
 
       {qrLot && <QRModal lot={qrLot} onClose={() => setQrLot(null)} />}
-    </div>
-  );
+      </div>
+      </div>
+      );
 }

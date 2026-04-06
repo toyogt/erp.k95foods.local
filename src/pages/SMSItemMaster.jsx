@@ -29,30 +29,38 @@ function ItemFormModal({ item, onClose, onSaved }) {
 
   async function handleSave() {
     if (!form.item_name?.trim()) {
-      toast({ title: 'Item name is required.', variant: 'destructive' }); return;
+      toast({ title: 'Item name is required', variant: 'destructive' });
+      return;
     }
     setSaving(true);
-    const data = {
-      ...form,
-      item_name: form.item_name.trim(),
-      min_shelf_life_days: form.min_shelf_life_days !== '' ? Number(form.min_shelf_life_days) : undefined,
-    };
-    if (item?.id) {
-      await base44.entities.StoreItemMaster.update(item.id, data);
-    } else {
-      await base44.entities.StoreItemMaster.create(data);
+    try {
+      const data = {
+        ...form,
+        item_name: form.item_name.trim(),
+        min_shelf_life_days: form.min_shelf_life_days !== '' ? Number(form.min_shelf_life_days) : undefined,
+      };
+      if (item?.id) {
+        await base44.entities.StoreItemMaster.update(item.id, data);
+        toast({ title: 'Item updated successfully' });
+      } else {
+        await base44.entities.StoreItemMaster.create(data);
+        toast({ title: 'Item created successfully' });
+      }
+      setSaving(false);
+      onSaved();
+    } catch (err) {
+      toast({ title: 'Failed to save item', variant: 'destructive' });
+      setSaving(false);
     }
-    setSaving(false);
-    onSaved();
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-3 md:p-4">
       <div className="bg-white rounded-2xl w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto">
-        <div className="p-5 border-b border-slate-200">
+        <div className="p-4 md:p-5 border-b border-slate-200">
           <h2 className="font-bold text-slate-900 text-lg">{item ? 'Edit Item' : 'New Item'}</h2>
         </div>
-        <div className="p-5 space-y-3">
+        <div className="p-4 md:p-5 space-y-3">
           <div>
             <label className="text-xs font-medium text-slate-700">Item Name *</label>
             <Input className="h-9 text-sm mt-1" value={form.item_name} onChange={e => setField('item_name', e.target.value)} placeholder="Enter item name" />
@@ -96,9 +104,9 @@ function ItemFormModal({ item, onClose, onSaved }) {
             <span className="text-sm text-slate-700">Active</span>
           </label>
         </div>
-        <div className="p-5 border-t border-slate-200 flex gap-2">
-          <Button variant="outline" onClick={onClose} className="flex-1 h-11">Cancel</Button>
-          <Button onClick={handleSave} disabled={saving} className="flex-1 h-11 bg-slate-900">{saving ? 'Saving…' : 'Save Item'}</Button>
+        <div className="p-4 md:p-5 border-t border-slate-200 flex gap-2">
+          <Button variant="outline" onClick={onClose} className="flex-1 h-11 text-sm">{saving ? 'Saving…' : 'Cancel'}</Button>
+          <Button onClick={handleSave} disabled={saving} className="flex-1 h-11 bg-slate-900 text-sm">{saving ? 'Saving…' : 'Save Item'}</Button>
         </div>
       </div>
     </div>
@@ -109,23 +117,31 @@ export default function SMSItemMaster() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [modal, setModal] = useState(null); // null | 'new' | item object
+  const [modal, setModal] = useState(null);
   const { toast } = useToast();
 
   async function load() {
     setLoading(true);
-    const data = await base44.entities.StoreItemMaster.list('-created_date', 200);
-    setItems(data);
-    setLoading(false);
+    await base44.entities.StoreItemMaster.list('-created_date', 200).then(data => {
+      setItems(data);
+      setLoading(false);
+    }).catch(err => {
+      toast({ title: 'Failed to load items', variant: 'destructive' });
+      setLoading(false);
+    });
   }
 
   useEffect(() => { load(); }, []);
 
   async function handleDelete(item) {
     if (!confirm(`Delete "${item.item_name}"?`)) return;
-    await base44.entities.StoreItemMaster.delete(item.id);
-    toast({ title: 'Item deleted.' });
-    load();
+    try {
+      await base44.entities.StoreItemMaster.delete(item.id);
+      toast({ title: 'Item deleted successfully' });
+      load();
+    } catch (err) {
+      toast({ title: 'Failed to delete item', variant: 'destructive' });
+    }
   }
 
   const filtered = items.filter(i =>
@@ -134,7 +150,8 @@ export default function SMSItemMaster() {
   );
 
   return (
-    <div className="max-w-5xl mx-auto space-y-4 pb-12 px-2 md:px-0">
+    <div className="min-h-screen bg-slate-50 pb-12">
+      <div className="max-w-5xl mx-auto space-y-4 px-3 md:px-4 lg:px-6 py-6">
       {modal && (
         <ItemFormModal
           item={modal === 'new' ? null : modal}
@@ -143,12 +160,12 @@ export default function SMSItemMaster() {
         />
       )}
 
-      <div className="flex items-center justify-between flex-wrap gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">Store Item Master</h1>
+          <h1 className="text-2xl font-bold text-slate-900">Store Item Master</h1>
           <p className="text-xs text-slate-500">Central repository of items with validation rules</p>
         </div>
-        <Button onClick={() => setModal('new')} className="h-11 gap-2 bg-slate-900">
+        <Button onClick={() => setModal('new')} className="h-11 gap-2 bg-slate-900 text-sm whitespace-nowrap">
           <Plus className="w-4 h-4" /> Add Item
         </Button>
       </div>
