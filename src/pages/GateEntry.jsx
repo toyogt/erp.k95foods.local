@@ -224,33 +224,21 @@ export default function GateEntryPage() {
 
   if (done) {
     return (
-      <div className="min-h-[70vh] flex items-center justify-center px-4">
-        <div className="w-full max-w-md bg-white/80 backdrop-blur-sm border border-slate-200/70 rounded-2xl shadow-lg p-8 text-center space-y-5">
-          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-            <CheckCircle2 className="w-10 h-10 text-green-500" />
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold text-slate-900">Gate Entry Created!</h2>
-            <p className="text-slate-500 text-sm mt-1">Goods Receipt Note and inventory lots are ready for Quality Control.</p>
-          </div>
-          <div className="bg-slate-50 rounded-xl border border-slate-200 p-4 space-y-2 text-left">
-            <div className="flex justify-between text-sm"><span className="text-slate-500">Gate Entry ID</span><span className="font-mono font-bold text-slate-800">{done.gate_id}</span></div>
-            {done.grn_id && <div className="flex justify-between text-sm"><span className="text-slate-500">GRN ID</span><span className="font-mono font-bold text-slate-800">{done.grn_id}</span></div>}
-          </div>
-          <Button onClick={resetForm} className="w-full h-12 bg-slate-900 text-base">+ New Gate Entry</Button>
-        </div>
+      <div className="max-w-2xl mx-auto pt-12 text-center space-y-4 px-4">
+        <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto" />
+        <h2 className="text-2xl font-bold text-slate-900">Gate Entry & GRN Created</h2>
+        <p className="text-slate-500 font-mono text-lg">{done.gate_id}</p>
+        {done.grn_id && <p className="text-sm text-slate-400">GRN: {done.grn_id} — Lots created and sent to QC</p>}
+        <Button onClick={resetForm} className="w-full h-12 bg-slate-900">New Gate Entry</Button>
       </div>
     );
   }
 
   if (checklistTemplate) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4 pb-12 px-3 md:px-0">
-        <div className="text-center pb-2">
-          <h2 className="text-xl font-bold text-slate-900">Gate Entry Checklist</h2>
-          <p className="text-sm text-slate-500 mt-1">Complete this checklist before finalising the entry</p>
-        </div>
-        {loadingCL ? <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-slate-400" /></div> : (
+      <div className="max-w-2xl mx-auto space-y-4 pb-12 px-2 md:px-0">
+        <h2 className="text-xl font-bold text-slate-900">Gate Entry Checklist</h2>
+        {loadingCL ? <Loader2 className="w-6 h-6 animate-spin mx-auto text-slate-400" /> : (
           <ChecklistGate template={checklistTemplate.tmpl} entityId={checklistTemplate.gate_id} entityType="GateEntry" user={user} onComplete={handleChecklistDone} onSkip={() => setDone({ gate_id: checklistTemplate.gate_id })} />
         )}
       </div>
@@ -258,45 +246,23 @@ export default function GateEntryPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-5 pb-16 px-3 md:px-0">
-
-      {/* Header */}
-      <div className="text-center pt-2 pb-1">
-        <div className="inline-flex items-center justify-center w-12 h-12 bg-slate-900 rounded-xl mb-3">
-          <Truck className="w-6 h-6 text-white" />
-        </div>
-        <h1 className="text-2xl font-bold text-slate-900">Gate Entry</h1>
-        <p className="text-sm text-slate-500 mt-1">Register incoming delivery and create a Goods Receipt Note</p>
-      </div>
-
+    <div className="max-w-2xl mx-auto space-y-4 pb-12 px-2 md:px-0">
       {/* Step indicator */}
-      <div className="bg-white/80 backdrop-blur-sm border border-slate-200/70 rounded-2xl p-4">
-        <div className="flex items-start gap-1">
-          {STEPS.map((s, i) => (
-            <div key={i} className="flex items-center gap-1 flex-1">
-              <div className="flex flex-col items-center gap-1">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-all ${
-                  i < step ? 'bg-green-500 text-white shadow-sm' :
-                  i === step ? 'bg-slate-900 text-white shadow-md ring-2 ring-slate-900/20' :
-                  'bg-slate-100 text-slate-400'
-                }`}>
-                  {i < step ? '✓' : i + 1}
-                </div>
-                <span className={`text-xs font-medium text-center leading-tight hidden sm:block ${
-                  i === step ? 'text-slate-900' : i < step ? 'text-green-600' : 'text-slate-400'
-                }`}>{s}</span>
-              </div>
-              {i < STEPS.length - 1 && <div className={`flex-1 h-0.5 mt-4 mb-auto ${
-                i < step ? 'bg-green-400' : 'bg-slate-200'
-              }`} />}
+      <div className="flex items-center gap-1">
+        {STEPS.map((s, i) => (
+          <div key={i} className="flex items-center gap-1 flex-1">
+            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${i < step ? 'bg-green-500 text-white' : i === step ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-400'}`}>
+              {i < step ? '✓' : i + 1}
             </div>
-          ))}
-        </div>
+            <span className={`text-xs font-medium hidden sm:block ${i === step ? 'text-slate-900' : 'text-slate-400'}`}>{s}</span>
+            {i < STEPS.length - 1 && <div className={`flex-1 h-0.5 ${i < step ? 'bg-green-400' : 'bg-slate-200'}`} />}
+          </div>
+        ))}
       </div>
 
       {/* Step 1: Photos */}
       {step === 0 && (
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-slate-200/70 shadow-sm p-5 space-y-5">
+        <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-5">
           <div className="flex items-center gap-2"><Camera className="w-5 h-5 text-slate-600" /><h2 className="font-bold text-slate-900">Capture Photos</h2></div>
           <p className="text-sm text-slate-600">Take clear photos of the vehicle and invoice</p>
           <div>
@@ -320,7 +286,7 @@ export default function GateEntryPage() {
 
       {/* Step 2: Details */}
       {step === 1 && (
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-slate-200/70 shadow-sm p-5 space-y-4">
+        <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
           <div className="flex items-center gap-2"><Truck className="w-5 h-5 text-slate-600" /><h2 className="font-bold text-slate-900">Enter Details</h2></div>
           {form.transport_type === 'vehicle' && (
             <div>
@@ -353,7 +319,7 @@ export default function GateEntryPage() {
 
       {/* Step 3: Items Received */}
       {step === 2 && (
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-slate-200/70 shadow-sm p-5 space-y-4">
+        <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
           <div className="flex items-center gap-2"><FileText className="w-5 h-5 text-slate-600" /><h2 className="font-bold text-slate-900">Items Received</h2></div>
           <p className="text-sm text-slate-500">Enter what you received in this delivery</p>
           <div className="space-y-3">
@@ -415,7 +381,7 @@ export default function GateEntryPage() {
 
       {/* Step 4: Review */}
       {step === 3 && (
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-slate-200/70 shadow-sm p-5 space-y-4">
+        <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
           <div className="flex items-center gap-2"><FileText className="w-5 h-5 text-slate-600" /><h2 className="font-bold text-slate-900">Review & Submit</h2></div>
           <div className="space-y-2 text-sm">
             <Row label="Transport" value={form.transport_type} />
