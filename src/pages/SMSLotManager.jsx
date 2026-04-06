@@ -14,26 +14,34 @@ function WeekBadge({ weeks }) {
   return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">Week {weeks}+</span>;
 }
 
-function StatusBadge({ status }) {
+// Effective status: always driven by actual stored stock, not just DB status field
+function getEffectiveStatus(dbStatus, storedQty) {
+  if (['rejected', 'damaged'].includes(dbStatus)) return dbStatus;
+  if (storedQty > 0) return 'putaway'; // has stock → available
+  return 'consumed'; // no stock left → consumed
+}
+
+function StatusBadge({ status, storedQty, originalQty }) {
+  const effective = getEffectiveStatus(status, storedQty);
   const map = {
     approved: 'bg-green-100 text-green-700',
-    qc_pending: 'bg-green-100 text-green-700', // legacy — treat as approved/stored
+    qc_pending: 'bg-green-100 text-green-700',
     rejected: 'bg-red-100 text-red-700',
     putaway: 'bg-blue-100 text-blue-700',
     consumed: 'bg-slate-100 text-slate-500',
     damaged: 'bg-orange-100 text-orange-700',
   };
   const labels = {
-    approved: 'Approved',
-    qc_pending: 'Stored',  // legacy mapping
+    approved: 'Available',
+    qc_pending: 'Available',
     rejected: 'Rejected',
-    putaway: 'Stored',
-    consumed: 'Consumed',
+    putaway: storedQty < originalQty ? 'Partially Consumed' : 'Available for Issue',
+    consumed: 'Fully Consumed',
     damaged: 'Damaged',
   };
   return (
-    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${map[status] || 'bg-slate-100 text-slate-600'}`}>
-      {labels[status] || status}
+    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${map[effective] || 'bg-slate-100 text-slate-600'}`}>
+      {labels[effective] || effective}
     </span>
   );
 }
@@ -203,7 +211,7 @@ export default function SMSLotManager() {
                       <td className="px-4 py-3 text-slate-600 text-xs">{lot.mfg_date || '—'}</td>
                       <td className="px-4 py-3 text-slate-600 text-xs">{lot.expiry_date || '—'}</td>
                       <td className="px-4 py-3"><WeekBadge weeks={lot.weeks_elapsed} /></td>
-                      <td className="px-4 py-3"><StatusBadge status={lot.status} /></td>
+                      <td className="px-4 py-3"><StatusBadge status={lot.status} storedQty={stored} originalQty={lot.quantity} /></td>
                       <td className="px-4 py-3">
                         <button onClick={() => setQrLot(lot)} className="p-1.5 rounded hover:bg-slate-100 text-slate-500" title="QR Code">
                           <QrCode className="w-4 h-4" />

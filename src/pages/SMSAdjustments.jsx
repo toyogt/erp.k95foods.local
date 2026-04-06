@@ -118,10 +118,43 @@ export default function SMSAdjustments() {
     });
     if (approved) {
       const balances = await base44.entities.StoreStockBalance.filter({ lot_id: adj.lot_id });
-      for (const bal of balances) {
-        const newQty = adj.adjustment_type === 'increase' ? bal.quantity + adj.adjustment_quantity : Math.max(0, bal.quantity - adj.adjustment_quantity);
-        if (newQty <= 0) await base44.entities.StoreStockBalance.delete(bal.id);
-        else await base44.entities.StoreStockBalance.update(bal.id, { quantity: newQty });
+      const remaining = adj.adjustment_quantity;
+      if (adj.adjustment_type === 'increase') {
+        // Add stock to first balance record or create new one
+        if (balances.length > 0) {
+          await base44.entities.StoreStockBalance.update(balances[0].id, { quantity: balances[0].quantity + remaining });
+        } else {
+          // No balance exists — create one (recovery scenario)
+          const lots = await base44.entities.StoreLot.filter({ lot_id: adj.lot_id });
+          const lot = lots[0];
+          if (lot) {
+            await base44.entities.StoreStockBalance.create({
+              lot_id: adj.lot_id, item_code: lot.item_code, item_name: lot.item_name,
+              uom: lot.uom, quantity: remaining, location_code: 'UNASSIGNED',
+            });
+          }
+        }
+      } else {
+        // Decrease: deduct proportionally from balances
+        let toDeduct = remaining;
+        for (const bal of balances) {
+          if (toDeduct <= 0) break;
+          const deduct = Math.min(toDeduct, bal.quantity);
+          toDeduct -= deduct;
+          const newQty = bal.quantity - deduct;
+          if (newQty <= 0) await base44.entities.StoreStockBalance.delete(bal.id);
+          else await base44.entities.StoreStockBalance.update(bal.id, { quantity: newQty });
+        }
+      }
+      // Recompute lot remaining_quantity and status from actual balances
+      const updatedBalances = await base44.entities.StoreStockBalance.filter({ lot_id: adj.lot_id });
+      const actualRemaining = updatedBalances.reduce((s, b) => s + (b.quantity || 0), 0);
+      const lots = await base44.entities.StoreLot.filter({ lot_id: adj.lot_id });
+      if (lots.length > 0) {
+        await base44.entities.StoreLot.update(lots[0].id, {
+          remaining_quantity: actualRemaining,
+          status: actualRemaining <= 0 ? 'consumed' : 'putaway',
+        });
       }
     }
     toast({ title: approved ? 'Adjustment approved' : 'Adjustment rejected' });
@@ -150,19 +183,55 @@ export default function SMSAdjustments() {
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead><tr className="bg-slate-100 text-slate-700 text-xs"><th className="text-left px-4 py-3">Adjustment ID</th><th className="text-left px-4 py-3">Item / Lot</th><th className="text-left px-4 py-3">Type</th><th className="text-right px-4 py-3">Before</th><th className="text-right px-4 py-3">Adjustment</th><th className="text-right px-4 py-3">After</th><th className="text-left px-4 py-3">Reason</th><th className="text-left px-4 py-3">Status</th>{isAdmin && <th className="text-left px-4 py-3">Approve</th>}</tr></thead>
+            <thead>
+              <tr className="bg-slate-100 text-slate-700 text-xs">
+                <th className="text-left px-4 py-3">Adjustment ID</th>
+                <th className="text-left px-4 py-3">Item / Lot</th>
+                <th className="text-left px-4 py-3">Type</th>
+                <th className="text-right px-4 py-3">Before</th>
+                <th className="text-right px-4 py-3">Adjustment</th>
+                <th className="text-right px-4 py-3">After</th>
+                <th className="text-left px-4 py-3">Reason</th>
+                <th className="text-left px-4 py-3">Status</th>
+                {isAdmin && <th className="text-left px-4 py-3">Approve</th>}
+              </tr>
+            </thead>
             <tbody className="divide-y divide-slate-100">
-              {loading ? <tr><td colSpan={9} className="text-center py-8 text-slate-400">Loading...</td></tr> : adjustments.length === 0 ? <tr><td colSpan={9} className="text-center py-8 text-slate-400">No adjustments yet</td></tr> : adjustments.map(a => (
-                <tr key={a.id} className="hover:bg-slate-50">
+              {loading ? (
+                <tr><td colSpan={9} className="text-center py-8 text-slate-400">Loading...</td></tr>
+              ) : adjustments.length === 0 ? (
+                <tr><td colSpan={9} className="text-center py-8 text-slate-400">No adjustments yet</td></tr>
+              ) : adjustments.map(a => (
+                <tr key={a.id} className={`hover:bg-slate-50 ${a.status === 'approved' ? (a.adjustment_type === 'increase' ? 'bg-green-50' : 'bg-red-50') : ''}`}>
                   <td className="px-4 py-3 font-mono text-xs font-bold">{a.adjustment_id}</td>
-                  <td className="px-4 py-3"><p className="font-medium text-slate-800">{a.item_name}</p><p className="text-xs text-slate-400">{a.lot_id}</p></td>
-                  <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${a.adjustment_type === 'decrease' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>{a.adjustment_type === 'decrease' ? '↓ Decrease' : '↑ Increase'}</span></td>
+                  <td className="px-4 py-3">
+                    <p className="font-medium text-slate-800">{a.item_name}</p>
+                    <p className="text-xs text-slate-400">{a.lot_id}</p>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${a.adjustment_type === 'decrease' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                      {a.adjustment_type === 'decrease' ? '↓ Decrease' : '↑ Increase'}
+                    </span>
+                  </td>
                   <td className="px-4 py-3 text-right text-slate-600">{a.quantity_before}</td>
                   <td className="px-4 py-3 text-right font-bold text-slate-800">{a.adjustment_quantity} {a.uom}</td>
                   <td className="px-4 py-3 text-right font-bold text-slate-800">{a.quantity_after}</td>
                   <td className="px-4 py-3 text-xs text-slate-500 max-w-xs truncate">{a.reason}</td>
-                  <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${a.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : a.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{a.status}</span></td>
-                  {isAdmin && <td className="px-4 py-3">{a.status === 'pending' && <div className="flex gap-1"><button onClick={() => approve(a, true)} className="p-1.5 rounded hover:bg-green-100 text-green-600"><CheckCircle2 className="w-4 h-4" /></button><button onClick={() => approve(a, false)} className="p-1.5 rounded hover:bg-red-100 text-red-500"><XCircle className="w-4 h-4" /></button></div>}</td>}
+                  <td className="px-4 py-3">
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${a.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : a.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                      {a.status}
+                    </span>
+                  </td>
+                  {isAdmin && (
+                    <td className="px-4 py-3">
+                      {a.status === 'pending' && (
+                        <div className="flex gap-1">
+                          <button onClick={() => approve(a, true)} className="p-1.5 rounded hover:bg-green-100 text-green-600"><CheckCircle2 className="w-4 h-4" /></button>
+                          <button onClick={() => approve(a, false)} className="p-1.5 rounded hover:bg-red-100 text-red-500"><XCircle className="w-4 h-4" /></button>
+                        </div>
+                      )}
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

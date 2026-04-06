@@ -306,9 +306,10 @@ export default function SMSStockOut() {
 
   async function loadData() {
     setLoading(true);
-    // Load lots with status=putaway (Stored) and their stock balances
+    // Load ALL non-rejected/non-damaged lots — filter by actual stock balance, not DB status field
+    // This ensures lots incorrectly marked 'consumed' but with real stock still appear
     const [lots, balances] = await Promise.all([
-      base44.entities.StoreLot.filter({ status: 'putaway' }),
+      base44.entities.StoreLot.list('-created_date', 500),
       base44.entities.StoreStockBalance.list('-created_date', 1000),
     ]);
 
@@ -316,24 +317,27 @@ export default function SMSStockOut() {
     const byLot = {};
     balances.forEach(b => { byLot[b.lot_id] = byLot[b.lot_id] ? [...byLot[b.lot_id], b] : [b]; });
 
-    // Build unique items list with their lots
+    // Build unique items list — only include lots that have actual stock in StoreStockBalance
     const itemMap = {};
-    lots.forEach(l => {
-      if (!itemMap[l.item_code]) {
-        itemMap[l.item_code] = {
-          item_code: l.item_code,
-          item_name: l.item_name,
-          uom: l.uom,
-          lots: [],
-          total_stock: 0,
-        };
-      }
-      const lotStock = (byLot[l.lot_id] || []).reduce((s, b) => s + (b.quantity || 0), 0);
-      itemMap[l.item_code].lots.push(l);
-      itemMap[l.item_code].total_stock += lotStock;
-    });
+    lots
+      .filter(l => !['rejected', 'damaged'].includes(l.status))
+      .forEach(l => {
+        const lotStock = (byLot[l.lot_id] || []).reduce((s, b) => s + (b.quantity || 0), 0);
+        if (lotStock <= 0) return; // skip lots with no actual stock
+        if (!itemMap[l.item_code]) {
+          itemMap[l.item_code] = {
+            item_code: l.item_code,
+            item_name: l.item_name,
+            uom: l.uom,
+            lots: [],
+            total_stock: 0,
+          };
+        }
+        itemMap[l.item_code].lots.push(l);
+        itemMap[l.item_code].total_stock += lotStock;
+      });
 
-    setStoredItems(Object.values(itemMap).filter(i => i.total_stock > 0));
+    setStoredItems(Object.values(itemMap));
     setStockByLot(byLot);
     setLoading(false);
   }
