@@ -1,14 +1,101 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, CheckCircle2, Truck, Camera, FileText, Plus, Trash2 } from 'lucide-react';
+import { Loader2, CheckCircle2, Truck, Camera, FileText, Plus, Trash2, Search } from 'lucide-react';
 import PhotoUploader from '@/components/grn/PhotoUploader';
 import ChecklistGate from '@/components/grn/ChecklistGate';
 import { genId, logGrnAudit, getChecklistTemplate } from '@/components/grn/grnHelpers';
 import { fireFMSEvent } from '@/lib/useFMSAutoComplete';
 import ExportButton from '@/components/store/ExportButton';
+
+// Searchable item name with UOM auto-fill
+function ItemNameSelect({ value, onChangeName, onSelectItem }) {
+  const [query, setQuery] = useState(value || '');
+  const [open, setOpen] = useState(false);
+  const [suggestions, setSuggestions] = useState([]);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    Promise.all([
+      base44.entities.StoreOpeningStock.list('-created_date', 500),
+      base44.entities.ItemMaster.list('-created_date', 500),
+      base44.entities.StoreLot.list('-created_date', 500),
+    ]).then(([os, im, lots]) => {
+      const seen = new Set();
+      const merged = [
+        ...os.map(o => ({ item_name: o.item_name, item_code: o.item_code, uom: o.uom })),
+        ...im.map(i => ({ item_name: i.item_name, item_code: i.item_code, uom: i.base_uom })),
+        ...lots.map(l => ({ item_name: l.item_name, item_code: l.item_code, uom: l.uom })),
+      ].filter(i => {
+        const key = i.item_name?.trim().toLowerCase();
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      setSuggestions(merged);
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    function onClick(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, []);
+
+  const filtered = query.trim()
+    ? suggestions.filter(s => s.item_name?.toLowerCase().includes(query.toLowerCase()))
+    : suggestions;
+
+  function handleSelect(item) {
+    setQuery(item.item_name);
+    setOpen(false);
+    onSelectItem(item);
+  }
+
+  function handleInput(e) {
+    setQuery(e.target.value);
+    onChangeName(e.target.value);
+    setOpen(true);
+  }
+
+  return (
+    <div className="relative" ref={ref}>
+      <div className="relative">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+        <input
+          className="w-full h-9 pl-8 pr-3 border border-slate-200 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-slate-400"
+          placeholder="Type to search or add new item..."
+          value={query}
+          onChange={handleInput}
+          onFocus={() => setOpen(true)}
+        />
+      </div>
+      {open && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+          {filtered.length === 0 ? (
+            query.trim() ? (
+              <div
+                className="px-4 py-2.5 text-sm text-blue-600 cursor-pointer hover:bg-blue-50 flex items-center gap-2"
+                onClick={() => { setOpen(false); onChangeName(query); }}
+              >
+                <Plus className="w-3.5 h-3.5" /> Add "{query}" as new item
+              </div>
+            ) : <div className="px-4 py-3 text-sm text-slate-400">No items found. Start typing...</div>
+          ) : (
+            filtered.map((s, i) => (
+              <div key={i} className="px-4 py-2.5 text-sm cursor-pointer hover:bg-slate-50" onClick={() => handleSelect(s)}>
+                <p className="font-medium text-slate-800">{s.item_name}</p>
+                {s.uom && <p className="text-xs text-slate-400">Unit: {s.uom}{s.item_code ? ` · ${s.item_code}` : ''}</p>}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const STEPS = ['Capture Photos', 'Enter Details', 'Items Received', 'Review & Submit'];
 
@@ -245,7 +332,17 @@ export default function GateEntryPage() {
                 <div className="grid grid-cols-2 gap-2">
                   <div className="col-span-2">
                     <Label className="text-xs font-medium text-slate-700">Item Name *</Label>
-                    <Input className="h-9 text-sm mt-1" value={it.item_name} onChange={e => setItem(idx, 'item_name', e.target.value)} placeholder="Material name" />
+                    <div className="mt-1">
+                      <ItemNameSelect
+                        value={it.item_name}
+                        onChangeName={v => setItem(idx, 'item_name', v)}
+                        onSelectItem={item => {
+                          setItem(idx, 'item_name', item.item_name);
+                          if (item.item_code) setItem(idx, 'item_code', item.item_code);
+                          if (item.uom) setItem(idx, 'uom', item.uom);
+                        }}
+                      />
+                    </div>
                   </div>
                   <div>
                     <Label className="text-xs font-medium text-slate-700">Quantity *</Label>
