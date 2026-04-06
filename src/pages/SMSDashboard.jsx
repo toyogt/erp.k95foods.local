@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
 import { Building2, Package, AlertTriangle, Clock, ArrowRight, TrendingDown, CalendarClock } from 'lucide-react';
+import { SkeletonCards, SkeletonList } from '@/components/store/StoreSkeleton';
 import { Button } from '@/components/ui/button';
 
 import ExportButton from '@/components/store/ExportButton';
@@ -80,7 +81,13 @@ export default function SMSDashboard() {
     { key: 'quantity', label: 'Quantity' }, { key: 'uom', label: 'Unit' },
   ];
 
-  if (loading) return <div className="flex items-center justify-center h-64 text-slate-400">Loading...</div>;
+  if (loading) return (
+    <div className="space-y-5">
+      <div><div className="h-6 bg-slate-200 rounded w-48 animate-pulse mb-1" /><div className="h-4 bg-slate-100 rounded w-64 animate-pulse" /></div>
+      <SkeletonCards count={3} />
+      <SkeletonList rows={4} />
+    </div>
+  );
 
   return (
     <div className="space-y-5">

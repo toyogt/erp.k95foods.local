@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Plus, CheckCircle2, X, ClipboardCheck } from 'lucide-react';
+import { SkeletonList } from '@/components/store/StoreSkeleton';
 import ExportButton from '@/components/store/ExportButton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -118,6 +119,14 @@ export default function SMSCycleCount() {
     load();
     setActiveSession(sessionName.trim());
   }
+
+  if (loading) return (
+    <div className="space-y-4">
+      <div><div className="h-6 bg-slate-200 rounded w-40 animate-pulse mb-1" /><div className="h-4 bg-slate-100 rounded w-64 animate-pulse" /></div>
+      <div className="bg-white rounded-xl border border-slate-200 p-4 animate-pulse h-16" />
+      <SkeletonList rows={3} />
+    </div>
+  );
 
   return (
     <div className="space-y-4">

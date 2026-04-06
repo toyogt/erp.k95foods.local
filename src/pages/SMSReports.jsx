@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { BarChart3, MapPin, Package, ArrowLeftRight, AlertTriangle } from 'lucide-react';
+import { SkeletonTable } from '@/components/store/StoreSkeleton';
 
 function WeekBadge({ weeks }) {
   if (!weeks || weeks <= 1) return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Week 1</span>;
@@ -50,7 +51,13 @@ export default function SMSReports() {
 
   const lowStock = reorderConfigs.filter(r => (stockByItem[r.item_code] || 0) <= r.reorder_level);
 
-  if (loading) return <div className="flex items-center justify-center h-64 text-slate-400">Loading reports...</div>;
+  if (loading) return (
+    <div className="space-y-4">
+      <div><div className="h-6 bg-slate-200 rounded w-40 animate-pulse mb-1" /><div className="h-4 bg-slate-100 rounded w-72 animate-pulse" /></div>
+      <div className="flex gap-1 bg-slate-100 rounded-xl p-1">{[1,2,3,4].map(i => <div key={i} className="flex-1 h-9 bg-slate-200 rounded-lg animate-pulse" />)}</div>
+      <SkeletonTable rows={6} cols={5} />
+    </div>
+  );
 
   return (
     <div className="space-y-4">

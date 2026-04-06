@@ -387,13 +387,16 @@ export default function SMSStockOut() {
         else await base44.entities.StoreStockBalance.update(bal.id, { quantity: newQty });
       }
 
-      // Update lot remaining quantity
-      const lots = await base44.entities.StoreLot.filter({ lot_id: item.lot_id });
+      // Recompute remaining from actual stock balances (prevents false consumption)
+      const [lots, updatedBalances] = await Promise.all([
+        base44.entities.StoreLot.filter({ lot_id: item.lot_id }),
+        base44.entities.StoreStockBalance.filter({ lot_id: item.lot_id }),
+      ]);
       if (lots.length > 0) {
-        const newRemaining = Math.max(0, (lots[0].remaining_quantity ?? lots[0].quantity) - item.quantity);
+        const actualRemaining = updatedBalances.reduce((s, b) => s + (b.quantity || 0), 0);
         await base44.entities.StoreLot.update(lots[0].id, {
-          remaining_quantity: newRemaining,
-          status: newRemaining <= 0 ? 'consumed' : lots[0].status,
+          remaining_quantity: actualRemaining,
+          status: actualRemaining <= 0 ? 'consumed' : 'putaway',
         });
       }
     }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Plus, QrCode, Edit2, Building2, Search, X } from 'lucide-react';
+import { SkeletonTable } from '@/components/store/StoreSkeleton';
 import ExportButton from '@/components/store/ExportButton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -165,6 +166,9 @@ export default function SMSLocationManager() {
         </select>
       </div>
 
+      {loading ? (
+        <SkeletonTable rows={5} cols={7} headers={['Location Code','Warehouse','Floor / Section','Place / Slab / Rack','Type','Capacity','Actions']} />
+      ) : (
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -180,9 +184,7 @@ export default function SMSLocationManager() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {loading ? (
-                <tr><td colSpan={7} className="text-center py-12 text-slate-400">Loading...</td></tr>
-              ) : filtered.length === 0 ? (
+              {filtered.length === 0 ? (
                 <tr><td colSpan={7} className="text-center py-12 text-slate-400">No locations found. Add your first location.</td></tr>
               ) : filtered.map(loc => (
                 <tr key={loc.id} className="hover:bg-slate-50">
@@ -205,6 +207,7 @@ export default function SMSLocationManager() {
         </div>
         <div className="px-4 py-2 bg-slate-50 border-t border-slate-100 text-xs text-slate-400">{filtered.length} location(s)</div>
       </div>
+      )}
 
       {showModal && <LocationModal loc={editLoc} onSave={() => { setShowModal(false); load(); }} onClose={() => setShowModal(false)} />}
       {qrLoc && <QRModal location={qrLoc} onClose={() => setQrLoc(null)} />}
