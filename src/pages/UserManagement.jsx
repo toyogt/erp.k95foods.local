@@ -17,7 +17,6 @@ export default function UserManagement() {
   const [showInvite, setShowInvite] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState('user');
-  const [inviteAppRole, setInviteAppRole] = useState('');
   const [inviting, setInviting] = useState(false);
   const [inviteError, setInviteError] = useState('');
   const [savingRole, setSavingRole] = useState(null);
@@ -43,10 +42,9 @@ export default function UserManagement() {
     setInviting(true);
     try {
       await base44.users.inviteUser(inviteEmail.trim(), inviteRole);
-      await auditUserInvited(user, inviteEmail.trim(), inviteAppRole || inviteRole);
+      await auditUserInvited(user, inviteEmail.trim(), inviteRole);
       setInviteEmail('');
       setInviteRole('user');
-      setInviteAppRole('');
       setShowInvite(false);
       load();
     } catch (e) {
@@ -200,7 +198,7 @@ export default function UserManagement() {
                   placeholder="user@company.com" className="mt-1" />
               </div>
               <div>
-                <Label>Platform Access <span className="text-red-500">*</span></Label>
+                <Label>Role <span className="text-red-500">*</span></Label>
                 <Select value={inviteRole} onValueChange={setInviteRole}>
                   <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -208,22 +206,7 @@ export default function UserManagement() {
                     <SelectItem value="admin">Admin — Full system access</SelectItem>
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-slate-400 mt-1">Platform-level permission (required by system)</p>
-              </div>
-              <div>
-                <Label>App Role <span className="text-slate-400 font-normal">(optional)</span></Label>
-                <Select value={inviteAppRole} onValueChange={setInviteAppRole}>
-                  <SelectTrigger className="mt-1"><SelectValue placeholder="Select role after joining" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={null}>— No specific role —</SelectItem>
-                    {roles.map(r => (
-                      <SelectItem key={r.role_key} value={r.role_key}>
-                        {r.label}{r.description ? ` — ${r.description}` : ''}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-slate-400 mt-1">Set module-specific role once user accepts invite</p>
+                <p className="text-xs text-slate-400 mt-1">Module-specific roles can be assigned from the Roles page after the user joins</p>
               </div>
               {inviteError && <p className="text-red-600 text-sm">{inviteError}</p>}
               <div className="flex gap-2 justify-end">
