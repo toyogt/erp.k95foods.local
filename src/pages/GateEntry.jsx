@@ -10,7 +10,42 @@ import ChecklistGate from '@/components/grn/ChecklistGate';
 import { genId, logGrnAudit, getChecklistTemplate } from '@/components/grn/grnHelpers';
 import { fireFMSEvent } from '@/lib/useFMSAutoComplete';
 import GateEntryInfoModal, { InfoButton } from '@/components/store/GateEntryInfoModal';
+import { nextSerial } from '@/lib/serialCounter';
 import { useNavigate } from 'react-router-dom';
+import { History, Loader2 as LoaderIcon } from 'lucide-react';
+
+function GateEntryHistory() {
+  const [entries, setEntries] = useState([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    base44.entities.GateEntry.list('-created_date', 100).then(d => { setEntries(d); setLoading(false); }).catch(() => setLoading(false));
+  }, []);
+  if (loading) return <div className="py-8 text-center text-slate-400"><LoaderIcon className="w-5 h-5 animate-spin mx-auto" /></div>;
+  if (entries.length === 0) return <div className="py-8 text-center text-slate-400">No Gate Entry records yet.</div>;
+  return (
+    <div className="space-y-3">
+      {entries.map(e => (
+        <div key={e.id} className="bg-white border border-slate-200 rounded-xl p-4">
+          <div className="flex items-start justify-between">
+            <span className="font-bold font-mono text-slate-900">{e.gate_id}</span>
+            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${e.status === 'PROCESSED' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>{e.status}</span>
+          </div>
+          <div className="text-xs text-slate-500 grid grid-cols-2 gap-1 mt-2">
+            <span>Arrived: {e.arrived_at ? new Date(e.arrived_at).toLocaleString('en-IN') : '—'}</span>
+            {e.vehicle_number && <span>Vehicle: {e.vehicle_number}</span>}
+            {e.driver_number && <span>Driver Mobile: {e.driver_number}</span>}
+            {e.driver_name && <span>Driver: {e.driver_name}</span>}
+          </div>
+          {e.vehicle_photo && <div className="flex gap-2 mt-2">
+            <img src={e.vehicle_photo} alt="vehicle" className="w-14 h-10 object-cover rounded border" />
+            {e.invoice_photo && <img src={e.invoice_photo} alt="invoice" className="w-14 h-10 object-cover rounded border" />}
+            {e.material_photo && <img src={e.material_photo} alt="material" className="w-14 h-10 object-cover rounded border" />}
+          </div>}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 // Hindi / English label maps
 const T = {
@@ -93,6 +128,7 @@ export default function GateEntryPage() {
   const t = T[lang];
 
   const [user, setUser] = useState(null);
+  const [activeTab, setActiveTab] = useState('new');
   const [step, setStep] = useState(0);
   const [showInfo, setShowInfo] = useState(false);
   const [form, setForm] = useState({
@@ -139,7 +175,7 @@ export default function GateEntryPage() {
 
   async function handleSubmit() {
     setSubmitting(true);
-    const gate_id = genId('GE');
+    const gate_id = await nextSerial('GE');
     const gateEntry = await base44.entities.GateEntry.create({
     gate_id,
     arrived_at: new Date().toISOString(),
@@ -248,8 +284,22 @@ export default function GateEntryPage() {
         </div>
       </div>
 
+      {/* Tabs */}
+      <div className="flex border-b border-slate-200">
+        {[{ id: 'new', label: 'New Gate Entry', icon: FileText }, { id: 'history', label: 'Documents / History', icon: History }].map(tab => (
+          <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === tab.id ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-700'
+            }`}>
+            <tab.icon className="w-4 h-4" />{tab.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'history' && <GateEntryHistory />}
+
       {/* Step indicator */}
-      <div className="flex items-center gap-1">
+      {activeTab === 'new' && <div className="flex items-center gap-1">
         {t.steps.map((s, i) => (
           <div key={i} className="flex items-center gap-1 flex-1">
             <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
@@ -261,10 +311,10 @@ export default function GateEntryPage() {
             {i < t.steps.length - 1 && <div className={`flex-1 h-0.5 ${i < step ? 'bg-green-400' : 'bg-slate-200'}`} />}
           </div>
         ))}
-      </div>
+      </div>}
 
       {/* ── Step 0: Photos ── */}
-      {step === 0 && (
+      {activeTab === 'new' && step === 0 && (
         <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-5">
           <div className="flex items-center gap-2">
             <Camera className="w-5 h-5 text-slate-600" />
@@ -297,7 +347,7 @@ export default function GateEntryPage() {
       )}
 
       {/* ── Step 1: Details ── */}
-      {step === 1 && (
+      {activeTab === 'new' && step === 1 && (
         <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
           <div className="flex items-center gap-2">
             <Truck className="w-5 h-5 text-slate-600" />
@@ -361,7 +411,7 @@ export default function GateEntryPage() {
       )}
 
       {/* ── Step 2: Review ── */}
-      {step === 2 && (
+      {activeTab === 'new' && step === 2 && (
         <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
           <div className="flex items-center gap-2">
             <FileText className="w-5 h-5 text-slate-600" />
