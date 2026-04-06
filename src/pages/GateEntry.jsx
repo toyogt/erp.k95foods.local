@@ -103,6 +103,7 @@ export default function GateEntryPage() {
     notes: '',
     vehicle_photo: '',
     material_photo: '',
+    invoice_photo: '',
   });
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(null);
@@ -116,6 +117,9 @@ export default function GateEntryPage() {
   function validateStep0() {
     if (form.transport_type === 'vehicle' && !form.vehicle_photo) {
       toast({ title: t.validation.vehiclePhoto, variant: 'destructive' }); return false;
+    }
+    if (!form.invoice_photo) {
+      toast({ title: lang === 'hi' ? 'इनवॉयस फ़ोटो आवश्यक है।' : 'Invoice photo is required.', variant: 'destructive' }); return false;
     }
     return true;
   }
@@ -137,15 +141,16 @@ export default function GateEntryPage() {
     setSubmitting(true);
     const gate_id = genId('GE');
     const gateEntry = await base44.entities.GateEntry.create({
-      gate_id,
-      arrived_at: new Date().toISOString(),
-      vehicle_number: form.vehicle_number.trim() || undefined,
-      driver_name: form.driver_name.trim() || undefined,
-      driver_number: form.driver_number.trim(),
-      notes: form.notes.trim() || undefined,
-      vehicle_photo: form.vehicle_photo || undefined,
-      material_photo: form.material_photo || undefined,
-      status: 'OPEN',
+    gate_id,
+    arrived_at: new Date().toISOString(),
+    vehicle_number: form.vehicle_number.trim() || undefined,
+    driver_name: form.driver_name.trim() || undefined,
+    driver_number: form.driver_number.trim(),
+    notes: form.notes.trim() || undefined,
+    vehicle_photo: form.vehicle_photo || undefined,
+    material_photo: form.material_photo || undefined,
+    invoice_photo: form.invoice_photo || undefined,
+    status: 'OPEN',
     });
 
     await logGrnAudit({
@@ -180,7 +185,7 @@ export default function GateEntryPage() {
 
   function resetForm() {
     setDone(null); setStep(0);
-    setForm({ transport_type: 'vehicle', vehicle_number: '', driver_name: '', driver_number: '', notes: '', vehicle_photo: '', material_photo: '' });
+    setForm({ transport_type: 'vehicle', vehicle_number: '', driver_name: '', driver_number: '', notes: '', vehicle_photo: '', material_photo: '', invoice_photo: '' });
     setChecklistTemplate(null);
   }
 
@@ -282,6 +287,7 @@ export default function GateEntryPage() {
             {form.transport_type === 'vehicle' && (
               <PhotoUploader label={`${t.vehiclePhoto} *`} required value={form.vehicle_photo} onChange={v => setField('vehicle_photo', v)} />
             )}
+            <PhotoUploader label={lang === 'hi' ? 'इनवॉयस / दस्तावेज़ फ़ोटो *' : 'Invoice / Document Photo *'} required value={form.invoice_photo} onChange={v => setField('invoice_photo', v)} />
             <PhotoUploader label={t.materialPhoto} value={form.material_photo} onChange={v => setField('material_photo', v)} />
           </div>
           <Button onClick={() => { if (validateStep0()) setStep(1); }} className="w-full h-12 bg-slate-900 text-base">
@@ -370,6 +376,7 @@ export default function GateEntryPage() {
           </div>
           <div className="flex gap-3 flex-wrap">
             {form.vehicle_photo && <img src={form.vehicle_photo} alt="vehicle" className="w-20 h-16 object-cover rounded-lg border" />}
+            {form.invoice_photo && <img src={form.invoice_photo} alt="invoice" className="w-20 h-16 object-cover rounded-lg border" />}
             {form.material_photo && <img src={form.material_photo} alt="material" className="w-20 h-16 object-cover rounded-lg border" />}
           </div>
           <div className="flex gap-2">

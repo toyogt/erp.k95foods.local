@@ -90,13 +90,14 @@ function QRModal({ lot, onClose }) {
 
 const LOT_HEADERS = [
   'Lot ID', 'Item', 'Supplier', 'Original Qty',
-  'Stored Stock', 'Issued / Consumed', 'Remaining Qty', 'Manufacture Date', 'Expiry', 'Aging', 'Status', 'QR',
+  'Stored Stock', 'Issued / Consumed', 'Remaining Qty', 'Stored At', 'Manufacture Date', 'Expiry', 'Aging', 'Status', 'QR',
 ];
 
 export default function SMSLotManager() {
   const [lots, setLots] = useState([]);
   const [storedByLot, setStoredByLot] = useState({});   // lot_id → current balance qty
   const [issuedByLot, setIssuedByLot] = useState({});   // lot_id → total issued qty
+  const [locationsByLot, setLocationsByLot] = useState({}); // lot_id → location codes array
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -111,6 +112,15 @@ export default function SMSLotManager() {
       base44.entities.StoreIssueLine.list('-created_date', 2000),
     ]);
 
+    // Build locations map: lot_id → unique location codes with qty
+    const lbl = {};
+    balances.filter(b => (b.quantity || 0) > 0).forEach(b => {
+      if (!b.lot_id) return;
+      if (!lbl[b.lot_id]) lbl[b.lot_id] = [];
+      const entry = `${b.location_code || b.location_id} (${b.quantity})`;
+      if (!lbl[b.lot_id].includes(entry)) lbl[b.lot_id].push(entry);
+    });
+
     // Build stored stock map: lot_id → sum of current balances
     const sbl = {};
     balances.forEach(b => { sbl[b.lot_id] = (sbl[b.lot_id] || 0) + (b.quantity || 0); });
@@ -122,6 +132,7 @@ export default function SMSLotManager() {
     setLots(lotsData);
     setStoredByLot(sbl);
     setIssuedByLot(ibl);
+    setLocationsByLot(lbl);
     setLoading(false);
   }
 
@@ -205,7 +216,7 @@ export default function SMSLotManager() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filtered.length === 0 ? (
-                  <tr><td colSpan={12} className="text-center py-12 text-slate-400">No lots found</td></tr>
+                  <tr><td colSpan={13} className="text-center py-12 text-slate-400">No lots found</td></tr>
                 ) : filtered.map(lot => {
                   const stored = storedByLot[lot.lot_id] ?? 0;
                   const issued = issuedByLot[lot.lot_id] ?? 0;
@@ -240,6 +251,16 @@ export default function SMSLotManager() {
                           {(lot.remaining_quantity ?? lot.quantity).toFixed(2)}
                         </span>
                         <span className="text-xs text-slate-400 ml-1">{lot.uom}</span>
+                      </td>
+                      {/* Stored At */}
+                      <td className="px-4 py-3">
+                        {locationsByLot[lot.lot_id]?.length > 0 ? (
+                          <div className="flex flex-col gap-0.5">
+                            {locationsByLot[lot.lot_id].map((loc, i) => (
+                              <span key={i} className="px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded text-xs font-mono whitespace-nowrap">{loc}</span>
+                            ))}
+                          </div>
+                        ) : <span className="text-slate-400 text-xs">—</span>}
                       </td>
                       <td className="px-4 py-3 text-slate-600 text-xs">{lot.mfg_date || '—'}</td>
                       <td className="px-4 py-3 text-slate-600 text-xs">{lot.expiry_date || '—'}</td>
