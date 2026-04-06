@@ -322,17 +322,23 @@ export default function GateEntryPage() {
 
         {/* ── Step 0: Photos ── */}
         {activeTab === 'new' && step === 0 && (
-          <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-6 space-y-5">
-            <div className="flex items-center gap-2">
-              <Camera className="w-5 h-5 text-slate-600" />
-              <h2 className="font-bold text-slate-900">{t.steps[0]}</h2>
+          <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-6 space-y-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
+                <Camera className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <h2 className="font-bold text-lg text-slate-900">{t.steps[0]}</h2>
+                <p className="text-xs text-slate-500 mt-0.5">Capture required photos for verification</p>
+              </div>
             </div>
+            
             <div>
-              <Label className="text-xs font-medium text-slate-700">{t.transportType} *</Label>
+              <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wide">{t.transportType} *</Label>
               <select
                 value={form.transport_type}
                 onChange={e => setField('transport_type', e.target.value)}
-                className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm mt-2"
+                className="w-full h-11 md:h-10 border border-slate-200 rounded-xl px-4 py-2.5 text-base md:text-sm mt-2 bg-white font-medium"
               >
                 <option value="vehicle">{t.transport.vehicle}</option>
                 <option value="bicycle">{t.transport.bicycle}</option>
@@ -340,14 +346,28 @@ export default function GateEntryPage() {
                 <option value="other">{t.transport.other}</option>
               </select>
             </div>
-            <div className="space-y-4">
+            
+            <div className="space-y-4 md:space-y-5">
               {form.transport_type === 'vehicle' && (
-                <PhotoUploader label={`${t.vehiclePhoto} *`} required value={form.vehicle_photo} onChange={v => setField('vehicle_photo', v)} />
+                <div>
+                  <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-2 block">{t.vehiclePhoto} <span className="text-red-500">*</span></Label>
+                  <PhotoUploader required value={form.vehicle_photo} onChange={v => setField('vehicle_photo', v)} />
+                  <p className="text-xs text-slate-500 mt-1.5">Take a clear photo of the vehicle from the front or side</p>
+                </div>
               )}
-              <PhotoUploader label={lang === 'hi' ? 'इनवॉयस / दस्तावेज़ फ़ोटो *' : 'Invoice / Document Photo *'} required value={form.invoice_photo} onChange={v => setField('invoice_photo', v)} />
-              <PhotoUploader label={t.materialPhoto} value={form.material_photo} onChange={v => setField('material_photo', v)} />
+              <div>
+                <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-2 block">{lang === 'hi' ? 'इनवॉयस / दस्तावेज़ फ़ोटो' : 'Invoice / Document Photo'} <span className="text-red-500">*</span></Label>
+                <PhotoUploader required value={form.invoice_photo} onChange={v => setField('invoice_photo', v)} />
+                <p className="text-xs text-slate-500 mt-1.5">Capture the invoice or delivery document clearly</p>
+              </div>
+              <div>
+                <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-2 block">{t.materialPhoto}</Label>
+                <PhotoUploader value={form.material_photo} onChange={v => setField('material_photo', v)} />
+                <p className="text-xs text-slate-500 mt-1.5">Optional: Photo of goods being received</p>
+              </div>
             </div>
-            <Button onClick={() => { if (validateStep0()) setStep(1); }} className="w-full h-11 md:h-12 bg-slate-900 text-sm md:text-base">
+            
+            <Button onClick={() => { if (validateStep0()) setStep(1); }} className="w-full h-12 md:h-11 bg-slate-900 hover:bg-slate-800 text-base md:text-sm font-medium rounded-xl">
               {t.continue}
             </Button>
           </div>
