@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
-import { Building2, Package, AlertTriangle, Clock, ArrowRight, TrendingDown, CalendarClock } from 'lucide-react';
+import StorePageAccessManager from '@/components/store/StorePageAccessManager';
+import { Building2, Package, AlertTriangle, Clock, ArrowRight, TrendingDown, CalendarClock, Users } from 'lucide-react';
 import { SkeletonCards, SkeletonList } from '@/components/store/StoreSkeleton';
 import { Button } from '@/components/ui/button';
 
@@ -38,6 +39,7 @@ export default function SMSDashboard() {
   const [reorderConfigs, setReorderConfigs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
+  const [showAccessManager, setShowAccessManager] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -96,11 +98,16 @@ export default function SMSDashboard() {
           <h1 className="text-xl font-bold text-slate-900">Store Management</h1>
           <p className="text-sm text-slate-500">Inventory lifecycle — Gate Entry to Dispatch</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <ExportButton data={stock} columns={stockExportCols} filename="current_stock" />
           <Link to="/SMSLocationManager">
             <Button variant="outline" size="sm" className="gap-2"><Building2 className="w-4 h-4" /> Locations</Button>
           </Link>
+          {isAdmin && (
+            <Button variant="outline" size="sm" className="gap-2" onClick={() => setShowAccessManager(true)}>
+              <Users className="w-4 h-4" /> Page Access
+            </Button>
+          )}
         </div>
       </div>
 
@@ -197,7 +204,6 @@ export default function SMSDashboard() {
           ))}
         </div>
       )}
-
 
     </div>
   );
