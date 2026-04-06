@@ -7,16 +7,16 @@ import { Loader2, RefreshCw, CheckCircle2, Plus, Trash2, Search, AlertTriangle, 
 import { logGrnAudit, getChecklistTemplate } from '@/components/grn/grnHelpers';
 import { fireFMSEvent, linkFMSRef } from '@/lib/useFMSAutoComplete';
 import ChecklistGate from '@/components/grn/ChecklistGate';
-import { useToast } from '@/components/ui/use-toast';
-import { SweetAlertModal, ValidationAlert } from '@/components/store/SweetAlert';
 import GRNItemCard from '@/components/store/GRNItemCard';
+import { showErrorAlert, showWarningAlert, showValidationErrors, showSuccessToast } from '@/lib/toastHelpers';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 function emptyItem() {
   return { item_code: '', item_name: '', quantity: '', uom: 'Nos', batch_lot: '', expiry_date: '', mfg_date: '', material_photo: '', supplier_name: '', notes: '', _rules: null };
 }
 
 export default function GRNReceive() {
-  const { toast } = useToast();
   const [user, setUser] = useState(null);
   const [gateEntries, setGateEntries] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -30,7 +30,6 @@ export default function GRNReceive() {
   const [showChecklist, setShowChecklist] = useState(false);
   const [search, setSearch] = useState('');
   const [storeItems, setStoreItems] = useState([]);
-  const [alertConfig, setAlertConfig] = useState(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -121,16 +120,13 @@ export default function GRNReceive() {
 
   async function handleSubmitClick() {
     if (validItems.length === 0) {
-      setAlertConfig({ open: true, type: 'warning', title: 'No Items', message: 'Please add at least one item with a valid quantity.' });
+      showWarningAlert('No Items', 'Please add at least one item with a valid quantity.');
       return;
     }
 
     const errors = validateItems();
     if (errors.length > 0) {
-      setAlertConfig({
-        open: true, type: 'error', title: 'Validation Errors',
-        message: errors.join('\n'),
-      });
+      showValidationErrors('Validation Errors', errors);
       return;
     }
 
@@ -244,15 +240,7 @@ export default function GRNReceive() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-4 pb-12 px-2 md:px-0">
-      {alertConfig && (
-        <SweetAlertModal
-          open={alertConfig.open}
-          type={alertConfig.type}
-          title={alertConfig.title}
-          message={alertConfig.message}
-          onClose={() => setAlertConfig(null)}
-        />
-      )}
+      <ToastContainer />
 
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-slate-900">GRN (Goods Received Note)</h1>

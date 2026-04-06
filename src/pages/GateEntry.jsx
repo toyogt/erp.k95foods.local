@@ -4,8 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, CheckCircle2, Truck, Camera, FileText, Languages } from 'lucide-react';
-import { useToast } from '@/components/ui/use-toast';
 import PhotoUploader from '@/components/grn/PhotoUploader';
+import { showErrorAlert, showSuccessToast } from '@/lib/toastHelpers';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import ChecklistGate from '@/components/grn/ChecklistGate';
 import { genId, logGrnAudit, getChecklistTemplate } from '@/components/grn/grnHelpers';
 import { fireFMSEvent } from '@/lib/useFMSAutoComplete';
@@ -54,7 +56,7 @@ const T = {
     steps: ['Capture Photos', 'Enter Details', 'Review & Submit'],
     transportType: 'Transport Type',
     vehiclePhoto: 'Vehicle Photo',
-    materialPhoto: 'Material / Goods Photo (optional)',
+    materialPhoto: 'Material / Goods Photo *',
     vehicleNumber: 'Vehicle Number',
     driverName: 'Driver Name (optional)',
     driverNumber: 'Driver Mobile Number',
@@ -87,7 +89,7 @@ const T = {
     steps: ['फ़ोटो लें', 'विवरण दर्ज करें', 'समीक्षा करें'],
     transportType: 'परिवहन का प्रकार',
     vehiclePhoto: 'वाहन की फ़ोटो',
-    materialPhoto: 'सामान की फ़ोटो (वैकल्पिक)',
+    materialPhoto: 'सामान की फ़ोटो *',
     vehicleNumber: 'वाहन नंबर',
     driverName: 'चालक का नाम (वैकल्पिक)',
     driverNumber: 'चालक का मोबाइल नंबर',
@@ -122,7 +124,6 @@ function isValidIndianPhone(num) {
 }
 
 export default function GateEntryPage() {
-  const { toast } = useToast();
   const navigate = useNavigate();
   const [lang, setLang] = useState('en');
   const t = T[lang];
@@ -152,23 +153,26 @@ export default function GateEntryPage() {
 
   function validateStep0() {
     if (form.transport_type === 'vehicle' && !form.vehicle_photo) {
-      toast({ title: t.validation.vehiclePhoto, variant: 'destructive' }); return false;
+      showErrorAlert('Validation Error', t.validation.vehiclePhoto); return false;
     }
     if (!form.invoice_photo) {
-      toast({ title: lang === 'hi' ? 'इनवॉयस फ़ोटो आवश्यक है।' : 'Invoice photo is required.', variant: 'destructive' }); return false;
+      showErrorAlert('Validation Error', lang === 'hi' ? 'इनवॉयस फ़ोटो आवश्यक है।' : 'Invoice photo is required.'); return false;
+    }
+    if (!form.material_photo) {
+      showErrorAlert('Validation Error', lang === 'hi' ? 'सामान की फ़ोटो आवश्यक है।' : 'Material / Goods photo is required.'); return false;
     }
     return true;
   }
 
   function validateStep1() {
     if (form.transport_type === 'vehicle' && !form.vehicle_number?.trim()) {
-      toast({ title: t.validation.vehicleNumber, variant: 'destructive' }); return false;
+      showErrorAlert('Validation Error', t.validation.vehicleNumber); return false;
     }
     if (!form.driver_number?.trim()) {
-      toast({ title: t.validation.driverNumber, variant: 'destructive' }); return false;
+      showErrorAlert('Validation Error', t.validation.driverNumber); return false;
     }
     if (!isValidIndianPhone(form.driver_number)) {
-      toast({ title: t.validation.driverNumberFormat, variant: 'destructive' }); return false;
+      showErrorAlert('Validation Error', t.validation.driverNumberFormat); return false;
     }
     return true;
   }
@@ -194,7 +198,7 @@ export default function GateEntryPage() {
       entity_id: gate_id, details: { vehicle: form.vehicle_number }, user,
     });
     await fireFMSEvent('gate_entry_created', gateEntry.id);
-    toast({ title: lang === 'hi' ? 'गेट एंट्री बनाई गई' : 'Gate Entry created successfully!' });
+    showSuccessToast(lang === 'hi' ? 'गेट एंट्री बनाई गई' : 'Gate Entry created successfully!');
 
     setLoadingCL(true);
     const tmpl = await getChecklistTemplate('GATE_ENTRY', 'CREATE');
@@ -217,7 +221,7 @@ export default function GateEntryPage() {
     await base44.entities.GateEntry.filter({ gate_id }).then(([ge]) => {
       if (ge) base44.entities.GateEntry.update(ge.id, { checklist_run_id: runId });
     });
-    toast({ title: lang === 'hi' ? 'चेकलिस्ट पूरी हुई' : 'Checklist completed!' });
+    showSuccessToast(lang === 'hi' ? 'चेकलिस्ट पूरी हुई' : 'Checklist completed!');
     setDone({ gate_id });
   }
 
@@ -273,6 +277,7 @@ export default function GateEntryPage() {
   // ── Main form ────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-slate-50 pb-12">
+      <ToastContainer />
       <div className="max-w-4xl mx-auto px-3 md:px-4 lg:px-6 py-6 space-y-4">
         {showInfo && <GateEntryInfoModal onClose={() => setShowInfo(false)} />}
 
@@ -292,7 +297,7 @@ export default function GateEntryPage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-slate-200 overflow-x-auto">
+        <div className="flex justify-center border-b border-slate-200 overflow-x-auto">
           {[{ id: 'new', label: 'New Gate Entry', icon: FileText }, { id: 'history', label: 'Documents / History', icon: History }].map(tab => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
@@ -347,23 +352,23 @@ export default function GateEntryPage() {
               </select>
             </div>
             
-            <div className="space-y-4 md:space-y-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {form.transport_type === 'vehicle' && (
                 <div>
                   <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-2 block">{t.vehiclePhoto} <span className="text-red-500">*</span></Label>
                   <PhotoUploader required value={form.vehicle_photo} onChange={v => setField('vehicle_photo', v)} />
-                  <p className="text-xs text-slate-500 mt-1.5">Take a clear photo of the vehicle from the front or side</p>
+                  <p className="text-xs text-slate-500 mt-1.5">Clear photo of vehicle from front or side</p>
                 </div>
               )}
               <div>
                 <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-2 block">{lang === 'hi' ? 'इनवॉयस / दस्तावेज़ फ़ोटो' : 'Invoice / Document Photo'} <span className="text-red-500">*</span></Label>
                 <PhotoUploader required value={form.invoice_photo} onChange={v => setField('invoice_photo', v)} />
-                <p className="text-xs text-slate-500 mt-1.5">Capture the invoice or delivery document clearly</p>
+                <p className="text-xs text-slate-500 mt-1.5">Capture invoice or delivery document clearly</p>
               </div>
               <div>
                 <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-2 block">{t.materialPhoto}</Label>
-                <PhotoUploader value={form.material_photo} onChange={v => setField('material_photo', v)} />
-                <p className="text-xs text-slate-500 mt-1.5">Optional: Photo of goods being received</p>
+                <PhotoUploader required value={form.material_photo} onChange={v => setField('material_photo', v)} />
+                <p className="text-xs text-slate-500 mt-1.5">Photo of goods being received</p>
               </div>
             </div>
             

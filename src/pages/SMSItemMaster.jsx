@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useToast } from '@/components/ui/use-toast';
 import { Plus, Pencil, Trash2, Search, PackageOpen, ImageIcon, Download } from 'lucide-react';
 import MaterialPhotoUpload from '@/components/store/MaterialPhotoUpload';
-import { SweetAlertModal } from '@/components/store/SweetAlert';
 import ImportSystemItemsModal from '@/components/store/ImportSystemItemsModal';
+import { showErrorAlert, showConfirmAlert, showSuccessToast } from '@/lib/toastHelpers';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const CATEGORIES = [
   { value: 'ingredient', label: 'Ingredient' },
@@ -30,17 +31,12 @@ const EMPTY_FORM = {
 function ItemFormModal({ item, onClose, onSaved }) {
   const [form, setForm] = useState(item ? { ...item } : { ...EMPTY_FORM });
   const [saving, setSaving] = useState(false);
-  const { toast } = useToast();
 
   function setField(k, v) { setForm(prev => ({ ...prev, [k]: v })); }
 
   async function handleSave() {
     if (!form.item_name?.trim()) {
-      toast({ title: 'Item name is required', variant: 'destructive' });
-      return;
-    }
-    if (!form.material_photo) {
-      toast({ title: 'Material photo is mandatory. Please upload a photo.', variant: 'destructive' });
+      showErrorAlert('Validation Error', 'Item name is required');
       return;
     }
     setSaving(true);
@@ -52,15 +48,15 @@ function ItemFormModal({ item, onClose, onSaved }) {
       };
       if (item?.id) {
         await base44.entities.StoreItemMaster.update(item.id, data);
-        toast({ title: 'Item updated successfully' });
+        showSuccessToast('Item updated successfully');
       } else {
         await base44.entities.StoreItemMaster.create(data);
-        toast({ title: 'Item created successfully' });
+        showSuccessToast('Item created successfully');
       }
       setSaving(false);
       onSaved();
     } catch (err) {
-      toast({ title: 'Failed to save item', variant: 'destructive' });
+      showErrorAlert('Save Failed', 'Failed to save item');
       setSaving(false);
     }
   }
@@ -79,7 +75,6 @@ function ItemFormModal({ item, onClose, onSaved }) {
           <MaterialPhotoUpload
             value={form.material_photo}
             onChange={v => setField('material_photo', v)}
-            required
           />
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -136,46 +131,34 @@ export default function SMSItemMaster() {
   const [modal, setModal] = useState(null);
   const [showImport, setShowImport] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState('all');
-  const { toast } = useToast();
 
   async function load() {
     setLoading(true);
     await base44.entities.StoreItemMaster.list('-created_date', 200).then(data => {
       setItems(data);
       setLoading(false);
-    }).catch(err => {
-      toast({ title: 'Failed to load items', variant: 'destructive' });
+    }).catch(() => {
+      showErrorAlert('Load Failed', 'Failed to load items');
       setLoading(false);
     });
   }
 
   useEffect(() => { load(); }, []);
 
-  const [alertConfig, setAlertConfig] = useState(null);
-  const [pendingDeleteItem, setPendingDeleteItem] = useState(null);
-
   async function handleDelete(item) {
-    setPendingDeleteItem(item);
-    setAlertConfig({
-      open: true,
-      type: 'warning',
-      title: 'Delete Item?',
-      message: `Are you sure you want to delete "${item.item_name}"? This cannot be undone.`,
-      showCancel: true,
-      confirmText: 'Delete',
-      onConfirm: async () => {
-        setAlertConfig(null);
+    showConfirmAlert(
+      'Delete Item?',
+      `Are you sure you want to delete "${item.item_name}"? This cannot be undone.`,
+      async () => {
         try {
           await base44.entities.StoreItemMaster.delete(item.id);
-          toast({ title: 'Item deleted successfully' });
+          showSuccessToast('Item deleted successfully');
           load();
         } catch (err) {
-          setAlertConfig({ open: true, type: 'error', title: 'Delete Failed', message: 'Could not delete this item. It may be referenced elsewhere.' });
+          showErrorAlert('Delete Failed', 'Could not delete this item. It may be referenced elsewhere.');
         }
-        setPendingDeleteItem(null);
-      },
-      onClose: () => { setAlertConfig(null); setPendingDeleteItem(null); },
-    });
+      }
+    );
   }
 
   const filtered = items.filter(i => {
@@ -188,19 +171,8 @@ export default function SMSItemMaster() {
 
   return (
     <div className="min-h-screen bg-slate-50 pb-12">
+      <ToastContainer />
       <div className="max-w-5xl mx-auto space-y-4 px-3 md:px-4 lg:px-6 py-6">
-      {alertConfig && (
-        <SweetAlertModal
-          open={alertConfig.open}
-          type={alertConfig.type}
-          title={alertConfig.title}
-          message={alertConfig.message}
-          showCancel={alertConfig.showCancel}
-          confirmText={alertConfig.confirmText}
-          onConfirm={alertConfig.onConfirm}
-          onClose={alertConfig.onClose || (() => setAlertConfig(null))}
-        />
-      )}
       {showImport && (
         <ImportSystemItemsModal
           existingItems={items}
