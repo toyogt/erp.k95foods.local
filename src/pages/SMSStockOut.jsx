@@ -169,10 +169,8 @@ function ScanModeIssue({ storedItems, stockByLot, onIssue, saving }) {
           />
           <QRScanner onScan={setLotScan} label="Lot QR" />
         </div>
-        {lotScan && (
-          resolvedLot
-            ? <div className="mt-1.5 flex items-center gap-2 text-green-600 text-xs"><CheckCircle2 className="w-3.5 h-3.5" />{resolvedLot.item_name} · Available: {maxQty} {resolvedLot.uom}</div>
-            : <div className="mt-1.5 flex items-center gap-2 text-red-500 text-xs"><AlertCircle className="w-3.5 h-3.5" />Lot not found or not in stored status</div>
+        {lotScan && !resolvedLot && (
+          <div className="mt-1.5 flex items-center gap-2 text-red-500 text-xs"><AlertCircle className="w-3.5 h-3.5" />Lot not found or not in stored status</div>
         )}
       </div>
 
@@ -182,7 +180,7 @@ function ScanModeIssue({ storedItems, stockByLot, onIssue, saving }) {
           <Input
             type="number"
             className="h-11 text-base mt-1"
-            placeholder={`Max: ${maxQty} ${resolvedLot.uom}`}
+            placeholder={`Enter quantity`}
             value={quantity}
             onChange={e => setQuantity(e.target.value)}
             min="0.01"
@@ -254,12 +252,7 @@ function ManualModeIssue({ storedItems, stockByLot, onIssue, saving }) {
           <div className="mt-1">
             <LotSelect lots={itemLots} value={selectedLotId} onChange={handleLotChange} />
           </div>
-          {selectedLotId && maxQty > 0 && (
-            <div className="mt-1.5 flex items-center gap-2 text-green-600 text-xs">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              Available: {maxQty.toFixed(2)} {balances[0]?.uom}
-            </div>
-          )}
+          {/* available qty shown in lot dropdown */}
         </div>
       )}
 
@@ -269,7 +262,7 @@ function ManualModeIssue({ storedItems, stockByLot, onIssue, saving }) {
           <Input
             type="number"
             className="h-11 text-base mt-1"
-            placeholder={`Max: ${maxQty.toFixed(2)}`}
+            placeholder="Enter quantity"
             value={quantity}
             onChange={e => setQuantity(e.target.value)}
             min="0.01"

@@ -9,7 +9,7 @@ import ExportButton from '@/components/store/ExportButton';
 
 function StatCard({ icon: Icon, label, value, color, sub }) {
   return (
-    <div className="bg-white rounded-xl border border-slate-200 p-4">
+    <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/70 shadow-sm p-4">
       <div className="flex items-center gap-3">
         <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${color}`}>
           <Icon className="w-5 h-5" />
@@ -113,7 +113,7 @@ export default function SMSDashboard() {
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-white rounded-xl border border-slate-200 p-4">
+      <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/70 shadow-sm p-4">
         <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Quick Actions</p>
         <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
           {quickActions.map(a => (
@@ -126,7 +126,7 @@ export default function SMSDashboard() {
 
       {/* Current Stock Summary */}
       {stock.length > 0 && (
-        <div className="bg-white rounded-xl border border-slate-200 p-4">
+        <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/70 shadow-sm p-4">
           <div className="flex items-center justify-between mb-3">
             <p className="text-sm font-semibold text-slate-700 flex items-center gap-2"><Package className="w-4 h-4 text-blue-500" /> Current Stock ({stock.length} entries)</p>
             <Link to="/SMSReports" className="text-xs text-blue-600 hover:underline flex items-center gap-1">Full report <ArrowRight className="w-3 h-3" /></Link>
@@ -152,7 +152,7 @@ export default function SMSDashboard() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Low Stock */}
-        <div className="bg-white rounded-xl border border-slate-200 p-4">
+        <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/70 shadow-sm p-4">
           <div className="flex items-center justify-between mb-3">
             <p className="text-sm font-semibold text-slate-700 flex items-center gap-2"><TrendingDown className="w-4 h-4 text-red-500" /> Low Stock Alerts</p>
           </div>
@@ -167,7 +167,7 @@ export default function SMSDashboard() {
         </div>
 
         {/* Expiry */}
-        <div className="bg-white rounded-xl border border-slate-200 p-4">
+        <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/70 shadow-sm p-4">
           <div className="flex items-center justify-between mb-3">
             <p className="text-sm font-semibold text-slate-700 flex items-center gap-2"><CalendarClock className="w-4 h-4 text-orange-500" /> Expiry Alerts</p>
           </div>
@@ -184,7 +184,7 @@ export default function SMSDashboard() {
 
       {/* Pending QC */}
       {pendingQC > 0 && (
-        <div className="bg-white rounded-xl border border-yellow-200 p-4">
+        <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-yellow-200/70 shadow-sm p-4">
           <div className="flex items-center justify-between mb-3">
             <p className="text-sm font-semibold text-yellow-700 flex items-center gap-2"><Clock className="w-4 h-4" /> {pendingQC} Lots Awaiting QC</p>
             <Link to="/SMSLotManager" className="text-xs text-blue-600 hover:underline flex items-center gap-1">View <ArrowRight className="w-3 h-3" /></Link>

@@ -224,7 +224,7 @@ export default function GateEntryPage() {
 
   if (done) {
     return (
-      <div className="max-w-md mx-auto pt-12 text-center space-y-4">
+      <div className="max-w-2xl mx-auto pt-12 text-center space-y-4 px-4">
         <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto" />
         <h2 className="text-2xl font-bold text-slate-900">Gate Entry & GRN Created</h2>
         <p className="text-slate-500 font-mono text-lg">{done.gate_id}</p>
@@ -236,7 +236,7 @@ export default function GateEntryPage() {
 
   if (checklistTemplate) {
     return (
-      <div className="max-w-lg mx-auto space-y-4 pb-12">
+      <div className="max-w-2xl mx-auto space-y-4 pb-12 px-2 md:px-0">
         <h2 className="text-xl font-bold text-slate-900">Gate Entry Checklist</h2>
         {loadingCL ? <Loader2 className="w-6 h-6 animate-spin mx-auto text-slate-400" /> : (
           <ChecklistGate template={checklistTemplate.tmpl} entityId={checklistTemplate.gate_id} entityType="GateEntry" user={user} onComplete={handleChecklistDone} onSkip={() => setDone({ gate_id: checklistTemplate.gate_id })} />
@@ -246,7 +246,7 @@ export default function GateEntryPage() {
   }
 
   return (
-    <div className="max-w-lg mx-auto space-y-4 pb-12">
+    <div className="max-w-2xl mx-auto space-y-4 pb-12 px-2 md:px-0">
       {/* Step indicator */}
       <div className="flex items-center gap-1">
         {STEPS.map((s, i) => (
