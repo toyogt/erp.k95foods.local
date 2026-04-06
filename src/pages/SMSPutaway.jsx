@@ -28,11 +28,10 @@ export default function SMSPutaway() {
     const issuedMap = {};
     issueLines.forEach(l => { issuedMap[l.lot_id] = (issuedMap[l.lot_id] || 0) + (l.issued_quantity || 0); });
 
-    // Pending putaway = not rejected/damaged, has no stock balance, has not been issued
+    // Pending putaway = not rejected/damaged/consumed AND still has remaining quantity
     const pending = lots.filter(l =>
       !['rejected', 'damaged', 'consumed'].includes(l.status) &&
-      (storedMap[l.lot_id] || 0) === 0 &&
-      (issuedMap[l.lot_id] || 0) === 0
+      (l.remaining_quantity ?? l.quantity) > 0
     );
 
     setPendingLots(pending);

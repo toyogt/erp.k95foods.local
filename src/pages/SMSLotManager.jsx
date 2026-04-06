@@ -90,7 +90,7 @@ function QRModal({ lot, onClose }) {
 
 const LOT_HEADERS = [
   'Lot ID', 'Item', 'Supplier', 'Original Qty',
-  'Stored Stock', 'Issued / Consumed', 'Manufacture Date', 'Expiry', 'Aging', 'Status', 'QR',
+  'Stored Stock', 'Issued / Consumed', 'Remaining Qty', 'Manufacture Date', 'Expiry', 'Aging', 'Status', 'QR',
 ];
 
 export default function SMSLotManager() {
@@ -205,7 +205,7 @@ export default function SMSLotManager() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filtered.length === 0 ? (
-                  <tr><td colSpan={11} className="text-center py-12 text-slate-400">No lots found</td></tr>
+                  <tr><td colSpan={12} className="text-center py-12 text-slate-400">No lots found</td></tr>
                 ) : filtered.map(lot => {
                   const stored = storedByLot[lot.lot_id] ?? 0;
                   const issued = issuedByLot[lot.lot_id] ?? 0;
@@ -231,6 +231,13 @@ export default function SMSLotManager() {
                       <td className="px-4 py-3 text-right">
                         <span className={`font-bold ${issued > 0 ? 'text-orange-600' : 'text-slate-400'}`}>
                           {issued.toFixed(2)}
+                        </span>
+                        <span className="text-xs text-slate-400 ml-1">{lot.uom}</span>
+                      </td>
+                      {/* Remaining Qty */}
+                      <td className="px-4 py-3 text-right">
+                        <span className={`font-bold ${(lot.remaining_quantity ?? lot.quantity) > 0 ? 'text-green-700' : 'text-slate-400'}`}>
+                          {(lot.remaining_quantity ?? lot.quantity).toFixed(2)}
                         </span>
                         <span className="text-xs text-slate-400 ml-1">{lot.uom}</span>
                       </td>

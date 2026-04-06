@@ -59,9 +59,11 @@ function LotSelect({ lots, value, onChange, usedLotIds = [] }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const selected = lots.find(l => l.lot_id === value);
+  // Show all lots that still have remaining quantity (partial storage fix)
+  const available = lots.filter(l => (l.remaining_quantity ?? l.quantity) > 0);
   const filtered = (query.trim()
-    ? lots.filter(l => l.lot_id?.toLowerCase().includes(query.toLowerCase()) || l.item_name?.toLowerCase().includes(query.toLowerCase()))
-    : lots
+    ? available.filter(l => l.lot_id?.toLowerCase().includes(query.toLowerCase()) || l.item_name?.toLowerCase().includes(query.toLowerCase()))
+    : available
   ).filter(l => !usedLotIds.includes(l.lot_id) || l.lot_id === value);
 
   useEffect(() => {
@@ -169,7 +171,8 @@ export default function PutawayPanel({ lots: externalLots, locations: externalLo
     }
     const maxQty = lot.remaining_quantity ?? lot.quantity;
     const remaining = maxQty - qty;
-    await base44.entities.StoreLot.update(lot.id, { status: remaining <= 0 ? 'putaway' : 'approved', remaining_quantity: remaining });
+    // Keep lot 'approved' if still has remaining quantity so it stays in dropdown
+    await base44.entities.StoreLot.update(lot.id, { status: remaining <= 0 ? 'putaway' : 'approved', remaining_quantity: Math.max(0, remaining) });
   }
 
   async function handleConfirmAll() {
