@@ -54,13 +54,21 @@ const T = {
   en: {
     title: 'Gate Entry',
     steps: ['Capture Photos', 'Enter Details', 'Review & Submit'],
+    photoSubtitle: 'Capture required photos for verification',
     transportType: 'Transport Type',
     vehiclePhoto: 'Vehicle Photo',
-    materialPhoto: 'Material / Goods Photo *',
+    invoicePhoto: 'Invoice / Document Photo',
+    materialPhoto: 'Material / Goods Photo',
+    vehiclePhotoHelp: 'Clear photo of vehicle from front or side',
+    invoicePhotoHelp: 'Capture invoice or delivery document clearly',
+    materialPhotoHelp: 'Photo of goods being received',
+    tapToUpload: 'Tap to upload',
     vehicleNumber: 'Vehicle Number',
     driverName: 'Driver Name (optional)',
     driverNumber: 'Driver Mobile Number',
     driverNumberPlaceholder: 'e.g. 9876543210',
+    driverNamePlaceholder: 'Driver name',
+    phoneValidation: 'Enter a valid 10-digit mobile number starting with 6–9',
     notes: 'Notes',
     notesPlaceholder: 'Any remarks...',
     continue: 'Continue to Details →',
@@ -71,6 +79,9 @@ const T = {
     success: 'Gate Entry Created',
     proceedGRN: 'Proceed to Goods Receipt →',
     newEntry: 'New Gate Entry',
+    checklistTitle: 'Gate Entry Checklist',
+    tabs: { new: 'New Gate Entry', history: 'Documents / History' },
+    reviewLabels: { transport: 'Transport', vehicleNumber: 'Vehicle Number', driverName: 'Driver Name', driverNumber: 'Driver Number', notes: 'Notes' },
     transport: {
       vehicle: 'Vehicle (Car, Truck, Bike)',
       bicycle: 'Bicycle / Cycle Rickshaw',
@@ -79,6 +90,8 @@ const T = {
     },
     validation: {
       vehiclePhoto: 'Vehicle photo is required.',
+      invoicePhoto: 'Invoice photo is required.',
+      materialPhoto: 'Material / Goods photo is required.',
       driverNumber: 'Driver mobile number is required.',
       driverNumberFormat: 'Enter a valid 10-digit Indian mobile number.',
       vehicleNumber: 'Vehicle number is required.',
@@ -86,14 +99,22 @@ const T = {
   },
   hi: {
     title: 'गेट एंट्री',
-    steps: ['फ़ोटो लें', 'विवरण दर्ज करें', 'समीक्षा करें'],
+    steps: ['फ़ोटो लें', 'विवरण दर्ज करें', 'समीक्षा करें और सबमिट करें'],
+    photoSubtitle: 'सत्यापन के लिए आवश्यक फ़ोटो लें',
     transportType: 'परिवहन का प्रकार',
     vehiclePhoto: 'वाहन की फ़ोटो',
-    materialPhoto: 'सामान की फ़ोटो *',
+    invoicePhoto: 'इनवॉयस / दस्तावेज़ फ़ोटो',
+    materialPhoto: 'सामान / माल की फ़ोटो',
+    vehiclePhotoHelp: 'वाहन की सामने या बगल से स्पष्ट फ़ोटो लें',
+    invoicePhotoHelp: 'इनवॉयस या डिलीवरी दस्तावेज़ की स्पष्ट फ़ोटो लें',
+    materialPhotoHelp: 'प्राप्त हो रहे सामान की फ़ोटो लें',
+    tapToUpload: 'अपलोड करने के लिए टैप करें',
     vehicleNumber: 'वाहन नंबर',
     driverName: 'चालक का नाम (वैकल्पिक)',
     driverNumber: 'चालक का मोबाइल नंबर',
     driverNumberPlaceholder: 'जैसे 9876543210',
+    driverNamePlaceholder: 'चालक का नाम',
+    phoneValidation: '6–9 से शुरू होने वाला सही 10 अंकों का मोबाइल नंबर दर्ज करें',
     notes: 'टिप्पणी',
     notesPlaceholder: 'कोई टिप्पणी...',
     continue: 'विवरण की ओर जाएं →',
@@ -104,6 +125,9 @@ const T = {
     success: 'गेट एंट्री बनाई गई',
     proceedGRN: 'माल रसीद की ओर जाएं →',
     newEntry: 'नई गेट एंट्री',
+    checklistTitle: 'गेट एंट्री चेकलिस्ट',
+    tabs: { new: 'नई गेट एंट्री', history: 'दस्तावेज़ / इतिहास' },
+    reviewLabels: { transport: 'परिवहन', vehicleNumber: 'वाहन नंबर', driverName: 'चालक का नाम', driverNumber: 'चालक का नंबर', notes: 'टिप्पणी' },
     transport: {
       vehicle: 'वाहन (कार, ट्रक, बाइक)',
       bicycle: 'साइकिल / साइकिल रिक्शा',
@@ -112,6 +136,8 @@ const T = {
     },
     validation: {
       vehiclePhoto: 'वाहन की फ़ोटो आवश्यक है।',
+      invoicePhoto: 'इनवॉयस फ़ोटो आवश्यक है।',
+      materialPhoto: 'सामान की फ़ोटो आवश्यक है।',
       driverNumber: 'चालक का मोबाइल नंबर आवश्यक है।',
       driverNumberFormat: 'सही 10 अंकों का भारतीय मोबाइल नंबर दर्ज करें।',
       vehicleNumber: 'वाहन नंबर आवश्यक है।',
@@ -153,26 +179,26 @@ export default function GateEntryPage() {
 
   function validateStep0() {
     if (form.transport_type === 'vehicle' && !form.vehicle_photo) {
-      showErrorAlert('Validation Error', t.validation.vehiclePhoto); return false;
+      showErrorAlert(lang === 'hi' ? 'सत्यापन त्रुटि' : 'Validation Error', t.validation.vehiclePhoto); return false;
     }
     if (!form.invoice_photo) {
-      showErrorAlert('Validation Error', lang === 'hi' ? 'इनवॉयस फ़ोटो आवश्यक है।' : 'Invoice photo is required.'); return false;
+      showErrorAlert(lang === 'hi' ? 'सत्यापन त्रुटि' : 'Validation Error', t.validation.invoicePhoto); return false;
     }
     if (!form.material_photo) {
-      showErrorAlert('Validation Error', lang === 'hi' ? 'सामान की फ़ोटो आवश्यक है।' : 'Material / Goods photo is required.'); return false;
+      showErrorAlert(lang === 'hi' ? 'सत्यापन त्रुटि' : 'Validation Error', t.validation.materialPhoto); return false;
     }
     return true;
   }
 
   function validateStep1() {
     if (form.transport_type === 'vehicle' && !form.vehicle_number?.trim()) {
-      showErrorAlert('Validation Error', t.validation.vehicleNumber); return false;
+      showErrorAlert(lang === 'hi' ? 'सत्यापन त्रुटि' : 'Validation Error', t.validation.vehicleNumber); return false;
     }
     if (!form.driver_number?.trim()) {
-      showErrorAlert('Validation Error', t.validation.driverNumber); return false;
+      showErrorAlert(lang === 'hi' ? 'सत्यापन त्रुटि' : 'Validation Error', t.validation.driverNumber); return false;
     }
     if (!isValidIndianPhone(form.driver_number)) {
-      showErrorAlert('Validation Error', t.validation.driverNumberFormat); return false;
+      showErrorAlert(lang === 'hi' ? 'सत्यापन त्रुटि' : 'Validation Error', t.validation.driverNumberFormat); return false;
     }
     return true;
   }
@@ -258,7 +284,7 @@ export default function GateEntryPage() {
     return (
       <div className="min-h-screen bg-slate-50 pb-12">
         <div className="max-w-4xl mx-auto px-3 md:px-4 lg:px-6 py-6 space-y-4">
-          <h2 className="text-2xl font-bold text-slate-900">Gate Entry Checklist</h2>
+          <h2 className="text-2xl font-bold text-slate-900">{t.checklistTitle}</h2>
           {loadingCL ? <Loader2 className="w-6 h-6 animate-spin mx-auto text-slate-400" /> : (
             <ChecklistGate
               template={checklistTemplate.tmpl}
@@ -298,12 +324,12 @@ export default function GateEntryPage() {
 
         {/* Tabs */}
         <div className="flex justify-center border-b border-slate-200 overflow-x-auto">
-          {[{ id: 'new', label: 'New Gate Entry', icon: FileText }, { id: 'history', label: 'Documents / History', icon: History }].map(tab => (
+          {[{ id: 'new', labelKey: 'new', icon: FileText }, { id: 'history', labelKey: 'history', icon: History }].map(tab => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                 activeTab === tab.id ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-700'
               }`}>
-              <tab.icon className="w-4 h-4" />{tab.label}
+              <tab.icon className="w-4 h-4" />{t.tabs[tab.labelKey]}
             </button>
           ))}
         </div>
@@ -334,7 +360,7 @@ export default function GateEntryPage() {
               </div>
               <div>
                 <h2 className="font-bold text-lg text-slate-900">{t.steps[0]}</h2>
-                <p className="text-xs text-slate-500 mt-0.5">Capture required photos for verification</p>
+                <p className="text-xs text-slate-500 mt-0.5">{t.photoSubtitle}</p>
               </div>
             </div>
             
@@ -357,18 +383,18 @@ export default function GateEntryPage() {
                 <div>
                   <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-2 block">{t.vehiclePhoto} <span className="text-red-500">*</span></Label>
                   <PhotoUploader required value={form.vehicle_photo} onChange={v => setField('vehicle_photo', v)} />
-                  <p className="text-xs text-slate-500 mt-1.5">Clear photo of vehicle from front or side</p>
+                  <p className="text-xs text-slate-500 mt-1.5">{t.vehiclePhotoHelp}</p>
                 </div>
               )}
               <div>
-                <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-2 block">{lang === 'hi' ? 'इनवॉयस / दस्तावेज़ फ़ोटो' : 'Invoice / Document Photo'} <span className="text-red-500">*</span></Label>
+                <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-2 block">{t.invoicePhoto} <span className="text-red-500">*</span></Label>
                 <PhotoUploader required value={form.invoice_photo} onChange={v => setField('invoice_photo', v)} />
-                <p className="text-xs text-slate-500 mt-1.5">Capture invoice or delivery document clearly</p>
+                <p className="text-xs text-slate-500 mt-1.5">{t.invoicePhotoHelp}</p>
               </div>
               <div>
-                <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-2 block">{t.materialPhoto}</Label>
+                <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-2 block">{t.materialPhoto} <span className="text-red-500">*</span></Label>
                 <PhotoUploader required value={form.material_photo} onChange={v => setField('material_photo', v)} />
-                <p className="text-xs text-slate-500 mt-1.5">Photo of goods being received</p>
+                <p className="text-xs text-slate-500 mt-1.5">{t.materialPhotoHelp}</p>
               </div>
             </div>
             
@@ -404,7 +430,7 @@ export default function GateEntryPage() {
                 className="h-11 md:h-9 text-base md:text-sm mt-2"
                 value={form.driver_name}
                 onChange={e => setField('driver_name', e.target.value)}
-                placeholder="Driver name"
+                placeholder={t.driverNamePlaceholder}
               />
             </div>
 
@@ -420,7 +446,7 @@ export default function GateEntryPage() {
                 placeholder={t.driverNumberPlaceholder}
               />
               {form.driver_number && !isValidIndianPhone(form.driver_number) && (
-                <p className="text-xs text-red-500 mt-1">Enter a valid 10-digit mobile number starting with 6–9</p>
+                <p className="text-xs text-red-500 mt-1">{t.phoneValidation}</p>
               )}
             </div>
 
@@ -450,11 +476,11 @@ export default function GateEntryPage() {
               <h2 className="font-bold text-slate-900">{t.steps[2]}</h2>
             </div>
             <div className="space-y-2 text-sm">
-              <Row label="Transport" value={form.transport_type} />
-              {form.transport_type === 'vehicle' && <Row label="Vehicle Number" value={form.vehicle_number} />}
-              {form.driver_name && <Row label="Driver Name" value={form.driver_name} />}
-              <Row label="Driver Number" value={form.driver_number} />
-              {form.notes && <Row label="Notes" value={form.notes} />}
+              <Row label={t.reviewLabels.transport} value={form.transport_type} />
+              {form.transport_type === 'vehicle' && <Row label={t.reviewLabels.vehicleNumber} value={form.vehicle_number} />}
+              {form.driver_name && <Row label={t.reviewLabels.driverName} value={form.driver_name} />}
+              <Row label={t.reviewLabels.driverNumber} value={form.driver_number} />
+              {form.notes && <Row label={t.reviewLabels.notes} value={form.notes} />}
             </div>
             <div className="flex gap-3 flex-wrap">
               {form.vehicle_photo && <img src={form.vehicle_photo} alt="vehicle" className="w-20 h-16 object-cover rounded-lg border" />}
