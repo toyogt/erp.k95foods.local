@@ -1,24 +1,19 @@
 import { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
-import { QrCode, ScanLine, Keyboard, CheckCircle2, AlertCircle, Search, MapPin, Package } from 'lucide-react';
+import { QrCode, ScanLine, Keyboard, CheckCircle2, AlertCircle, Search, MapPin, Package, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import QRScanner from '@/components/store/QRScanner';
 
-// Searchable dropdown for locations
 function LocationSelect({ locations, value, onChange }) {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
-
   const selected = locations.find(l => l.id === value);
   const filtered = query.trim()
-    ? locations.filter(l =>
-        l.location_code?.toLowerCase().includes(query.toLowerCase()) ||
-        l.display_name?.toLowerCase().includes(query.toLowerCase())
-      )
+    ? locations.filter(l => l.location_code?.toLowerCase().includes(query.toLowerCase()) || l.display_name?.toLowerCase().includes(query.toLowerCase()))
     : locations;
 
   useEffect(() => {
@@ -29,10 +24,7 @@ function LocationSelect({ locations, value, onChange }) {
 
   return (
     <div className="relative" ref={ref}>
-      <div
-        className="flex items-center h-11 border border-slate-200 rounded-md px-3 gap-2 cursor-pointer bg-white"
-        onClick={() => { setOpen(true); setQuery(''); }}
-      >
+      <div className="flex items-center h-11 border border-slate-200 rounded-md px-3 gap-2 cursor-pointer bg-white" onClick={() => { setOpen(true); setQuery(''); }}>
         <MapPin className="w-4 h-4 text-slate-400 shrink-0" />
         <span className={`flex-1 text-sm truncate ${selected ? 'text-slate-900' : 'text-slate-400'}`}>
           {selected ? `${selected.location_code} — ${selected.display_name}` : 'Type to search location...'}
@@ -43,28 +35,18 @@ function LocationSelect({ locations, value, onChange }) {
           <div className="p-2 border-b">
             <div className="flex items-center gap-2 px-2">
               <Search className="w-4 h-4 text-slate-400" />
-              <input
-                autoFocus
-                className="flex-1 text-sm outline-none"
-                placeholder="Search location..."
-                value={query}
-                onChange={e => setQuery(e.target.value)}
-              />
+              <input autoFocus className="flex-1 text-sm outline-none" placeholder="Search location..." value={query} onChange={e => setQuery(e.target.value)} />
             </div>
           </div>
           <div className="max-h-48 overflow-y-auto">
-            {filtered.length === 0 ? (
-              <p className="text-sm text-slate-400 text-center py-4">No locations found</p>
-            ) : filtered.map(l => (
-              <div
-                key={l.id}
-                className={`px-4 py-2.5 text-sm cursor-pointer hover:bg-slate-50 ${l.id === value ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-700'}`}
-                onClick={() => { onChange(l.id); setOpen(false); setQuery(''); }}
-              >
-                <span className="font-mono font-semibold">{l.location_code}</span>
-                <span className="text-slate-400 ml-2">{l.display_name}</span>
-              </div>
-            ))}
+            {filtered.length === 0 ? <p className="text-sm text-slate-400 text-center py-4">No locations found</p>
+              : filtered.map(l => (
+                <div key={l.id} className={`px-4 py-2.5 text-sm cursor-pointer hover:bg-slate-50 ${l.id === value ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-700'}`}
+                  onClick={() => { onChange(l.id); setOpen(false); setQuery(''); }}>
+                  <span className="font-mono font-semibold">{l.location_code}</span>
+                  <span className="text-slate-400 ml-2">{l.display_name}</span>
+                </div>
+              ))}
           </div>
         </div>
       )}
@@ -72,20 +54,15 @@ function LocationSelect({ locations, value, onChange }) {
   );
 }
 
-// Searchable dropdown for lots
-function LotSelect({ lots, value, onChange }) {
+function LotSelect({ lots, value, onChange, usedLotIds = [] }) {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
-
   const selected = lots.find(l => l.lot_id === value);
-  const filtered = query.trim()
-    ? lots.filter(l =>
-        l.lot_id?.toLowerCase().includes(query.toLowerCase()) ||
-        l.item_name?.toLowerCase().includes(query.toLowerCase()) ||
-        l.item_code?.toLowerCase().includes(query.toLowerCase())
-      )
-    : lots;
+  const filtered = (query.trim()
+    ? lots.filter(l => l.lot_id?.toLowerCase().includes(query.toLowerCase()) || l.item_name?.toLowerCase().includes(query.toLowerCase()))
+    : lots
+  ).filter(l => !usedLotIds.includes(l.lot_id) || l.lot_id === value);
 
   useEffect(() => {
     function handleClick(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
@@ -95,10 +72,7 @@ function LotSelect({ lots, value, onChange }) {
 
   return (
     <div className="relative" ref={ref}>
-      <div
-        className="flex items-center h-11 border border-slate-200 rounded-md px-3 gap-2 cursor-pointer bg-white"
-        onClick={() => { setOpen(true); setQuery(''); }}
-      >
+      <div className="flex items-center h-11 border border-slate-200 rounded-md px-3 gap-2 cursor-pointer bg-white" onClick={() => { setOpen(true); setQuery(''); }}>
         <Package className="w-4 h-4 text-slate-400 shrink-0" />
         <span className={`flex-1 text-sm truncate ${selected ? 'text-slate-900' : 'text-slate-400'}`}>
           {selected ? `${selected.lot_id} — ${selected.item_name}` : 'Type to search lot...'}
@@ -109,28 +83,18 @@ function LotSelect({ lots, value, onChange }) {
           <div className="p-2 border-b">
             <div className="flex items-center gap-2 px-2">
               <Search className="w-4 h-4 text-slate-400" />
-              <input
-                autoFocus
-                className="flex-1 text-sm outline-none"
-                placeholder="Search by Lot ID, Item name..."
-                value={query}
-                onChange={e => setQuery(e.target.value)}
-              />
+              <input autoFocus className="flex-1 text-sm outline-none" placeholder="Search by Lot ID, Item name..." value={query} onChange={e => setQuery(e.target.value)} />
             </div>
           </div>
           <div className="max-h-48 overflow-y-auto">
-            {filtered.length === 0 ? (
-              <p className="text-sm text-slate-400 text-center py-4">No lots found</p>
-            ) : filtered.map(l => (
-              <div
-                key={l.lot_id}
-                className={`px-4 py-2.5 text-sm cursor-pointer hover:bg-slate-50 ${l.lot_id === value ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-700'}`}
-                onClick={() => { onChange(l.lot_id); setOpen(false); setQuery(''); }}
-              >
-                <p className="font-mono font-semibold text-slate-800">{l.lot_id}</p>
-                <p className="text-xs text-slate-500">{l.item_name} · Available: {l.remaining_quantity ?? l.quantity} {l.uom}</p>
-              </div>
-            ))}
+            {filtered.length === 0 ? <p className="text-sm text-slate-400 text-center py-4">No lots found</p>
+              : filtered.map(l => (
+                <div key={l.lot_id} className={`px-4 py-2.5 text-sm cursor-pointer hover:bg-slate-50 ${l.lot_id === value ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-700'}`}
+                  onClick={() => { onChange(l.lot_id); setOpen(false); setQuery(''); }}>
+                  <p className="font-mono font-semibold text-slate-800">{l.lot_id}</p>
+                  <p className="text-xs text-slate-500">{l.item_name} · Available: {l.remaining_quantity ?? l.quantity} {l.uom}</p>
+                </div>
+              ))}
           </div>
         </div>
       )}
@@ -138,114 +102,99 @@ function LotSelect({ lots, value, onChange }) {
   );
 }
 
-/**
- * PutawayPanel — reusable across GRN, Transfers, Returns, Adjustments
- * Props:
- *   lots: pre-filtered lot list (or null to load all approved)
- *   locations: pre-filtered location list (or null to load all)
- *   onSuccess: callback after successful putaway
- *   compact: boolean (smaller layout for embedded use)
- */
+function emptyEntry() { return { lotId: '', locationId: '', quantity: '', notes: '' }; }
+
 export default function PutawayPanel({ lots: externalLots, locations: externalLocations, onSuccess, compact = false }) {
   const { toast } = useToast();
-  const [mode, setMode] = useState('scan'); // 'scan' | 'manual'
-
+  const [mode, setMode] = useState('manual'); // 'scan' | 'manual'
   const [lots, setLots] = useState(externalLots || []);
   const [locations, setLocations] = useState(externalLocations || []);
   const [loading, setLoading] = useState(!externalLots || !externalLocations);
   const [saving, setSaving] = useState(false);
 
-  // Scan mode state
+  // Multi-entry queue
+  const [entries, setEntries] = useState([emptyEntry()]);
+
+  // Scan mode state (single scan → add to queue)
   const [locationScan, setLocationScan] = useState('');
   const [lotScan, setLotScan] = useState('');
-
-  // Manual mode state
-  const [selectedLotId, setSelectedLotId] = useState('');
-  const [selectedLocationId, setSelectedLocationId] = useState('');
-
-  // Shared state
-  const [quantity, setQuantity] = useState('');
-  const [notes, setNotes] = useState('');
+  const [scanQty, setScanQty] = useState('');
+  const [scanNotes, setScanNotes] = useState('');
+  const [scanQueue, setScanQueue] = useState([]);
 
   useEffect(() => {
     if (externalLots && externalLocations) return;
-    setLoading(true);
     Promise.all([
       externalLots ? Promise.resolve(externalLots) : base44.entities.StoreLot.filter({ status: 'approved' }),
       externalLocations ? Promise.resolve(externalLocations) : base44.entities.StoreLocation.filter({ is_active: true }),
     ]).then(([l, loc]) => { setLots(l); setLocations(loc); setLoading(false); });
   }, []);
 
-  // Resolve from scan inputs
-  const resolvedLocation = mode === 'scan'
-    ? locations.find(l => l.qr_code === locationScan.trim() || l.location_code === locationScan.trim()) || null
-    : locations.find(l => l.id === selectedLocationId) || null;
+  function setEntry(idx, key, val) {
+    setEntries(prev => prev.map((e, i) => i === idx ? { ...e, [key]: val } : e));
+  }
+  function addEntry() { setEntries(prev => [...prev, emptyEntry()]); }
+  function removeEntry(idx) { setEntries(prev => prev.filter((_, i) => i !== idx)); }
 
-  const resolvedLot = mode === 'scan'
-    ? lots.find(l => l.qr_code === lotScan.trim() || l.lot_id === lotScan.trim()) || null
-    : lots.find(l => l.lot_id === selectedLotId) || null;
+  const usedLotIds = entries.map(e => e.lotId).filter(Boolean);
 
-  const maxQty = resolvedLot ? (resolvedLot.remaining_quantity ?? resolvedLot.quantity) : 0;
+  // Scan mode resolve
+  const scanLocation = locations.find(l => l.qr_code === locationScan.trim() || l.location_code === locationScan.trim()) || null;
+  const scanLot = lots.find(l => l.qr_code === lotScan.trim() || l.lot_id === lotScan.trim()) || null;
+  const scanMax = scanLot ? (scanLot.remaining_quantity ?? scanLot.quantity) : 0;
 
-  function resetForm() {
-    setLocationScan(''); setLotScan('');
-    setSelectedLotId(''); setSelectedLocationId('');
-    setQuantity(''); setNotes('');
+  function addToScanQueue() {
+    if (!scanLot || !scanLocation || !scanQty) return;
+    setScanQueue(prev => [...prev, { lot: scanLot, location: scanLocation, quantity: parseFloat(scanQty), notes: scanNotes }]);
+    setLotScan(''); setScanQty(''); setScanNotes('');
   }
 
-  async function handleConfirm() {
-    if (!resolvedLocation || !resolvedLot || !quantity) return;
-    const qty = parseFloat(quantity);
-    if (qty <= 0 || qty > maxQty) {
-      toast({ title: 'Invalid quantity', description: `Maximum available: ${maxQty} ${resolvedLot.uom}`, variant: 'destructive' });
-      return;
-    }
-    setSaving(true);
-    const user = await base44.auth.me();
-    const putawayId = `PUT-${Date.now()}`;
-    const now = new Date().toISOString();
-
+  async function processEntry(lot, location, qty, notes, user, now) {
+    const putawayId = `PUT-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`;
     await base44.entities.StorePutaway.create({
-      putaway_id: putawayId,
-      lot_id: resolvedLot.lot_id,
-      location_id: resolvedLocation.id,
-      location_code: resolvedLocation.location_code,
-      item_code: resolvedLot.item_code,
-      item_name: resolvedLot.item_name,
-      uom: resolvedLot.uom,
-      quantity: qty,
-      putaway_by: user?.email,
-      putaway_at: now,
-      notes,
+      putaway_id: putawayId, lot_id: lot.lot_id, location_id: location.id,
+      location_code: location.location_code, item_code: lot.item_code, item_name: lot.item_name,
+      uom: lot.uom, quantity: qty, putaway_by: user?.email, putaway_at: now, notes,
     });
-
-    // Update stock balance
-    const existing = await base44.entities.StoreStockBalance.filter({ lot_id: resolvedLot.lot_id, location_id: resolvedLocation.id });
+    const existing = await base44.entities.StoreStockBalance.filter({ lot_id: lot.lot_id, location_id: location.id });
     if (existing.length > 0) {
       await base44.entities.StoreStockBalance.update(existing[0].id, { quantity: (existing[0].quantity || 0) + qty });
     } else {
       await base44.entities.StoreStockBalance.create({
-        location_id: resolvedLocation.id, location_code: resolvedLocation.location_code,
-        lot_id: resolvedLot.lot_id, item_code: resolvedLot.item_code, item_name: resolvedLot.item_name,
-        uom: resolvedLot.uom, quantity: qty,
-        mfg_date: resolvedLot.mfg_date, expiry_date: resolvedLot.expiry_date,
+        location_id: location.id, location_code: location.location_code,
+        lot_id: lot.lot_id, item_code: lot.item_code, item_name: lot.item_name,
+        uom: lot.uom, quantity: qty, mfg_date: lot.mfg_date, expiry_date: lot.expiry_date,
         putaway_date: now, putaway_by: user?.email, putaway_id: putawayId,
       });
     }
-
-    // Update lot remaining quantity and status
+    const maxQty = lot.remaining_quantity ?? lot.quantity;
     const remaining = maxQty - qty;
-    await base44.entities.StoreLot.update(resolvedLot.id, {
-      status: remaining <= 0 ? 'putaway' : 'approved',
-      remaining_quantity: remaining,
-    });
+    await base44.entities.StoreLot.update(lot.id, { status: remaining <= 0 ? 'putaway' : 'approved', remaining_quantity: remaining });
+  }
 
-    toast({
-      title: 'Putaway confirmed!',
-      description: `${qty} ${resolvedLot.uom} of ${resolvedLot.item_name} stored at ${resolvedLocation.location_code}`,
-    });
+  async function handleConfirmAll() {
+    const toProcess = mode === 'scan' ? scanQueue : entries.filter(e => {
+      const lot = lots.find(l => l.lot_id === e.lotId);
+      const loc = locations.find(l => l.id === e.locationId);
+      return lot && loc && e.quantity && parseFloat(e.quantity) > 0;
+    }).map(e => ({
+      lot: lots.find(l => l.lot_id === e.lotId),
+      location: locations.find(l => l.id === e.locationId),
+      quantity: parseFloat(e.quantity),
+      notes: e.notes,
+    }));
 
-    resetForm();
+    if (toProcess.length === 0) { toast({ title: 'No valid entries to submit', variant: 'destructive' }); return; }
+
+    setSaving(true);
+    const user = await base44.auth.me();
+    const now = new Date().toISOString();
+    for (const item of toProcess) {
+      await processEntry(item.lot, item.location, item.quantity, item.notes, user, now);
+    }
+    toast({ title: `${toProcess.length} putaway(s) confirmed!`, description: `Items successfully stored` });
+    setEntries([emptyEntry()]);
+    setScanQueue([]); setLocationScan(''); setLotScan(''); setScanQty(''); setScanNotes('');
     setSaving(false);
     if (onSuccess) onSuccess();
   }
@@ -256,144 +205,125 @@ export default function PutawayPanel({ lots: externalLots, locations: externalLo
     <div className={`space-y-4 ${compact ? '' : 'max-w-2xl mx-auto'}`}>
       {/* Mode Toggle */}
       <div className="flex rounded-lg border border-slate-200 overflow-hidden">
-        <button
-          onClick={() => { setMode('scan'); resetForm(); }}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium transition-colors ${mode === 'scan' ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
-        >
+        <button onClick={() => setMode('scan')} className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium transition-colors ${mode === 'scan' ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}>
           <ScanLine className="w-4 h-4" /> QR / Barcode Scan
         </button>
-        <button
-          onClick={() => { setMode('manual'); resetForm(); }}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium transition-colors ${mode === 'manual' ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
-        >
+        <button onClick={() => setMode('manual')} className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium transition-colors ${mode === 'manual' ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}>
           <Keyboard className="w-4 h-4" /> Manual Entry
         </button>
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-4">
-        {mode === 'scan' ? (
-          <>
-            {/* SCAN MODE */}
-            <div>
-              <Label className="text-xs font-medium text-slate-700 flex items-center gap-1">
-                <QrCode className="w-3.5 h-3.5" /> Step 1 — Scan Location QR
-              </Label>
-              <div className="flex gap-2 mt-1">
-                <Input
-                  className="h-11 text-base flex-1 font-mono"
-                  value={locationScan}
-                  onChange={e => setLocationScan(e.target.value)}
-                  placeholder="Scan or type location code"
-                />
-                <QRScanner onScan={setLocationScan} label="Location" />
-              </div>
-              {locationScan && (
-                resolvedLocation
-                  ? <div className="mt-1.5 flex items-center gap-2 text-green-600 text-xs"><CheckCircle2 className="w-3.5 h-3.5" />{resolvedLocation.location_code} — {resolvedLocation.display_name}</div>
-                  : <div className="mt-1.5 flex items-center gap-2 text-red-500 text-xs"><AlertCircle className="w-3.5 h-3.5" />Location not found</div>
-              )}
-            </div>
+      {mode === 'manual' ? (
+        <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/70 shadow-sm p-4 space-y-3">
+          <p className="text-sm font-semibold text-slate-700">Putaway Entries ({entries.length})</p>
 
-            <div>
-              <Label className="text-xs font-medium text-slate-700 flex items-center gap-1">
-                <QrCode className="w-3.5 h-3.5" /> Step 2 — Scan Lot QR
-              </Label>
-              <div className="flex gap-2 mt-1">
-                <Input
-                  className="h-11 text-base flex-1 font-mono"
-                  value={lotScan}
-                  onChange={e => setLotScan(e.target.value)}
-                  placeholder="Scan or type Lot ID"
-                />
-                <QRScanner onScan={setLotScan} label="Lot" />
-              </div>
-              {lotScan && (
-                resolvedLot
-                  ? <div className="mt-1.5 flex items-center gap-2 text-green-600 text-xs"><CheckCircle2 className="w-3.5 h-3.5" />{resolvedLot.item_name} · Available: {maxQty} {resolvedLot.uom}</div>
-                  : <div className="mt-1.5 flex items-center gap-2 text-red-500 text-xs"><AlertCircle className="w-3.5 h-3.5" />Lot not found or not available for putaway</div>
-              )}
-            </div>
-          </>
-        ) : (
-          <>
-            {/* MANUAL MODE */}
-            <div>
-              <Label className="text-xs font-medium text-slate-700">Step 1 — Select Location *</Label>
-              <div className="mt-1">
-                <LocationSelect
-                  locations={locations}
-                  value={selectedLocationId}
-                  onChange={setSelectedLocationId}
-                />
-              </div>
-              <p className="text-xs text-slate-400 mt-1">Type to search by location code or name</p>
-            </div>
-
-            <div>
-              <Label className="text-xs font-medium text-slate-700">Step 2 — Select Lot *</Label>
-              <div className="mt-1">
-                <LotSelect
-                  lots={lots}
-                  value={selectedLotId}
-                  onChange={setSelectedLotId}
-                />
-              </div>
-              <p className="text-xs text-slate-400 mt-1">Type to search by Lot ID or item name</p>
-              {resolvedLot && (
-                <div className="mt-1.5 flex items-center gap-2 text-green-600 text-xs">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  {resolvedLot.item_name} · Supplier: {resolvedLot.supplier_name || '—'} · Available: {maxQty} {resolvedLot.uom}
+          {entries.map((entry, idx) => {
+            const lot = lots.find(l => l.lot_id === entry.lotId);
+            const location = locations.find(l => l.id === entry.locationId);
+            const maxQty = lot ? (lot.remaining_quantity ?? lot.quantity) : 0;
+            return (
+              <div key={idx} className="border border-slate-200 rounded-lg p-3 space-y-3 bg-slate-50/50">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold text-slate-600">Lot {idx + 1}</p>
+                  {entries.length > 1 && (
+                    <button onClick={() => removeEntry(idx)} className="text-red-400 hover:text-red-600 p-1">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
-              )}
-            </div>
-          </>
-        )}
-
-        {/* Quantity + Notes — shared */}
-        {resolvedLot && resolvedLocation && (
-          <>
-            <div>
-              <Label className="text-xs font-medium text-slate-700">Quantity to Store *</Label>
-              <Input
-                type="number"
-                className="h-11 text-base mt-1"
-                value={quantity}
-                onChange={e => setQuantity(e.target.value)}
-                placeholder={`Max: ${maxQty} ${resolvedLot.uom}`}
-                min="0.01"
-                max={maxQty}
-              />
-              <p className="text-xs text-slate-400 mt-1">Available in lot: {maxQty} {resolvedLot.uom}</p>
-            </div>
-
-            <div>
-              <Label className="text-xs font-medium text-slate-700">Notes (optional)</Label>
-              <Input className="h-9 text-sm mt-1" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Any remarks..." />
-            </div>
-
-            {/* Summary */}
-            {quantity && (
-              <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-                <p className="text-xs font-semibold text-slate-500 mb-2">Confirm Putaway</p>
-                <div className="space-y-1 text-sm">
-                  <div className="flex justify-between"><span className="text-slate-500">Item</span><span className="font-medium">{resolvedLot.item_name}</span></div>
-                  <div className="flex justify-between"><span className="text-slate-500">Lot</span><span className="font-mono text-xs">{resolvedLot.lot_id}</span></div>
-                  <div className="flex justify-between"><span className="text-slate-500">Location</span><span className="font-mono text-xs">{resolvedLocation.location_code}</span></div>
-                  <div className="flex justify-between"><span className="text-slate-500">Quantity</span><span className="font-bold text-slate-900">{quantity} {resolvedLot.uom}</span></div>
+                <div>
+                  <Label className="text-xs font-medium text-slate-700">Location *</Label>
+                  <div className="mt-1"><LocationSelect locations={locations} value={entry.locationId} onChange={v => setEntry(idx, 'locationId', v)} /></div>
+                </div>
+                <div>
+                  <Label className="text-xs font-medium text-slate-700">Lot *</Label>
+                  <div className="mt-1"><LotSelect lots={lots} value={entry.lotId} onChange={v => setEntry(idx, 'lotId', v)} usedLotIds={usedLotIds.filter((_, i) => i !== idx)} /></div>
+                  {lot && <p className="text-xs text-green-600 mt-1 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" />{lot.item_name} · Available: {maxQty} {lot.uom}</p>}
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs font-medium text-slate-700">Quantity *</Label>
+                    <Input type="number" className="h-9 text-sm mt-1" value={entry.quantity} onChange={e => setEntry(idx, 'quantity', e.target.value)} placeholder={lot ? `Max: ${maxQty}` : '0'} min="0.01" max={maxQty} />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-medium text-slate-700">Notes</Label>
+                    <Input className="h-9 text-sm mt-1" value={entry.notes} onChange={e => setEntry(idx, 'notes', e.target.value)} placeholder="Optional" />
+                  </div>
                 </div>
               </div>
-            )}
-          </>
-        )}
+            );
+          })}
 
-        <Button
-          className="w-full h-11 text-base"
-          disabled={!resolvedLocation || !resolvedLot || !quantity || saving}
-          onClick={handleConfirm}
-        >
-          {saving ? 'Saving...' : 'Confirm Putaway'}
-        </Button>
-      </div>
+          <button onClick={addEntry} className="w-full border-2 border-dashed border-slate-300 rounded-lg py-3 text-sm text-slate-500 hover:border-blue-400 hover:text-blue-600 flex items-center justify-center gap-2 transition-colors">
+            <Plus className="w-4 h-4" /> Add More Lots
+          </button>
+
+          <Button className="w-full h-11 text-base" disabled={saving} onClick={handleConfirmAll}>
+            {saving ? 'Saving...' : `Confirm Putaway (${entries.filter(e => e.lotId && e.locationId && e.quantity).length} entry/entries)`}
+          </Button>
+        </div>
+      ) : (
+        <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/70 shadow-sm p-4 space-y-4">
+          {/* Scan current lot */}
+          <div>
+            <Label className="text-xs font-medium text-slate-700 flex items-center gap-1"><QrCode className="w-3.5 h-3.5" /> Scan Location QR</Label>
+            <div className="flex gap-2 mt-1">
+              <Input className="h-11 text-base flex-1 font-mono" value={locationScan} onChange={e => setLocationScan(e.target.value)} placeholder="Scan or type location code" />
+              <QRScanner onScan={setLocationScan} label="Location" />
+            </div>
+            {locationScan && (scanLocation
+              ? <p className="mt-1 text-xs text-green-600 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" />{scanLocation.location_code} — {scanLocation.display_name}</p>
+              : <p className="mt-1 text-xs text-red-500 flex items-center gap-1"><AlertCircle className="w-3 h-3" />Location not found</p>)}
+          </div>
+          <div>
+            <Label className="text-xs font-medium text-slate-700 flex items-center gap-1"><QrCode className="w-3.5 h-3.5" /> Scan Lot QR</Label>
+            <div className="flex gap-2 mt-1">
+              <Input className="h-11 text-base flex-1 font-mono" value={lotScan} onChange={e => setLotScan(e.target.value)} placeholder="Scan or type Lot ID" />
+              <QRScanner onScan={setLotScan} label="Lot" />
+            </div>
+            {lotScan && (scanLot
+              ? <p className="mt-1 text-xs text-green-600 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" />{scanLot.item_name} · Available: {scanMax} {scanLot.uom}</p>
+              : <p className="mt-1 text-xs text-red-500 flex items-center gap-1"><AlertCircle className="w-3 h-3" />Lot not found</p>)}
+          </div>
+          {scanLot && scanLocation && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs font-medium text-slate-700">Quantity *</Label>
+                <Input type="number" className="h-9 text-sm mt-1" value={scanQty} onChange={e => setScanQty(e.target.value)} placeholder={`Max: ${scanMax}`} />
+              </div>
+              <div>
+                <Label className="text-xs font-medium text-slate-700">Notes</Label>
+                <Input className="h-9 text-sm mt-1" value={scanNotes} onChange={e => setScanNotes(e.target.value)} placeholder="Optional" />
+              </div>
+            </div>
+          )}
+          <Button variant="outline" className="w-full h-11" disabled={!scanLot || !scanLocation || !scanQty} onClick={addToScanQueue}>
+            <Plus className="w-4 h-4 mr-2" /> Add to Queue
+          </Button>
+
+          {/* Queue display */}
+          {scanQueue.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-slate-500">Queue ({scanQueue.length} lot(s) ready)</p>
+              {scanQueue.map((item, i) => (
+                <div key={i} className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                  <div>
+                    <p className="text-sm font-medium text-slate-800">{item.lot.item_name}</p>
+                    <p className="text-xs text-slate-500 font-mono">{item.lot.lot_id} → {item.location.location_code}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-green-700">{item.quantity} {item.lot.uom}</span>
+                    <button onClick={() => setScanQueue(prev => prev.filter((_, j) => j !== i))} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+                  </div>
+                </div>
+              ))}
+              <Button className="w-full h-11 text-base" disabled={saving} onClick={handleConfirmAll}>
+                {saving ? 'Saving...' : `Confirm All (${scanQueue.length} putaway(s))`}
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
