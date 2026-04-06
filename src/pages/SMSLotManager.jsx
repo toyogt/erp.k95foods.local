@@ -139,7 +139,7 @@ export default function SMSLotManager() {
       </div>
 
       {/* Week Color Legend */}
-      <div className="bg-white rounded-xl border border-slate-200 p-3">
+      <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/70 shadow-sm p-3">
         <p className="text-xs font-semibold text-slate-500 mb-2">Week Aging Legend</p>
         <div className="flex flex-wrap gap-2">
           {[
@@ -152,7 +152,7 @@ export default function SMSLotManager() {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-3">
+      <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <Input className="pl-9 h-9" placeholder="Search by Lot ID, Item, Supplier..." value={search} onChange={e => setSearch(e.target.value)} />
@@ -170,7 +170,7 @@ export default function SMSLotManager() {
       {loading ? (
         <SkeletonTable rows={6} cols={11} headers={LOT_HEADERS} />
       ) : (
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/70 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>

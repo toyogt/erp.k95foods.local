@@ -106,7 +106,7 @@ export default function SMSOpeningStock() {
   }
 
   return (
-    <div className="space-y-4 max-w-4xl mx-auto">
+    <div className="space-y-4 max-w-4xl mx-auto px-2 md:px-0">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-slate-900">Opening Stock Entry</h1>
@@ -117,7 +117,7 @@ export default function SMSOpeningStock() {
         </Button>
       </div>
 
-      <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+      <div className="flex items-center gap-3 bg-amber-50/80 backdrop-blur-sm border border-amber-200/70 rounded-xl px-4 py-3">
         <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
         <p className="text-sm text-amber-700">
           Each entry creates a new lot and stock balance record. Deleting an entry also removes the associated lot and stock.
@@ -125,7 +125,7 @@ export default function SMSOpeningStock() {
       </div>
 
       {/* Entry form */}
-      <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-4">
+      <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/70 shadow-sm p-4 md:p-5 space-y-4">
         <p className="text-sm font-semibold text-slate-700">Add New Stock Entries</p>
         {lines.map((line, idx) => (
           <div key={idx} className="border border-slate-200 rounded-lg p-4">
@@ -180,7 +180,7 @@ export default function SMSOpeningStock() {
       </div>
 
       {/* History */}
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/70 shadow-sm overflow-hidden">
         <div className="px-4 py-3 border-b bg-slate-50 flex items-center justify-between">
           <p className="text-sm font-semibold text-slate-700">Recorded Entries ({history.length})</p>
         </div>

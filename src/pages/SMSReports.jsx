@@ -144,11 +144,11 @@ export default function SMSReports() {
           </div>
           <p className="text-xs text-slate-500">{filteredItems.length} item(s) · {exportRows.length} lot-location row(s)</p>
           {filteredItems.length === 0 ? (
-            <div className="bg-white rounded-xl border border-slate-200 p-8 text-center text-slate-400">No stock data matches the filters</div>
+            <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/70 p-8 text-center text-slate-400">No stock data matches the filters</div>
           ) : filteredItems.map(item => {
             const visibleEntries = locationFilter ? item.entries.filter(e => e.location_code === locationFilter) : item.entries;
             return (
-              <div key={item.item_code} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+              <div key={item.item_code} className="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/70 shadow-sm overflow-hidden">
                 <div className="px-4 py-3 bg-slate-50 border-b flex items-center justify-between">
                   <div>
                     <p className="text-sm font-bold text-slate-800">{item.item_name}</p>
@@ -197,9 +197,9 @@ export default function SMSReports() {
       {tab === 'location' && (
         <div className="space-y-3">
           {Object.entries(byLocation).length === 0 ? (
-            <div className="bg-white rounded-xl border border-slate-200 p-8 text-center text-slate-400">No stock data available</div>
+            <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/70 p-8 text-center text-slate-400">No stock data available</div>
           ) : Object.entries(byLocation).map(([locCode, entries]) => (
-            <div key={locCode} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+            <div key={locCode} className="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/70 shadow-sm overflow-hidden">
               <div className="px-4 py-3 bg-slate-50 border-b flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-slate-400" />
                 <p className="text-sm font-bold font-mono text-slate-800">{locCode}</p>
@@ -226,7 +226,7 @@ export default function SMSReports() {
 
       {/* Stock by Lot */}
       {tab === 'lot' && (
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/70 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead><tr className="bg-slate-100 text-slate-700 text-xs"><th className="text-left px-4 py-3">Lot ID</th><th className="text-left px-4 py-3">Item</th><th className="text-left px-4 py-3">Supplier</th><th className="text-right px-4 py-3">Original Qty</th><th className="text-right px-4 py-3">Remaining</th><th className="text-left px-4 py-3">Manufacture</th><th className="text-left px-4 py-3">Expiry</th><th className="text-left px-4 py-3">Aging</th><th className="text-left px-4 py-3">Status</th></tr></thead>
@@ -252,7 +252,7 @@ export default function SMSReports() {
 
       {/* Transfer History */}
       {tab === 'movements' && (
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/70 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead><tr className="bg-slate-100 text-slate-700 text-xs"><th className="text-left px-4 py-3">Transfer ID</th><th className="text-left px-4 py-3">Item / Lot</th><th className="text-left px-4 py-3">From</th><th className="text-left px-4 py-3">To</th><th className="text-right px-4 py-3">Quantity</th><th className="text-left px-4 py-3">Reason</th><th className="text-left px-4 py-3">By / At</th></tr></thead>
@@ -282,7 +282,7 @@ export default function SMSReports() {
           {lowStock.length === 0 ? (
             <div className="bg-green-50 border border-green-200 rounded-xl p-8 text-center text-green-600 font-medium">All items are above reorder levels ✓</div>
           ) : lowStock.map(r => (
-            <div key={r.item_code} className="bg-white rounded-xl border border-red-200 p-4">
+            <div key={r.item_code} className="bg-white/80 backdrop-blur-sm rounded-xl border border-red-200/70 shadow-sm p-4">
               <div className="flex items-center justify-between">
                 <div><p className="font-semibold text-slate-800">{r.item_name || r.item_code}</p><p className="text-xs text-slate-500">Code: {r.item_code} · Unit: {r.uom}</p></div>
                 <div className="text-right">

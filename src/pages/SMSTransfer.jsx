@@ -99,7 +99,7 @@ export default function SMSTransfer() {
   }
 
   return (
-    <div className="space-y-4 max-w-xl mx-auto">
+    <div className="space-y-4 max-w-xl mx-auto px-2 md:px-0">
       <div>
         <h1 className="text-xl font-bold text-slate-900">Internal Transfer</h1>
         <p className="text-sm text-slate-500">Move stock between locations or initiate putaway after receipt</p>
@@ -122,7 +122,7 @@ export default function SMSTransfer() {
       </div>
 
       {activeTab === 'transfer' ? (
-        <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-4">
+        <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/70 shadow-sm p-4 md:p-5 space-y-4">
           {/* Source */}
           <div>
             <Label className="text-xs font-medium text-slate-700">Step 1 — Source Location QR *</Label>
@@ -173,7 +173,7 @@ export default function SMSTransfer() {
           )}
 
           {fromLoc && toLoc && resolvedStock && quantity && (
-            <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+            <div className="bg-slate-50/80 backdrop-blur-sm rounded-lg p-4 border border-slate-200/70">
               <p className="text-xs font-semibold text-slate-500 mb-2">Transfer Summary</p>
               <div className="flex items-center gap-3">
                 <div className="text-center"><p className="text-xs text-slate-500">From</p><p className="font-mono text-sm font-bold text-slate-800">{fromLoc.location_code}</p></div>

@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Package } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
 import ExportButton from '@/components/store/ExportButton';
 import PutawayPanel from '@/components/store/PutawayPanel';
 
 export default function SMSPutaway() {
+  const { toast } = useToast();
   const [pendingLots, setPendingLots] = useState([]);
   const [locations, setLocations] = useState([]);
   const [putawayHistory, setPutawayHistory] = useState([]);
@@ -53,7 +55,7 @@ export default function SMSPutaway() {
   ];
 
   return (
-    <div className="space-y-4 max-w-2xl mx-auto">
+    <div className="space-y-4 max-w-2xl mx-auto px-2 md:px-0">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-slate-900">Putaway</h1>
@@ -63,7 +65,7 @@ export default function SMSPutaway() {
       </div>
 
       {!loading && (
-        <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 flex items-center gap-3">
+        <div className="bg-blue-50/80 backdrop-blur-sm border border-blue-100/70 rounded-xl px-4 py-3 flex items-center gap-3">
           <Package className="w-5 h-5 text-blue-500 shrink-0" />
           <p className="text-sm text-blue-700">
             <strong>{pendingLots.length}</strong> approved lot(s) awaiting putaway
@@ -82,7 +84,7 @@ export default function SMSPutaway() {
 
       {/* Pending lots quick-list */}
       {pendingLots.length > 0 && (
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/70 shadow-sm overflow-hidden">
           <div className="px-4 py-3 border-b bg-slate-50">
             <p className="text-sm font-semibold text-slate-700">Approved Lots — Pending Putaway</p>
           </div>
@@ -105,7 +107,7 @@ export default function SMSPutaway() {
 
       {/* Recent history */}
       {putawayHistory.length > 0 && (
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/70 shadow-sm overflow-hidden">
           <div className="px-4 py-3 border-b bg-slate-50">
             <p className="text-sm font-semibold text-slate-700">Recent Putaway History</p>
           </div>

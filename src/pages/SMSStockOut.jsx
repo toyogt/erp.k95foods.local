@@ -405,14 +405,14 @@ export default function SMSStockOut() {
   }
 
   return (
-    <div className="space-y-4 max-w-3xl mx-auto">
+    <div className="space-y-4 max-w-3xl mx-auto px-2 md:px-0">
       <div>
         <h1 className="text-xl font-bold text-slate-900">Stock Issue</h1>
         <p className="text-sm text-slate-500">Issue stored stock for production or dispatch using FIFO</p>
       </div>
 
       {/* Issue header */}
-      <div className="bg-white rounded-xl border border-slate-200 p-4">
+      <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/70 shadow-sm p-4">
         <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Issue Details</p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
@@ -451,7 +451,7 @@ export default function SMSStockOut() {
       </div>
 
       {/* Issue form */}
-      <div className="bg-white rounded-xl border border-slate-200 p-5">
+      <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/70 shadow-sm p-4 md:p-5">
         {loading ? (
           <p className="text-sm text-slate-400 text-center py-6">Loading stored items...</p>
         ) : storedItems.length === 0 ? (
