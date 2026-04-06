@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Plus, Trash2, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Plus, Trash2, AlertTriangle, RefreshCw, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,6 +8,93 @@ import { useToast } from '@/components/ui/use-toast';
 
 function emptyLine() {
   return { item_code: '', item_name: '', uom: '', quantity: '', location_code: '', mfg_date: '', expiry_date: '', supplier_name: '' };
+}
+
+// Searchable item name dropdown with UOM auto-fill
+function ItemNameSelect({ value, onChange, onSelectItem }) {
+  const [query, setQuery] = useState(value || '');
+  const [open, setOpen] = useState(false);
+  const [suggestions, setSuggestions] = useState([]);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    // Load known items from opening stock and item master
+    Promise.all([
+      base44.entities.StoreOpeningStock.list('-created_date', 500),
+      base44.entities.ItemMaster.list('-created_date', 500),
+    ]).then(([openingStock, items]) => {
+      const fromOS = openingStock.map(o => ({ item_name: o.item_name, item_code: o.item_code, uom: o.uom }));
+      const fromIM = items.map(i => ({ item_name: i.item_name, item_code: i.item_code, uom: i.base_uom }));
+      const seen = new Set();
+      const merged = [...fromOS, ...fromIM].filter(i => {
+        const key = i.item_name?.toLowerCase();
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      setSuggestions(merged);
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    function handleClick(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  const filtered = query.trim()
+    ? suggestions.filter(s => s.item_name?.toLowerCase().includes(query.toLowerCase()))
+    : suggestions;
+
+  function handleSelect(item) {
+    setQuery(item.item_name);
+    setOpen(false);
+    onSelectItem(item);
+  }
+
+  function handleInput(e) {
+    setQuery(e.target.value);
+    onChange(e.target.value);
+    setOpen(true);
+  }
+
+  return (
+    <div className="relative" ref={ref}>
+      <div className="relative">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+        <input
+          className="w-full h-9 pl-8 pr-3 border border-slate-200 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-slate-400"
+          placeholder="Type to search or add new item..."
+          value={query}
+          onChange={handleInput}
+          onFocus={() => setOpen(true)}
+        />
+      </div>
+      {open && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+          {filtered.length === 0 ? (
+            <div
+              className="px-4 py-2.5 text-sm text-blue-600 cursor-pointer hover:bg-blue-50 flex items-center gap-2"
+              onClick={() => { setOpen(false); onChange(query); }}
+            >
+              <Plus className="w-3.5 h-3.5" /> Add "{query}" as new item
+            </div>
+          ) : (
+            filtered.map((s, i) => (
+              <div
+                key={i}
+                className="px-4 py-2.5 text-sm cursor-pointer hover:bg-slate-50"
+                onClick={() => handleSelect(s)}
+              >
+                <p className="font-medium text-slate-800">{s.item_name}</p>
+                {s.uom && <p className="text-xs text-slate-400">Unit: {s.uom} {s.item_code ? `· ${s.item_code}` : ''}</p>}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function SMSOpeningStock() {
@@ -138,17 +225,32 @@ export default function SMSOpeningStock() {
               )}
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {[
-                { key: 'item_code', label: 'Item Code *', placeholder: 'e.g. SKU001' },
-                { key: 'item_name', label: 'Item Name *', placeholder: 'Item description' },
-                { key: 'uom', label: 'Unit *', placeholder: 'Kg / Ltr / Nos' },
-                { key: 'supplier_name', label: 'Supplier', placeholder: 'Supplier name' },
-              ].map(f => (
-                <div key={f.key}>
-                  <Label className="text-xs font-medium text-slate-700">{f.label}</Label>
-                  <Input className="h-9 text-sm mt-1" placeholder={f.placeholder} value={line[f.key]} onChange={e => setLine(idx, f.key, e.target.value)} />
+              <div className="col-span-2">
+                <Label className="text-xs font-medium text-slate-700">Item Name *</Label>
+                <div className="mt-1">
+                  <ItemNameSelect
+                    value={line.item_name}
+                    onChange={v => setLine(idx, 'item_name', v)}
+                    onSelectItem={item => {
+                      setLine(idx, 'item_name', item.item_name);
+                      if (item.item_code) setLine(idx, 'item_code', item.item_code);
+                      if (item.uom) setLine(idx, 'uom', item.uom);
+                    }}
+                  />
                 </div>
-              ))}
+              </div>
+              <div>
+                <Label className="text-xs font-medium text-slate-700">Item Code</Label>
+                <Input className="h-9 text-sm mt-1" placeholder="e.g. SKU001" value={line.item_code} onChange={e => setLine(idx, 'item_code', e.target.value)} />
+              </div>
+              <div>
+                <Label className="text-xs font-medium text-slate-700">Unit *</Label>
+                <Input className="h-9 text-sm mt-1" placeholder="Kg / Ltr / Nos" value={line.uom} onChange={e => setLine(idx, 'uom', e.target.value)} />
+              </div>
+              <div>
+                <Label className="text-xs font-medium text-slate-700">Supplier</Label>
+                <Input className="h-9 text-sm mt-1" placeholder="Supplier name" value={line.supplier_name} onChange={e => setLine(idx, 'supplier_name', e.target.value)} />
+              </div>
               <div>
                 <Label className="text-xs font-medium text-slate-700">Quantity *</Label>
                 <Input type="number" className="h-9 text-sm mt-1" value={line.quantity} onChange={e => setLine(idx, 'quantity', e.target.value)} placeholder="0" />

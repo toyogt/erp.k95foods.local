@@ -14,29 +14,32 @@ function WeekBadge({ weeks }) {
   return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">Week {weeks}+</span>;
 }
 
-// Effective status: always driven by actual stored stock, not just DB status field
-function getEffectiveStatus(dbStatus, storedQty) {
+// Effective status: always driven by actual stored stock + issued qty, not just DB status field
+function getEffectiveStatus(dbStatus, storedQty, issuedQty, originalQty) {
   if (['rejected', 'damaged'].includes(dbStatus)) return dbStatus;
-  if (storedQty > 0) return 'putaway'; // has stock → available
-  return 'consumed'; // no stock left → consumed
+  if (storedQty > 0 && issuedQty > 0) return 'partial'; // has stock + some issued
+  if (storedQty > 0) return 'putaway';                   // has stock, nothing issued
+  if (issuedQty >= originalQty && originalQty > 0) return 'consumed'; // fully issued
+  if (issuedQty > 0 && storedQty === 0) return 'consumed'; // issued all, nothing left
+  return 'pending_putaway'; // stored=0, issued=0 → waiting for putaway
 }
 
-function StatusBadge({ status, storedQty, originalQty }) {
-  const effective = getEffectiveStatus(status, storedQty);
+function StatusBadge({ status, storedQty, issuedQty, originalQty }) {
+  const effective = getEffectiveStatus(status, storedQty, issuedQty, originalQty);
   const map = {
-    approved: 'bg-green-100 text-green-700',
-    qc_pending: 'bg-green-100 text-green-700',
-    rejected: 'bg-red-100 text-red-700',
+    pending_putaway: 'bg-amber-100 text-amber-700',
     putaway: 'bg-blue-100 text-blue-700',
+    partial: 'bg-orange-100 text-orange-700',
     consumed: 'bg-slate-100 text-slate-500',
+    rejected: 'bg-red-100 text-red-700',
     damaged: 'bg-orange-100 text-orange-700',
   };
   const labels = {
-    approved: 'Available',
-    qc_pending: 'Available',
-    rejected: 'Rejected',
-    putaway: storedQty < originalQty ? 'Partially Consumed' : 'Available for Issue',
+    pending_putaway: 'Pending Putaway',
+    putaway: 'Available for Issue',
+    partial: 'Partially Consumed',
     consumed: 'Fully Consumed',
+    rejected: 'Rejected',
     damaged: 'Damaged',
   };
   return (
@@ -211,7 +214,7 @@ export default function SMSLotManager() {
                       <td className="px-4 py-3 text-slate-600 text-xs">{lot.mfg_date || '—'}</td>
                       <td className="px-4 py-3 text-slate-600 text-xs">{lot.expiry_date || '—'}</td>
                       <td className="px-4 py-3"><WeekBadge weeks={lot.weeks_elapsed} /></td>
-                      <td className="px-4 py-3"><StatusBadge status={lot.status} storedQty={stored} originalQty={lot.quantity} /></td>
+                      <td className="px-4 py-3"><StatusBadge status={lot.status} storedQty={stored} issuedQty={issued} originalQty={lot.quantity} /></td>
                       <td className="px-4 py-3">
                         <button onClick={() => setQrLot(lot)} className="p-1.5 rounded hover:bg-slate-100 text-slate-500" title="QR Code">
                           <QrCode className="w-4 h-4" />

@@ -12,12 +12,28 @@ export default function SMSPutaway() {
 
   async function load() {
     setLoading(true);
-    const [lots, locs, history] = await Promise.all([
-      base44.entities.StoreLot.filter({ status: 'approved' }),
+    const [lots, locs, history, balances, issueLines] = await Promise.all([
+      base44.entities.StoreLot.list('-created_date', 500),
       base44.entities.StoreLocation.filter({ is_active: true }),
       base44.entities.StorePutaway.list('-created_date', 50),
+      base44.entities.StoreStockBalance.list('-created_date', 1000),
+      base44.entities.StoreIssueLine.list('-created_date', 2000),
     ]);
-    setPendingLots(lots);
+
+    // Build maps: lot_id → stored qty, lot_id → issued qty
+    const storedMap = {};
+    balances.forEach(b => { storedMap[b.lot_id] = (storedMap[b.lot_id] || 0) + (b.quantity || 0); });
+    const issuedMap = {};
+    issueLines.forEach(l => { issuedMap[l.lot_id] = (issuedMap[l.lot_id] || 0) + (l.issued_quantity || 0); });
+
+    // Pending putaway = not rejected/damaged, has no stock balance, has not been issued
+    const pending = lots.filter(l =>
+      !['rejected', 'damaged', 'consumed'].includes(l.status) &&
+      (storedMap[l.lot_id] || 0) === 0 &&
+      (issuedMap[l.lot_id] || 0) === 0
+    );
+
+    setPendingLots(pending);
     setLocations(locs);
     setPutawayHistory(history);
     setLoading(false);
