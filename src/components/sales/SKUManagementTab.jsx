@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Input } from '@/components/ui/input';
@@ -30,7 +30,13 @@ const EDITABLE_COLUMNS = [
   { key: 'amazon_item_id', label: 'Amazon Item ID', type: 'text' },
   { key: 'is_active', label: 'Status', type: 'boolean' },
   { key: 'is_trial_pack', label: 'Trial Pack', type: 'boolean' },
+  { key: '_current_stock', label: 'Current Stock', type: 'stock', readOnly: true },
 ];
+
+function StockBadge({ qty }) {
+  if (!qty) return <span className="text-slate-400 text-xs">0</span>;
+  return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">{Number(qty).toLocaleString('en-IN')}</span>;
+}
 
 function EditableCell({ value, type, readOnly, onChange }) {
   if (readOnly) {
@@ -66,6 +72,20 @@ export default function SKUManagementTab() {
   const [editingId, setEditingId] = useState(null);
   const [editData, setEditData] = useState({});
   const [saving, setSaving] = useState(false);
+
+  const { data: stockBalances = [] } = useQuery({
+    queryKey: ['store_stock_balance_all'],
+    queryFn: () => base44.entities.StoreStockBalance.list('-updated_date', 2000),
+    staleTime: 60000,
+  });
+
+  const stockByItemCode = useMemo(() => {
+    const map = {};
+    stockBalances.forEach(b => {
+      if (b.item_code) map[b.item_code] = (map[b.item_code] || 0) + (b.quantity || 0);
+    });
+    return map;
+  }, [stockBalances]);
 
   const { data: skus = [], isLoading } = useQuery({
     queryKey: ['product_master_all'],
@@ -161,7 +181,9 @@ export default function SKUManagementTab() {
                   <tr key={sku.id} className={`hover:bg-slate-50 transition-colors ${isEditing ? 'bg-blue-50' : ''}`}>
                     {EDITABLE_COLUMNS.map(col => (
                       <td key={col.key} className="px-3 py-2 whitespace-nowrap">
-                        {isEditing ? (
+                        {col.key === '_current_stock' ? (
+                          <StockBadge qty={stockByItemCode[sku.item_code] || 0} />
+                        ) : isEditing ? (
                           <EditableCell
                             value={row[col.key]}
                             type={col.type}
