@@ -3,7 +3,8 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, CheckCircle2, Truck, Camera, FileText, Plus, Trash2, Search } from 'lucide-react';
+import { Loader2, CheckCircle2, Truck, Camera, FileText, Plus, Trash2, Search, AlertCircle } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
 import PhotoUploader from '@/components/grn/PhotoUploader';
 import ChecklistGate from '@/components/grn/ChecklistGate';
 import { genId, logGrnAudit, getChecklistTemplate } from '@/components/grn/grnHelpers';
@@ -102,6 +103,7 @@ const STEPS = ['Capture Photos', 'Enter Details', 'Items Received', 'Review & Su
 function emptyItem() { return { item_name: '', item_code: '', quantity: '', uom: 'Nos', batch_lot: '', notes: '' }; }
 
 export default function GateEntryPage() {
+  const { toast } = useToast();
   const [user, setUser] = useState(null);
   const [step, setStep] = useState(0);
   const [form, setForm] = useState({
@@ -124,6 +126,17 @@ export default function GateEntryPage() {
   function addItem() { setItems(prev => [...prev, emptyItem()]); }
   function removeItem(idx) { setItems(prev => prev.filter((_, i) => i !== idx)); }
 
+  function validateStep1() {
+    if (!form.invoice_photo) { toast({ title: 'Invoice Photo is required *', variant: 'destructive' }); return false; }
+    if (form.transport_type === 'vehicle' && !form.vehicle_photo) { toast({ title: 'Vehicle Photo is required *', variant: 'destructive' }); return false; }
+    return true;
+  }
+  function validateStep2() {
+    if (!form.invoice_number?.trim()) { toast({ title: 'Invoice Number is required *', variant: 'destructive' }); return false; }
+    if (form.transport_type === 'vehicle' && !form.vehicle_number?.trim()) { toast({ title: 'Vehicle Number is required *', variant: 'destructive' }); return false; }
+    if (!form.supplier_name_text?.trim()) { toast({ title: 'Supplier / Party Name is required *', variant: 'destructive' }); return false; }
+    return true;
+  }
   function canProceedStep1() { return form.invoice_photo && (form.transport_type === 'vehicle' ? form.vehicle_photo : true); }
   function canProceedStep2() {
     return form.invoice_number?.trim().length >= 1 && (form.transport_type === 'vehicle' ? form.vehicle_number?.trim().length >= 2 : true);
@@ -280,7 +293,13 @@ export default function GateEntryPage() {
             <PhotoUploader label="Material/Goods Photo (optional)" value={form.material_photo} onChange={v => setField('material_photo', v)} />
             {form.transport_type === 'vehicle' && <PhotoUploader label="Weighbridge Slip (optional)" value={form.weighbridge_slip_photo} onChange={v => setField('weighbridge_slip_photo', v)} />}
           </div>
-          <Button onClick={() => setStep(1)} disabled={!canProceedStep1()} className="w-full h-12 bg-slate-900">Continue to Details →</Button>
+          {!canProceedStep1() && (
+            <div className="flex items-center gap-2 text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <p className="text-xs">Invoice photo is required. Vehicle photo required for vehicle transport.</p>
+            </div>
+          )}
+          <Button onClick={() => { if (validateStep1()) setStep(1); }} className="w-full h-12 bg-slate-900">Continue to Details →</Button>
         </div>
       )}
 
@@ -299,12 +318,12 @@ export default function GateEntryPage() {
             <Input className="h-11 text-base mt-1" value={form.invoice_number} onChange={e => setField('invoice_number', e.target.value)} placeholder="e.g. INV-2026-001234" />
           </div>
           <div>
-            <Label className="text-xs font-medium text-slate-700">Driver Name (optional)</Label>
-            <Input className="h-9 text-sm mt-1" value={form.driver_name} onChange={e => setField('driver_name', e.target.value)} placeholder="Driver name" />
+            <Label className="text-xs font-medium text-slate-700">Supplier / Party Name *</Label>
+            <Input className="h-11 text-base mt-1" value={form.supplier_name_text} onChange={e => setField('supplier_name_text', e.target.value)} placeholder="As written on invoice" />
           </div>
           <div>
-            <Label className="text-xs font-medium text-slate-700">Supplier / Party Name (optional)</Label>
-            <Input className="h-9 text-sm mt-1" value={form.supplier_name_text} onChange={e => setField('supplier_name_text', e.target.value)} placeholder="As written on invoice" />
+            <Label className="text-xs font-medium text-slate-700">Driver Name (optional)</Label>
+            <Input className="h-9 text-sm mt-1" value={form.driver_name} onChange={e => setField('driver_name', e.target.value)} placeholder="Driver name" />
           </div>
           <div>
             <Label className="text-xs font-medium text-slate-700">Notes</Label>
@@ -312,7 +331,7 @@ export default function GateEntryPage() {
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => setStep(0)} className="flex-1 h-11">← Back</Button>
-            <Button onClick={() => setStep(2)} disabled={!canProceedStep2()} className="flex-1 h-11 bg-slate-900">Items Received →</Button>
+            <Button onClick={() => { if (validateStep2()) setStep(2); }} className="flex-1 h-11 bg-slate-900">Items Received →</Button>
           </div>
         </div>
       )}

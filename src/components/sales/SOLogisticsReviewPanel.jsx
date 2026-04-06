@@ -11,7 +11,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
-import { CheckCircle2, Loader2, Truck, Package, Calendar, Scale } from 'lucide-react';
+import { CheckCircle2, Loader2, Truck, Package, Calendar, Scale, PackageCheck } from 'lucide-react';
+import StockCrossCheckPanel from '@/components/sales/StockCrossCheckPanel';
 import { fireFMSEvent, linkFMSRef, findFMSInstanceByRef } from '@/lib/useFMSAutoComplete';
 import { generateDocNumber } from '@/lib/docNumberHelper';
 import SystemEstimateCard from '@/components/sales/logistics/SystemEstimateCard';
@@ -169,7 +170,7 @@ export default function SOLogisticsReviewPanel({ order, onUpdated }) {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -183,6 +184,9 @@ export default function SOLogisticsReviewPanel({ order, onUpdated }) {
           </div>
         )}
       </div>
+
+      {/* ── Stock Cross-Check ── */}
+      <StockCrossCheckPanel order={order} />
 
       {/* ── Row 1: Transporter + Expected Transportation Cost — side by side ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -300,7 +304,7 @@ export default function SOLogisticsReviewPanel({ order, onUpdated }) {
       <CostComparisonCard costRecord={costRecord} />
 
       {/* ── Action Buttons ── */}
-      <div className="flex gap-3 pt-2 border-t border-slate-200">
+      <div className="flex flex-wrap gap-3 pt-2 border-t border-slate-200">
         {order.workflow_state === 'draft' && (
           <Button className="h-11 bg-slate-900 text-white text-sm" onClick={handleSendForReview} disabled={saving}>
             {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}

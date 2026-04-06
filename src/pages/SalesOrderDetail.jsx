@@ -12,6 +12,7 @@ import { useToast } from '@/components/ui/use-toast';
 import SalesOrderStatusBadge from '@/components/sales/SalesOrderStatusBadge';
 import SOInvoicePanel from '@/components/sales/SOInvoicePanel';
 import SOLogisticsReviewPanel from '@/components/sales/SOLogisticsReviewPanel';
+import SOAddressPanel from '@/components/sales/SOAddressPanel';
 import DeleteWithRemarks from '@/components/sales/DeleteWithRemarks';
 import SOConnectionsGrid from '@/components/sales/SOConnectionsGrid';
 import SOActivityTimeline from '@/components/sales/SOActivityTimeline';
@@ -78,36 +79,42 @@ export default function SalesOrderDetail() {
     queryKey: ['sales_order', soId],
     queryFn: () => base44.entities.SalesOrder.filter({ id: soId }).then(list => list[0]),
     enabled: !!soId,
+    staleTime: 15000,
   });
 
   const { data: deliveryNotes = [] } = useQuery({
     queryKey: ['delivery_notes_detail', soId],
     queryFn: () => base44.entities.SalesDeliveryNote.filter({ sales_order_id: soId }),
-    enabled: !!soId,
+    enabled: !!soId && activePanel === 'invoice',
+    staleTime: 30000,
   });
 
   const { data: invoices = [] } = useQuery({
     queryKey: ['invoices_detail', soId],
     queryFn: () => base44.entities.SalesInvoice.filter({ sales_order_id: soId }),
-    enabled: !!soId,
+    enabled: !!soId && activePanel === 'invoice',
+    staleTime: 30000,
   });
 
   const { data: items = [] } = useQuery({
     queryKey: ['so_items', soId],
     queryFn: () => base44.entities.SalesOrderItem.filter({ sales_order_id: soId }),
     enabled: !!soId,
+    staleTime: 30000,
   });
 
   const { data: picklists = [] } = useQuery({
     queryKey: ['picklists_detail', soId],
     queryFn: () => base44.entities.SalesPicklist.filter({ sales_order_id: soId }),
     enabled: !!soId,
+    staleTime: 30000,
   });
 
   const { data: auditLogs = [] } = useQuery({
     queryKey: ['so_audit', soId],
     queryFn: () => base44.entities.SalesAuditLog.filter({ entity_id: soId }, '-created_date', 30),
-    enabled: !!soId,
+    enabled: !!soId && activePanel === 'items',
+    staleTime: 30000,
   });
 
   // Workflow sequence validation
@@ -456,56 +463,7 @@ export default function SalesOrderDetail() {
 
         {/* ── Address & Contacts ─────────────────────────────────────── */}
         {activePanel === 'address' && (
-          <>
-            <Section title="Billing Address" defaultOpen={true}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-                <div>
-                  <Field label="Customer Address" value={order.customer_name} highlight />
-                  <div className="py-2">
-                    <p className="text-xs text-slate-500 mb-1">Address</p>
-                    <p className="text-xs text-slate-700 whitespace-pre-line bg-slate-50 rounded p-2">{order.billing_address || '—'}</p>
-                  </div>
-                  <Field label="Billing Address GSTIN" value={order.customer_gstin} />
-                  <Field label="Status" value="Active" />
-                  <Field label="GST Category" value={order.gst_category || 'Registered Regular'} />
-                  <Field label="Place of Supply" value={order.place_of_supply || '—'} />
-                </div>
-              </div>
-            </Section>
-
-            <Section title="Shipping Address" defaultOpen={true}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-                <div>
-                  <Field label="Shipping Address Name" value={order.customer_name} />
-                  <div className="py-2">
-                    <p className="text-xs text-slate-500 mb-1">Shipping Address</p>
-                    <p className="text-xs text-slate-700 whitespace-pre-line bg-slate-50 rounded p-2">{order.shipping_address || order.billing_address || '—'}</p>
-                  </div>
-                </div>
-                <div>
-                  <Field label="Dispatch Address Name" value="—" />
-                </div>
-              </div>
-            </Section>
-
-            <Section title="Company Address" defaultOpen={false}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-                <div>
-                  <Field label="Company Address Name" value="K95 Foods Private Limited - Display Shipping" />
-                  <Field label="Company GSTIN" value="—" />
-                </div>
-              </div>
-            </Section>
-
-            {order.customer_pan && (
-              <Section title="Tax Information" defaultOpen={true}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-                  <Field label="Customer GSTIN" value={order.customer_gstin} />
-                  <Field label="Customer PAN" value={order.customer_pan} />
-                </div>
-              </Section>
-            )}
-          </>
+          <SOAddressPanel order={order} onUpdated={refetch} />
         )}
 
         {/* ── Logistics ─────────────────────────────────────────── */}
