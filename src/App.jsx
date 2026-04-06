@@ -98,6 +98,7 @@ import SalesGRNReconciliation from './pages/SalesGRNReconciliation';
 import TransportRateCards from './pages/TransportRateCards';
 import SalesPicklists from './pages/SalesPicklists';
 import SalesInvoices from './pages/SalesInvoices';
+import SalesSKUManagement from './pages/SalesSKUManagement';
 import SMSDashboard from './pages/SMSDashboard';
 import SMSLocationManager from './pages/SMSLocationManager';
 import SMSLotManager from './pages/SMSLotManager';
@@ -129,7 +130,7 @@ const PAGE_COMPONENTS = {
   SalesOrders, SalesDistributors, SalesRateListManager, SalesSettingsPage, DistributorPortal,
   SalesPicklistDetail, SalesDeliveryNoteDetail, SalesInvoiceDetail,
   SalesCustomerManager, SalesPriceListView, SalesGRNReconciliation, TransportRateCards,
-  SalesPicklists, SalesInvoices,
+  SalesPicklists, SalesInvoices, SalesSKUManagement,
   SMSDashboard, SMSLocationManager, SMSLotManager, SMSPutaway, SMSStockOut,
   SMSTransfer, SMSOpeningStock, SMSReorderConfig, SMSCycleCount, SMSAdjustments, SMSReports,
   SKUBOMConfig, ScheduledTaskManager,

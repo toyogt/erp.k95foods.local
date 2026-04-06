@@ -132,6 +132,7 @@ export const pageRegistry = [
   { pageKey: 'TransportRateCards',     title: 'Transport Rate Cards', moduleKey: 'SALES', icon: Truck,       roles: ['admin', 'sales_manager'], adminOnly: false },
   { pageKey: 'SalesPicklists',         title: 'Picklists',            moduleKey: 'SALES', icon: ClipboardList, roles: ['admin', 'sales_manager', 'sales_user', 'user'] },
   { pageKey: 'SalesInvoices',          title: 'Invoices',             moduleKey: 'SALES', icon: FileText,     roles: ['admin', 'sales_manager', 'sales_user', 'user'] },
+  { pageKey: 'SalesSKUManagement',      title: 'Products (SKU)',        moduleKey: 'SALES', icon: PackageSearch, roles: ['admin', 'sales_manager', 'sales_user', 'user'] },
 
   // ─── USER MANAGEMENT ───
   { pageKey: 'UserManagement', title: 'Users', moduleKey: 'USER_MANAGEMENT', icon: Users, roles: ['admin'], adminOnly: true },
