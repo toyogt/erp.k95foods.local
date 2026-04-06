@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Plus, QrCode, Edit2, Building2, Search, X } from 'lucide-react';
+import toast, { Toaster } from 'react-hot-toast';
+import { Plus, QrCode, Edit2, Search, X, Printer } from 'lucide-react';
 import { SkeletonTable } from '@/components/store/StoreSkeleton';
 import ExportButton from '@/components/store/ExportButton';
 import { Button } from '@/components/ui/button';
@@ -26,6 +27,7 @@ function LocationModal({ loc, onSave, onClose }) {
     const payload = { ...form, location_code: code, qr_code: code, display_name: code, capacity_limit: form.capacity_limit ? Number(form.capacity_limit) : null };
     if (loc?.id) await base44.entities.StoreLocation.update(loc.id, payload);
     else await base44.entities.StoreLocation.create(payload);
+    toast.success(loc?.id ? 'Location updated!' : 'Location added!');
     onSave();
   }
 
@@ -92,16 +94,37 @@ function LocationModal({ loc, onSave, onClose }) {
 }
 
 function QRModal({ location, onClose }) {
+  function handlePrint() {
+    const printWin = window.open('', '_blank', 'width=400,height=500');
+    const qrVal = location.qr_code || location.location_code;
+    printWin.document.write(`
+      <html><head><title>Location QR - ${location.location_code}</title>
+      <style>body{font-family:sans-serif;text-align:center;padding:24px} img{width:180px;height:180px} p{margin:4px 0} .mono{font-family:monospace;font-size:13px;font-weight:bold}</style>
+      </head><body>
+      <p style="font-size:14px;font-weight:600">Location QR Code</p>
+      <p style="font-size:12px;color:#666">${location.display_name || location.location_code}</p>
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrVal)}" />
+      <p class="mono">${location.location_code}</p>
+      <p style="font-size:11px;color:#999">${location.location_type || 'storage'}</p>
+      </body></html>
+    `);
+    printWin.document.close();
+    printWin.focus();
+    setTimeout(() => { printWin.print(); printWin.close(); }, 500);
+  }
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-xs text-center">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-white/60 p-6 w-full max-w-xs text-center">
         <p className="text-sm font-semibold text-slate-700 mb-1">Location QR Code</p>
         <p className="text-xs text-slate-500 mb-4">{location.display_name || location.location_code}</p>
-        <div className="flex justify-center mb-4 p-4 bg-white border border-slate-200 rounded-lg">
+        <div className="flex justify-center mb-4 p-4 bg-white border border-slate-200 rounded-xl">
           <QRCode value={location.qr_code || location.location_code} size={160} />
         </div>
         <p className="text-xs font-mono text-slate-600 mb-4">{location.location_code}</p>
-        <Button variant="outline" className="w-full" onClick={onClose}>Close</Button>
+        <div className="flex gap-2">
+          <Button variant="outline" className="flex-1 h-10" onClick={onClose}>Close</Button>
+          <Button className="flex-1 h-10 gap-2" onClick={handlePrint}><Printer className="w-4 h-4" /> Print QR</Button>
+        </div>
       </div>
     </div>
   );
@@ -137,12 +160,13 @@ export default function SMSLocationManager() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <Toaster position="top-right" />
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-slate-900">Location Manager</h1>
           <p className="text-sm text-slate-500">Warehouse → Floor → Section → Place → Slab → Rack</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <ExportButton data={filtered} columns={[
             { key: 'location_code', label: 'Code' }, { key: 'warehouse', label: 'Warehouse' },
             { key: 'floor', label: 'Floor' }, { key: 'section', label: 'Section' },
@@ -155,7 +179,7 @@ export default function SMSLocationManager() {
         </div>
       </div>
 
-      <div className="flex gap-3">
+      <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <Input className="pl-9 h-9" placeholder="Search locations..." value={search} onChange={e => setSearch(e.target.value)} />
@@ -169,7 +193,7 @@ export default function SMSLocationManager() {
       {loading ? (
         <SkeletonTable rows={5} cols={7} headers={['Location Code','Warehouse','Floor / Section','Place / Slab / Rack','Type','Capacity','Actions']} />
       ) : (
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/70 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import { QrCode, Search } from 'lucide-react';
+import toast, { Toaster } from 'react-hot-toast';
+import { QrCode, Search, Printer } from 'lucide-react';
 import ExportButton from '@/components/store/ExportButton';
 import { Input } from '@/components/ui/input';
 import { SkeletonTable } from '@/components/store/StoreSkeleton';
@@ -50,17 +51,38 @@ function StatusBadge({ status, storedQty, issuedQty, originalQty }) {
 }
 
 function QRModal({ lot, onClose }) {
+  function handlePrint() {
+    const printWin = window.open('', '_blank', 'width=400,height=500');
+    const qrVal = lot.qr_code || lot.lot_id;
+    printWin.document.write(`
+      <html><head><title>Lot QR - ${lot.lot_id}</title>
+      <style>body{font-family:sans-serif;text-align:center;padding:24px} img{width:180px;height:180px} p{margin:4px 0} .mono{font-family:monospace;font-size:13px;font-weight:bold}</style>
+      </head><body>
+      <p style="font-size:14px;font-weight:600">Lot QR Code</p>
+      <p style="font-size:12px;color:#666">${lot.item_name}</p>
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrVal)}" />
+      <p class="mono">${lot.lot_id}</p>
+      <p style="font-size:11px;color:#999">${lot.supplier_name || ''}</p>
+      </body></html>
+    `);
+    printWin.document.close();
+    printWin.focus();
+    setTimeout(() => { printWin.print(); printWin.close(); }, 500);
+  }
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-xs text-center">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-white/60 p-6 w-full max-w-xs text-center">
         <p className="text-sm font-semibold text-slate-700 mb-1">Lot QR Code</p>
         <p className="text-xs text-slate-500 mb-1">{lot.item_name}</p>
-        <p className="text-xs text-slate-400 mb-4">{lot.lot_id}</p>
-        <div className="flex justify-center mb-4 p-4 bg-white border border-slate-200 rounded-lg">
+        <p className="text-xs text-slate-400 mb-4 font-mono">{lot.lot_id}</p>
+        <div className="flex justify-center mb-4 p-4 bg-white border border-slate-200 rounded-xl">
           <QRCode value={lot.qr_code || lot.lot_id} size={160} />
         </div>
         <p className="text-xs font-mono text-slate-600 mb-4">{lot.lot_id}</p>
-        <Button variant="outline" className="w-full" onClick={onClose}>Close</Button>
+        <div className="flex gap-2">
+          <Button variant="outline" className="flex-1 h-10" onClick={onClose}>Close</Button>
+          <Button className="flex-1 h-10 gap-2" onClick={handlePrint}><Printer className="w-4 h-4" /> Print QR</Button>
+        </div>
       </div>
     </div>
   );
@@ -124,7 +146,8 @@ export default function SMSLotManager() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <Toaster position="top-right" />
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-slate-900">Lot Manager</h1>
           <p className="text-sm text-slate-500">Track all lots with stored stock, issued quantities, and QR codes</p>
