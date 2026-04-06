@@ -24,6 +24,7 @@ import { useToast } from '@/components/ui/use-toast';
 import SalesOrderStatusBadge from '@/components/sales/SalesOrderStatusBadge';
 import CreateSalesOrderModal from '@/components/sales/CreateSalesOrderModal';
 import DistributorRequestsTab from '@/components/sales/DistributorRequestsTab';
+import SKUManagementTab from '@/components/sales/SKUManagementTab';
 
 const STATUS_TABS = [
   { key: 'distributor_requests', label: 'Distributor Requests', icon: Inbox },
@@ -35,6 +36,7 @@ const STATUS_TABS = [
   { key: 'dispatched', label: 'Dispatched' },
   { key: 'invoiced', label: 'Invoiced' },
   { key: 'paid', label: 'Paid' },
+  { key: 'sku', label: 'SKU', icon: Package },
 ];
 
 const PLATFORM_COLORS = {
@@ -177,7 +179,7 @@ export default function SalesOrders() {
           ))}
         </div>
 
-        {activeTab !== 'distributor_requests' && (
+        {activeTab !== 'distributor_requests' && activeTab !== 'sku' && (
         <div className="p-3 border-b border-slate-100 space-y-2">
           <div className="flex gap-2 flex-wrap">
             <div className="relative flex-1 min-w-[180px]">
@@ -222,6 +224,10 @@ export default function SalesOrders() {
         {activeTab === 'distributor_requests' ? (
           <div className="p-4">
             <DistributorRequestsTab onSOCreated={refetch} />
+          </div>
+        ) : activeTab === 'sku' ? (
+          <div className="p-4">
+            <SKUManagementTab />
           </div>
         ) : isLoading ? (
           <div className="p-8 text-center text-slate-400 text-sm">Loading orders...</div>
