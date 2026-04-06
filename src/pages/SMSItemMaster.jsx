@@ -225,7 +225,8 @@ export default function SMSItemMaster() {
             </tbody>
           </table>
         </div>
-      )}
-    </div>
-  );
-}
+        )}
+        </div>
+        </div>
+        );
+        }

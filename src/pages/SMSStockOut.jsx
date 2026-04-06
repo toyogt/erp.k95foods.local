@@ -465,7 +465,8 @@ export default function SMSStockOut() {
         ) : (
           <ManualModeIssue storedItems={storedItems} stockByLot={stockByLot} onIssue={handleIssue} saving={saving} />
         )}
-      </div>
-    </div>
-  );
-}
+        </div>
+        </div>
+        </div>
+        );
+        }
