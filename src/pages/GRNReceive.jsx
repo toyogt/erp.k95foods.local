@@ -8,12 +8,11 @@ import { logGrnAudit, getChecklistTemplate } from '@/components/grn/grnHelpers';
 import { fireFMSEvent, linkFMSRef } from '@/lib/useFMSAutoComplete';
 import ChecklistGate from '@/components/grn/ChecklistGate';
 import { useToast } from '@/components/ui/use-toast';
-import GRNSupplierSelect from '@/components/store/GRNSupplierSelect';
 import { SweetAlertModal, ValidationAlert } from '@/components/store/SweetAlert';
 import GRNItemCard from '@/components/store/GRNItemCard';
 
 function emptyItem() {
-  return { item_code: '', item_name: '', quantity: '', uom: 'Nos', batch_lot: '', expiry_date: '', mfg_date: '', material_photo: '', notes: '', _rules: null };
+  return { item_code: '', item_name: '', quantity: '', uom: 'Nos', batch_lot: '', expiry_date: '', mfg_date: '', material_photo: '', supplier_name: '', notes: '', _rules: null };
 }
 
 export default function GRNReceive() {
@@ -24,7 +23,7 @@ export default function GRNReceive() {
   const [selected, setSelected] = useState(null);
   const [items, setItems] = useState([emptyItem()]);
   const [grnNotes, setGrnNotes] = useState('');
-  const [supplier, setSupplier] = useState({ supplier_id: '', supplier_name: '' });
+  const [suppliers, setSuppliers] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(null);
   const [checklistTemplate, setChecklistTemplate] = useState(null);
@@ -41,14 +40,16 @@ export default function GRNReceive() {
 
   async function load(autoSelectGateId) {
     setLoading(true);
-    const [u, entries, existingGrns, masterItems] = await Promise.all([
+    const [u, entries, existingGrns, masterItems, approvedSuppliers] = await Promise.all([
       base44.auth.me(),
       base44.entities.GateEntry.filter({ status: 'OPEN' }, '-created_date', 100),
       base44.entities.GRNHeader.list('-created_date', 200),
       base44.entities.StoreItemMaster.filter({ is_active: true }, 'item_name', 500),
+      base44.entities.Supplier.filter({ approval_status: 'APPROVED' }, 'supplier_name', 500).catch(() => []),
     ]);
     setUser(u);
     setStoreItems(masterItems);
+    setSuppliers(approvedSuppliers);
 
     const usedGateIds = new Set(existingGrns.map(g => g.gate_id).filter(Boolean));
     const pending = entries.filter(e => !usedGateIds.has(e.gate_id));
@@ -68,7 +69,6 @@ export default function GRNReceive() {
     setSelected(entry);
     setItems([emptyItem()]);
     setGrnNotes('');
-    setSupplier({ supplier_id: '', supplier_name: '' });
     setDone(null);
     setShowChecklist(false);
   }
@@ -146,11 +146,13 @@ export default function GRNReceive() {
     setSubmitting(true);
     const grn_id = `GRN-${Date.now().toString(36).toUpperCase()}`;
 
+    // Collect unique supplier names from items
+    const uniqueSuppliers = [...new Set(validItems.map(it => it.supplier_name).filter(Boolean))];
+
     const grnHeader = await base44.entities.GRNHeader.create({
       grn_id,
       gate_id: selected.gate_id,
-      supplier_id: supplier.supplier_id || '',
-      supplier_name: supplier.supplier_name || '',
+      supplier_name: uniqueSuppliers.join(', '),
       status: 'RECEIVED',
       received_at: new Date().toISOString(),
       received_by: user?.email || '',
@@ -180,7 +182,7 @@ export default function GRNReceive() {
         quantity: qty, remaining_quantity: qty,
         mfg_date: it.mfg_date || undefined,
         expiry_date: it.expiry_date || undefined,
-        supplier_name: supplier.supplier_name || '',
+        supplier_name: it.supplier_name || '',
         gate_entry_id: selected.gate_id, grn_id,
         status: it._rules?.qc_required ? 'approved' : 'approved',
       });
@@ -190,7 +192,7 @@ export default function GRNReceive() {
 
     await logGrnAudit({
       action: 'GRN_RECEIVED', entity_type: 'GRNHeader',
-      entity_id: grn_id, details: { gate_id: selected.gate_id, item_count: validItems.length, supplier: supplier.supplier_name }, user,
+      entity_id: grn_id, details: { gate_id: selected.gate_id, item_count: validItems.length, suppliers: uniqueSuppliers }, user,
     });
     await fireFMSEvent('grn_received', grnHeader.id);
 
@@ -206,7 +208,7 @@ export default function GRNReceive() {
       (e.driver_name || '').toLowerCase().includes(q);
   });
 
-  const itemNames = validItems.map(it => it.item_name).filter(Boolean);
+
 
   // ── Success ─────────────────────────────────────────────────
   if (done) {
@@ -326,13 +328,6 @@ export default function GRNReceive() {
             </div>
           </div>
 
-          {/* Supplier selection */}
-          <GRNSupplierSelect
-            value={supplier.supplier_name}
-            onChange={setSupplier}
-            itemNames={itemNames}
-          />
-
           {/* Items section */}
           <div>
             <p className="text-sm font-semibold text-slate-700 mb-2">Items Received *</p>
@@ -343,6 +338,7 @@ export default function GRNReceive() {
                   index={idx}
                   item={it}
                   storeItems={storeItems}
+                  suppliers={suppliers}
                   canRemove={items.length > 1}
                   onUpdate={(k, v) => setItem(idx, k, v)}
                   onSelectMasterItem={(masterItem) => onSelectMasterItem(idx, masterItem)}

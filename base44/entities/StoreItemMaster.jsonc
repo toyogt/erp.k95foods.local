@@ -20,10 +20,23 @@
         "ingredient",
         "box_type",
         "cap_type",
+        "container",
+        "flavour",
+        "label_artwork",
         "packaging",
         "other"
       ],
       "default": "other"
+    },
+    "source_entity": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Source entity type if imported from System master (e.g. IngredientItem, BoxType)"
+    },
+    "source_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "ID of the source record in the original entity"
     },
     "uom": {
       "type": "string",

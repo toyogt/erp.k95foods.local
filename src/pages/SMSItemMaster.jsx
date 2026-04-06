@@ -3,14 +3,18 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
-import { Plus, Pencil, Trash2, Search, PackageOpen, ImageIcon } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, PackageOpen, ImageIcon, Download } from 'lucide-react';
 import MaterialPhotoUpload from '@/components/store/MaterialPhotoUpload';
 import { SweetAlertModal } from '@/components/store/SweetAlert';
+import ImportSystemItemsModal from '@/components/store/ImportSystemItemsModal';
 
 const CATEGORIES = [
   { value: 'ingredient', label: 'Ingredient' },
   { value: 'box_type', label: 'Box Type' },
   { value: 'cap_type', label: 'Cap Type' },
+  { value: 'container', label: 'Container / Bottle' },
+  { value: 'flavour', label: 'Flavour' },
+  { value: 'label_artwork', label: 'Label Artwork' },
   { value: 'packaging', label: 'Packaging' },
   { value: 'other', label: 'Other' },
 ];
@@ -130,6 +134,8 @@ export default function SMSItemMaster() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [modal, setModal] = useState(null);
+  const [showImport, setShowImport] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState('all');
   const { toast } = useToast();
 
   async function load() {
@@ -172,10 +178,13 @@ export default function SMSItemMaster() {
     });
   }
 
-  const filtered = items.filter(i =>
-    i.item_name?.toLowerCase().includes(search.toLowerCase()) ||
-    i.item_category?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = items.filter(i => {
+    const matchSearch = i.item_name?.toLowerCase().includes(search.toLowerCase()) ||
+      i.item_category?.toLowerCase().includes(search.toLowerCase()) ||
+      i.item_code?.toLowerCase().includes(search.toLowerCase());
+    const matchCategory = categoryFilter === 'all' || i.item_category === categoryFilter;
+    return matchSearch && matchCategory;
+  });
 
   return (
     <div className="min-h-screen bg-slate-50 pb-12">
@@ -192,6 +201,13 @@ export default function SMSItemMaster() {
           onClose={alertConfig.onClose || (() => setAlertConfig(null))}
         />
       )}
+      {showImport && (
+        <ImportSystemItemsModal
+          existingItems={items}
+          onClose={() => setShowImport(false)}
+          onImported={load}
+        />
+      )}
       {modal && (
         <ItemFormModal
           item={modal === 'new' ? null : modal}
@@ -205,14 +221,29 @@ export default function SMSItemMaster() {
           <h1 className="text-2xl font-bold text-slate-900">Store Item Master</h1>
           <p className="text-xs text-slate-500">Central repository of items with validation rules</p>
         </div>
-        <Button onClick={() => setModal('new')} className="h-11 gap-2 bg-slate-900 text-sm whitespace-nowrap">
-          <Plus className="w-4 h-4" /> Add Item
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setShowImport(true)} className="h-11 gap-2 text-sm whitespace-nowrap">
+            <Download className="w-4 h-4" /> Import from System
+          </Button>
+          <Button onClick={() => setModal('new')} className="h-11 gap-2 bg-slate-900 text-sm whitespace-nowrap">
+            <Plus className="w-4 h-4" /> Add Item
+          </Button>
+        </div>
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-        <Input className="pl-9 h-9" placeholder="Search items…" value={search} onChange={e => setSearch(e.target.value)} />
+      <div className="flex flex-col sm:flex-row gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Input className="pl-9 h-9" placeholder="Search items…" value={search} onChange={e => setSearch(e.target.value)} />
+        </div>
+        <select
+          className="h-9 border border-slate-200 rounded-md px-3 text-sm bg-white"
+          value={categoryFilter}
+          onChange={e => setCategoryFilter(e.target.value)}
+        >
+          <option value="all">All Categories</option>
+          {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+        </select>
       </div>
 
       {loading ? (
@@ -250,7 +281,12 @@ export default function SMSItemMaster() {
                       <span className="font-medium text-slate-900">{item.item_name}</span>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-slate-600 hidden md:table-cell capitalize">{item.item_category?.replace('_', ' ')}</td>
+                  <td className="px-4 py-3 hidden md:table-cell">
+                    <span className="capitalize text-slate-600">{item.item_category?.replace(/_/g, ' ')}</span>
+                    {item.source_entity && (
+                      <span className="ml-1.5 text-xs bg-teal-100 text-teal-700 px-1.5 py-0.5 rounded">System</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-slate-600 hidden md:table-cell">{item.uom || 'Nos'}</td>
                   <td className="px-4 py-3 hidden lg:table-cell">
                     <div className="flex flex-wrap gap-1">

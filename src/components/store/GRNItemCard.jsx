@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Trash2, Search, Plus, AlertTriangle, Camera, Loader2, ImageIcon } from 'lucide-react';
+import { Trash2, Search, Plus, AlertTriangle, Camera, Loader2, ImageIcon, ChevronDown } from 'lucide-react';
 import { ValidationAlert } from '@/components/store/SweetAlert';
 
 function ItemSearchSelect({ value, storeItems, onChangeName, onSelectItem }) {
@@ -103,7 +103,51 @@ function ItemPhotoUpload({ value, onChange }) {
   );
 }
 
-export default function GRNItemCard({ index, item, storeItems, canRemove, onUpdate, onSelectMasterItem, onRemove }) {
+function PerItemSupplierSelect({ value, onChange, suppliers }) {
+  const [query, setQuery] = useState(value || '');
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => { setQuery(value || ''); }, [value]);
+  useEffect(() => {
+    function onClick(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, []);
+
+  const filtered = query.trim()
+    ? suppliers.filter(s => s.supplier_name?.toLowerCase().includes(query.toLowerCase()))
+    : suppliers;
+
+  return (
+    <div className="relative" ref={ref}>
+      <div className="relative">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+        <input
+          className="w-full h-11 pl-8 pr-8 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-teal-400"
+          placeholder="Search supplier..."
+          value={query}
+          onChange={e => { setQuery(e.target.value); onChange(e.target.value); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+        />
+        <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+      </div>
+      {open && filtered.length > 0 && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-40 overflow-y-auto">
+          {filtered.map(s => (
+            <div key={s.id} className="px-4 py-2 text-sm cursor-pointer hover:bg-slate-50"
+              onClick={() => { setQuery(s.supplier_name); setOpen(false); onChange(s.supplier_name); }}>
+              <p className="font-medium text-slate-800">{s.supplier_name}</p>
+              <p className="text-xs text-slate-400">{s.supplier_id}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function GRNItemCard({ index, item, storeItems, suppliers, canRemove, onUpdate, onSelectMasterItem, onRemove }) {
   const rules = item._rules;
 
   return (
@@ -212,6 +256,18 @@ export default function GRNItemCard({ index, item, storeItems, canRemove, onUpda
               )}
             </div>
           )}
+        </div>
+
+        {/* Per-item supplier */}
+        <div>
+          <Label className="text-xs font-medium text-slate-700">Supplier Name</Label>
+          <div className="mt-1">
+            <PerItemSupplierSelect
+              value={item.supplier_name}
+              onChange={v => onUpdate('supplier_name', v)}
+              suppliers={suppliers || []}
+            />
+          </div>
         </div>
 
         {/* Material photo upload for this GRN line */}
