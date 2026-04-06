@@ -17,21 +17,21 @@ function ItemNameSelect({ value, onChangeName, onSelectItem }) {
   const ref = useRef(null);
 
   useEffect(() => {
-    Promise.all([
-      base44.entities.ItemMaster.list('-created_date', 500),
-      base44.entities.StoreLot.list('-created_date', 500),
-    ]).then(([im, lots]) => {
-      const seen = new Set();
-      const merged = [
-        ...im.map(i => ({ item_name: i.item_name, uom: i.base_uom })),
-        ...lots.map(l => ({ item_name: l.item_name, uom: l.uom })),
-      ].filter(i => {
-        const key = i.item_name?.trim().toLowerCase();
-        if (!key || seen.has(key)) return false;
-        seen.add(key); return true;
-      });
-      setSuggestions(merged);
-    }).catch(() => {});
+   Promise.all([
+     base44.entities.ItemMaster.list('-created_date', 500),
+     base44.entities.StoreLot.list('-created_date', 500),
+   ]).then(([im, lots]) => {
+     const seen = new Set();
+     const merged = [
+       ...im.map(i => ({ item_code: i.item_code, item_name: i.item_name, uom: i.base_uom })),
+       ...lots.map(l => ({ item_code: l.item_code, item_name: l.item_name, uom: l.uom })),
+     ].filter(i => {
+       const key = i.item_name?.trim().toLowerCase();
+       if (!key || seen.has(key)) return false;
+       seen.add(key); return true;
+     });
+     setSuggestions(merged);
+   }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -59,17 +59,17 @@ function ItemNameSelect({ value, onChangeName, onSelectItem }) {
       {open && (
         <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
           {filtered.length === 0 ? (
-            query.trim()
-              ? <div className="px-4 py-2.5 text-sm text-blue-600 cursor-pointer hover:bg-blue-50 flex items-center gap-2" onClick={() => { setOpen(false); onChangeName(query); }}>
-                  <Plus className="w-3.5 h-3.5" /> Add "{query}" as new item
-                </div>
-              : <div className="px-4 py-3 text-sm text-slate-400">No items found. Start typing...</div>
+           query.trim()
+             ? <div className="px-4 py-2.5 text-sm text-blue-600 cursor-pointer hover:bg-blue-50 flex items-center gap-2" onClick={() => { setOpen(false); onChangeName(query); }}>
+                 <Plus className="w-3.5 h-3.5" /> Add "{query}" as new item
+               </div>
+             : <div className="px-4 py-3 text-sm text-slate-400">No items found. Start typing...</div>
           ) : filtered.map((s, i) => (
-            <div key={i} className="px-4 py-2.5 text-sm cursor-pointer hover:bg-slate-50"
-              onClick={() => { setQuery(s.item_name); setOpen(false); onSelectItem(s); }}>
-              <p className="font-medium text-slate-800">{s.item_name}</p>
-              {s.uom && <p className="text-xs text-slate-400">Unit: {s.uom}</p>}
-            </div>
+           <div key={i} className="px-4 py-2.5 text-sm cursor-pointer hover:bg-slate-50"
+             onClick={() => { setQuery(s.item_name); setOpen(false); onSelectItem(s); }}>
+             <p className="font-medium text-slate-800">{s.item_name}</p>
+             <p className="text-xs text-slate-400">{s.item_code && `Code: ${s.item_code}`} {s.uom && `· Unit: ${s.uom}`}</p>
+           </div>
           ))}
         </div>
       )}
@@ -77,7 +77,7 @@ function ItemNameSelect({ value, onChangeName, onSelectItem }) {
   );
 }
 
-function emptyItem() { return { item_name: '', quantity: '', uom: 'Nos', batch_lot: '', notes: '' }; }
+function emptyItem() { return { item_code: '', item_name: '', quantity: '', uom: 'Nos', batch_lot: '', notes: '' }; }
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function GRNReceive() {
@@ -173,6 +173,7 @@ export default function GRNReceive() {
     for (const it of validItems) {
       await base44.entities.GRNItem.create({
         grn_id,
+        item_code: it.item_code || it.item_name,
         item_name: it.item_name,
         ordered_qty: parseFloat(it.quantity),
         received_qty: parseFloat(it.quantity),
@@ -341,13 +342,14 @@ export default function GRNReceive() {
                       <Label className="text-xs font-medium text-slate-700">Item Name *</Label>
                       <div className="mt-1">
                         <ItemNameSelect
-                          value={it.item_name}
-                          onChangeName={v => setItem(idx, 'item_name', v)}
-                          onSelectItem={item => {
-                            setItem(idx, 'item_name', item.item_name);
-                            if (item.uom) setItem(idx, 'uom', item.uom);
-                          }}
-                        />
+                           value={it.item_name}
+                           onChangeName={v => setItem(idx, 'item_name', v)}
+                           onSelectItem={item => {
+                             setItem(idx, 'item_name', item.item_name);
+                             setItem(idx, 'item_code', item.item_code || item.item_name);
+                             if (item.uom) setItem(idx, 'uom', item.uom);
+                           }}
+                         />
                       </div>
                     </div>
                     <div>
