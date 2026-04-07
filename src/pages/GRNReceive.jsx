@@ -214,7 +214,7 @@ export default function GRNReceive() {
   // ── Success ─────────────────────────────────────────────────
   if (done) {
     return (
-      <div className="max-w-2xl mx-auto pt-12 text-center space-y-4 px-4">
+      <div className="max-w-2xl mx-auto pt-12 text-center space-y-4">
         <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto" />
         <h2 className="text-2xl font-bold text-slate-900">Goods Received Note Confirmed</h2>
         <p className="text-slate-500 font-mono text-lg">{done.grn_id}</p>
@@ -239,7 +239,7 @@ export default function GRNReceive() {
   // ── Checklist ────────────────────────────────────────────────
   if (showChecklist && checklistTemplate) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4 pb-12 px-2 md:px-0">
+      <div className="space-y-4 pb-12">
         <h2 className="text-lg font-bold text-slate-900">Goods Received Note Checklist</h2>
         <ChecklistGate
           template={checklistTemplate}
@@ -321,8 +321,8 @@ export default function GRNReceive() {
   }, [activeTab, allGrns]);
 
   return (
-    <div className="max-w-4xl mx-auto space-y-4 pb-12 px-2 md:px-0">
-      <ToastContainer />
+  <div className="space-y-4 pb-12">
+    <ToastContainer />
 
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-slate-900">Goods Received Note</h1>

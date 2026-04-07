@@ -218,9 +218,9 @@ export default function SMSItemMaster() {
   });
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-12">
+    <div className="pb-12">
       <ToastContainer />
-      <div className="max-w-5xl mx-auto space-y-4 px-3 md:px-4 lg:px-6 py-6">
+      <div className="space-y-4">
       {showImport && (
         <ImportSystemItemsModal
           existingItems={items}
