@@ -349,7 +349,7 @@ export default function GRNReceive() {
       {/* Master Tab */}
       {activeTab === 'master' && <GRNTable grns={allGrns} title="All Goods Received Notes" />}
 
-      {/* Create Tab — Gate Entry List */}
+      {/* Create Tab — Gate Entry Table */}
       {activeTab === 'create' && !selected && (
         <>
           <div className="relative">
@@ -369,27 +369,44 @@ export default function GRNReceive() {
               <p className="text-xs mt-1">Complete a Gate Entry first to create a Goods Received Note.</p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {filteredEntries.map(e => (
-                <button key={e.id} onClick={() => selectGateEntry(e)}
-                  className="w-full text-left bg-white rounded-2xl border border-slate-200 p-4 hover:border-blue-400 hover:shadow-sm transition-all">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <span className="font-bold text-slate-900 font-mono">{e.gate_id}</span>
-                      <p className="text-sm text-slate-600 mt-0.5">
-                        {e.vehicle_number ? `Vehicle: ${e.vehicle_number}` : 'Non-vehicle delivery'}
-                      </p>
-                      <p className="text-xs text-slate-400 mt-0.5">
-                        Driver: {e.driver_name || '—'} · Mobile: {e.driver_number || '—'}
-                      </p>
-                      <p className="text-xs text-slate-400">
-                        Arrived: {e.arrived_at ? new Date(e.arrived_at).toLocaleString('en-IN') : '—'}
-                      </p>
-                    </div>
-                    <span className="text-blue-500 text-sm font-semibold shrink-0">Open →</span>
-                  </div>
-                </button>
-              ))}
+            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-slate-100 text-slate-700 text-xs">
+                      <th className="text-left px-4 py-3 font-medium">Gate Entry ID</th>
+                      <th className="text-left px-4 py-3 font-medium">Vehicle</th>
+                      <th className="text-left px-4 py-3 font-medium">Driver</th>
+                      <th className="text-left px-4 py-3 font-medium">Status</th>
+                      <th className="text-left px-4 py-3 font-medium">Date</th>
+                      <th className="px-4 py-3 font-medium">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredEntries.map(e => (
+                      <tr key={e.id} className="hover:bg-slate-50">
+                        <td className="px-4 py-3 font-mono font-bold text-slate-900">{e.gate_id}</td>
+                        <td className="px-4 py-3 text-slate-700">{e.vehicle_number || '—'}</td>
+                        <td className="px-4 py-3 text-slate-600">
+                          <p>{e.driver_name || '—'}</p>
+                          {e.driver_number && <p className="text-xs text-slate-400">{e.driver_number}</p>}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">{e.status}</span>
+                        </td>
+                        <td className="px-4 py-3 text-xs text-slate-500">
+                          {e.arrived_at ? new Date(e.arrived_at).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <Button size="sm" onClick={() => selectGateEntry(e)} className="h-9 gap-1.5 text-sm">
+                            <Plus className="w-3.5 h-3.5" /> Create Goods Received Note
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </>
