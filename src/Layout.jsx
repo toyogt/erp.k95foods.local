@@ -259,7 +259,7 @@ export default function Layout({ children, currentPageName }) {
             )}
           </header>
 
-          <main className="flex-1 px-2 md:px-4 py-4 pb-24 w-full">
+          <main className="flex-1 px-1 md:px-2 py-3 pb-24 w-full">
             {children}
           </main>
         </div>
