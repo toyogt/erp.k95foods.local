@@ -1,15 +1,18 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import { ArrowRight, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ArrowRight, CheckCircle2, AlertCircle, ListChecks } from 'lucide-react';
 import ExportButton from '@/components/store/ExportButton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import QRScanner from '@/components/store/QRScanner';
+import TransferHistory from '@/components/store/TransferHistory';
 
 export default function SMSTransfer() {
   const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState('transfer');
+  const [transferHistory, setTransferHistory] = useState([]);
   const [locations, setLocations] = useState([]);
   const [fromScan, setFromScan] = useState('');
   const [toLotScan, setToLotScan] = useState('');
@@ -22,7 +25,13 @@ export default function SMSTransfer() {
   const [resolvedStock, setResolvedStock] = useState(null);
 
   useEffect(() => {
-    base44.entities.StoreLocation.filter({ is_active: true }).then(setLocations);
+    Promise.all([
+      base44.entities.StoreLocation.filter({ is_active: true }),
+      base44.entities.StoreTransfer.list('-created_date', 100),
+    ]).then(([locs, history]) => {
+      setLocations(locs);
+      setTransferHistory(history);
+    });
   }, []);
 
   useEffect(() => {
@@ -90,16 +99,35 @@ export default function SMSTransfer() {
     setFromScan(''); setToScan(''); setToLotScan(''); setQuantity(''); setReason('');
     setFromLoc(null); setToLoc(null); setResolvedStock(null);
     setSaving(false);
+    // Refresh history
+    base44.entities.StoreTransfer.list('-created_date', 100).then(setTransferHistory);
   }
 
   return (
-    <div className="space-y-4 max-w-xl mx-auto px-2 md:px-0">
+    <div className="space-y-4">
       <div>
         <h1 className="text-xl font-bold text-slate-900">Internal Transfer</h1>
         <p className="text-sm text-slate-500">Move stock between locations</p>
       </div>
 
-      <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/70 shadow-sm p-4 md:p-5 space-y-4">
+      {/* Tabs */}
+      <div className="flex border-b border-slate-200">
+        {[
+          { id: 'transfer', label: 'New Transfer', icon: ArrowRight },
+          { id: 'history', label: `Transfer History (${transferHistory.length})`, icon: ListChecks },
+        ].map(t => (
+          <button key={t.id} onClick={() => setActiveTab(t.id)}
+            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+              activeTab === t.id ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-700'
+            }`}>
+            <t.icon className="w-4 h-4" />{t.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'history' && <TransferHistory transfers={transferHistory} />}
+
+      {activeTab === 'transfer' && <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/70 shadow-sm p-4 md:p-5 space-y-4 max-w-xl">
           {/* Source */}
           <div>
             <Label className="text-xs font-medium text-slate-700">Step 1 — Source Location QR *</Label>
@@ -164,7 +192,7 @@ export default function SMSTransfer() {
           <Button className="w-full h-11 text-base" disabled={!fromLoc || !toLoc || !resolvedStock || !quantity || !reason || saving} onClick={handleTransfer}>
             {saving ? 'Processing...' : 'Confirm Transfer'}
           </Button>
-      </div>
+      </div>}
     </div>
   );
 }

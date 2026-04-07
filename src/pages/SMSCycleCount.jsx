@@ -232,7 +232,10 @@ export default function SMSCycleCount() {
                 <div key={s.name} className={`px-4 py-3 cursor-pointer hover:bg-slate-50 flex items-center justify-between ${activeSession === s.name ? 'bg-blue-50' : ''}`} onClick={() => setActiveSession(s.name)}>
                   <div>
                     <p className="text-sm font-medium text-slate-800">{s.name}</p>
-                    <p className="text-xs text-slate-500">{counted}/{total} counted · {discrepancies} discrepancies</p>
+                    <p className="text-xs text-slate-500">
+                      {counted}/{total} counted · {discrepancies} discrepancies
+                      {s.items[0]?.created_date && ` · ${new Date(s.items[0].created_date).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })}`}
+                    </p>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-24 bg-slate-100 rounded-full h-2"><div className="bg-blue-500 h-2 rounded-full" style={{ width: `${(counted / total) * 100}%` }} /></div>

@@ -204,6 +204,7 @@ export default function SMSAdjustments() {
                 <th className="text-right px-4 py-3">Adjustment</th>
                 <th className="text-right px-4 py-3">After</th>
                 <th className="text-left px-4 py-3">Reason</th>
+                <th className="text-left px-4 py-3">Requested Date</th>
                 <th className="text-left px-4 py-3">Status</th>
                 {isAdmin && <th className="text-left px-4 py-3">Approve</th>}
               </tr>
@@ -229,6 +230,9 @@ export default function SMSAdjustments() {
                   <td className="px-4 py-3 text-right font-bold text-slate-800">{a.adjustment_quantity} {a.uom}</td>
                   <td className="px-4 py-3 text-right font-bold text-slate-800">{a.quantity_after}</td>
                   <td className="px-4 py-3 text-xs text-slate-500 max-w-xs truncate">{a.reason}</td>
+                  <td className="px-4 py-3 text-sm text-slate-500">
+                    {a.created_date ? new Date(a.created_date).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'}
+                  </td>
                   <td className="px-4 py-3">
                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${a.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : a.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                       {a.status}

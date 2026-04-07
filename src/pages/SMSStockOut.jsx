@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Plus, Trash2, AlertCircle, PackageOpen, ScanLine, Keyboard, QrCode, CheckCircle2, Search } from 'lucide-react';
+import { Plus, Trash2, AlertCircle, PackageOpen, ScanLine, Keyboard, QrCode, CheckCircle2, Search, Clock, ListChecks } from 'lucide-react';
 import ExportButton from '@/components/store/ExportButton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import QRScanner from '@/components/store/QRScanner';
+import StockIssueHistory from '@/components/store/StockIssueHistory';
 
 // Searchable item dropdown — only items with "putaway" (Stored) lots
 function ItemSelect({ items, value, onChange }) {
@@ -286,11 +287,13 @@ function ManualModeIssue({ storedItems, stockByLot, onIssue, saving }) {
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 export default function SMSStockOut() {
   const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState('issue');
   const [mode, setMode] = useState('manual'); // 'scan' | 'manual'
   const [issueType, setIssueType] = useState('production');
   const [referenceNumber, setReferenceNumber] = useState('');
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
+  const [issueHistory, setIssueHistory] = useState([]);
 
   // Data
   const [storedItems, setStoredItems] = useState([]); // unique items with status=putaway lots
@@ -299,12 +302,12 @@ export default function SMSStockOut() {
 
   async function loadData() {
     setLoading(true);
-    // Load ALL non-rejected/non-damaged lots — filter by actual stock balance, not DB status field
-    // This ensures lots incorrectly marked 'consumed' but with real stock still appear
-    const [lots, balances] = await Promise.all([
+    const [lots, balances, issues] = await Promise.all([
       base44.entities.StoreLot.list('-created_date', 500),
       base44.entities.StoreStockBalance.list('-created_date', 1000),
+      base44.entities.StoreIssue.list('-created_date', 100),
     ]);
+    setIssueHistory(issues);
 
     // Build stockByLot map
     const byLot = {};
@@ -405,13 +408,31 @@ export default function SMSStockOut() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-12">
-      <div className="max-w-4xl mx-auto px-3 md:px-4 lg:px-6 py-6 space-y-4">
+    <div className="pb-12">
+      <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Stock Issue</h1>
         <p className="text-sm text-slate-500">Issue stored stock for production or dispatch using FIFO</p>
       </div>
 
+      {/* Tabs */}
+      <div className="flex border-b border-slate-200">
+        {[
+          { id: 'issue', label: 'New Issue', icon: PackageOpen },
+          { id: 'history', label: `Issue History (${issueHistory.length})`, icon: ListChecks },
+        ].map(t => (
+          <button key={t.id} onClick={() => setActiveTab(t.id)}
+            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+              activeTab === t.id ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-700'
+            }`}>
+            <t.icon className="w-4 h-4" />{t.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'history' && <StockIssueHistory issues={issueHistory} />}
+
+      {activeTab === 'issue' && <>
       {/* Issue header */}
       <div className="bg-white rounded-xl border border-slate-200 p-4 md:p-6">
         <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Issue Details</p>
@@ -466,6 +487,7 @@ export default function SMSStockOut() {
           <ManualModeIssue storedItems={storedItems} stockByLot={stockByLot} onIssue={handleIssue} saving={saving} />
         )}
         </div>
+        </>}
         </div>
         </div>
         );

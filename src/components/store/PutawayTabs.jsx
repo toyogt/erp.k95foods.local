@@ -39,6 +39,7 @@ export default function PutawayTabs({ pendingLots, putawayHistory }) {
                     <th className="text-left px-4 py-3 font-medium">Supplier</th>
                     <th className="text-right px-4 py-3 font-medium">Quantity</th>
                     <th className="text-left px-4 py-3 font-medium">Unit</th>
+                    <th className="text-left px-4 py-3 font-medium">Created Date</th>
                     <th className="text-left px-4 py-3 font-medium">Status</th>
                   </tr>
                 </thead>
@@ -50,6 +51,9 @@ export default function PutawayTabs({ pendingLots, putawayHistory }) {
                       <td className="px-4 py-3 text-slate-600">{lot.supplier_name || '—'}</td>
                       <td className="px-4 py-3 text-right font-bold text-slate-800">{lot.remaining_quantity ?? lot.quantity}</td>
                       <td className="px-4 py-3 text-slate-600">{lot.uom}</td>
+                      <td className="px-4 py-3 text-sm text-slate-500">
+                        {lot.created_date ? new Date(lot.created_date).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'}
+                      </td>
                       <td className="px-4 py-3">
                         <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Ready for putaway</span>
                       </td>
