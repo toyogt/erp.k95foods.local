@@ -9,19 +9,19 @@ export default function PutawayTabs({ pendingLots, putawayHistory, loading }) {
   return (
     <div>
       {/* Tab bar */}
-      <div className="flex border-b border-slate-200 mb-4">
+      <div className="flex border-b border-slate-200 mb-4 overflow-x-auto">
         {[
-          { id: 'pending', label: `Approved Lots — Pending (${pendingLots.length})`, icon: Clock },
-          { id: 'history', label: `Recent Putaway History (${putawayHistory.length})`, icon: ListChecks },
+          { id: 'pending', label: `Pending (${pendingLots.length})`, fullLabel: `Approved Lots — Pending (${pendingLots.length})`, icon: Clock },
+          { id: 'history', label: `History (${putawayHistory.length})`, fullLabel: `Recent Putaway History (${putawayHistory.length})`, icon: ListChecks },
         ].map(t => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0 ${
               tab === t.id ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-700'
             }`}
           >
-            <t.icon className="w-4 h-4" />{t.label}
+            <t.icon className="w-4 h-4" /><span className="hidden sm:inline">{t.fullLabel}</span><span className="sm:hidden">{t.label}</span>
           </button>
         ))}
       </div>
@@ -33,7 +33,9 @@ export default function PutawayTabs({ pendingLots, putawayHistory, loading }) {
         ) : pendingLots.length === 0 ? (
           <p className="text-sm text-slate-400 text-center py-8">No approved lots pending putaway.</p>
         ) : (
-          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+          <>
+          {/* Desktop Table */}
+          <div className="hidden md:block bg-white rounded-xl border border-slate-200 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -67,6 +69,26 @@ export default function PutawayTabs({ pendingLots, putawayHistory, loading }) {
               </table>
             </div>
           </div>
+          {/* Mobile Cards */}
+          <div className="md:hidden space-y-2">
+            {pendingLots.map(lot => (
+              <div key={lot.id} className="bg-white border border-slate-200 rounded-xl p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-mono text-xs font-bold text-slate-500">{lot.lot_id}</p>
+                    <p className="text-sm font-semibold text-slate-900 mt-0.5">{lot.item_name}</p>
+                    {lot.supplier_name && <p className="text-xs text-slate-500">{lot.supplier_name}</p>}
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 shrink-0">Ready</span>
+                </div>
+                <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-slate-500">
+                  <span>Quantity: <strong className="text-slate-700">{lot.remaining_quantity ?? lot.quantity} {lot.uom}</strong></span>
+                  {lot.created_date && <span>{new Date(lot.created_date).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+          </>
         )
       )}
 

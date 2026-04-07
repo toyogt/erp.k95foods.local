@@ -191,15 +191,15 @@ export default function SMSDashboard() {
 
       {/* Pending QC */}
       {pendingQC > 0 && (
-        <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-yellow-200/70 shadow-sm p-4">
+        <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-yellow-200/70 shadow-sm p-3 md:p-4">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-sm font-semibold text-yellow-700 flex items-center gap-2"><Clock className="w-4 h-4" /> {pendingQC} Lots Awaiting QC</p>
+            <p className="text-sm font-semibold text-yellow-700 flex items-center gap-2"><Clock className="w-4 h-4" /> {pendingQC} Lots Awaiting Quality Control</p>
             <Link to="/SMSLotManager" className="text-xs text-blue-600 hover:underline flex items-center gap-1">View <ArrowRight className="w-3 h-3" /></Link>
           </div>
           {lots.filter(l => l.status === 'qc_pending').slice(0, 4).map(l => (
-            <div key={l.id} className="flex items-center justify-between bg-yellow-50 rounded px-3 py-1.5 text-sm mb-1">
+            <div key={l.id} className="flex flex-col sm:flex-row sm:items-center justify-between bg-yellow-50 rounded px-3 py-2 text-sm mb-1 gap-1">
               <span className="font-medium text-slate-800">{l.lot_id}</span>
-              <span className="text-slate-500">{l.item_name} — {l.quantity} {l.uom}</span>
+              <span className="text-slate-500 text-xs sm:text-sm">{l.item_name} — {l.quantity} {l.uom}</span>
             </div>
           ))}
         </div>

@@ -182,9 +182,9 @@ export default function SMSLocationManager() {
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <Input className="pl-9 h-9" placeholder="Search locations..." value={search} onChange={e => setSearch(e.target.value)} />
+          <Input className="pl-9 h-11 md:h-9 text-base md:text-sm" placeholder="Search locations..." value={search} onChange={e => setSearch(e.target.value)} />
         </div>
-        <select className="h-9 border border-slate-200 rounded-md px-3 text-sm" value={warehouseFilter} onChange={e => setWarehouseFilter(e.target.value)}>
+        <select className="h-11 md:h-9 border border-slate-200 rounded-md px-3 text-base md:text-sm" value={warehouseFilter} onChange={e => setWarehouseFilter(e.target.value)}>
           <option value="">All Warehouses</option>
           {warehouses.map(w => <option key={w} value={w}>{w}</option>)}
         </select>
@@ -192,8 +192,12 @@ export default function SMSLocationManager() {
 
       {loading ? (
         <SkeletonTable rows={5} cols={7} headers={['Location Code','Warehouse','Floor / Section','Place / Slab / Rack','Type','Capacity','Actions']} />
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-12 text-slate-400">No locations found. Add your first location.</div>
       ) : (
-      <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/70 shadow-sm overflow-hidden">
+      <>
+      {/* Desktop Table */}
+      <div className="hidden md:block bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/70 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -208,9 +212,7 @@ export default function SMSLocationManager() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filtered.length === 0 ? (
-                <tr><td colSpan={7} className="text-center py-12 text-slate-400">No locations found. Add your first location.</td></tr>
-              ) : filtered.map(loc => (
+              {filtered.map(loc => (
                 <tr key={loc.id} className="hover:bg-slate-50">
                   <td className="px-4 py-3 font-mono text-xs font-bold text-slate-800">{loc.location_code}</td>
                   <td className="px-4 py-3 text-slate-700">{loc.warehouse}</td>
@@ -231,6 +233,30 @@ export default function SMSLocationManager() {
         </div>
         <div className="px-4 py-2 bg-slate-50 border-t border-slate-100 text-xs text-slate-400">{filtered.length} location(s)</div>
       </div>
+      {/* Mobile Cards */}
+      <div className="md:hidden space-y-2">
+        {filtered.map(loc => (
+          <div key={loc.id} className="bg-white border border-slate-200 rounded-xl p-3">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="font-mono text-sm font-bold text-slate-800">{loc.location_code}</p>
+                <p className="text-xs text-slate-500 mt-0.5">{loc.warehouse}{loc.floor ? ` · ${loc.floor}` : ''}{loc.section ? ` · ${loc.section}` : ''}</p>
+              </div>
+              <span className={`px-2 py-0.5 rounded-full text-xs font-medium shrink-0 ${TYPE_COLORS[loc.location_type] || 'bg-slate-100 text-slate-600'}`}>{loc.location_type || 'storage'}</span>
+            </div>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-slate-500">
+              {loc.rack && <span>Rack: <strong className="text-slate-700">{loc.rack}</strong></span>}
+              {loc.capacity_limit && <span>Capacity: <strong className="text-slate-700">{loc.capacity_limit}</strong></span>}
+            </div>
+            <div className="flex gap-2 mt-3">
+              <button onClick={() => setQrLoc(loc)} className="flex-1 h-11 flex items-center justify-center gap-2 rounded-lg border border-slate-200 text-sm text-slate-700 hover:bg-slate-50"><QrCode className="w-4 h-4" /> QR Code</button>
+              <button onClick={() => { setEditLoc(loc); setShowModal(true); }} className="flex-1 h-11 flex items-center justify-center gap-2 rounded-lg border border-slate-200 text-sm text-slate-700 hover:bg-slate-50"><Edit2 className="w-4 h-4" /> Edit</button>
+            </div>
+          </div>
+        ))}
+        <p className="text-xs text-slate-400 text-center py-1">{filtered.length} location(s)</p>
+      </div>
+      </>
       )}
 
       {showModal && <LocationModal loc={editLoc} onSave={() => { setShowModal(false); load(); }} onClose={() => setShowModal(false)} />}

@@ -177,7 +177,7 @@ export default function SMSAdjustments() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-slate-900">Stock Adjustments</h1>
           <p className="text-sm text-slate-500">Request manual corrections — no direct deletion allowed</p>
@@ -189,10 +189,11 @@ export default function SMSAdjustments() {
             { key: 'adjustment_quantity', label: 'Adjustment' }, { key: 'quantity_after', label: 'After' },
             { key: 'reason', label: 'Reason' }, { key: 'status', label: 'Status' },
           ]} filename="adjustments" />
-          <Button onClick={() => setShowModal(true)} className="gap-2 h-11"><Plus className="w-4 h-4" />Request Adjustment</Button>
+          <Button onClick={() => setShowModal(true)} className="gap-2 h-11 w-full sm:w-auto"><Plus className="w-4 h-4" />Request Adjustment</Button>
         </div>
       </div>
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      {/* Desktop Table */}
+      <div className="hidden md:block bg-white rounded-xl border border-slate-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -254,6 +255,47 @@ export default function SMSAdjustments() {
           </table>
         </div>
       </div>
+
+      {/* Mobile Cards */}
+      <div className="md:hidden space-y-2">
+        {loading ? (
+          <div className="text-center py-8 text-slate-400">Loading...</div>
+        ) : adjustments.length === 0 ? (
+          <div className="text-center py-8 text-slate-400">No adjustments yet</div>
+        ) : adjustments.map(a => (
+          <div key={a.id} className={`bg-white border border-slate-200 rounded-xl p-3 ${a.status === 'approved' ? (a.adjustment_type === 'increase' ? 'bg-green-50' : 'bg-red-50') : ''}`}>
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="font-mono text-xs font-bold text-slate-500">{a.adjustment_id}</p>
+                <p className="text-sm font-semibold text-slate-900 mt-0.5">{a.item_name}</p>
+                <p className="text-xs text-slate-400">{a.lot_id}</p>
+              </div>
+              <div className="flex flex-col items-end gap-1 shrink-0">
+                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${a.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : a.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                  {a.status}
+                </span>
+                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${a.adjustment_type === 'decrease' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                  {a.adjustment_type === 'decrease' ? '↓ Decrease' : '↑ Increase'}
+                </span>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-slate-500">
+              <span>Before: <strong className="text-slate-700">{a.quantity_before}</strong></span>
+              <span>Adjustment: <strong className="text-slate-700">{a.adjustment_quantity}</strong></span>
+              <span>After: <strong className="text-slate-700">{a.quantity_after}</strong></span>
+            </div>
+            {a.reason && <p className="text-xs text-slate-500 mt-1.5 line-clamp-2">{a.reason}</p>}
+            {a.created_date && <p className="text-xs text-slate-400 mt-1">{new Date(a.created_date).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })}</p>}
+            {isAdmin && a.status === 'pending' && (
+              <div className="flex gap-2 mt-3">
+                <button onClick={() => approve(a, true)} className="flex-1 h-11 flex items-center justify-center gap-2 rounded-lg bg-green-50 border border-green-200 text-sm font-medium text-green-700"><CheckCircle2 className="w-4 h-4" /> Approve</button>
+                <button onClick={() => approve(a, false)} className="flex-1 h-11 flex items-center justify-center gap-2 rounded-lg bg-red-50 border border-red-200 text-sm font-medium text-red-600"><XCircle className="w-4 h-4" /> Reject</button>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
       {showModal && <AdjModal onSave={() => { setShowModal(false); load(); }} onClose={() => setShowModal(false)} />}
     </div>
   );

@@ -112,12 +112,12 @@ export default function SMSReports() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-slate-100 rounded-xl p-1 flex-wrap">
+      <div className="flex gap-1 bg-slate-100 rounded-xl p-1 overflow-x-auto">
         {TABS.map(t => {
           const Icon = t.icon;
           return (
-            <button key={t.key} onClick={() => setTab(t.key)} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${tab === t.key ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}>
-              <Icon className="w-4 h-4" />{t.label}
+            <button key={t.key} onClick={() => setTab(t.key)} className={`flex items-center gap-1.5 px-3 md:px-4 py-2.5 rounded-lg text-xs md:text-sm font-medium transition-all whitespace-nowrap shrink-0 ${tab === t.key ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}>
+              <Icon className="w-4 h-4" /><span className="hidden sm:inline">{t.label}</span><span className="sm:hidden">{t.label.split(' ')[0]}</span>
             </button>
           );
         })}
@@ -126,12 +126,12 @@ export default function SMSReports() {
       {/* Item Level Report */}
       {tab === 'item' && (
         <div className="space-y-4">
-          <div className="flex flex-wrap gap-3 items-center">
-            <div className="relative flex-1 min-w-48">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <Input className="pl-9 h-9" placeholder="Search item name or code..." value={itemSearch} onChange={e => setItemSearch(e.target.value)} />
+              <Input className="pl-9 h-11 md:h-9 text-base md:text-sm" placeholder="Search item name or code..." value={itemSearch} onChange={e => setItemSearch(e.target.value)} />
             </div>
-            <select className="h-9 border border-slate-200 rounded-md px-3 text-sm" value={locationFilter} onChange={e => setLocationFilter(e.target.value)}>
+            <select className="h-11 md:h-9 border border-slate-200 rounded-md px-3 text-base md:text-sm" value={locationFilter} onChange={e => setLocationFilter(e.target.value)}>
               <option value="">All Locations</option>
               {allLocations.map(l => <option key={l} value={l}>{l}</option>)}
             </select>

@@ -183,23 +183,23 @@ export default function SMSTransfer() {
             <>
               <div>
                 <Label className="text-xs font-medium text-slate-700">Quantity *</Label>
-                <Input type="number" className="h-9 text-sm mt-1" min="0.01" max={resolvedStock.quantity} value={quantity} onChange={e => setQuantity(e.target.value)} placeholder={`Max: ${resolvedStock.quantity} ${resolvedStock.uom}`} />
+                <Input type="number" className="h-11 md:h-9 text-base md:text-sm mt-1" min="0.01" max={resolvedStock.quantity} value={quantity} onChange={e => setQuantity(e.target.value)} placeholder={`Max: ${resolvedStock.quantity} ${resolvedStock.uom}`} />
               </div>
               <div>
                 <Label className="text-xs font-medium text-slate-700">Reason *</Label>
-                <Input className="h-9 text-sm mt-1" placeholder="Reason for transfer" value={reason} onChange={e => setReason(e.target.value)} />
+                <Input className="h-11 md:h-9 text-base md:text-sm mt-1" placeholder="Reason for transfer" value={reason} onChange={e => setReason(e.target.value)} />
               </div>
             </>
           )}
 
           {fromLoc && toLoc && resolvedStock && quantity && (
-            <div className="bg-slate-50/80 backdrop-blur-sm rounded-lg p-4 border border-slate-200/70">
+            <div className="bg-slate-50/80 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-slate-200/70">
               <p className="text-xs font-semibold text-slate-500 mb-2">Transfer Summary</p>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
                 <div className="text-center"><p className="text-xs text-slate-500">From</p><p className="font-mono text-sm font-bold text-slate-800">{fromLoc.location_code}</p></div>
-                <ArrowRight className="w-5 h-5 text-slate-400" />
+                <ArrowRight className="w-5 h-5 text-slate-400 hidden sm:block" />
                 <div className="text-center"><p className="text-xs text-slate-500">To</p><p className="font-mono text-sm font-bold text-slate-800">{toLoc.location_code}</p></div>
-                <div className="ml-auto text-right"><p className="text-xs text-slate-500">Quantity</p><p className="text-sm font-bold text-slate-900">{quantity} {resolvedStock.uom}</p></div>
+                <div className="sm:ml-auto text-left sm:text-right"><p className="text-xs text-slate-500">Quantity</p><p className="text-sm font-bold text-slate-900">{quantity} {resolvedStock.uom}</p></div>
               </div>
             </div>
           )}

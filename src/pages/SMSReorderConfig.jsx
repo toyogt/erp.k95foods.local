@@ -192,7 +192,8 @@ export default function SMSReorderConfig() {
           <Button onClick={() => { setEditing(null); setShowModal(true); }} className="gap-2 h-11"><Plus className="w-4 h-4" /> Add Alert</Button>
         </div>
       </div>
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      {/* Desktop Table */}
+      <div className="hidden md:block bg-white rounded-xl border border-slate-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead><tr className="bg-slate-100 text-slate-700 text-xs"><th className="text-left px-4 py-3">Item</th><th className="text-right px-4 py-3">Current Stock</th><th className="text-right px-4 py-3">Suggest Order</th><th className="text-left px-4 py-3">Status</th><th className="text-left px-4 py-3">Alert</th><th className="text-left px-4 py-3">Actions</th></tr></thead>
@@ -216,6 +217,41 @@ export default function SMSReorderConfig() {
           </table>
         </div>
       </div>
+
+      {/* Mobile Cards */}
+      <div className="md:hidden space-y-2">
+        {loading ? (
+          <div className="text-center py-8 text-slate-400">Loading...</div>
+        ) : configs.length === 0 ? (
+          <div className="text-center py-8 text-slate-400">No reorder configs set</div>
+        ) : configs.map(c => {
+          const current = stockByItem[c.item_code] || 0;
+          const reorderLevel = storeItems.find(i => i.item_code === c.item_code)?.reorder_level || 0;
+          const isLow = reorderLevel > 0 && current <= reorderLevel;
+          return (
+            <div key={c.id} className="bg-white border border-slate-200 rounded-xl p-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-slate-900">{c.item_name || c.item_code}</p>
+                  <p className="text-xs text-slate-400">{c.item_code} · {c.uom}</p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${c.is_active ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>{c.is_active ? 'Active' : 'Inactive'}</span>
+                  <button onClick={() => { setEditing(c); setShowModal(true); }} className="p-1.5 rounded hover:bg-slate-100 text-slate-500"><Edit2 className="w-4 h-4" /></button>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-slate-500">
+                <span>Current: <strong className={isLow ? 'text-red-600' : 'text-slate-700'}>{current.toFixed(2)}</strong></span>
+                <span>Reorder Qty: <strong className="text-slate-700">{c.reorder_quantity || '—'}</strong></span>
+              </div>
+              {isLow && (
+                <div className="flex items-center gap-1 text-xs text-red-500 font-medium mt-2"><Bell className="w-3.5 h-3.5" />Low Stock Alert</div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
       {showModal && <ConfigModal config={editing} storeItems={storeItems} onSave={() => { setShowModal(false); load(); }} onClose={() => setShowModal(false)} />}
     </div>
   );

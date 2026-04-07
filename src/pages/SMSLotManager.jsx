@@ -221,7 +221,9 @@ export default function SMSLotManager() {
       {loading ? (
         <SkeletonTable rows={6} cols={11} headers={LOT_HEADERS} />
       ) : (
-        <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/70 shadow-sm overflow-hidden">
+        <>
+        {/* Desktop Table */}
+        <div className="hidden lg:block bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/70 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm table-auto">
               <thead>
@@ -250,28 +252,18 @@ export default function SMSLotManager() {
                       <td className="px-3 md:px-4 py-3 text-right font-medium text-slate-800 text-sm">
                         {lot.quantity} <span className="text-xs text-slate-400">{lot.uom}</span>
                       </td>
-                      {/* Stored Stock */}
                       <td className="px-3 md:px-4 py-3 text-right">
-                        <span className={`font-bold ${stored > 0 ? 'text-blue-700' : 'text-slate-400'}`}>
-                          {stored.toFixed(2)}
-                        </span>
+                        <span className={`font-bold ${stored > 0 ? 'text-blue-700' : 'text-slate-400'}`}>{stored.toFixed(2)}</span>
                         <span className="text-xs text-slate-400 ml-1">{lot.uom}</span>
                       </td>
-                      {/* Issued / Consumed */}
                       <td className="px-3 md:px-4 py-3 text-right">
-                        <span className={`font-bold ${issued > 0 ? 'text-orange-600' : 'text-slate-400'}`}>
-                          {issued.toFixed(2)}
-                        </span>
+                        <span className={`font-bold ${issued > 0 ? 'text-orange-600' : 'text-slate-400'}`}>{issued.toFixed(2)}</span>
                         <span className="text-xs text-slate-400 ml-1">{lot.uom}</span>
                       </td>
-                      {/* Remaining Qty */}
                       <td className="px-3 md:px-4 py-3 text-right">
-                        <span className={`font-bold ${(lot.remaining_quantity ?? lot.quantity) > 0 ? 'text-green-700' : 'text-slate-400'}`}>
-                          {(lot.remaining_quantity ?? lot.quantity).toFixed(2)}
-                        </span>
+                        <span className={`font-bold ${(lot.remaining_quantity ?? lot.quantity) > 0 ? 'text-green-700' : 'text-slate-400'}`}>{(lot.remaining_quantity ?? lot.quantity).toFixed(2)}</span>
                         <span className="text-xs text-slate-400 ml-1">{lot.uom}</span>
                       </td>
-                      {/* Stored At */}
                       <td className="px-3 md:px-4 py-3">
                         {locationsByLot[lot.lot_id]?.length > 0 ? (
                           <div className="flex flex-col gap-0.5">
@@ -305,6 +297,66 @@ export default function SMSLotManager() {
           </div>
           <div className="px-4 py-2 bg-slate-50 border-t text-xs text-slate-400">{filtered.length} lot(s)</div>
         </div>
+
+        {/* Mobile Cards */}
+        <div className="lg:hidden space-y-2">
+          {filtered.length === 0 ? (
+            <div className="text-center py-12 text-slate-400">No lots found</div>
+          ) : filtered.map(lot => {
+            const stored = storedByLot[lot.lot_id] ?? 0;
+            const issued = issuedByLot[lot.lot_id] ?? 0;
+            const lotGateEntry = gateEntries[lot.gate_entry_id];
+            const lotInvoiceUrl = lotGateEntry?.invoice_photo;
+            return (
+              <div key={lot.id} className="bg-white border border-slate-200 rounded-xl p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-mono text-xs font-bold text-slate-500">{lot.lot_id}</p>
+                    <p className="text-sm font-semibold text-slate-900 mt-0.5 truncate">{lot.item_name}</p>
+                    {lot.supplier_name && <p className="text-xs text-slate-500">{lot.supplier_name}</p>}
+                  </div>
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    <StatusBadge status={lot.status} storedQty={stored} issuedQty={issued} originalQty={lot.quantity} />
+                    <WeekBadge weeks={lot.weeks_elapsed} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-2 mt-2">
+                  <div className="bg-slate-50 rounded-lg px-2 py-1.5 text-center">
+                    <p className="text-xs text-slate-500">Original</p>
+                    <p className="text-sm font-bold text-slate-800">{lot.quantity}</p>
+                  </div>
+                  <div className="bg-blue-50 rounded-lg px-2 py-1.5 text-center">
+                    <p className="text-xs text-blue-500">Stored</p>
+                    <p className="text-sm font-bold text-blue-700">{stored.toFixed(1)}</p>
+                  </div>
+                  <div className="bg-orange-50 rounded-lg px-2 py-1.5 text-center">
+                    <p className="text-xs text-orange-500">Issued</p>
+                    <p className="text-sm font-bold text-orange-600">{issued.toFixed(1)}</p>
+                  </div>
+                </div>
+                {locationsByLot[lot.lot_id]?.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {locationsByLot[lot.lot_id].map((loc, i) => (
+                      <span key={i} className="px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded text-xs font-mono">{loc}</span>
+                    ))}
+                  </div>
+                )}
+                <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-slate-500">
+                  {lot.mfg_date && <span>Manufacture: <strong className="text-slate-700">{lot.mfg_date}</strong></span>}
+                  {lot.expiry_date && <span>Expiry: <strong className="text-slate-700">{lot.expiry_date}</strong></span>}
+                </div>
+                <div className="flex gap-2 mt-3">
+                  {lotInvoiceUrl && (
+                    <button onClick={() => setInvoicePreview(lotInvoiceUrl)} className="flex-1 h-11 flex items-center justify-center gap-2 rounded-lg border border-slate-200 text-sm text-blue-600"><Eye className="w-4 h-4" /> Invoice</button>
+                  )}
+                  <button onClick={() => setQrLot(lot)} className="flex-1 h-11 flex items-center justify-center gap-2 rounded-lg border border-slate-200 text-sm text-slate-700"><QrCode className="w-4 h-4" /> QR Code</button>
+                </div>
+              </div>
+            );
+          })}
+          <p className="text-xs text-slate-400 text-center py-1">{filtered.length} lot(s)</p>
+        </div>
+        </>
       )}
 
       {qrLot && <QRModal lot={qrLot} onClose={() => setQrLot(null)} />}

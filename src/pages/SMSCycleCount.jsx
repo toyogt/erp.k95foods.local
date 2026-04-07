@@ -91,16 +91,18 @@ function CountRow({ entry, onCount }) {
 
   if (entry.status !== 'pending') {
     return (
-      <div className="flex items-center justify-between px-4 py-3 hover:bg-slate-50">
-        <div>
-          <p className="text-sm font-medium text-slate-800">{entry.item_name}</p>
-          <p className="text-xs text-slate-400">{entry.lot_id} · {entry.location_code}</p>
+      <div className="px-3 md:px-4 py-3 hover:bg-slate-50">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-slate-800">{entry.item_name}</p>
+            <p className="text-xs text-slate-400">{entry.lot_id} · {entry.location_code}</p>
+          </div>
+          <span className="px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700 shrink-0">Counted</span>
         </div>
-        <div className="flex items-center gap-4 text-sm">
-          <div className="text-right"><p className="text-slate-500 text-xs">System</p><p className="font-medium">{entry.system_quantity}</p></div>
-          <div className="text-right"><p className="text-slate-500 text-xs">Physical</p><p className="font-medium">{entry.physical_quantity ?? '—'}</p></div>
-          <div className="text-right"><p className="text-slate-500 text-xs">Variance</p><p className={`font-bold ${(entry.variance || 0) === 0 ? 'text-green-600' : 'text-red-500'}`}>{entry.variance > 0 ? '+' : ''}{entry.variance ?? '—'}</p></div>
-          <span className="px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700">Counted</span>
+        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-slate-500">
+          <span>System: <strong className="text-slate-700">{entry.system_quantity}</strong></span>
+          <span>Physical: <strong className="text-slate-700">{entry.physical_quantity ?? '—'}</strong></span>
+          <span>Variance: <strong className={`${(entry.variance || 0) === 0 ? 'text-green-600' : 'text-red-500'}`}>{entry.variance > 0 ? '+' : ''}{entry.variance ?? '—'}</strong></span>
         </div>
       </div>
     );
@@ -108,23 +110,21 @@ function CountRow({ entry, onCount }) {
 
   return (
     <>
-      <div className="px-4 py-3 border-b border-slate-100">
-        <div className="flex items-center justify-between mb-2">
-          <div>
-            <p className="text-sm font-medium text-slate-800">{entry.item_name}</p>
-            <p className="text-xs text-slate-400">{entry.lot_id} · {entry.location_code} · System: {entry.system_quantity} {entry.uom}</p>
-          </div>
+      <div className="px-3 md:px-4 py-3 border-b border-slate-100">
+        <div className="mb-2">
+          <p className="text-sm font-medium text-slate-800">{entry.item_name}</p>
+          <p className="text-xs text-slate-400">{entry.lot_id} · {entry.location_code} · System: {entry.system_quantity} {entry.uom}</p>
         </div>
-        <div className="flex gap-3 items-end">
+        <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
           <div className="flex-1">
             <Label className="text-xs font-medium text-slate-700">Physical Count *</Label>
-            <Input type="number" className="h-9 text-sm mt-1" value={physical} onChange={e => setPhysical(e.target.value)} placeholder="Actual counted quantity" />
+            <Input type="number" className="h-11 md:h-9 text-base md:text-sm mt-1" value={physical} onChange={e => setPhysical(e.target.value)} placeholder="Actual counted quantity" />
           </div>
           <div className="flex-1">
             <Label className="text-xs font-medium text-slate-700">Notes</Label>
-            <Input className="h-9 text-sm mt-1" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Optional remarks" />
+            <Input className="h-11 md:h-9 text-base md:text-sm mt-1" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Optional remarks" />
           </div>
-          <Button size="sm" className="h-9 gap-1.5" disabled={physical === '' || saving} onClick={submit}><CheckCircle2 className="w-4 h-4" />Record</Button>
+          <Button className="h-11 md:h-9 gap-1.5 w-full sm:w-auto" disabled={physical === '' || saving} onClick={submit}><CheckCircle2 className="w-4 h-4" />Record</Button>
         </div>
       </div>
       {showDiscrepancy && (
@@ -207,12 +207,8 @@ export default function SMSCycleCount() {
       </div>
 
       {/* Start new session */}
-      <div className="bg-white rounded-xl border border-slate-200 p-4 flex gap-3 items-end">
-        <div className="flex-1">
-          <Label className="text-xs font-medium text-slate-700">New Count Session Name</Label>
-          <Input className="h-9 text-sm mt-1" placeholder="e.g. Monthly Count Jan 2025" value={sessionName} onChange={e => setSessionName(e.target.value)} />
-        </div>
-        <Button className="h-9 gap-2" disabled={!sessionName.trim() || creating || stock.length === 0} onClick={createSession}>
+      <div className="bg-white rounded-xl border border-slate-200 p-3 md:p-4 flex flex-col sm:flex-row gap-3 sm:items-end">
+        <Button className="h-11 md:h-9 gap-2 w-full sm:w-auto" disabled={!sessionName.trim() || creating || stock.length === 0} onClick={createSession}>
           <Plus className="w-4 h-4" />{creating ? 'Creating...' : 'Start Session'}
         </Button>
       </div>
