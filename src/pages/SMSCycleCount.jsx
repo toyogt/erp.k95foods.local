@@ -208,6 +208,10 @@ export default function SMSCycleCount() {
 
       {/* Start new session */}
       <div className="bg-white rounded-xl border border-slate-200 p-3 md:p-4 flex flex-col sm:flex-row gap-3 sm:items-end">
+        <div className="flex-1">
+          <Label className="text-xs font-medium text-slate-700">New Count Session Name</Label>
+          <Input className="h-11 md:h-9 text-base md:text-sm mt-1" placeholder="e.g. Monthly Count Jan 2025" value={sessionName} onChange={e => setSessionName(e.target.value)} />
+        </div>
         <Button className="h-11 md:h-9 gap-2 w-full sm:w-auto" disabled={!sessionName.trim() || creating || stock.length === 0} onClick={createSession}>
           <Plus className="w-4 h-4" />{creating ? 'Creating...' : 'Start Session'}
         </Button>
