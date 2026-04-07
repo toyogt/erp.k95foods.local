@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import QRScanner from '@/components/store/QRScanner';
-import StockIssueHistory from '@/components/store/StockIssueHistory';
+import StockIssueHistoryCards from '@/components/store/StockIssueHistoryCards';
+import useDraftSave from '@/hooks/useDraftSave';
 
 // Searchable item dropdown — only items with "putaway" (Stored) lots
 function ItemSelect({ items, value, onChange }) {
@@ -285,13 +286,19 @@ function ManualModeIssue({ storedItems, stockByLot, onIssue, saving }) {
 }
 
 // ─── Main Page ─────────────────────────────────────────────────────────────────
+const ISSUE_DRAFT_INITIAL = { issueType: 'production', referenceNumber: '', notes: '' };
+
 export default function SMSStockOut() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('issue');
-  const [mode, setMode] = useState('manual'); // 'scan' | 'manual'
-  const [issueType, setIssueType] = useState('production');
-  const [referenceNumber, setReferenceNumber] = useState('');
-  const [notes, setNotes] = useState('');
+  const [mode, setMode] = useState('manual');
+  const [draft, setDraft, clearDraft, hasDraft] = useDraftSave('sms_stock_issue', ISSUE_DRAFT_INITIAL);
+  const issueType = draft.issueType;
+  const referenceNumber = draft.referenceNumber;
+  const notes = draft.notes;
+  const setIssueType = v => setDraft(prev => ({ ...prev, issueType: v }));
+  const setReferenceNumber = v => setDraft(prev => ({ ...prev, referenceNumber: v }));
+  const setNotes = v => setDraft(prev => ({ ...prev, notes: v }));
   const [saving, setSaving] = useState(false);
   const [issueHistory, setIssueHistory] = useState([]);
 
@@ -402,7 +409,7 @@ export default function SMSStockOut() {
     }
 
     toast({ title: 'Stock issued successfully!', description: `Issue ${issueId} confirmed` });
-    setReferenceNumber(''); setNotes('');
+    clearDraft();
     setSaving(false);
     loadData();
   }
@@ -430,9 +437,15 @@ export default function SMSStockOut() {
         ))}
       </div>
 
-      {activeTab === 'history' && <StockIssueHistory issues={issueHistory} />}
+      {activeTab === 'history' && <StockIssueHistoryCards issues={issueHistory} />}
 
       {activeTab === 'issue' && <>
+      {hasDraft && (
+        <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+          <p className="text-xs text-amber-700 font-medium">You have an unsaved draft issue</p>
+          <button onClick={clearDraft} className="text-xs text-red-500 hover:text-red-700 font-medium">Clear Draft</button>
+        </div>
+      )}
       {/* Issue header */}
       <div className="bg-white rounded-xl border border-slate-200 p-4 md:p-6">
         <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Issue Details</p>

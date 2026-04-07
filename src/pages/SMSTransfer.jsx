@@ -7,18 +7,27 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import QRScanner from '@/components/store/QRScanner';
-import TransferHistory from '@/components/store/TransferHistory';
+import TransferHistoryCards from '@/components/store/TransferHistoryCards';
+import useDraftSave from '@/hooks/useDraftSave';
+
+const DRAFT_INITIAL = { fromScan: '', toLotScan: '', toScan: '', quantity: '', reason: '' };
 
 export default function SMSTransfer() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('transfer');
   const [transferHistory, setTransferHistory] = useState([]);
   const [locations, setLocations] = useState([]);
-  const [fromScan, setFromScan] = useState('');
-  const [toLotScan, setToLotScan] = useState('');
-  const [toScan, setToScan] = useState('');
-  const [quantity, setQuantity] = useState('');
-  const [reason, setReason] = useState('');
+  const [draft, setDraft, clearDraft, hasDraft] = useDraftSave('sms_transfer', DRAFT_INITIAL);
+  const fromScan = draft.fromScan;
+  const toLotScan = draft.toLotScan;
+  const toScan = draft.toScan;
+  const quantity = draft.quantity;
+  const reason = draft.reason;
+  const setFromScan = v => setDraft(prev => ({ ...prev, fromScan: v }));
+  const setToLotScan = v => setDraft(prev => ({ ...prev, toLotScan: v }));
+  const setToScan = v => setDraft(prev => ({ ...prev, toScan: v }));
+  const setQuantity = v => setDraft(prev => ({ ...prev, quantity: v }));
+  const setReason = v => setDraft(prev => ({ ...prev, reason: v }));
   const [saving, setSaving] = useState(false);
   const [fromLoc, setFromLoc] = useState(null);
   const [toLoc, setToLoc] = useState(null);
@@ -96,7 +105,7 @@ export default function SMSTransfer() {
     }
 
     toast({ title: 'Transfer completed!', description: `${qty} ${resolvedStock.uom} moved from ${fromLoc.location_code} → ${toLoc.location_code}` });
-    setFromScan(''); setToScan(''); setToLotScan(''); setQuantity(''); setReason('');
+    clearDraft();
     setFromLoc(null); setToLoc(null); setResolvedStock(null);
     setSaving(false);
     // Refresh history
@@ -125,9 +134,15 @@ export default function SMSTransfer() {
         ))}
       </div>
 
-      {activeTab === 'history' && <TransferHistory transfers={transferHistory} />}
+      {activeTab === 'history' && <TransferHistoryCards transfers={transferHistory} />}
 
       {activeTab === 'transfer' && <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/70 shadow-sm p-4 md:p-5 space-y-4 max-w-xl">
+          {hasDraft && (
+            <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              <p className="text-xs text-amber-700 font-medium">You have an unsaved draft transfer</p>
+              <button onClick={clearDraft} className="text-xs text-red-500 hover:text-red-700 font-medium">Clear Draft</button>
+            </div>
+          )}
           {/* Source */}
           <div>
             <Label className="text-xs font-medium text-slate-700">Step 1 — Source Location QR *</Label>

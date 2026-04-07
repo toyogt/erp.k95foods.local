@@ -15,6 +15,7 @@ import GateEntryInfoModal, { InfoButton } from '@/components/store/GateEntryInfo
 import { nextSerial } from '@/lib/serialCounter';
 import { useNavigate } from 'react-router-dom';
 import { History, Loader2 as LoaderIcon } from 'lucide-react';
+import useDraftSave from '@/hooks/useDraftSave';
 
 function GateEntryHistory() {
   const [entries, setEntries] = useState([]);
@@ -149,6 +150,17 @@ function isValidIndianPhone(num) {
   return /^[6-9]\d{9}$/.test(num.replace(/\s/g, ''));
 }
 
+const GATE_DRAFT_INITIAL = {
+  transport_type: 'vehicle',
+  vehicle_number: '',
+  driver_name: '',
+  driver_number: '',
+  notes: '',
+  vehicle_photo: '',
+  material_photo: '',
+  invoice_photo: '',
+};
+
 export default function GateEntryPage() {
   const navigate = useNavigate();
   const [lang, setLang] = useState('en');
@@ -158,16 +170,7 @@ export default function GateEntryPage() {
   const [activeTab, setActiveTab] = useState('new');
   const [step, setStep] = useState(0);
   const [showInfo, setShowInfo] = useState(false);
-  const [form, setForm] = useState({
-    transport_type: 'vehicle',
-    vehicle_number: '',
-    driver_name: '',
-    driver_number: '',
-    notes: '',
-    vehicle_photo: '',
-    material_photo: '',
-    invoice_photo: '',
-  });
+  const [form, setForm, clearDraft, hasDraft] = useDraftSave('gate_entry', GATE_DRAFT_INITIAL);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(null);
   const [checklistTemplate, setChecklistTemplate] = useState(null);
@@ -176,6 +179,7 @@ export default function GateEntryPage() {
   useEffect(() => { base44.auth.me().then(setUser).catch(() => {}); }, []);
 
   function setField(k, v) { setForm(prev => ({ ...prev, [k]: v })); }
+
 
   function validateStep0() {
     if (form.transport_type === 'vehicle' && !form.vehicle_photo) {
@@ -253,7 +257,7 @@ export default function GateEntryPage() {
 
   function resetForm() {
     setDone(null); setStep(0);
-    setForm({ transport_type: 'vehicle', vehicle_number: '', driver_name: '', driver_number: '', notes: '', vehicle_photo: '', material_photo: '', invoice_photo: '' });
+    clearDraft();
     setChecklistTemplate(null);
   }
 
@@ -322,6 +326,14 @@ export default function GateEntryPage() {
         </div>
 
         {activeTab === 'history' && <GateEntryHistory />}
+
+        {/* Draft banner */}
+        {activeTab === 'new' && hasDraft && step === 0 && (
+          <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+            <p className="text-xs text-amber-700 font-medium">You have an unsaved draft Gate Entry</p>
+            <button onClick={resetForm} className="text-xs text-red-500 hover:text-red-700 font-medium">Clear Draft</button>
+          </div>
+        )}
 
         {/* Step indicator */}
         {activeTab === 'new' && <div className="flex items-center gap-1 overflow-x-auto pb-2">

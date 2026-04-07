@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Clock, ListChecks } from 'lucide-react';
 import { SkeletonTable } from '@/components/store/StoreSkeleton';
+import PutawayHistoryCards from '@/components/store/PutawayHistoryCards';
 
 export default function PutawayTabs({ pendingLots, putawayHistory, loading }) {
   const [tab, setTab] = useState('pending');
@@ -73,41 +74,8 @@ export default function PutawayTabs({ pendingLots, putawayHistory, loading }) {
       {tab === 'history' && (
         loading ? (
           <SkeletonTable rows={5} cols={7} headers={['Lot', 'Item', 'Location', 'Quantity', 'Unit', 'Done By', 'Date']} />
-        ) : putawayHistory.length === 0 ? (
-          <p className="text-sm text-slate-400 text-center py-8">No putaway history yet.</p>
         ) : (
-          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-slate-100 text-slate-700 text-xs">
-                    <th className="text-left px-4 py-3 font-medium">Lot</th>
-                    <th className="text-left px-4 py-3 font-medium">Item</th>
-                    <th className="text-left px-4 py-3 font-medium">Location</th>
-                    <th className="text-right px-4 py-3 font-medium">Quantity</th>
-                    <th className="text-left px-4 py-3 font-medium">Unit</th>
-                    <th className="text-left px-4 py-3 font-medium">Done By</th>
-                    <th className="text-left px-4 py-3 font-medium">Date</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {putawayHistory.map(p => (
-                    <tr key={p.id} className="hover:bg-slate-50">
-                      <td className="px-4 py-3 font-mono text-sm font-bold text-slate-700">{p.lot_id}</td>
-                      <td className="px-4 py-3 text-slate-800">{p.item_name}</td>
-                      <td className="px-4 py-3 font-mono text-sm text-slate-600">{p.location_code}</td>
-                      <td className="px-4 py-3 text-right font-bold text-slate-800">{p.quantity}</td>
-                      <td className="px-4 py-3 text-slate-600">{p.uom}</td>
-                      <td className="px-4 py-3 text-sm text-slate-500">{p.putaway_by}</td>
-                      <td className="px-4 py-3 text-sm text-slate-500">
-                        {p.putaway_at ? new Date(p.putaway_at).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <PutawayHistoryCards history={putawayHistory} />
         )
       )}
     </div>

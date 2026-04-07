@@ -14,6 +14,7 @@ import { showErrorAlert, showWarningAlert, showValidationErrors, showSuccessToas
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import moment from 'moment';
+import useDraftSave from '@/hooks/useDraftSave';
 
 function GRNTable({ grns, title }) {
   if (!grns || grns.length === 0) {
@@ -63,13 +64,28 @@ function emptyItem() {
   return { item_code: '', item_name: '', original_quantity: '', quantity: '', qty_mismatch: 'no', mismatch_type: 'none', mismatch_reason: '', uom: 'Nos', batch_lot: '', expiry_date: '', mfg_date: '', material_photo: '', supplier_name: '', notes: '', _rules: null };
 }
 
+const GRN_DRAFT_INITIAL = { items: [emptyItem()], grnNotes: '', selectedGateId: '' };
+
 export default function GRNReceive() {
   const [user, setUser] = useState(null);
   const [gateEntries, setGateEntries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
-  const [items, setItems] = useState([emptyItem()]);
-  const [grnNotes, setGrnNotes] = useState('');
+  const [draft, setDraftState, clearGrnDraft, hasGrnDraft] = useDraftSave('grn_receive', GRN_DRAFT_INITIAL);
+  const [items, setItemsRaw] = useState(draft.items || [emptyItem()]);
+  const [grnNotes, setGrnNotesRaw] = useState(draft.grnNotes || '');
+  // Sync items/notes to draft
+  function setItems(updater) {
+    setItemsRaw(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      setDraftState(d => ({ ...d, items: next }));
+      return next;
+    });
+  }
+  function setGrnNotes(v) {
+    setGrnNotesRaw(v);
+    setDraftState(d => ({ ...d, grnNotes: v }));
+  }
   const [suppliers, setSuppliers] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(null);
@@ -118,8 +134,15 @@ export default function GRNReceive() {
 
   function selectGateEntry(entry) {
     setSelected(entry);
-    setItems([emptyItem()]);
-    setGrnNotes('');
+    // Restore draft items if selecting same gate entry
+    if (draft.selectedGateId === entry.gate_id && draft.items?.length > 0) {
+      setItemsRaw(draft.items);
+      setGrnNotesRaw(draft.grnNotes || '');
+    } else {
+      setItemsRaw([emptyItem()]);
+      setGrnNotesRaw('');
+      setDraftState(d => ({ ...d, selectedGateId: entry.gate_id, items: [emptyItem()], grnNotes: '' }));
+    }
     setDone(null);
     setShowChecklist(false);
   }
@@ -255,6 +278,7 @@ export default function GRNReceive() {
 
     setDone({ grn_id, gate_id: selected.gate_id, item_count: validItems.length, items: validItems });
     setSubmitting(false);
+    clearGrnDraft();
     load();
   }
 
@@ -440,6 +464,14 @@ export default function GRNReceive() {
               )}
             </div>
           </div>
+
+          {/* Draft banner */}
+          {hasGrnDraft && (
+            <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              <p className="text-xs text-amber-700 font-medium">You have an unsaved draft Goods Received Note for this entry</p>
+              <button onClick={() => { clearGrnDraft(); setItemsRaw([emptyItem()]); setGrnNotesRaw(''); }} className="text-xs text-red-500 hover:text-red-700 font-medium">Clear Draft</button>
+            </div>
+          )}
 
           {/* Items section */}
           <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-5">
