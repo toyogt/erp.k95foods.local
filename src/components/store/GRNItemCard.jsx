@@ -195,7 +195,7 @@ export default function GRNItemCard({ index, item, storeItems, suppliers, canRem
           </div>
         )}
 
-        {/* Row 1: Item Name, Quantity, Unit */}
+        {/* Row 1: Item Name, Original Quantity, Unit */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div>
             <Label className="text-xs font-medium text-slate-700">Item Name <span className="text-red-500">*</span></Label>
@@ -209,9 +209,14 @@ export default function GRNItemCard({ index, item, storeItems, suppliers, canRem
             </div>
           </div>
           <div>
-            <Label className="text-xs font-medium text-slate-700">Quantity <span className="text-red-500">*</span></Label>
-            <Input type="number" className="h-11 text-sm mt-1" value={item.quantity}
-              onChange={e => onUpdate('quantity', e.target.value)} placeholder="0" />
+            <Label className="text-xs font-medium text-slate-700">Original Quantity <span className="text-red-500">*</span></Label>
+            <Input type="number" className="h-11 text-sm mt-1" value={item.original_quantity || ''}
+              onChange={e => {
+                onUpdate('original_quantity', e.target.value);
+                if (!item.qty_mismatch || item.qty_mismatch === 'no') {
+                  onUpdate('quantity', e.target.value);
+                }
+              }} placeholder="As per invoice" />
           </div>
           <div>
             <Label className="text-xs font-medium text-slate-700">Unit</Label>
@@ -226,6 +231,63 @@ export default function GRNItemCard({ index, item, storeItems, suppliers, canRem
             </select>
           </div>
         </div>
+
+        {/* Row 1b: Quantity Mismatch */}
+        {item.original_quantity && parseFloat(item.original_quantity) > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 bg-slate-50 rounded-lg p-3 border border-slate-100">
+            <div>
+              <Label className="text-xs font-medium text-slate-700">Quantity Mismatch?</Label>
+              <select className="w-full h-11 border border-slate-200 rounded-xl px-2 text-sm mt-1"
+                value={item.qty_mismatch || 'no'} onChange={e => {
+                  onUpdate('qty_mismatch', e.target.value);
+                  if (e.target.value === 'no') {
+                    onUpdate('quantity', item.original_quantity);
+                    onUpdate('mismatch_type', 'none');
+                    onUpdate('mismatch_reason', '');
+                  } else {
+                    onUpdate('quantity', '');
+                  }
+                }}>
+                <option value="no">No</option>
+                <option value="yes">Yes</option>
+              </select>
+            </div>
+
+            {item.qty_mismatch === 'yes' && (
+              <>
+                <div>
+                  <Label className="text-xs font-medium text-slate-700">Mismatch Type <span className="text-red-500">*</span></Label>
+                  <select className="w-full h-11 border border-slate-200 rounded-xl px-2 text-sm mt-1"
+                    value={item.mismatch_type || ''} onChange={e => onUpdate('mismatch_type', e.target.value)}>
+                    <option value="">Select type</option>
+                    <option value="damaged">Damaged</option>
+                    <option value="decreased">Decreased (Short received)</option>
+                    <option value="increased">Increased (Excess received)</option>
+                  </select>
+                </div>
+                <div>
+                  <Label className="text-xs font-medium text-slate-700">Actual Received Quantity <span className="text-red-500">*</span></Label>
+                  <Input type="number" className="h-11 text-sm mt-1" value={item.quantity}
+                    onChange={e => onUpdate('quantity', e.target.value)} placeholder="Actual count" />
+                </div>
+                <div>
+                  <Label className="text-xs font-medium text-slate-700">Reason <span className="text-red-500">*</span></Label>
+                  <Input className="h-11 text-sm mt-1" value={item.mismatch_reason || ''}
+                    onChange={e => onUpdate('mismatch_reason', e.target.value)} placeholder="Reason for mismatch" />
+                </div>
+              </>
+            )}
+
+            {(!item.qty_mismatch || item.qty_mismatch === 'no') && (
+              <div>
+                <Label className="text-xs font-medium text-slate-700">Received Quantity</Label>
+                <div className="h-11 flex items-center text-sm font-bold text-green-700 mt-1">
+                  {item.original_quantity} {item.uom}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Row 2: Batch/Lot, Supplier, Photo */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">

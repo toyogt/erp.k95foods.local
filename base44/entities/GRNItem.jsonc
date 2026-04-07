@@ -1,0 +1,75 @@
+{
+  "name": "GRNItem",
+  "type": "object",
+  "title": "GRN Item",
+  "properties": {
+    "grn_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "po_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "item_code": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "item_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "uom_code": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "ordered_qty": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Original quantity as per invoice/PO"
+    },
+    "received_qty": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Actual received quantity after mismatch adjustment"
+    },
+    "damaged_qty": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0
+    },
+    "mismatch_type": {
+      "type": "string",
+      "enum": [
+        "none",
+        "damaged",
+        "decreased",
+        "increased"
+      ],
+      "default": "none",
+      "description": "Type of quantity mismatch"
+    },
+    "mismatch_reason": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "Reason for quantity mismatch"
+    },
+    "batch_or_lot_text": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "line_notes": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "photos_json": {
+      "type": "string",
+      "maxLength": 5000
+    }
+  },
+  "required": [
+    "grn_id",
+    "item_code",
+    "received_qty"
+  ]
+}

@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Clock, ListChecks } from 'lucide-react';
+import { SkeletonTable } from '@/components/store/StoreSkeleton';
 
-export default function PutawayTabs({ pendingLots, putawayHistory }) {
+export default function PutawayTabs({ pendingLots, putawayHistory, loading }) {
   const [tab, setTab] = useState('pending');
 
   return (
@@ -26,7 +27,9 @@ export default function PutawayTabs({ pendingLots, putawayHistory }) {
 
       {/* Pending Lots Tab */}
       {tab === 'pending' && (
-        pendingLots.length === 0 ? (
+        loading ? (
+          <SkeletonTable rows={5} cols={7} headers={['Lot ID', 'Item Name', 'Supplier', 'Quantity', 'Unit', 'Created Date', 'Status']} />
+        ) : pendingLots.length === 0 ? (
           <p className="text-sm text-slate-400 text-center py-8">No approved lots pending putaway.</p>
         ) : (
           <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
@@ -68,7 +71,9 @@ export default function PutawayTabs({ pendingLots, putawayHistory }) {
 
       {/* History Tab */}
       {tab === 'history' && (
-        putawayHistory.length === 0 ? (
+        loading ? (
+          <SkeletonTable rows={5} cols={7} headers={['Lot', 'Item', 'Location', 'Quantity', 'Unit', 'Done By', 'Date']} />
+        ) : putawayHistory.length === 0 ? (
           <p className="text-sm text-slate-400 text-center py-8">No putaway history yet.</p>
         ) : (
           <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">

@@ -3,7 +3,8 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, RefreshCw, CheckCircle2, Plus, Trash2, Search, AlertTriangle, Camera, ListChecks } from 'lucide-react';
+import { Loader2, RefreshCw, CheckCircle2, Plus, Trash2, Search, AlertTriangle, Camera, ListChecks, FileText } from 'lucide-react';
+import InvoicePreviewModal from '@/components/store/InvoicePreviewModal';
 import { logGrnAudit, getChecklistTemplate } from '@/components/grn/grnHelpers';
 import { fireFMSEvent, linkFMSRef } from '@/lib/useFMSAutoComplete';
 import ChecklistGate from '@/components/grn/ChecklistGate';
@@ -59,7 +60,7 @@ function GRNTable({ grns, title }) {
 }
 
 function emptyItem() {
-  return { item_code: '', item_name: '', quantity: '', uom: 'Nos', batch_lot: '', expiry_date: '', mfg_date: '', material_photo: '', supplier_name: '', notes: '', _rules: null };
+  return { item_code: '', item_name: '', original_quantity: '', quantity: '', qty_mismatch: 'no', mismatch_type: 'none', mismatch_reason: '', uom: 'Nos', batch_lot: '', expiry_date: '', mfg_date: '', material_photo: '', supplier_name: '', notes: '', _rules: null };
 }
 
 export default function GRNReceive() {
@@ -79,6 +80,7 @@ export default function GRNReceive() {
   const [activeTab, setActiveTab] = useState('create');
   const [allGrns, setAllGrns] = useState([]);
   const [grnItems, setGrnItems] = useState({});
+  const [invoicePreview, setInvoicePreview] = useState(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -145,7 +147,7 @@ export default function GRNReceive() {
     } : it));
   }
 
-  const validItems = items.filter(it => it.item_name.trim() && parseFloat(it.quantity) > 0);
+  const validItems = items.filter(it => it.item_name.trim() && parseFloat(it.original_quantity || it.quantity) > 0);
 
   function validateItems() {
     const errors = [];
@@ -207,25 +209,34 @@ export default function GRNReceive() {
     });
 
     for (const it of validItems) {
+      const originalQty = parseFloat(it.original_quantity || it.quantity);
+      const receivedQty = it.qty_mismatch === 'yes' ? parseFloat(it.quantity) : originalQty;
+      const mismatchType = it.qty_mismatch === 'yes' ? (it.mismatch_type || 'none') : 'none';
+
       await base44.entities.GRNItem.create({
         grn_id,
         item_code: it.item_code || it.item_name,
         item_name: it.item_name,
-        ordered_qty: parseFloat(it.quantity),
-        received_qty: parseFloat(it.quantity),
+        ordered_qty: originalQty,
+        received_qty: receivedQty,
         uom_code: it.uom || 'Nos',
         batch_or_lot_text: it.batch_lot || '',
         line_notes: it.notes || '',
+        mismatch_type: mismatchType,
+        mismatch_reason: it.mismatch_reason || '',
+        damaged_qty: mismatchType === 'damaged' ? (originalQty - receivedQty) : 0,
       });
 
       const lotId = `LOT-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-      const qty = parseFloat(it.quantity);
       await base44.entities.StoreLot.create({
         lot_id: lotId, qr_code: lotId,
         item_code: it.item_code || it.item_name,
         item_name: it.item_name,
         uom: it.uom || 'Nos',
-        quantity: qty, remaining_quantity: qty,
+        original_quantity: originalQty,
+        quantity: receivedQty, remaining_quantity: receivedQty,
+        mismatch_type: mismatchType,
+        mismatch_reason: it.mismatch_reason || '',
         mfg_date: it.mfg_date || undefined,
         expiry_date: it.expiry_date || undefined,
         supplier_name: it.supplier_name || '',
@@ -421,6 +432,12 @@ export default function GRNReceive() {
             <div className="flex items-center gap-4 text-xs text-slate-500">
               {selected.vehicle_number && <span>Vehicle: <strong className="text-slate-700">{selected.vehicle_number}</strong></span>}
               <span>Driver: <strong className="text-slate-700">{selected.driver_name || '—'}</strong></span>
+              {selected.invoice_photo && (
+                <button onClick={() => setInvoicePreview(selected.invoice_photo)}
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors font-medium">
+                  <FileText className="w-3.5 h-3.5" /> View Invoice
+                </button>
+              )}
             </div>
           </div>
 
@@ -471,6 +488,9 @@ export default function GRNReceive() {
             {submitting ? 'Confirming...' : (checklistTemplate ? 'Next: Complete Checklist →' : 'Confirm Goods Received Note')}
           </Button>
         </div>
+      )}
+      {invoicePreview && (
+        <InvoicePreviewModal imageUrl={invoicePreview} title="Invoice Preview" onClose={() => setInvoicePreview(null)} />
       )}
     </div>
   );

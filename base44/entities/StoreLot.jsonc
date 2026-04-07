@@ -27,15 +27,34 @@
       "type": "string",
       "maxLength": 50
     },
+    "original_quantity": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Original quantity as per invoice/PO before mismatch adjustment"
+    },
     "quantity": {
       "type": "number",
       "minimum": 0,
-      "description": "Original received quantity"
+      "description": "Actual received quantity (after mismatch adjustment)"
     },
     "remaining_quantity": {
       "type": "number",
       "minimum": 0,
       "description": "Current available quantity"
+    },
+    "mismatch_type": {
+      "type": "string",
+      "enum": [
+        "none",
+        "damaged",
+        "decreased",
+        "increased"
+      ],
+      "default": "none"
+    },
+    "mismatch_reason": {
+      "type": "string",
+      "maxLength": 500
     },
     "mfg_date": {
       "type": "string",

@@ -84,9 +84,7 @@ export default function SMSPutaway() {
       )}
 
       {/* Tabs */}
-      {!loading && (
-        <PutawayTabs pendingLots={pendingLots} putawayHistory={putawayHistory} />
-      )}
+      <PutawayTabs pendingLots={pendingLots} putawayHistory={putawayHistory} loading={loading} />
       </div>
       </div>
       );
