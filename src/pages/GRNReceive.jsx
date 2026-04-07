@@ -12,6 +12,51 @@ import GRNPrintTemplate from '@/components/store/GRNPrintTemplate';
 import { showErrorAlert, showWarningAlert, showValidationErrors, showSuccessToast } from '@/lib/toastHelpers';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import moment from 'moment';
+
+function GRNTable({ grns, title }) {
+  if (!grns || grns.length === 0) {
+    return <div className="text-center py-12 text-slate-400"><p className="font-semibold">No records found.</p></div>;
+  }
+  return (
+    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-slate-100 text-slate-700 text-xs">
+              <th className="text-left px-4 py-3 font-medium">Goods Received Note ID</th>
+              <th className="text-left px-4 py-3 font-medium">Gate Entry</th>
+              <th className="text-left px-4 py-3 font-medium">Supplier</th>
+              <th className="text-left px-4 py-3 font-medium">Status</th>
+              <th className="text-left px-4 py-3 font-medium">Received By</th>
+              <th className="text-left px-4 py-3 font-medium">Date</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {grns.map(g => (
+              <tr key={g.id} className="hover:bg-slate-50">
+                <td className="px-4 py-3 font-mono font-bold text-slate-900">{g.grn_id}</td>
+                <td className="px-4 py-3 text-slate-600">{g.gate_id || '—'}</td>
+                <td className="px-4 py-3 text-slate-600">{g.supplier_name || '—'}</td>
+                <td className="px-4 py-3">
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                    g.status === 'RECEIVED' ? 'bg-green-100 text-green-700' :
+                    g.status === 'DRAFT' ? 'bg-slate-100 text-slate-600' :
+                    'bg-amber-100 text-amber-700'
+                  }`}>{g.status}</span>
+                </td>
+                <td className="px-4 py-3 text-slate-600">{g.received_by || '—'}</td>
+                <td className="px-4 py-3 text-xs text-slate-500">
+                  {g.received_at ? moment(g.received_at).format('DD/MM/YYYY') : g.created_date ? moment(g.created_date).format('DD/MM/YYYY') : '—'}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
 
 function emptyItem() {
   return { item_code: '', item_name: '', quantity: '', uom: 'Nos', batch_lot: '', expiry_date: '', mfg_date: '', material_photo: '', supplier_name: '', notes: '', _rules: null };
