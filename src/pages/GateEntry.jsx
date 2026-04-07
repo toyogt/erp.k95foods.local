@@ -257,27 +257,14 @@ export default function GateEntryPage() {
     setChecklistTemplate(null);
   }
 
-  // ── Success screen ───────────────────────────────────────────────────────────
-  if (done) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center px-3 md:px-4 py-12">
-        <div className="max-w-lg w-full bg-white rounded-2xl border border-slate-200 p-6 md:p-8 text-center space-y-6">
-          <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto" />
-          <h2 className="text-2xl font-bold text-slate-900">{t.success}</h2>
-          <p className="text-slate-500 font-mono text-lg">{done.gate_id}</p>
-          <Button
-            onClick={() => navigate(`/GRNReceive?gate_id=${done.gate_id}`)}
-            className="w-full h-11 md:h-12 bg-green-600 hover:bg-green-700 text-sm md:text-base"
-          >
-            {t.proceedGRN}
-          </Button>
-          <Button variant="outline" onClick={resetForm} className="w-full h-11 md:h-12 text-sm md:text-base">
-            {t.newEntry}
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  // ── Success screen — just reset to new entry ─────────────────────────────────
+  useEffect(() => {
+    if (done) {
+      // Auto-reset to new form after success
+      const timer = setTimeout(() => resetForm(), 100);
+      return () => clearTimeout(timer);
+    }
+  }, [done]);
 
   // ── Checklist screen ─────────────────────────────────────────────────────────
   if (checklistTemplate) {

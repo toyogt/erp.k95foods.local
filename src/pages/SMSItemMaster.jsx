@@ -25,7 +25,8 @@ const EMPTY_FORM = {
   material_photo: '',
   batch_required: false, expiry_required: false,
   mfg_date_required: false, qc_required: false,
-  min_shelf_life_days: '', storage_notes: '', is_active: true,
+  min_shelf_life_days: '', opening_stock: '', reorder_level: '',
+  storage_notes: '', is_active: true,
 };
 
 function ItemFormModal({ item, onClose, onSaved }) {
@@ -45,6 +46,8 @@ function ItemFormModal({ item, onClose, onSaved }) {
         ...form,
         item_name: form.item_name.trim(),
         min_shelf_life_days: form.min_shelf_life_days !== '' ? Number(form.min_shelf_life_days) : undefined,
+        opening_stock: form.opening_stock !== '' ? Number(form.opening_stock) : 0,
+        reorder_level: form.reorder_level !== '' ? Number(form.reorder_level) : 0,
       };
       if (item?.id) {
         await base44.entities.StoreItemMaster.update(item.id, data);
@@ -91,6 +94,18 @@ function ItemFormModal({ item, onClose, onSaved }) {
           <div>
             <label className="text-xs font-medium text-slate-700">Minimum Shelf Life (days)</label>
             <Input className="h-9 text-sm mt-1" type="number" min="0" value={form.min_shelf_life_days} onChange={e => setField('min_shelf_life_days', e.target.value)} placeholder="0" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-slate-700">Opening Stock</label>
+              <Input className="h-9 text-sm mt-1" type="number" min="0" value={form.opening_stock} onChange={e => setField('opening_stock', e.target.value)} placeholder="0" />
+              <p className="text-xs text-slate-400 mt-0.5">Initial stock quantity for this item</p>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-slate-700">Reorder Level</label>
+              <Input className="h-9 text-sm mt-1" type="number" min="0" value={form.reorder_level} onChange={e => setField('reorder_level', e.target.value)} placeholder="0" />
+              <p className="text-xs text-slate-400 mt-0.5">Alert when stock falls below</p>
+            </div>
           </div>
           <div className="border border-slate-100 rounded-xl p-4 space-y-2">
             <p className="text-xs font-semibold text-slate-600 mb-2">Validation Rules</p>

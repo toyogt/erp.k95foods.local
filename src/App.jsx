@@ -105,7 +105,7 @@ import SMSLotManager from './pages/SMSLotManager';
 import SMSPutaway from './pages/SMSPutaway';
 import SMSStockOut from './pages/SMSStockOut';
 import SMSTransfer from './pages/SMSTransfer';
-import SMSOpeningStock from './pages/SMSOpeningStock';
+// SMSOpeningStock removed — Opening Stock now handled via Item Master
 import SMSReorderConfig from './pages/SMSReorderConfig';
 import SMSCycleCount from './pages/SMSCycleCount';
 import SMSAdjustments from './pages/SMSAdjustments';
@@ -133,7 +133,7 @@ const PAGE_COMPONENTS = {
   SalesCustomerManager, SalesPriceListView, SalesGRNReconciliation, TransportRateCards,
   SalesPicklists, SalesInvoices, SalesSKUManagement,
   SMSDashboard, SMSLocationManager, SMSLotManager, SMSPutaway, SMSStockOut,
-      SMSTransfer, SMSOpeningStock, SMSReorderConfig, SMSCycleCount, SMSAdjustments, SMSReports, SMSItemMaster,
+      SMSTransfer, SMSReorderConfig, SMSCycleCount, SMSAdjustments, SMSReports, SMSItemMaster,
   SKUBOMConfig, ScheduledTaskManager,
 };
 
@@ -298,7 +298,7 @@ const AuthenticatedApp = () => {
         ['SMSDashboard', SMSDashboard], ['SMSLocationManager', SMSLocationManager],
         ['SMSLotManager', SMSLotManager], ['SMSPutaway', SMSPutaway],
         ['SMSStockOut', SMSStockOut], ['SMSTransfer', SMSTransfer],
-        ['SMSOpeningStock', SMSOpeningStock], ['SMSReorderConfig', SMSReorderConfig],
+        ['SMSReorderConfig', SMSReorderConfig],
         ['SMSCycleCount', SMSCycleCount], ['SMSAdjustments', SMSAdjustments],
         ['SMSReports', SMSReports], ['SMSItemMaster', SMSItemMaster],
       ].map(([key, Comp]) => (

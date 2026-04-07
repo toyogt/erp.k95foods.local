@@ -11,11 +11,16 @@ function AdjModal({ onSave, onClose }) {
   const { toast } = useToast();
   const [lots, setLots] = useState([]);
   const [stock, setStock] = useState([]);
-  const [form, setForm] = useState({ lot_id: '', adjustment_type: 'decrease', adjustment_quantity: '', reason: '' });
+  const [locations, setLocations] = useState([]);
+  const [form, setForm] = useState({ lot_id: '', adjustment_type: 'decrease', adjustment_quantity: '', reason: '', location_id: '' });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    Promise.all([base44.entities.StoreLot.list('-created_date', 200), base44.entities.StoreStockBalance.list('-created_date', 500)]).then(([l, s]) => { setLots(l); setStock(s); });
+    Promise.all([
+      base44.entities.StoreLot.list('-created_date', 200),
+      base44.entities.StoreStockBalance.list('-created_date', 500),
+      base44.entities.StoreLocation.filter({ is_active: true }),
+    ]).then(([l, s, locs]) => { setLots(l); setStock(s); setLocations(locs); });
   }, []);
 
   const selectedLotStock = stock.filter(s => s.lot_id === form.lot_id);
@@ -76,6 +81,13 @@ function AdjModal({ onSave, onClose }) {
             <Input type="number" className="h-9 text-sm mt-1" min="0.01" value={form.adjustment_quantity} onChange={e => set('adjustment_quantity', e.target.value)} placeholder="Adjustment quantity" />
           </div>
           <div>
+            <Label className="text-xs font-medium text-slate-700">Location *</Label>
+            <select className="w-full h-9 border border-slate-200 rounded-md px-2 text-sm mt-1" value={form.location_id} onChange={e => set('location_id', e.target.value)}>
+              <option value="">Select location for adjustment...</option>
+              {locations.map(l => <option key={l.id} value={l.id}>{l.location_code} — {l.display_name}</option>)}
+            </select>
+          </div>
+          <div>
             <Label className="text-xs font-medium text-slate-700">Reason *</Label>
             <textarea className="w-full border border-slate-200 rounded-md p-2 text-sm mt-1 h-20" value={form.reason} onChange={e => set('reason', e.target.value)} placeholder="Enter reason for adjustment..." />
           </div>
@@ -88,7 +100,7 @@ function AdjModal({ onSave, onClose }) {
         </div>
         <div className="flex gap-3 px-5 py-4 border-t">
           <Button variant="outline" className="flex-1" onClick={onClose}>Cancel</Button>
-          <Button className="flex-1" disabled={saving || !form.lot_id || !form.adjustment_quantity || !form.reason} onClick={handleSave}>{saving ? 'Submitting...' : 'Submit Request'}</Button>
+          <Button className="flex-1" disabled={saving || !form.lot_id || !form.adjustment_quantity || !form.reason || !form.location_id} onClick={handleSave}>{saving ? 'Submitting...' : 'Submit Request'}</Button>
         </div>
       </div>
     </div>

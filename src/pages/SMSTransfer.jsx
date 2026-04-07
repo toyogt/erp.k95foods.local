@@ -7,13 +7,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import QRScanner from '@/components/store/QRScanner';
-import PutawayPanel from '@/components/store/PutawayPanel';
 
 export default function SMSTransfer() {
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState('transfer'); // 'transfer' | 'putaway'
   const [locations, setLocations] = useState([]);
-  const [putawayLots, setPutawayLots] = useState([]);
   const [fromScan, setFromScan] = useState('');
   const [toLotScan, setToLotScan] = useState('');
   const [toScan, setToScan] = useState('');
@@ -25,10 +22,7 @@ export default function SMSTransfer() {
   const [resolvedStock, setResolvedStock] = useState(null);
 
   useEffect(() => {
-    Promise.all([
-      base44.entities.StoreLocation.filter({ is_active: true }),
-      base44.entities.StoreLot.filter({ status: 'approved' }),
-    ]).then(([locs, lots]) => { setLocations(locs); setPutawayLots(lots); });
+    base44.entities.StoreLocation.filter({ is_active: true }).then(setLocations);
   }, []);
 
   useEffect(() => {
@@ -102,27 +96,10 @@ export default function SMSTransfer() {
     <div className="space-y-4 max-w-xl mx-auto px-2 md:px-0">
       <div>
         <h1 className="text-xl font-bold text-slate-900">Internal Transfer</h1>
-        <p className="text-sm text-slate-500">Move stock between locations or initiate putaway after receipt</p>
+        <p className="text-sm text-slate-500">Move stock between locations</p>
       </div>
 
-      {/* Tab toggle */}
-      <div className="flex rounded-lg border border-slate-200 overflow-hidden">
-        <button
-          onClick={() => setActiveTab('transfer')}
-          className={`flex-1 py-2.5 text-sm font-medium transition-colors ${activeTab === 'transfer' ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
-        >
-          Internal Transfer
-        </button>
-        <button
-          onClick={() => setActiveTab('putaway')}
-          className={`flex-1 py-2.5 text-sm font-medium transition-colors ${activeTab === 'putaway' ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
-        >
-          Putaway After Receipt
-        </button>
-      </div>
-
-      {activeTab === 'transfer' ? (
-        <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/70 shadow-sm p-4 md:p-5 space-y-4">
+      <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/70 shadow-sm p-4 md:p-5 space-y-4">
           {/* Source */}
           <div>
             <Label className="text-xs font-medium text-slate-700">Step 1 — Source Location QR *</Label>
@@ -187,15 +164,7 @@ export default function SMSTransfer() {
           <Button className="w-full h-11 text-base" disabled={!fromLoc || !toLoc || !resolvedStock || !quantity || !reason || saving} onClick={handleTransfer}>
             {saving ? 'Processing...' : 'Confirm Transfer'}
           </Button>
-        </div>
-      ) : (
-        <PutawayPanel
-          lots={putawayLots}
-          locations={locations}
-          onSuccess={() => base44.entities.StoreLot.filter({ status: 'approved' }).then(setPutawayLots)}
-          compact
-        />
-      )}
+      </div>
     </div>
   );
 }

@@ -46,7 +46,7 @@
     "material_photo": {
       "type": "string",
       "maxLength": 1000,
-      "description": "URL of the uploaded material photo (mandatory)"
+      "description": "URL of the uploaded material photo"
     },
     "batch_required": {
       "type": "boolean",
@@ -72,6 +72,18 @@
       "type": "number",
       "minimum": 0,
       "description": "Minimum required shelf life at time of receipt (days)"
+    },
+    "opening_stock": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0,
+      "description": "Opening stock quantity for this item"
+    },
+    "reorder_level": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0,
+      "description": "Reorder alert level for this item"
     },
     "storage_notes": {
       "type": "string",

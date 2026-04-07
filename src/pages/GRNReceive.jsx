@@ -3,11 +3,12 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, RefreshCw, CheckCircle2, Plus, Trash2, Search, AlertTriangle, Camera } from 'lucide-react';
+import { Loader2, RefreshCw, CheckCircle2, Plus, Trash2, Search, AlertTriangle, Camera, Clock, ListChecks } from 'lucide-react';
 import { logGrnAudit, getChecklistTemplate } from '@/components/grn/grnHelpers';
 import { fireFMSEvent, linkFMSRef } from '@/lib/useFMSAutoComplete';
 import ChecklistGate from '@/components/grn/ChecklistGate';
 import GRNItemCard from '@/components/store/GRNItemCard';
+import GRNPrintTemplate from '@/components/store/GRNPrintTemplate';
 import { showErrorAlert, showWarningAlert, showValidationErrors, showSuccessToast } from '@/lib/toastHelpers';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -30,6 +31,9 @@ export default function GRNReceive() {
   const [showChecklist, setShowChecklist] = useState(false);
   const [search, setSearch] = useState('');
   const [storeItems, setStoreItems] = useState([]);
+  const [activeTab, setActiveTab] = useState('create');
+  const [allGrns, setAllGrns] = useState([]);
+  const [grnItems, setGrnItems] = useState({});
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -49,6 +53,7 @@ export default function GRNReceive() {
     setUser(u);
     setStoreItems(masterItems);
     setSuppliers(approvedSuppliers);
+    setAllGrns(existingGrns);
 
     const usedGateIds = new Set(existingGrns.map(g => g.gate_id).filter(Boolean));
     const pending = entries.filter(e => !usedGateIds.has(e.gate_id));
@@ -192,7 +197,7 @@ export default function GRNReceive() {
     });
     await fireFMSEvent('grn_received', grnHeader.id);
 
-    setDone({ grn_id, gate_id: selected.gate_id, item_count: validItems.length });
+    setDone({ grn_id, gate_id: selected.gate_id, item_count: validItems.length, items: validItems });
     setSubmitting(false);
     load();
   }
@@ -214,8 +219,18 @@ export default function GRNReceive() {
         <h2 className="text-2xl font-bold text-slate-900">Goods Received Note Confirmed</h2>
         <p className="text-slate-500 font-mono text-lg">{done.grn_id}</p>
         <p className="text-sm text-slate-400">Gate Entry: {done.gate_id} · {done.item_count} item lot(s) created</p>
+        <div className="flex gap-2 justify-center">
+          <GRNPrintTemplate
+            grnId={done.grn_id}
+            gateId={done.gate_id}
+            items={done.items || []}
+            notes={grnNotes}
+            receivedBy={user?.email}
+            receivedAt={new Date().toISOString()}
+          />
+        </div>
         <Button onClick={() => { setSelected(null); setDone(null); }} className="w-full h-12 bg-slate-900">
-          Back to Gate Entry List
+          Back to Goods Received Note List
         </Button>
       </div>
     );
@@ -238,19 +253,109 @@ export default function GRNReceive() {
     );
   }
 
+  const pendingGrns = allGrns.filter(g => g.status === 'DRAFT' || g.status === 'RECEIVED');
+  const completedGrns = allGrns.filter(g => !['DRAFT'].includes(g.status));
+
+  async function loadGrnItemsFor(grnId) {
+    if (grnItems[grnId]) return;
+    const itemsList = await base44.entities.GRNItem.filter({ grn_id: grnId });
+    setGrnItems(prev => ({ ...prev, [grnId]: itemsList }));
+  }
+
+  function GRNTable({ grns, title }) {
+    if (grns.length === 0) return <p className="text-sm text-slate-400 text-center py-8">No records found.</p>;
+    return (
+      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-slate-100 text-slate-700 text-xs">
+                <th className="text-left px-4 py-3 font-medium">GRN ID</th>
+                <th className="text-left px-4 py-3 font-medium">Gate Entry</th>
+                <th className="text-left px-4 py-3 font-medium">Supplier</th>
+                <th className="text-left px-4 py-3 font-medium">Status</th>
+                <th className="text-left px-4 py-3 font-medium">Received By</th>
+                <th className="text-left px-4 py-3 font-medium">Date</th>
+                <th className="px-4 py-3 font-medium">Print</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {grns.map(g => (
+                <tr key={g.id} className="hover:bg-slate-50">
+                  <td className="px-4 py-3 font-mono font-bold text-slate-900">{g.grn_id}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-slate-600">{g.gate_id || '—'}</td>
+                  <td className="px-4 py-3 text-slate-700">{g.supplier_name || '—'}</td>
+                  <td className="px-4 py-3">
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                      g.status === 'RECEIVED' ? 'bg-green-100 text-green-700' :
+                      g.status === 'DRAFT' ? 'bg-yellow-100 text-yellow-700' :
+                      g.status === 'CANCELLED' ? 'bg-red-100 text-red-700' :
+                      'bg-blue-100 text-blue-700'
+                    }`}>{g.status}</span>
+                  </td>
+                  <td className="px-4 py-3 text-xs text-slate-500">{g.received_by || '—'}</td>
+                  <td className="px-4 py-3 text-xs text-slate-500">{g.received_at ? new Date(g.received_at).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'}</td>
+                  <td className="px-4 py-3">
+                    <GRNPrintTemplate
+                      grnId={g.grn_id}
+                      gateId={g.gate_id}
+                      items={grnItems[g.grn_id] || []}
+                      notes={g.notes}
+                      receivedBy={g.received_by}
+                      receivedAt={g.received_at}
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  }
+
+  // Load GRN items when viewing tabs
+  useEffect(() => {
+    if (activeTab === 'pending' || activeTab === 'master') {
+      allGrns.forEach(g => loadGrnItemsFor(g.grn_id));
+    }
+  }, [activeTab, allGrns]);
+
   return (
-    <div className="max-w-2xl mx-auto space-y-4 pb-12 px-2 md:px-0">
+    <div className="max-w-4xl mx-auto space-y-4 pb-12 px-2 md:px-0">
       <ToastContainer />
 
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-900">GRN (Goods Received Note)</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Goods Received Note</h1>
         <button onClick={() => load()} className="p-2 rounded-xl hover:bg-slate-100 text-slate-400">
           <RefreshCw className="w-5 h-5" />
         </button>
       </div>
 
-      {/* ── Gate Entry List ── */}
-      {!selected ? (
+      {/* Tabs */}
+      <div className="flex justify-center border-b border-slate-200 overflow-x-auto">
+        {[
+          { id: 'create', label: 'Create New', icon: Plus },
+          { id: 'pending', label: `Pending (${pendingGrns.length})`, icon: Clock },
+          { id: 'master', label: `All Records (${allGrns.length})`, icon: ListChecks },
+        ].map(tab => (
+          <button key={tab.id} onClick={() => { setActiveTab(tab.id); setSelected(null); setDone(null); }}
+            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+              activeTab === tab.id ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-700'
+            }`}>
+            <tab.icon className="w-4 h-4" />{tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Pending Tab */}
+      {activeTab === 'pending' && <GRNTable grns={pendingGrns} title="Pending Goods Received Notes" />}
+
+      {/* Master Tab */}
+      {activeTab === 'master' && <GRNTable grns={allGrns} title="All Goods Received Notes" />}
+
+      {/* Create Tab — Gate Entry List */}
+      {activeTab === 'create' && !selected ? (
         <>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />

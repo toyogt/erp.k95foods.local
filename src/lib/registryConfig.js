@@ -114,7 +114,7 @@ export const pageRegistry = [
   { pageKey: 'SMSPutaway',         title: 'Putaway',            moduleKey: 'STORE', icon: Archive,         roles: ['admin', 'store_manager', 'store_receiver', 'user'] },
   { pageKey: 'SMSStockOut',        title: 'Stock Issue',        moduleKey: 'STORE', icon: PackageOpen,     roles: ['admin', 'store_manager', 'user'] },
   { pageKey: 'SMSTransfer',        title: 'Internal Transfer',  moduleKey: 'STORE', icon: ArrowLeftRight,  roles: ['admin', 'store_manager', 'store_receiver', 'user'] },
-  { pageKey: 'SMSOpeningStock',    title: 'Opening Stock',      moduleKey: 'STORE', icon: BarChart3,       roles: ['admin', 'store_manager'] },
+
   { pageKey: 'SMSReorderConfig',   title: 'Reorder Alerts',     moduleKey: 'STORE', icon: TrendingDown,    roles: ['admin', 'store_manager'] },
   { pageKey: 'SMSCycleCount',      title: 'Cycle Count',        moduleKey: 'STORE', icon: ClipboardCheck,  roles: ['admin', 'store_manager', 'user'] },
   { pageKey: 'SMSAdjustments',     title: 'Adjustments',        moduleKey: 'STORE', icon: SlidersHorizontal, roles: ['admin', 'store_manager', 'user'] },
