@@ -93,6 +93,7 @@ import TraceInvestigation from './pages/TraceInvestigation';
 import TransferReceiving from './pages/TransferReceiving';
 import UOMManager from './pages/UOMManager';
 import WarehouseBins from './pages/WarehouseBins';
+import FMSMyTasks from './pages/FMSMyTasks';
 import __Layout from './Layout.jsx';
 
 
@@ -146,7 +147,7 @@ export const PAGES = {
 }
 
 export const pagesConfig = {
-    mainPage: "Dashboard",
-    Pages: PAGES,
+    mainPage: "FMSMyTasks",
+    Pages: { ...PAGES, FMSMyTasks },
     Layout: __Layout,
 };
