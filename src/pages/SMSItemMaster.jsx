@@ -21,7 +21,7 @@ const CATEGORIES = [
 ];
 
 const EMPTY_FORM = {
-  item_name: '', item_category: 'other', uom: 'Nos',
+  item_name: '', item_category: 'other', uom: '',
   material_photo: '',
   batch_required: false, expiry_required: false,
   mfg_date_required: false, qc_required: false,
@@ -32,6 +32,14 @@ const EMPTY_FORM = {
 function ItemFormModal({ item, onClose, onSaved }) {
   const [form, setForm] = useState(item ? { ...item } : { ...EMPTY_FORM });
   const [saving, setSaving] = useState(false);
+  const [uomOptions, setUomOptions] = useState([]);
+  const [uomLoading, setUomLoading] = useState(true);
+
+  useEffect(() => {
+    base44.entities.UOMMaster.filter({ is_active: true }, 'uom_name', 200)
+      .then(d => { setUomOptions(d); setUomLoading(false); })
+      .catch(() => setUomLoading(false));
+  }, []);
 
   function setField(k, v) { setForm(prev => ({ ...prev, [k]: v })); }
 
@@ -88,7 +96,22 @@ function ItemFormModal({ item, onClose, onSaved }) {
             </div>
             <div>
               <label className="text-xs font-medium text-slate-700">Unit of Measure</label>
-              <Input className="h-9 text-sm mt-1" value={form.uom} onChange={e => setField('uom', e.target.value)} placeholder="Nos, Kg, Ltr..." />
+              <select
+                className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm mt-1 h-9 bg-white"
+                value={form.uom}
+                onChange={e => setField('uom', e.target.value)}
+              >
+                <option value="">Select Unit of Measure</option>
+                {uomLoading ? (
+                  <option disabled>Loading...</option>
+                ) : uomOptions.length === 0 ? (
+                  <option disabled>No units found — add in System → Unit of Measure</option>
+                ) : (
+                  uomOptions.map(u => (
+                    <option key={u.id} value={u.uom_code}>{u.uom_name} ({u.uom_code})</option>
+                  ))
+                )}
+              </select>
             </div>
           </div>
           <div>

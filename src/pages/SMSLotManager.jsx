@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useToast } from '@/components/ui/use-toast';
-import { QrCode, Search, Printer, FileText, Info, Eye } from 'lucide-react';
+import { QrCode, Search, Printer, FileText, Eye } from 'lucide-react';
 import InvoicePreviewModal from '@/components/store/InvoicePreviewModal';
 import ExportButton from '@/components/store/ExportButton';
 import { Input } from '@/components/ui/input';
@@ -91,7 +91,7 @@ function QRModal({ lot, onClose }) {
 
 const LOT_HEADERS = [
   'Lot ID', 'Item', 'Supplier', 'Original Qty',
-  'Stored Stock', 'Issued / Consumed', 'Remaining Qty', 'Stored At', 'Manufacture Date', 'Expiry', 'Aging', 'Status', 'Invoice', 'Info', 'QR',
+  'Stored Stock', 'Issued / Consumed', 'Remaining Qty', 'Stored At', 'Manufacture Date', 'Expiry', 'Aging', 'Status', 'Invoice', 'QR',
 ];
 
 export default function SMSLotManager() {
@@ -106,7 +106,7 @@ export default function SMSLotManager() {
   const [qrLot, setQrLot] = useState(null);
   const [gateEntries, setGateEntries] = useState({});
   const [invoicePreview, setInvoicePreview] = useState(null);
-  const [detailLot, setDetailLot] = useState(null);
+
 
   async function load() {
     setLoading(true);
@@ -156,8 +156,12 @@ export default function SMSLotManager() {
       l.item_name?.toLowerCase().includes(q) ||
       l.item_code?.toLowerCase().includes(q) ||
       l.supplier_name?.toLowerCase().includes(q);
-    const matchStatus = !statusFilter || l.status === statusFilter || (statusFilter === 'putaway' && l.status === 'qc_pending');
-    return matchSearch && matchStatus;
+    if (!statusFilter) return matchSearch;
+    // Compute effective status for filtering
+    const stored = storedByLot[l.lot_id] ?? 0;
+    const issued = issuedByLot[l.lot_id] ?? 0;
+    const effective = getEffectiveStatus(l.status, stored, issued, l.quantity);
+    return matchSearch && effective === statusFilter;
   });
 
   const exportData = filtered.map(l => ({
@@ -204,10 +208,12 @@ export default function SMSLotManager() {
         </div>
         <select className="h-11 md:h-9 border border-slate-200 rounded-md px-3 text-base md:text-sm" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
           <option value="">All Statuses</option>
-          <option value="approved">Approved</option>
-          <option value="putaway">Stored</option>
+          <option value="approved">Pending Putaway</option>
+          <option value="putaway">Available for Issue</option>
+          <option value="partial">Partially Consumed</option>
+          <option value="consumed">Fully Consumed</option>
           <option value="rejected">Rejected</option>
-          <option value="consumed">Consumed</option>
+          <option value="damaged">Damaged</option>
         </select>
       </div>
 
@@ -227,7 +233,7 @@ export default function SMSLotManager() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filtered.length === 0 ? (
-                  <tr><td colSpan={15} className="text-center py-12 text-slate-400">No lots found</td></tr>
+                  <tr><td colSpan={14} className="text-center py-12 text-slate-400">No lots found</td></tr>
                 ) : filtered.map(lot => {
                   const stored = storedByLot[lot.lot_id] ?? 0;
                   const issued = issuedByLot[lot.lot_id] ?? 0;
@@ -287,11 +293,6 @@ export default function SMSLotManager() {
                         ) : <span className="text-slate-300">—</span>}
                       </td>
                       <td className="px-3 md:px-4 py-3">
-                        <button onClick={() => setDetailLot(lot)} className="p-1.5 rounded hover:bg-slate-100 text-blue-500" title="Lot Details">
-                          <Info className="w-4 h-4" />
-                        </button>
-                      </td>
-                      <td className="px-3 md:px-4 py-3">
                         <button onClick={() => setQrLot(lot)} className="p-1.5 rounded hover:bg-slate-100 text-slate-500" title="QR Code">
                           <QrCode className="w-4 h-4" />
                         </button>
@@ -307,52 +308,6 @@ export default function SMSLotManager() {
       )}
 
       {qrLot && <QRModal lot={qrLot} onClose={() => setQrLot(null)} />}
-
-      {/* Lot Detail Modal */}
-      {detailLot && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
-              <h3 className="text-sm font-semibold text-slate-900">Lot Details</h3>
-              <button onClick={() => setDetailLot(null)} className="text-slate-400 hover:text-slate-600">✕</button>
-            </div>
-            <div className="p-5 space-y-3">
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div><p className="text-xs text-slate-500">Lot ID</p><p className="font-mono font-bold text-slate-800">{detailLot.lot_id}</p></div>
-                <div><p className="text-xs text-slate-500">Item</p><p className="font-medium text-slate-800">{detailLot.item_name}</p></div>
-                <div><p className="text-xs text-slate-500">Goods Received Note</p><p className="font-mono text-slate-700">{detailLot.grn_id || '—'}</p></div>
-                <div><p className="text-xs text-slate-500">Gate Entry</p><p className="font-mono text-slate-700">{detailLot.gate_entry_id || '—'}</p></div>
-                <div><p className="text-xs text-slate-500">Supplier</p><p className="text-slate-700">{detailLot.supplier_name || '—'}</p></div>
-                <div><p className="text-xs text-slate-500">Unit</p><p className="text-slate-700">{detailLot.uom || '—'}</p></div>
-                {detailLot.original_quantity != null && (
-                  <div><p className="text-xs text-slate-500">Original Quantity</p><p className="font-bold text-slate-800">{detailLot.original_quantity}</p></div>
-                )}
-                <div><p className="text-xs text-slate-500">Received Quantity</p><p className="font-bold text-slate-800">{detailLot.quantity}</p></div>
-              </div>
-
-              {/* Mismatch info */}
-              {detailLot.mismatch_type && detailLot.mismatch_type !== 'none' && (
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                  <p className="text-xs font-semibold text-amber-700 mb-1">Quantity Mismatch</p>
-                  <p className="text-sm text-amber-800 capitalize">{detailLot.mismatch_type}</p>
-                  {detailLot.mismatch_reason && <p className="text-xs text-amber-600 mt-1">Reason: {detailLot.mismatch_reason}</p>}
-                </div>
-              )}
-
-              {/* Invoice preview button */}
-              {detailLot.gate_entry_id && gateEntries[detailLot.gate_entry_id]?.invoice_photo && (
-                <button
-                  onClick={() => { setDetailLot(null); setInvoicePreview(gateEntries[detailLot.gate_entry_id].invoice_photo); }}
-                  className="w-full flex items-center justify-center gap-2 h-11 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors text-sm font-medium">
-                  <FileText className="w-4 h-4" /> View Invoice
-                </button>
-              )}
-
-              <Button variant="outline" className="w-full h-11" onClick={() => setDetailLot(null)}>Close</Button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {invoicePreview && (
         <InvoicePreviewModal imageUrl={invoicePreview} title="Invoice Preview" onClose={() => setInvoicePreview(null)} />

@@ -26,26 +26,46 @@ function GateEntryHistory() {
   if (loading) return <div className="py-8 text-center text-slate-400"><LoaderIcon className="w-5 h-5 animate-spin mx-auto" /></div>;
   if (entries.length === 0) return <div className="py-12 text-center text-slate-400">No Gate Entry records yet.</div>;
   return (
-    <div className="space-y-3 max-w-4xl">
-      {entries.map(e => (
-        <div key={e.id} className="bg-white border border-slate-200 rounded-xl p-4 md:p-5 hover:shadow-sm transition-shadow">
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3">
-            <span className="font-bold font-mono text-slate-900 text-sm md:text-base">{e.gate_id}</span>
-            <span className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${e.status === 'PROCESSED' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>{e.status}</span>
-          </div>
-          <div className="text-xs text-slate-500 grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
-            <span>Arrived: {e.arrived_at ? new Date(e.arrived_at).toLocaleString('en-IN') : '—'}</span>
-            {e.vehicle_number && <span>Vehicle: {e.vehicle_number}</span>}
-            {e.driver_number && <span>Driver Mobile: {e.driver_number}</span>}
-            {e.driver_name && <span>Driver: {e.driver_name}</span>}
-          </div>
-          {e.vehicle_photo && <div className="flex gap-2 mt-3 flex-wrap">
-            <img src={e.vehicle_photo} alt="vehicle" className="w-14 h-10 object-cover rounded border" />
-            {e.invoice_photo && <img src={e.invoice_photo} alt="invoice" className="w-14 h-10 object-cover rounded border" />}
-            {e.material_photo && <img src={e.material_photo} alt="material" className="w-14 h-10 object-cover rounded border" />}
-          </div>}
-        </div>
-      ))}
+    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-slate-100 text-slate-700 text-xs">
+              <th className="text-left px-4 py-3 font-medium">Gate Entry ID</th>
+              <th className="text-left px-4 py-3 font-medium">Vehicle Number</th>
+              <th className="text-left px-4 py-3 font-medium">Driver</th>
+              <th className="text-left px-4 py-3 font-medium">Driver Mobile</th>
+              <th className="text-left px-4 py-3 font-medium">Status</th>
+              <th className="text-left px-4 py-3 font-medium">Arrived</th>
+              <th className="text-left px-4 py-3 font-medium">Photos</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {entries.map(e => (
+              <tr key={e.id} className="hover:bg-slate-50">
+                <td className="px-4 py-3 font-mono font-bold text-slate-900">{e.gate_id}</td>
+                <td className="px-4 py-3 text-slate-700">{e.vehicle_number || '—'}</td>
+                <td className="px-4 py-3 text-slate-600">{e.driver_name || '—'}</td>
+                <td className="px-4 py-3 text-slate-600">{e.driver_number || '—'}</td>
+                <td className="px-4 py-3">
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${e.status === 'PROCESSED' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>{e.status}</span>
+                </td>
+                <td className="px-4 py-3 text-xs text-slate-500">
+                  {e.arrived_at ? new Date(e.arrived_at).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'}
+                </td>
+                <td className="px-4 py-3">
+                  <div className="flex gap-1.5">
+                    {e.vehicle_photo && <img src={e.vehicle_photo} alt="vehicle" className="w-10 h-8 object-cover rounded border border-slate-200" />}
+                    {e.invoice_photo && <img src={e.invoice_photo} alt="invoice" className="w-10 h-8 object-cover rounded border border-slate-200" />}
+                    {e.material_photo && <img src={e.material_photo} alt="material" className="w-10 h-8 object-cover rounded border border-slate-200" />}
+                    {!e.vehicle_photo && !e.invoice_photo && !e.material_photo && <span className="text-slate-400 text-xs">—</span>}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -377,23 +397,23 @@ export default function GateEntryPage() {
               </select>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-5">
               {form.transport_type === 'vehicle' && (
-                <div>
-                  <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-2 block">{t.vehiclePhoto} <span className="text-red-500">*</span></Label>
+                <div className="bg-slate-50 rounded-xl border border-slate-200 p-4">
+                  <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-3 block">{t.vehiclePhoto} <span className="text-red-500">*</span></Label>
                   <PhotoUploader required value={form.vehicle_photo} onChange={v => setField('vehicle_photo', v)} />
-                  <p className="text-xs text-slate-500 mt-1.5">{t.vehiclePhotoHelp}</p>
+                  <p className="text-xs text-slate-500 mt-2">{t.vehiclePhotoHelp}</p>
                 </div>
               )}
-              <div>
-                <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-2 block">{t.invoicePhoto} <span className="text-red-500">*</span></Label>
+              <div className="bg-slate-50 rounded-xl border border-slate-200 p-4">
+                <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-3 block">{t.invoicePhoto} <span className="text-red-500">*</span></Label>
                 <PhotoUploader required value={form.invoice_photo} onChange={v => setField('invoice_photo', v)} />
-                <p className="text-xs text-slate-500 mt-1.5">{t.invoicePhotoHelp}</p>
+                <p className="text-xs text-slate-500 mt-2">{t.invoicePhotoHelp}</p>
               </div>
-              <div>
-                <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-2 block">{t.materialPhoto} <span className="text-red-500">*</span></Label>
+              <div className="bg-slate-50 rounded-xl border border-slate-200 p-4">
+                <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-3 block">{t.materialPhoto} <span className="text-red-500">*</span></Label>
                 <PhotoUploader required value={form.material_photo} onChange={v => setField('material_photo', v)} />
-                <p className="text-xs text-slate-500 mt-1.5">{t.materialPhotoHelp}</p>
+                <p className="text-xs text-slate-500 mt-2">{t.materialPhotoHelp}</p>
               </div>
             </div>
             
