@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useToast } from '@/components/ui/use-toast';
-import { QrCode, Search, Printer, FileText, Info } from 'lucide-react';
+import { QrCode, Search, Printer, FileText, Info, Eye } from 'lucide-react';
 import InvoicePreviewModal from '@/components/store/InvoicePreviewModal';
 import ExportButton from '@/components/store/ExportButton';
 import { Input } from '@/components/ui/input';
@@ -91,7 +91,7 @@ function QRModal({ lot, onClose }) {
 
 const LOT_HEADERS = [
   'Lot ID', 'Item', 'Supplier', 'Original Qty',
-  'Stored Stock', 'Issued / Consumed', 'Remaining Qty', 'Stored At', 'Manufacture Date', 'Expiry', 'Aging', 'Status', 'Info', 'QR',
+  'Stored Stock', 'Issued / Consumed', 'Remaining Qty', 'Stored At', 'Manufacture Date', 'Expiry', 'Aging', 'Status', 'Invoice', 'Info', 'QR',
 ];
 
 export default function SMSLotManager() {
@@ -227,10 +227,12 @@ export default function SMSLotManager() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filtered.length === 0 ? (
-                  <tr><td colSpan={13} className="text-center py-12 text-slate-400">No lots found</td></tr>
+                  <tr><td colSpan={15} className="text-center py-12 text-slate-400">No lots found</td></tr>
                 ) : filtered.map(lot => {
                   const stored = storedByLot[lot.lot_id] ?? 0;
                   const issued = issuedByLot[lot.lot_id] ?? 0;
+                  const lotGateEntry = gateEntries[lot.gate_entry_id];
+                  const lotInvoiceUrl = lotGateEntry?.invoice_photo;
                   return (
                     <tr key={lot.id} className="hover:bg-slate-50">
                       <td className="px-3 md:px-4 py-3 font-mono text-sm font-bold text-slate-800 whitespace-nowrap min-w-[180px]">{lot.lot_id}</td>
@@ -277,6 +279,13 @@ export default function SMSLotManager() {
                       <td className="px-3 md:px-4 py-3 text-slate-600 text-xs">{lot.expiry_date || '—'}</td>
                       <td className="px-3 md:px-4 py-3"><WeekBadge weeks={lot.weeks_elapsed} /></td>
                       <td className="px-3 md:px-4 py-3"><StatusBadge status={lot.status} storedQty={stored} issuedQty={issued} originalQty={lot.quantity} /></td>
+                      <td className="px-3 md:px-4 py-3">
+                        {lotInvoiceUrl ? (
+                          <button onClick={() => setInvoicePreview(lotInvoiceUrl)} className="p-1.5 rounded hover:bg-blue-50 text-blue-500" title="View Invoice">
+                            <Eye className="w-4 h-4" />
+                          </button>
+                        ) : <span className="text-slate-300">—</span>}
+                      </td>
                       <td className="px-3 md:px-4 py-3">
                         <button onClick={() => setDetailLot(lot)} className="p-1.5 rounded hover:bg-slate-100 text-blue-500" title="Lot Details">
                           <Info className="w-4 h-4" />

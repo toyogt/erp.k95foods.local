@@ -3,7 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, RefreshCw, CheckCircle2, Plus, Trash2, Search, AlertTriangle, Camera, ListChecks, FileText } from 'lucide-react';
+import { Loader2, RefreshCw, CheckCircle2, Plus, Trash2, Search, AlertTriangle, Camera, ListChecks, FileText, Eye } from 'lucide-react';
 import InvoicePreviewModal from '@/components/store/InvoicePreviewModal';
 import { logGrnAudit, getChecklistTemplate } from '@/components/grn/grnHelpers';
 import { fireFMSEvent, linkFMSRef } from '@/lib/useFMSAutoComplete';
@@ -16,7 +16,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import moment from 'moment';
 import useDraftSave from '@/hooks/useDraftSave';
 
-function GRNTable({ grns, title }) {
+function GRNTable({ grns, title, allGateEntries, onViewInvoice }) {
   if (!grns || grns.length === 0) {
     return <div className="text-center py-12 text-slate-400"><p className="font-semibold">No records found.</p></div>;
   }
@@ -32,27 +32,39 @@ function GRNTable({ grns, title }) {
               <th className="text-left px-4 py-3 font-medium">Status</th>
               <th className="text-left px-4 py-3 font-medium">Received By</th>
               <th className="text-left px-4 py-3 font-medium">Date</th>
+              <th className="text-center px-4 py-3 font-medium">Invoice</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {grns.map(g => (
-              <tr key={g.id} className="hover:bg-slate-50">
-                <td className="px-4 py-3 font-mono font-bold text-slate-900">{g.grn_id}</td>
-                <td className="px-4 py-3 text-slate-600">{g.gate_id || '—'}</td>
-                <td className="px-4 py-3 text-slate-600">{g.supplier_name || '—'}</td>
-                <td className="px-4 py-3">
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                    g.status === 'RECEIVED' ? 'bg-green-100 text-green-700' :
-                    g.status === 'DRAFT' ? 'bg-slate-100 text-slate-600' :
-                    'bg-amber-100 text-amber-700'
-                  }`}>{g.status}</span>
-                </td>
-                <td className="px-4 py-3 text-slate-600">{g.received_by || '—'}</td>
-                <td className="px-4 py-3 text-xs text-slate-500">
-                  {g.received_at ? moment(g.received_at).format('DD/MM/YYYY') : g.created_date ? moment(g.created_date).format('DD/MM/YYYY') : '—'}
-                </td>
-              </tr>
-            ))}
+            {grns.map(g => {
+              const gateEntry = allGateEntries?.[g.gate_id];
+              const invoiceUrl = gateEntry?.invoice_photo;
+              return (
+                <tr key={g.id} className="hover:bg-slate-50">
+                  <td className="px-4 py-3 font-mono font-bold text-slate-900">{g.grn_id}</td>
+                  <td className="px-4 py-3 text-slate-600">{g.gate_id || '—'}</td>
+                  <td className="px-4 py-3 text-slate-600">{g.supplier_name || '—'}</td>
+                  <td className="px-4 py-3">
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                      g.status === 'RECEIVED' ? 'bg-green-100 text-green-700' :
+                      g.status === 'DRAFT' ? 'bg-slate-100 text-slate-600' :
+                      'bg-amber-100 text-amber-700'
+                    }`}>{g.status}</span>
+                  </td>
+                  <td className="px-4 py-3 text-slate-600">{g.received_by || '—'}</td>
+                  <td className="px-4 py-3 text-xs text-slate-500">
+                    {g.received_at ? moment(g.received_at).format('DD/MM/YYYY') : g.created_date ? moment(g.created_date).format('DD/MM/YYYY') : '—'}
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    {invoiceUrl ? (
+                      <button onClick={() => onViewInvoice(invoiceUrl)} className="p-1.5 rounded hover:bg-blue-50 text-blue-500" title="View Invoice">
+                        <Eye className="w-4 h-4" />
+                      </button>
+                    ) : <span className="text-slate-300">—</span>}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -97,6 +109,7 @@ export default function GRNReceive() {
   const [allGrns, setAllGrns] = useState([]);
   const [grnItems, setGrnItems] = useState({});
   const [invoicePreview, setInvoicePreview] = useState(null);
+  const [allGateMap, setAllGateMap] = useState({});
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -106,13 +119,18 @@ export default function GRNReceive() {
 
   async function load(autoSelectGateId) {
     setLoading(true);
-    const [u, entries, existingGrns, masterItems, approvedSuppliers] = await Promise.all([
+    const [u, entries, existingGrns, masterItems, approvedSuppliers, allGates] = await Promise.all([
       base44.auth.me(),
       base44.entities.GateEntry.filter({ status: 'OPEN' }, '-created_date', 100),
       base44.entities.GRNHeader.list('-created_date', 200),
       base44.entities.StoreItemMaster.filter({ is_active: true }, 'item_name', 500),
       base44.entities.Supplier.filter({ approval_status: 'APPROVED' }, 'supplier_name', 500).catch(() => []),
+      base44.entities.GateEntry.list('-created_date', 500),
     ]);
+    // Build gate entry map for invoice lookups
+    const gateMap = {};
+    allGates.forEach(g => { gateMap[g.gate_id] = g; });
+    setAllGateMap(gateMap);
     setUser(u);
     setStoreItems(masterItems);
     setSuppliers(approvedSuppliers);
@@ -373,7 +391,7 @@ export default function GRNReceive() {
       </div>
 
       {/* Master Tab */}
-      {activeTab === 'master' && <GRNTable grns={allGrns} title="All Goods Received Notes" />}
+      {activeTab === 'master' && <GRNTable grns={allGrns} title="All Goods Received Notes" allGateEntries={allGateMap} onViewInvoice={url => setInvoicePreview(url)} />}
 
       {/* Create Tab — Gate Entry Table */}
       {activeTab === 'create' && !selected && (
@@ -424,9 +442,16 @@ export default function GRNReceive() {
                           {e.arrived_at ? new Date(e.arrived_at).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'}
                         </td>
                         <td className="px-4 py-3 text-center">
-                          <Button size="sm" onClick={() => selectGateEntry(e)} className="h-9 gap-1.5 text-sm">
-                            <Plus className="w-3.5 h-3.5" /> Create Goods Received Note
-                          </Button>
+                          <div className="flex items-center justify-center gap-2">
+                            {e.invoice_photo && (
+                              <button onClick={() => setInvoicePreview(e.invoice_photo)} className="p-1.5 rounded hover:bg-blue-50 text-blue-500" title="View Invoice">
+                                <Eye className="w-4 h-4" />
+                              </button>
+                            )}
+                            <Button size="sm" onClick={() => selectGateEntry(e)} className="h-9 gap-1.5 text-sm">
+                              <Plus className="w-3.5 h-3.5" /> Create Goods Received Note
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ))}
