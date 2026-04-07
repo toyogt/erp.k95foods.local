@@ -211,6 +211,19 @@ export default function GRNReceive() {
 
 
 
+  async function loadGrnItemsFor(grnId) {
+    if (grnItems[grnId]) return;
+    const itemsList = await base44.entities.GRNItem.filter({ grn_id: grnId });
+    setGrnItems(prev => ({ ...prev, [grnId]: itemsList }));
+  }
+
+  // Load GRN items when viewing master tab
+  useEffect(() => {
+    if (activeTab === 'master') {
+      allGrns.forEach(g => loadGrnItemsFor(g.grn_id));
+    }
+  }, [activeTab, allGrns]);
+
   // ── Success ─────────────────────────────────────────────────
   if (done) {
     return (
@@ -252,73 +265,6 @@ export default function GRNReceive() {
       </div>
     );
   }
-
-
-
-  async function loadGrnItemsFor(grnId) {
-    if (grnItems[grnId]) return;
-    const itemsList = await base44.entities.GRNItem.filter({ grn_id: grnId });
-    setGrnItems(prev => ({ ...prev, [grnId]: itemsList }));
-  }
-
-  function GRNTable({ grns, title }) {
-    if (grns.length === 0) return <p className="text-sm text-slate-400 text-center py-8">No records found.</p>;
-    return (
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-slate-100 text-slate-700 text-xs">
-                <th className="text-left px-4 py-3 font-medium">GRN ID</th>
-                <th className="text-left px-4 py-3 font-medium">Gate Entry</th>
-                <th className="text-left px-4 py-3 font-medium">Supplier</th>
-                <th className="text-left px-4 py-3 font-medium">Status</th>
-                <th className="text-left px-4 py-3 font-medium">Received By</th>
-                <th className="text-left px-4 py-3 font-medium">Date</th>
-                <th className="px-4 py-3 font-medium">Print</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {grns.map(g => (
-                <tr key={g.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-3 font-mono font-bold text-slate-900">{g.grn_id}</td>
-                  <td className="px-4 py-3 font-mono text-xs text-slate-600">{g.gate_id || '—'}</td>
-                  <td className="px-4 py-3 text-slate-700">{g.supplier_name || '—'}</td>
-                  <td className="px-4 py-3">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                      g.status === 'RECEIVED' ? 'bg-green-100 text-green-700' :
-                      g.status === 'DRAFT' ? 'bg-yellow-100 text-yellow-700' :
-                      g.status === 'CANCELLED' ? 'bg-red-100 text-red-700' :
-                      'bg-blue-100 text-blue-700'
-                    }`}>{g.status}</span>
-                  </td>
-                  <td className="px-4 py-3 text-xs text-slate-500">{g.received_by || '—'}</td>
-                  <td className="px-4 py-3 text-xs text-slate-500">{g.received_at ? new Date(g.received_at).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'}</td>
-                  <td className="px-4 py-3">
-                    <GRNPrintTemplate
-                      grnId={g.grn_id}
-                      gateId={g.gate_id}
-                      items={grnItems[g.grn_id] || []}
-                      notes={g.notes}
-                      receivedBy={g.received_by}
-                      receivedAt={g.received_at}
-                    />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    );
-  }
-
-  // Load GRN items when viewing master tab
-  useEffect(() => {
-    if (activeTab === 'master') {
-      allGrns.forEach(g => loadGrnItemsFor(g.grn_id));
-    }
-  }, [activeTab, allGrns]);
 
   return (
   <div className="space-y-4 pb-12">
