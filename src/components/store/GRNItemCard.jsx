@@ -105,11 +105,10 @@ function ItemPhotoUpload({ value, onChange }) {
 }
 
 function PerItemSupplierSelect({ value, onChange, suppliers }) {
-  const [query, setQuery] = useState(value || '');
+  const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
-  useEffect(() => { setQuery(value || ''); }, [value]);
   useEffect(() => {
     function onClick(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
     document.addEventListener('mousedown', onClick);
@@ -120,26 +119,62 @@ function PerItemSupplierSelect({ value, onChange, suppliers }) {
     ? suppliers.filter(s => s.supplier_name?.toLowerCase().includes(query.toLowerCase()))
     : suppliers;
 
+  const selectedSupplier = suppliers.find(s => s.supplier_name === value);
+
   return (
     <div className="relative" ref={ref}>
-      <div className="relative">
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-        <input
-          className="w-full h-11 pl-8 pr-8 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-teal-400"
-          placeholder="Search supplier..."
-          value={query}
-          onChange={e => { setQuery(e.target.value); onChange(e.target.value); setOpen(true); }}
-          onFocus={() => setOpen(true)}
-        />
-        <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-      </div>
-      {open && filtered.length > 0 && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-40 overflow-y-auto">
-          {filtered.map(s => (
-            <div key={s.id} className="px-4 py-2 text-sm cursor-pointer hover:bg-slate-50"
-              onClick={() => { setQuery(s.supplier_name); setOpen(false); onChange(s.supplier_name); }}>
-              <p className="font-medium text-slate-800">{s.supplier_name}</p>
-              <p className="text-xs text-slate-400">{s.supplier_id}</p>
+      {!open ? (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="w-full h-11 px-3 border border-slate-200 rounded-xl text-sm text-left flex items-center justify-between bg-white focus:outline-none focus:ring-1 focus:ring-teal-400"
+        >
+          <span className={value ? 'text-slate-900 font-medium' : 'text-slate-400'}>
+            {value || 'Select supplier...'}
+          </span>
+          <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+        </button>
+      ) : (
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+          <input
+            autoFocus
+            className="w-full h-11 pl-8 pr-8 border border-teal-400 rounded-xl text-sm focus:outline-none ring-1 ring-teal-400"
+            placeholder="Search supplier..."
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+          />
+          {value && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onChange(''); setQuery(''); setOpen(false); }}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500"
+              title="Clear"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      )}
+      {open && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+          {filtered.length === 0 ? (
+            <div className="px-4 py-3 text-sm text-slate-400">
+              {query.trim()
+                ? <span className="text-amber-600">No supplier found. Add suppliers in Supplier Manager first.</span>
+                : 'No approved suppliers available.'
+              }
+            </div>
+          ) : filtered.map(s => (
+            <div
+              key={s.id}
+              className={`px-4 py-2.5 text-sm cursor-pointer hover:bg-slate-50 ${
+                s.supplier_name === value ? 'bg-teal-50 font-semibold text-teal-800' : 'text-slate-800'
+              }`}
+              onClick={() => { onChange(s.supplier_name); setQuery(''); setOpen(false); }}
+            >
+              <p className="font-medium">{s.supplier_name}</p>
+              {s.supplier_id && <p className="text-xs text-slate-400">{s.supplier_id}</p>}
             </div>
           ))}
         </div>
@@ -303,7 +338,7 @@ export default function GRNItemCard({ index, item, storeItems, suppliers, canRem
             )}
           </div>
           <div>
-            <Label className="text-xs font-medium text-slate-700">Supplier Name</Label>
+            <Label className="text-xs font-medium text-slate-700">Supplier Name <span className="text-red-500">*</span></Label>
             <div className="mt-1">
               <PerItemSupplierSelect
                 value={item.supplier_name}
