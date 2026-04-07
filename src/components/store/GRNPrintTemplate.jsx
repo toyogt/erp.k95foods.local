@@ -1,7 +1,6 @@
 import { useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Printer, QrCode } from 'lucide-react';
-import QRCode from 'react-qr-code';
 
 function LotQRPrint({ lots }) {
   function handlePrintQR() {
@@ -26,8 +25,8 @@ function LotQRPrint({ lots }) {
 
   if (!lots || lots.length === 0) return null;
   return (
-    <Button onClick={handlePrintQR} variant="outline" className="gap-2 h-11 text-sm">
-      <QrCode className="w-4 h-4" /> Print QR
+    <Button onClick={handlePrintQR} variant="outline" size="sm" className="gap-1.5 h-9 text-xs">
+      <QrCode className="w-3.5 h-3.5" /> QR
     </Button>
   );
 }
@@ -75,7 +74,7 @@ export default function GRNPrintTemplate({ grnId, gateId, items, notes, received
       <div ref={printRef} style={{ display: 'none' }}>
         <h1>Goods Received Note</h1>
         <div className="meta">
-          <p><strong>GRN ID:</strong> {grnId}</p>
+          <p><strong>Goods Received Note ID:</strong> {grnId}</p>
           <p><strong>Gate Entry:</strong> {gateId}</p>
           <p><strong>Received By:</strong> {receivedBy || '—'}</p>
           <p><strong>Date:</strong> {dateStr}</p>
@@ -111,3 +110,6 @@ export default function GRNPrintTemplate({ grnId, gateId, items, notes, received
           <p>Printed on {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })} — K95 ERP Store Management</p>
         </div>
       </div>
+    </div>
+  );
+}
