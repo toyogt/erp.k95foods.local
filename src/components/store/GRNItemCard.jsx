@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Trash2, Search, Plus, AlertTriangle, Camera, Loader2, ImageIcon, ChevronDown } from 'lucide-react';
+import { Trash2, Search, Plus, AlertTriangle, ImageIcon, ChevronDown } from 'lucide-react';
 import { ValidationAlert } from '@/components/store/SweetAlert';
 
 function ItemSearchSelect({ value, storeItems, onChangeName, onSelectItem }) {
@@ -68,41 +68,7 @@ function ItemSearchSelect({ value, storeItems, onChangeName, onSelectItem }) {
   );
 }
 
-function ItemPhotoUpload({ value, onChange }) {
-  const [uploading, setUploading] = useState(false);
 
-  async function handleFile(e) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploading(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    onChange(file_url);
-    setUploading(false);
-  }
-
-  if (value) {
-    return (
-      <div className="relative group w-16 h-16">
-        <img src={value} alt="Material" className="w-16 h-16 object-cover rounded-lg border border-slate-200" />
-        <button onClick={() => onChange('')}
-          className="absolute -top-1 -right-1 p-0.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-          <Trash2 className="w-3 h-3" />
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <label className="flex flex-col items-center justify-center w-16 h-16 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-teal-400 transition-colors">
-      {uploading ? (
-        <Loader2 className="w-4 h-4 text-slate-400 animate-spin" />
-      ) : (
-        <Camera className="w-4 h-4 text-slate-400" />
-      )}
-      <input type="file" accept="image/*" onChange={handleFile} className="hidden" disabled={uploading} />
-    </label>
-  );
-}
 
 function PerItemSupplierSelect({ value, onChange, suppliers }) {
   const [query, setQuery] = useState(value || '');
@@ -289,8 +255,8 @@ export default function GRNItemCard({ index, item, storeItems, suppliers, canRem
           </div>
         )}
 
-        {/* Row 2: Batch/Lot, Supplier, Photo */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {/* Row 2: Batch/Lot, Supplier */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
             <Label className="text-xs font-medium text-slate-700">
               Batch / Lot {rules?.batch_required && <span className="text-red-500">*</span>}
@@ -310,12 +276,6 @@ export default function GRNItemCard({ index, item, storeItems, suppliers, canRem
                 onChange={v => onUpdate('supplier_name', v)}
                 suppliers={suppliers || []}
               />
-            </div>
-          </div>
-          <div>
-            <Label className="text-xs font-medium text-slate-700">Material Photo</Label>
-            <div className="mt-1">
-              <ItemPhotoUpload value={item.material_photo} onChange={v => onUpdate('material_photo', v)} />
             </div>
           </div>
         </div>
