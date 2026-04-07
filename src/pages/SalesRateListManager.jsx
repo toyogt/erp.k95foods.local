@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
@@ -8,6 +8,8 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { Plus, Upload, Download, Edit2, X, Check, Loader2, Search, FileDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import usePagination from '@/hooks/usePagination';
+import TablePagination from '@/components/sales/TablePagination';
 
 function exportRatesCSV(rows) {
   const headers = ['item_code','item_name','hsn_code','uom','price_list','rate','mrp','igst_rate','packing_unit','brand','valid_from','valid_upto'];
@@ -41,14 +43,19 @@ export default function SalesRateListManager() {
 
   const { data: rates = [], isLoading } = useQuery({
     queryKey: ['sales_rate_list'],
-    queryFn: () => base44.entities.SalesRateList.list('-created_date', 200),
+    queryFn: () => base44.entities.SalesRateList.list('-created_date', 1000),
+    staleTime: 120000,
+    cacheTime: 600000,
+    refetchOnWindowFocus: false,
   });
 
-  const filtered = rates.filter(r =>
+  const filtered = useMemo(() => rates.filter(r =>
     !search || r.item_code?.toLowerCase().includes(search.toLowerCase()) ||
     r.item_name?.toLowerCase().includes(search.toLowerCase()) ||
     r.price_list?.toLowerCase().includes(search.toLowerCase())
-  );
+  ), [rates, search]);
+
+  const pagination = usePagination(filtered, 30);
 
   function openNew() {
     setEditing(null);
@@ -170,6 +177,7 @@ export default function SalesRateListManager() {
         ) : filtered.length === 0 ? (
           <div className="p-8 text-center text-slate-400 text-sm">No rates found. Add manually or upload a CSV.</div>
         ) : (
+          <>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -187,7 +195,7 @@ export default function SalesRateListManager() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filtered.map(r => (
+                {pagination.paged.map(r => (
                   <tr key={r.id} className="hover:bg-slate-50">
                     <td className="px-3 py-2 font-mono text-xs text-slate-700">{r.item_code}</td>
                     <td className="px-3 py-2 text-slate-800 max-w-xs truncate">{r.item_name}</td>
@@ -212,6 +220,8 @@ export default function SalesRateListManager() {
               </tbody>
             </table>
           </div>
+          <TablePagination {...pagination} />
+          </>
         )}
       </div>
 

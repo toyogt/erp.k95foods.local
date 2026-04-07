@@ -1,6 +1,5 @@
-import { useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import { useQuery } from '@tanstack/react-query';
+import { useState, useCallback, useMemo } from 'react';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
 import { Plus, Upload, Package, TrendingUp, Clock, AlertTriangle, Search, Inbox, Download } from 'lucide-react';
@@ -25,6 +24,8 @@ import SalesOrderStatusBadge from '@/components/sales/SalesOrderStatusBadge';
 import CreateSalesOrderModal from '@/components/sales/CreateSalesOrderModal';
 import DistributorRequestsTab from '@/components/sales/DistributorRequestsTab';
 import SKUManagementTab from '@/components/sales/SKUManagementTab';
+import usePagination from '@/hooks/usePagination';
+import TablePagination from '@/components/sales/TablePagination';
 
 const STATUS_TABS = [
   { key: 'distributor_requests', label: 'Distributor Requests', icon: Inbox },
@@ -65,12 +66,13 @@ export default function SalesOrders() {
 
   const { data: orders = [], isLoading, refetch } = useQuery({
     queryKey: ['sales_orders'],
-    queryFn: () => base44.entities.SalesOrder.list('-created_date', 200),
-    staleTime: 60000,
-    cacheTime: 300000,
+    queryFn: () => base44.entities.SalesOrder.list('-created_date', 500),
+    staleTime: 120000,
+    cacheTime: 600000,
+    refetchOnWindowFocus: false,
   });
 
-  const filtered = orders.filter(o => {
+  const filtered = useMemo(() => orders.filter(o => {
     const matchesTab = activeTab === 'all' || o.status === activeTab;
     const matchesSearch = !search ||
       o.so_number?.toLowerCase().includes(search.toLowerCase()) ||
@@ -81,16 +83,22 @@ export default function SalesOrders() {
       o.po_expiry_date && new Date(o.po_expiry_date) < new Date() && !['paid','closed','cancelled'].includes(o.status)
     );
     return matchesTab && matchesSearch && matchesPlatform && matchesExpiry;
-  });
+  }), [orders, activeTab, search, filterPlatform, filterExpiryAlert]);
 
-  // KPI counts
-  const pending = orders.filter(o => ['draft', 'confirmed', 'stock_validated', 'picking', 'packing'].includes(o.status)).length;
-  const dispatched = orders.filter(o => o.status === 'dispatched').length;
-  const overdue = orders.filter(o => {
-    if (!o.po_expiry_date) return false;
-    return new Date(o.po_expiry_date) < new Date() && !['paid', 'closed', 'cancelled'].includes(o.status);
-  }).length;
-  const totalValue = orders.reduce((s, o) => s + (o.total_amount || 0), 0);
+  const pagination = usePagination(filtered, 25);
+
+  // KPI counts — memoized
+  const { pending, dispatched, overdue, totalValue } = useMemo(() => {
+    let pend = 0, disp = 0, over = 0, val = 0;
+    const now = new Date();
+    for (const o of orders) {
+      val += o.total_amount || 0;
+      if (['draft', 'confirmed', 'stock_validated', 'picking', 'packing'].includes(o.status)) pend++;
+      if (o.status === 'dispatched') disp++;
+      if (o.po_expiry_date && new Date(o.po_expiry_date) < now && !['paid', 'closed', 'cancelled'].includes(o.status)) over++;
+    }
+    return { pending: pend, dispatched: disp, overdue: over, totalValue: val };
+  }, [orders]);
 
   return (
     <div className="p-3 md:p-6 space-y-4 max-w-7xl mx-auto pb-32">
@@ -237,10 +245,11 @@ export default function SalesOrders() {
             <p className="text-sm text-slate-500">No orders found</p>
           </div>
         ) : (
+          <>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
             <thead>
-              <tr className="bg-slate-50 text-slate-700 text-xs font-medium">
+              <tr className="bg-slate-100 text-slate-700 text-xs font-medium">
                 <th className="px-4 py-3 text-left">Sales Order Number</th>
                   <th className="px-4 py-3 text-left">Customer</th>
                   <th className="px-4 py-3 text-left">Platform</th>
@@ -252,7 +261,7 @@ export default function SalesOrders() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filtered.map(order => {
+                {pagination.paged.map(order => {
                   const isExpired = order.po_expiry_date && new Date(order.po_expiry_date) < new Date()
                     && !['paid', 'closed', 'cancelled'].includes(order.status);
                   return (
@@ -294,7 +303,8 @@ export default function SalesOrders() {
               </tbody>
             </table>
           </div>
-        )}
+          <TablePagination {...pagination} />
+          </>
       </div>
 
       {showCreateModal && (

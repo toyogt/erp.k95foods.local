@@ -1,13 +1,15 @@
 /**
  * Picklists Listing Page — shows all picklists with search, filter, and links.
  */
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
 import { Search, ClipboardList, Package } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import SalesOrderStatusBadge from '@/components/sales/SalesOrderStatusBadge';
+import usePagination from '@/hooks/usePagination';
+import TablePagination from '@/components/sales/TablePagination';
 
 const STATUS_TABS = [
   { key: 'all', label: 'All' },
@@ -30,17 +32,22 @@ export default function SalesPicklists() {
 
   const { data: picklists = [], isLoading } = useQuery({
     queryKey: ['all_picklists'],
-    queryFn: () => base44.entities.SalesPicklist.list('-created_date', 200),
+    queryFn: () => base44.entities.SalesPicklist.list('-created_date', 500),
+    staleTime: 120000,
+    cacheTime: 600000,
+    refetchOnWindowFocus: false,
   });
 
-  const filtered = picklists.filter(pl => {
+  const filtered = useMemo(() => picklists.filter(pl => {
     const matchTab = activeTab === 'all' || pl.status === activeTab;
     const matchSearch = !search ||
       pl.picklist_number?.toLowerCase().includes(search.toLowerCase()) ||
       pl.so_number?.toLowerCase().includes(search.toLowerCase()) ||
       pl.transporter?.toLowerCase().includes(search.toLowerCase());
     return matchTab && matchSearch;
-  });
+  }), [picklists, activeTab, search]);
+
+  const pagination = usePagination(filtered, 25);
 
   const fmt = (d) => {
     if (!d) return '—';
@@ -104,6 +111,7 @@ export default function SalesPicklists() {
             <p className="text-sm text-slate-500">No picklists found</p>
           </div>
         ) : (
+          <>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -118,7 +126,7 @@ export default function SalesPicklists() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filtered.map(pl => (
+                {pagination.paged.map(pl => (
                   <tr key={pl.id} className="hover:bg-slate-50">
                     <td className="px-4 py-3 font-medium text-blue-600">
                       <Link to={`/SalesPicklistDetail?id=${pl.id}`} className="hover:underline">{pl.picklist_number}</Link>
@@ -142,6 +150,8 @@ export default function SalesPicklists() {
               </tbody>
             </table>
           </div>
+          <TablePagination {...pagination} />
+          </>
         )}
       </div>
     </div>

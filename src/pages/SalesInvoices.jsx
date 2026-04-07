@@ -1,12 +1,14 @@
 /**
  * Invoices Listing Page — shows all sales invoices with search, filter, and links.
  */
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
 import { Search, FileText, Receipt } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import usePagination from '@/hooks/usePagination';
+import TablePagination from '@/components/sales/TablePagination';
 
 const STATUS_TABS = [
   { key: 'all', label: 'All' },
@@ -34,17 +36,22 @@ export default function SalesInvoices() {
 
   const { data: invoices = [], isLoading } = useQuery({
     queryKey: ['all_invoices'],
-    queryFn: () => base44.entities.SalesInvoice.list('-created_date', 200),
+    queryFn: () => base44.entities.SalesInvoice.list('-created_date', 500),
+    staleTime: 120000,
+    cacheTime: 600000,
+    refetchOnWindowFocus: false,
   });
 
-  const filtered = invoices.filter(inv => {
+  const filtered = useMemo(() => invoices.filter(inv => {
     const matchTab = activeTab === 'all' || inv.status === activeTab;
     const matchSearch = !search ||
       inv.invoice_number?.toLowerCase().includes(search.toLowerCase()) ||
       inv.so_number?.toLowerCase().includes(search.toLowerCase()) ||
       inv.customer_name?.toLowerCase().includes(search.toLowerCase());
     return matchTab && matchSearch;
-  });
+  }), [invoices, activeTab, search]);
+
+  const pagination = usePagination(filtered, 25);
 
   const fmt = (d) => {
     if (!d) return '—';
@@ -107,6 +114,7 @@ export default function SalesInvoices() {
             <p className="text-sm text-slate-500">No invoices found</p>
           </div>
         ) : (
+          <>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -122,7 +130,7 @@ export default function SalesInvoices() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filtered.map(inv => (
+                {pagination.paged.map(inv => (
                   <tr key={inv.id} className="hover:bg-slate-50">
                     <td className="px-4 py-3 font-medium">
                       <Link to={`/SalesInvoiceDetail?id=${inv.id}`} className="text-blue-600 hover:underline">{inv.invoice_number}</Link>
@@ -155,6 +163,8 @@ export default function SalesInvoices() {
               </tbody>
             </table>
           </div>
+          <TablePagination {...pagination} />
+          </>
         )}
       </div>
     </div>

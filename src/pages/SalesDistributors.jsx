@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { Plus, Edit2, X, CheckCircle2, Users, Loader2, Download } from 'lucide-react';
+import usePagination from '@/hooks/usePagination';
+import TablePagination from '@/components/sales/TablePagination';
 
 function exportDistributorsCSV(rows) {
   const headers = ['Name','Code','Contact','Phone','Email','GSTIN','PAN','Region','Credit Limit','Utilized','Status','Payment Terms'];
@@ -35,8 +37,13 @@ export default function SalesDistributors() {
 
   const { data: distributors = [], isLoading, refetch } = useQuery({
     queryKey: ['distributors'],
-    queryFn: () => base44.entities.Distributor.list('-created_date', 100),
+    queryFn: () => base44.entities.Distributor.list('-created_date', 200),
+    staleTime: 120000,
+    cacheTime: 600000,
+    refetchOnWindowFocus: false,
   });
+
+  const pagination = usePagination(distributors, 25);
 
   function openNew() { setEditing(null); setForm(EMPTY_FORM); setShowForm(true); }
   function openEdit(d) {
@@ -130,6 +137,7 @@ export default function SalesDistributors() {
             <p className="text-sm text-slate-500">No distributors added yet</p>
           </div>
         ) : (
+          <>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -145,7 +153,7 @@ export default function SalesDistributors() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {distributors.map(d => {
+                {pagination.paged.map(d => {
                   const available = (d.credit_limit || 0) - (d.utilized_limit || 0);
                   return (
                     <tr key={d.id} className="hover:bg-slate-50">
@@ -176,6 +184,8 @@ export default function SalesDistributors() {
               </tbody>
             </table>
           </div>
+          <TablePagination {...pagination} />
+          </>
         )}
       </div>
 

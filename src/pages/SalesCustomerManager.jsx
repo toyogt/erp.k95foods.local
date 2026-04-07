@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,8 @@ import BulkCSVUploadModal from '@/components/sales/BulkCSVUploadModal';
 import CustomerImportModal from '@/components/sales/CustomerImportModal';
 import CustomerFormDrawer, { BLANK_CUSTOMER } from '@/components/sales/CustomerFormDrawer';
 import SalesAnalyticsPanel from '@/components/sales/SalesAnalyticsPanel';
+import usePagination from '@/hooks/usePagination';
+import TablePagination from '@/components/sales/TablePagination';
 
 function exportCSV(rows) {
   const headers = ['Name', 'Code', 'GSTIN', 'PAN', 'Phone', 'Email', 'Customer Group', 'Price List', 'GST Category', 'Place of Supply', 'Payment Terms', 'Status', 'Credit Limit', 'Current Outstanding'];
@@ -67,11 +69,16 @@ export default function SalesCustomerManager() {
   const { data: customers = [], isLoading } = useQuery({
     queryKey: ['customers_all'],
     queryFn: () => base44.entities.Customer.list('-created_date', 500),
+    staleTime: 120000,
+    cacheTime: 600000,
+    refetchOnWindowFocus: false,
   });
 
   const { data: allRates = [] } = useQuery({
     queryKey: ['sales_rate_list_all'],
     queryFn: () => base44.entities.SalesRateList.list('-created_date', 1000),
+    staleTime: 300000,
+    refetchOnWindowFocus: false,
   });
 
   const priceLists = [...new Set(allRates.map(r => r.price_list).filter(Boolean))].sort();
@@ -91,7 +98,7 @@ export default function SalesCustomerManager() {
     else { setSortCol(col); setSortDir('asc'); }
   }
 
-  const sorted = [...filtered].sort((a, b) => {
+  const sorted = useMemo(() => [...filtered].sort((a, b) => {
     let av = a[sortCol] ?? '';
     let bv = b[sortCol] ?? '';
     if (typeof av === 'number' || typeof bv === 'number') {
@@ -100,7 +107,9 @@ export default function SalesCustomerManager() {
     }
     av = String(av).toLowerCase(); bv = String(bv).toLowerCase();
     return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
-  });
+  }), [filtered, sortCol, sortDir]);
+
+  const pagination = usePagination(sorted, 30);
 
   const allFilteredIds = filtered.map(c => c.id);
   const allSelected = allFilteredIds.length > 0 && allFilteredIds.every(id => selected.has(id));
@@ -372,6 +381,7 @@ export default function SalesCustomerManager() {
         ) : filtered.length === 0 ? (
           <div className="p-8 text-center"><Users className="w-10 h-10 text-slate-300 mx-auto mb-2" /><p className="text-sm text-slate-500">No customers found</p></div>
         ) : (
+          <>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -388,7 +398,7 @@ export default function SalesCustomerManager() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {sorted.map(c => (
+                {pagination.paged.map(c => (
                   <tr key={c.id} className={`hover:bg-slate-50 ${selected.has(c.id) ? 'bg-blue-50' : ''}`}>
                     <td className="px-3 py-2">
                       <input type="checkbox" checked={selected.has(c.id)} onChange={() => toggleRow(c.id)} className="rounded" />
@@ -425,10 +435,10 @@ export default function SalesCustomerManager() {
               </tbody>
             </table>
           </div>
+          <TablePagination {...pagination} />
+          </>
         )}
       </div>
-
-
 
       {/* Import New Customers Modal */}
       {showImportModal && (
