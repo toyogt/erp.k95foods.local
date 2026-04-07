@@ -3,7 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, RefreshCw, CheckCircle2, Plus, Trash2, Search, AlertTriangle, Camera, Clock, ListChecks } from 'lucide-react';
+import { Loader2, RefreshCw, CheckCircle2, Plus, Trash2, Search, AlertTriangle, Camera, ListChecks } from 'lucide-react';
 import { logGrnAudit, getChecklistTemplate } from '@/components/grn/grnHelpers';
 import { fireFMSEvent, linkFMSRef } from '@/lib/useFMSAutoComplete';
 import ChecklistGate from '@/components/grn/ChecklistGate';
@@ -253,8 +253,7 @@ export default function GRNReceive() {
     );
   }
 
-  const pendingGrns = allGrns.filter(g => g.status === 'DRAFT' || g.status === 'RECEIVED');
-  const completedGrns = allGrns.filter(g => !['DRAFT'].includes(g.status));
+
 
   async function loadGrnItemsFor(grnId) {
     if (grnItems[grnId]) return;
@@ -314,9 +313,9 @@ export default function GRNReceive() {
     );
   }
 
-  // Load GRN items when viewing tabs
+  // Load GRN items when viewing master tab
   useEffect(() => {
-    if (activeTab === 'pending' || activeTab === 'master') {
+    if (activeTab === 'master') {
       allGrns.forEach(g => loadGrnItemsFor(g.grn_id));
     }
   }, [activeTab, allGrns]);
@@ -336,7 +335,6 @@ export default function GRNReceive() {
       <div className="flex justify-center border-b border-slate-200 overflow-x-auto">
         {[
           { id: 'create', label: 'Create New', icon: Plus },
-          { id: 'pending', label: `Pending (${pendingGrns.length})`, icon: Clock },
           { id: 'master', label: `All Records (${allGrns.length})`, icon: ListChecks },
         ].map(tab => (
           <button key={tab.id} onClick={() => { setActiveTab(tab.id); setSelected(null); setDone(null); }}
@@ -347,9 +345,6 @@ export default function GRNReceive() {
           </button>
         ))}
       </div>
-
-      {/* Pending Tab */}
-      {activeTab === 'pending' && <GRNTable grns={pendingGrns} title="Pending Goods Received Notes" />}
 
       {/* Master Tab */}
       {activeTab === 'master' && <GRNTable grns={allGrns} title="All Goods Received Notes" />}
