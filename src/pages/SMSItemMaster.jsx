@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Pencil, Trash2, Search, PackageOpen, ImageIcon, Download } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, PackageOpen, ImageIcon, Download, AlertTriangle } from 'lucide-react';
 import MaterialPhotoUpload from '@/components/store/MaterialPhotoUpload';
 import ImportSystemItemsModal from '@/components/store/ImportSystemItemsModal';
 import { showErrorAlert, showConfirmAlert, showSuccessToast } from '@/lib/toastHelpers';
@@ -146,16 +146,49 @@ export default function SMSItemMaster() {
   const [modal, setModal] = useState(null);
   const [showImport, setShowImport] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [stockByItem, setStockByItem] = useState({});
+  const [issuedByItem, setIssuedByItem] = useState({});
+  const [notStoredByItem, setNotStoredByItem] = useState({});
 
   async function load() {
     setLoading(true);
-    await base44.entities.StoreItemMaster.list('-created_date', 200).then(data => {
+    try {
+      const [data, balances, issueLines, lots] = await Promise.all([
+        base44.entities.StoreItemMaster.list('-created_date', 200),
+        base44.entities.StoreStockBalance.list('-created_date', 1000),
+        base44.entities.StoreIssueLine.list('-created_date', 2000),
+        base44.entities.StoreLot.list('-created_date', 500),
+      ]);
       setItems(data);
-      setLoading(false);
-    }).catch(() => {
+
+      // Build current stock from balances (stored stock)
+      const sbi = {};
+      balances.forEach(b => {
+        const code = b.item_code;
+        if (code) sbi[code] = (sbi[code] || 0) + (b.quantity || 0);
+      });
+      setStockByItem(sbi);
+
+      // Build issued from issue lines
+      const ibi = {};
+      issueLines.forEach(l => {
+        const code = l.item_code;
+        if (code) ibi[code] = (ibi[code] || 0) + (l.issued_quantity || 0);
+      });
+      setIssuedByItem(ibi);
+
+      // Build blocked / not-stored: lots that have quantity but no stored balance
+      const storedLotIds = new Set(balances.filter(b => (b.quantity || 0) > 0).map(b => b.lot_id));
+      const nsbi = {};
+      lots.filter(l => !['consumed', 'rejected'].includes(l.status) && !storedLotIds.has(l.lot_id)).forEach(l => {
+        const code = l.item_code;
+        if (code) nsbi[code] = (nsbi[code] || 0) + (l.remaining_quantity || l.quantity || 0);
+      });
+      setNotStoredByItem(nsbi);
+    } catch {
       showErrorAlert('Load Failed', 'Failed to load items');
-      setLoading(false);
-    });
+    }
+    setLoading(false);
   }
 
   useEffect(() => { load(); }, []);
@@ -244,14 +277,17 @@ export default function SMSItemMaster() {
         <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-slate-100 text-slate-700">
-              <tr>
-                <th className="text-left px-4 py-3 font-medium">Item Name</th>
-                <th className="text-left px-4 py-3 font-medium hidden md:table-cell">Category</th>
-                <th className="text-left px-4 py-3 font-medium hidden md:table-cell">Unit</th>
-                <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">Rules</th>
-                <th className="text-left px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3" />
-              </tr>
+             <tr>
+               <th className="text-left px-4 py-3 font-medium">Item Name</th>
+               <th className="text-left px-4 py-3 font-medium hidden md:table-cell">Category</th>
+               <th className="text-left px-4 py-3 font-medium hidden md:table-cell">Unit</th>
+               <th className="text-right px-4 py-3 font-medium hidden md:table-cell">Opening Stock</th>
+               <th className="text-right px-4 py-3 font-medium hidden md:table-cell">Current Stock</th>
+               <th className="text-right px-4 py-3 font-medium hidden lg:table-cell">Blocked Units</th>
+               <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">Rules</th>
+               <th className="text-left px-4 py-3 font-medium">Status</th>
+               <th className="px-4 py-3" />
+             </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filtered.map(item => (
@@ -275,6 +311,31 @@ export default function SMSItemMaster() {
                     )}
                   </td>
                   <td className="px-4 py-3 text-slate-600 hidden md:table-cell">{item.uom || 'Nos'}</td>
+                  <td className="px-4 py-3 text-right hidden md:table-cell">
+                    <span className="text-slate-600">{item.opening_stock || 0}</span>
+                  </td>
+                  <td className="px-4 py-3 text-right hidden md:table-cell">
+                    {(() => {
+                      const code = item.item_code || item.item_name;
+                      const stored = stockByItem[code] || 0;
+                      return (
+                        <span className={`font-bold ${stored > 0 ? 'text-green-700' : 'text-slate-400'}`}>
+                          {stored.toFixed(1)}
+                        </span>
+                      );
+                    })()}
+                  </td>
+                  <td className="px-4 py-3 text-right hidden lg:table-cell">
+                    {(() => {
+                      const code = item.item_code || item.item_name;
+                      const blocked = notStoredByItem[code] || 0;
+                      return blocked > 0 ? (
+                        <span className="text-amber-600 font-medium flex items-center gap-1 justify-end">
+                          <AlertTriangle className="w-3 h-3" />{blocked.toFixed(1)}
+                        </span>
+                      ) : <span className="text-slate-400">0</span>;
+                    })()}
+                  </td>
                   <td className="px-4 py-3 hidden lg:table-cell">
                     <div className="flex flex-wrap gap-1">
                       {item.batch_required && <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">Batch</span>}

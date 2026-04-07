@@ -28,20 +28,21 @@ function ItemSearchSelect({ value, storeItems, onChangeName, onSelectItem }) {
         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
         <input
           className="w-full h-11 pl-8 pr-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-teal-400"
-          placeholder="Type to search or add new..."
+          placeholder="Search from Store Item Master..."
           value={query}
-          onChange={e => { setQuery(e.target.value); onChangeName(e.target.value); setOpen(true); }}
+          onChange={e => { setQuery(e.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
         />
       </div>
       {open && (
         <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-52 overflow-y-auto">
           {filtered.length === 0 ? (
-            query.trim()
-              ? <div className="px-4 py-2.5 text-sm text-blue-600 cursor-pointer hover:bg-blue-50 flex items-center gap-2" onClick={() => { setOpen(false); onChangeName(query); }}>
-                  <Plus className="w-3.5 h-3.5" /> Add "{query}" as new item
-                </div>
-              : <div className="px-4 py-3 text-sm text-slate-400">No items found. Start typing...</div>
+            <div className="px-4 py-3 text-sm text-slate-400">
+              {query.trim()
+                ? <span className="text-amber-600">Item not found in Store Item Master. Please add it via Item Master first.</span>
+                : 'Start typing to search items...'
+              }
+            </div>
           ) : filtered.map((s, i) => (
             <div key={i} className="px-4 py-2.5 text-sm cursor-pointer hover:bg-slate-50 flex items-center gap-2"
               onClick={() => { setQuery(s.item_name); setOpen(false); onSelectItem(s); }}>
@@ -149,60 +150,69 @@ function PerItemSupplierSelect({ value, onChange, suppliers }) {
 
 export default function GRNItemCard({ index, item, storeItems, suppliers, canRemove, onUpdate, onSelectMasterItem, onRemove }) {
   const rules = item._rules;
+  const hasItem = !!item.item_name?.trim();
 
   return (
-    <div className="border border-slate-200 rounded-xl p-3 space-y-3">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold text-slate-500">Item {index + 1}</span>
-        {canRemove && (
-          <button onClick={onRemove} className="text-red-400 hover:text-red-600 p-1">
-            <Trash2 className="w-4 h-4" />
-          </button>
-        )}
-      </div>
-
-      <div className="space-y-3">
-        {/* Item Name */}
-        <div>
-          <Label className="text-xs font-medium text-slate-700">Item Name *</Label>
-          <div className="mt-1">
-            <ItemSearchSelect
-              value={item.item_name}
-              storeItems={storeItems}
-              onChangeName={v => onUpdate('item_name', v)}
-              onSelectItem={onSelectMasterItem}
-            />
+    <div className="border border-slate-200 rounded-xl overflow-hidden">
+      {/* Item Header — shows after selection */}
+      {hasItem && rules && (
+        <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 flex items-center gap-3">
+          {rules.material_photo ? (
+            <img src={rules.material_photo} alt="" className="w-9 h-9 rounded-lg object-cover border border-slate-200 shrink-0" />
+          ) : (
+            <div className="w-9 h-9 rounded-lg bg-teal-50 flex items-center justify-center shrink-0">
+              <ImageIcon className="w-4 h-4 text-teal-500" />
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-semibold text-slate-900 text-sm truncate">{item.item_name}</span>
+              {rules.batch_required && <span className="px-2 py-0.5 border border-blue-300 text-blue-700 rounded-full text-xs font-medium">Batch required</span>}
+              {rules.expiry_required && <span className="px-2 py-0.5 border border-orange-300 text-orange-700 rounded-full text-xs font-medium">Expiry required</span>}
+              {rules.qc_required && <span className="px-2 py-0.5 border border-red-300 text-red-700 rounded-full text-xs font-medium">Quality Control</span>}
+            </div>
+            <p className="text-xs text-slate-400">From Store Item Master</p>
           </div>
-          <p className="text-xs text-slate-400 mt-0.5">Type to search from Store Item Master or add new</p>
+          {canRemove && (
+            <button onClick={onRemove} className="text-red-400 hover:text-red-600 p-1.5 shrink-0">
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
         </div>
+      )}
 
-        {/* Master photo reference */}
-        {rules?.material_photo && (
-          <div className="flex items-center gap-2 bg-teal-50 rounded-lg p-2">
-            <img src={rules.material_photo} alt="" className="w-10 h-10 rounded object-cover border border-teal-200" />
-            <span className="text-xs text-teal-700">Reference photo from Item Master</span>
+      {/* Card body */}
+      <div className="p-4 space-y-3">
+        {/* Top row: Item search + remove (if no rules header) */}
+        {!hasItem && (
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs font-semibold text-slate-500">Item {index + 1}</span>
+            {canRemove && (
+              <button onClick={onRemove} className="text-red-400 hover:text-red-600 p-1">
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
           </div>
         )}
 
-        {/* Validation rules badges */}
-        {rules && (
-          <div className="flex flex-wrap gap-1">
-            {rules.batch_required && <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">Batch Required</span>}
-            {rules.expiry_required && <span className="px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded text-xs">Expiry Required</span>}
-            {rules.mfg_date_required && <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded text-xs">Manufacture Date Required</span>}
-            {rules.qc_required && <span className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-xs">Quality Control Required</span>}
-          </div>
-        )}
-
-        <div className="grid grid-cols-2 gap-2">
-          {/* Quantity */}
+        {/* Row 1: Item Name, Quantity, Unit */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div>
-            <Label className="text-xs font-medium text-slate-700">Quantity *</Label>
+            <Label className="text-xs font-medium text-slate-700">Item Name <span className="text-red-500">*</span></Label>
+            <div className="mt-1">
+              <ItemSearchSelect
+                value={item.item_name}
+                storeItems={storeItems}
+                onChangeName={v => onUpdate('item_name', v)}
+                onSelectItem={onSelectMasterItem}
+              />
+            </div>
+          </div>
+          <div>
+            <Label className="text-xs font-medium text-slate-700">Quantity <span className="text-red-500">*</span></Label>
             <Input type="number" className="h-11 text-sm mt-1" value={item.quantity}
               onChange={e => onUpdate('quantity', e.target.value)} placeholder="0" />
           </div>
-
-          {/* Unit */}
           <div>
             <Label className="text-xs font-medium text-slate-700">Unit</Label>
             <select className="w-full h-11 border border-slate-200 rounded-xl px-2 text-sm mt-1"
@@ -215,68 +225,60 @@ export default function GRNItemCard({ index, item, storeItems, suppliers, canRem
               <option value="Box">Boxes</option>
             </select>
           </div>
+        </div>
 
-          {/* Batch / Lot */}
+        {/* Row 2: Batch/Lot, Supplier, Photo */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div>
             <Label className="text-xs font-medium text-slate-700">
               Batch / Lot {rules?.batch_required && <span className="text-red-500">*</span>}
             </Label>
             <Input className="h-11 text-sm mt-1" value={item.batch_lot}
               onChange={e => onUpdate('batch_lot', e.target.value)}
-              placeholder={rules?.batch_required ? 'Required' : 'Optional'} />
+              placeholder={rules?.batch_required ? 'Enter batch number' : 'Optional'} />
             {rules?.batch_required && !item.batch_lot?.trim() && (
               <p className="text-xs text-red-500 mt-0.5">Batch number is mandatory for this item</p>
             )}
           </div>
-
-          {/* Expiry Date */}
-          {rules?.expiry_required && (
-            <div>
-              <Label className="text-xs font-medium text-slate-700">
-                Expiry Date <span className="text-red-500">*</span>
-              </Label>
-              <Input type="date" className="h-11 text-sm mt-1" value={item.expiry_date}
-                onChange={e => onUpdate('expiry_date', e.target.value)} />
-              {!item.expiry_date && (
-                <p className="text-xs text-red-500 mt-0.5">Expiry date is mandatory</p>
-              )}
+          <div>
+            <Label className="text-xs font-medium text-slate-700">Supplier Name</Label>
+            <div className="mt-1">
+              <PerItemSupplierSelect
+                value={item.supplier_name}
+                onChange={v => onUpdate('supplier_name', v)}
+                suppliers={suppliers || []}
+              />
             </div>
-          )}
-
-          {/* Manufacturing Date */}
-          {rules?.mfg_date_required && (
-            <div>
-              <Label className="text-xs font-medium text-slate-700">
-                Manufacture Date <span className="text-red-500">*</span>
-              </Label>
-              <Input type="date" className="h-11 text-sm mt-1" value={item.mfg_date}
-                onChange={e => onUpdate('mfg_date', e.target.value)} />
-              {!item.mfg_date && (
-                <p className="text-xs text-red-500 mt-0.5">Manufacture date is mandatory</p>
-              )}
+          </div>
+          <div>
+            <Label className="text-xs font-medium text-slate-700">Material Photo</Label>
+            <div className="mt-1">
+              <ItemPhotoUpload value={item.material_photo} onChange={v => onUpdate('material_photo', v)} />
             </div>
-          )}
-        </div>
-
-        {/* Per-item supplier */}
-        <div>
-          <Label className="text-xs font-medium text-slate-700">Supplier Name</Label>
-          <div className="mt-1">
-            <PerItemSupplierSelect
-              value={item.supplier_name}
-              onChange={v => onUpdate('supplier_name', v)}
-              suppliers={suppliers || []}
-            />
           </div>
         </div>
 
-        {/* Material photo upload for this GRN line */}
-        <div>
-          <Label className="text-xs font-medium text-slate-700">Material Photo</Label>
-          <div className="mt-1">
-            <ItemPhotoUpload value={item.material_photo} onChange={v => onUpdate('material_photo', v)} />
+        {/* Row 3: Expiry + Mfg date (conditional) */}
+        {(rules?.expiry_required || rules?.mfg_date_required) && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {rules?.expiry_required && (
+              <div>
+                <Label className="text-xs font-medium text-slate-700">Expiry Date <span className="text-red-500">*</span></Label>
+                <Input type="date" className="h-11 text-sm mt-1" value={item.expiry_date}
+                  onChange={e => onUpdate('expiry_date', e.target.value)} />
+                {!item.expiry_date && <p className="text-xs text-red-500 mt-0.5">Expiry date is mandatory</p>}
+              </div>
+            )}
+            {rules?.mfg_date_required && (
+              <div>
+                <Label className="text-xs font-medium text-slate-700">Manufacture Date <span className="text-red-500">*</span></Label>
+                <Input type="date" className="h-11 text-sm mt-1" value={item.mfg_date}
+                  onChange={e => onUpdate('mfg_date', e.target.value)} />
+                {!item.mfg_date && <p className="text-xs text-red-500 mt-0.5">Manufacture date is mandatory</p>}
+              </div>
+            )}
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

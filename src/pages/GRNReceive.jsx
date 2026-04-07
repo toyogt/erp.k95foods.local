@@ -403,29 +403,27 @@ export default function GRNReceive() {
       {/* Create Tab — Items Entry Form */}
       {activeTab === 'create' && selected && (
         <div className="space-y-4">
-          {/* Header */}
-          <div className="flex items-center gap-2">
-            <button onClick={() => setSelected(null)} className="text-blue-500 text-sm font-semibold">← Back</button>
-            <span className="font-bold text-slate-900">{selected.gate_id}</span>
-          </div>
-
-          {/* Gate entry summary */}
-          <div className="bg-slate-50 rounded-xl p-3 text-sm space-y-1">
-            {selected.vehicle_number && (
-              <div className="flex justify-between text-xs text-slate-500">
-                <span>Vehicle</span>
-                <span className="font-semibold text-slate-700">{selected.vehicle_number}</span>
+          {/* Header — breadcrumb + gate info */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div>
+              <div className="flex items-center gap-2 text-sm">
+                <button onClick={() => setSelected(null)} className="text-blue-500 font-semibold">← Back</button>
+                <span className="text-slate-400">/</span>
+                <span className="text-slate-500">Goods Received Notes</span>
               </div>
-            )}
-            <div className="flex justify-between text-xs text-slate-500">
-              <span>Driver Number</span>
-              <span className="font-semibold text-slate-700">{selected.driver_number || '—'}</span>
+              <h2 className="text-xl font-bold text-slate-900 mt-1">
+                Goods Received Note <span className="font-mono text-base text-slate-500 ml-1">{selected.gate_id}</span>
+              </h2>
+            </div>
+            <div className="flex items-center gap-4 text-xs text-slate-500">
+              {selected.vehicle_number && <span>Vehicle: <strong className="text-slate-700">{selected.vehicle_number}</strong></span>}
+              <span>Driver: <strong className="text-slate-700">{selected.driver_name || '—'}</strong></span>
             </div>
           </div>
 
           {/* Items section */}
-          <div>
-            <p className="text-sm font-semibold text-slate-700 mb-2">Items Received *</p>
+          <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-5">
+            <p className="text-sm font-semibold text-slate-900 uppercase tracking-wide mb-3">Items Received <span className="text-red-500">*</span></p>
             <div className="space-y-3">
               {items.map((it, idx) => (
                 <GRNItemCard
@@ -443,21 +441,21 @@ export default function GRNReceive() {
             </div>
             <button
               onClick={addItem}
-              className="mt-2 w-full border-2 border-dashed border-slate-300 rounded-lg py-3 text-sm text-slate-500 hover:border-blue-400 hover:text-blue-600 flex items-center justify-center gap-2 transition-colors"
+              className="mt-3 text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1.5 transition-colors"
             >
-              <Plus className="w-4 h-4" /> Add Another Item
+              <Plus className="w-4 h-4" /> Add another item
             </button>
           </div>
 
           {/* Notes */}
-          <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">Goods Received Notes</label>
+          <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-5">
+            <label className="block text-sm font-semibold text-slate-900 uppercase tracking-wide mb-2">Goods Received Notes</label>
             <textarea
-              rows={2}
+              rows={3}
               placeholder="Overall notes, discrepancies..."
               value={grnNotes}
               onChange={e => setGrnNotes(e.target.value)}
-              className="w-full border border-slate-200 rounded-xl px-4 py-2 text-sm resize-none"
+              className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm resize-none"
             />
           </div>
 
