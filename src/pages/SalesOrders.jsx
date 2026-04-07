@@ -305,6 +305,7 @@ export default function SalesOrders() {
           </div>
           <TablePagination {...pagination} />
           </>
+        )}
       </div>
 
       {showCreateModal && (
