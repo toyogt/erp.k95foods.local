@@ -4,6 +4,7 @@ import { Package } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import ExportButton from '@/components/store/ExportButton';
 import PutawayPanel from '@/components/store/PutawayPanel';
+import PutawayTabs from '@/components/store/PutawayTabs';
 
 export default function SMSPutaway() {
   const { toast } = useToast();
@@ -82,60 +83,9 @@ export default function SMSPutaway() {
         />
       )}
 
-      {/* Pending lots quick-list */}
-      {pendingLots.length > 0 && (
-        <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/70 shadow-sm overflow-hidden">
-          <div className="px-4 py-3 border-b bg-slate-50">
-            <p className="text-sm font-semibold text-slate-700">Approved Lots — Pending Putaway</p>
-          </div>
-          <div className="divide-y divide-slate-100">
-            {pendingLots.map(lot => (
-              <div key={lot.id} className="px-4 py-3 flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-slate-800">{lot.lot_id}</p>
-                  <p className="text-xs text-slate-500">{lot.item_name} · {lot.supplier_name}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-bold text-slate-800">{lot.remaining_quantity ?? lot.quantity} {lot.uom}</p>
-                  <p className="text-xs text-green-600">Ready for putaway</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Recent history */}
-      {putawayHistory.length > 0 && (
-        <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/70 shadow-sm overflow-hidden">
-          <div className="px-4 py-3 border-b bg-slate-50">
-            <p className="text-sm font-semibold text-slate-700">Recent Putaway History</p>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-slate-100 text-xs text-slate-600">
-                  <th className="text-left px-4 py-2">Lot</th>
-                  <th className="text-left px-4 py-2">Item</th>
-                  <th className="text-left px-4 py-2">Location</th>
-                  <th className="text-right px-4 py-2">Quantity</th>
-                  <th className="text-left px-4 py-2">By</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {putawayHistory.slice(0, 10).map(p => (
-                  <tr key={p.id} className="hover:bg-slate-50">
-                    <td className="px-4 py-2.5 font-mono text-xs font-bold text-slate-700">{p.lot_id}</td>
-                    <td className="px-4 py-2.5 text-slate-800">{p.item_name}</td>
-                    <td className="px-4 py-2.5 font-mono text-xs text-slate-600">{p.location_code}</td>
-                    <td className="px-4 py-2.5 text-right font-bold text-slate-800">{p.quantity} {p.uom}</td>
-                    <td className="px-4 py-2.5 text-xs text-slate-400">{p.putaway_by}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+      {/* Tabs */}
+      {!loading && (
+        <PutawayTabs pendingLots={pendingLots} putawayHistory={putawayHistory} />
       )}
       </div>
       </div>

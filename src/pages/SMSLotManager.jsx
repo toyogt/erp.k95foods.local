@@ -206,8 +206,8 @@ export default function SMSLotManager() {
         <SkeletonTable rows={6} cols={11} headers={LOT_HEADERS} />
       ) : (
         <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/70 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto -mx-3 md:-mx-4 lg:-mx-6">
-            <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm table-auto">
               <thead>
                 <tr className="bg-slate-100 text-slate-700 text-xs whitespace-nowrap">
                   {LOT_HEADERS.map(h => (
@@ -222,8 +222,8 @@ export default function SMSLotManager() {
                   const stored = storedByLot[lot.lot_id] ?? 0;
                   const issued = issuedByLot[lot.lot_id] ?? 0;
                   return (
-                    <tr key={lot.id} className="hover:bg-slate-50 whitespace-nowrap">
-                      <td className="px-3 md:px-4 py-3 font-mono text-xs font-bold text-slate-800">{lot.lot_id}</td>
+                    <tr key={lot.id} className="hover:bg-slate-50">
+                      <td className="px-3 md:px-4 py-3 font-mono text-sm font-bold text-slate-800 whitespace-nowrap min-w-[180px]">{lot.lot_id}</td>
                       <td className="px-3 md:px-4 py-3">
                         <p className="font-medium text-slate-800 truncate">{lot.item_name}</p>
                         <p className="text-xs text-slate-400">{lot.item_code}</p>
