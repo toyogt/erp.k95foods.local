@@ -3,87 +3,36 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, CheckCircle2, Truck, Camera, FileText, Languages } from 'lucide-react';
-import PhotoUploader from '@/components/grn/PhotoUploader';
+import { Loader2, Truck, ArrowRight } from 'lucide-react';
 import { showErrorAlert, showSuccessToast } from '@/lib/toastHelpers';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import ChecklistGate from '@/components/grn/ChecklistGate';
-import { genId, logGrnAudit, getChecklistTemplate } from '@/components/grn/grnHelpers';
+import { logGrnAudit, getChecklistTemplate } from '@/components/grn/grnHelpers';
 import { fireFMSEvent } from '@/lib/useFMSAutoComplete';
-import GateEntryInfoModal, { InfoButton } from '@/components/store/GateEntryInfoModal';
 import { nextSerial } from '@/lib/serialCounter';
 import { useNavigate } from 'react-router-dom';
-import { History, Loader2 as LoaderIcon } from 'lucide-react';
 import useDraftSave from '@/hooks/useDraftSave';
 
-function GateEntryHistory() {
-  const [entries, setEntries] = useState([]);
-  const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    base44.entities.GateEntry.list('-created_date', 100).then(d => { setEntries(d); setLoading(false); }).catch(() => setLoading(false));
-  }, []);
-  if (loading) return <div className="py-8 text-center text-slate-400"><LoaderIcon className="w-5 h-5 animate-spin mx-auto" /></div>;
-  if (entries.length === 0) return <div className="py-12 text-center text-slate-400">No Gate Entry records yet.</div>;
-  return (
-    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-slate-100 text-slate-700 text-xs">
-              <th className="text-left px-4 py-3 font-medium">Gate Entry ID</th>
-              <th className="text-left px-4 py-3 font-medium">Vehicle Number</th>
-              <th className="text-left px-4 py-3 font-medium">Driver</th>
-              <th className="text-left px-4 py-3 font-medium">Driver Mobile</th>
-              <th className="text-left px-4 py-3 font-medium">Status</th>
-              <th className="text-left px-4 py-3 font-medium">Arrived</th>
-              <th className="text-left px-4 py-3 font-medium">Photos</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {entries.map(e => (
-              <tr key={e.id} className="hover:bg-slate-50">
-                <td className="px-4 py-3 font-mono font-bold text-slate-900">{e.gate_id}</td>
-                <td className="px-4 py-3 text-slate-700">{e.vehicle_number || '—'}</td>
-                <td className="px-4 py-3 text-slate-600">{e.driver_name || '—'}</td>
-                <td className="px-4 py-3 text-slate-600">{e.driver_number || '—'}</td>
-                <td className="px-4 py-3">
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${e.status === 'PROCESSED' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>{e.status}</span>
-                </td>
-                <td className="px-4 py-3 text-xs text-slate-500">
-                  {e.arrived_at ? new Date(e.arrived_at).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'}
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex gap-1.5">
-                    {e.vehicle_photo && <img src={e.vehicle_photo} alt="vehicle" className="w-10 h-8 object-cover rounded border border-slate-200" />}
-                    {e.invoice_photo && <img src={e.invoice_photo} alt="invoice" className="w-10 h-8 object-cover rounded border border-slate-200" />}
-                    {e.material_photo && <img src={e.material_photo} alt="material" className="w-10 h-8 object-cover rounded border border-slate-200" />}
-                    {!e.vehicle_photo && !e.invoice_photo && !e.material_photo && <span className="text-slate-400 text-xs">—</span>}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
+import GateEntryHeader from '@/components/gate/GateEntryHeader';
+import StepProgressBar from '@/components/gate/StepProgressBar';
+import TransportTypePicker from '@/components/gate/TransportTypePicker';
+import PhotoCaptureCard from '@/components/gate/PhotoCaptureCard';
+import GateHistoryMobile from '@/components/gate/GateHistoryMobile';
 
-// Hindi / English label maps
+// Hindi / English labels
 const T = {
   en: {
     title: 'Gate Entry',
     steps: ['Capture Photos', 'Enter Details', 'Review & Submit'],
     photoSubtitle: 'Capture required photos for verification',
-    transportType: 'Transport Type',
+    transportLabels: { vehicle: 'Vehicle', bicycle: 'Courier', manual: 'On Foot' },
     vehiclePhoto: 'Vehicle Photo',
-    invoicePhoto: 'Invoice / Document Photo',
-    materialPhoto: 'Material / Goods Photo',
+    invoicePhoto: 'Invoice / Document',
+    materialPhoto: 'Goods / Material',
     vehiclePhotoHelp: 'Clear photo of vehicle from front or side',
     invoicePhotoHelp: 'Capture invoice or delivery document clearly',
     materialPhotoHelp: 'Photo of goods being received',
-    tapToUpload: 'Tap to upload',
     vehicleNumber: 'Vehicle Number',
     driverName: 'Driver Name (optional)',
     driverNumber: 'Driver Mobile Number',
@@ -92,23 +41,14 @@ const T = {
     phoneValidation: 'Enter a valid 10-digit mobile number starting with 6–9',
     notes: 'Notes',
     notesPlaceholder: 'Any remarks...',
-    continue: 'Continue to Details →',
-    back: '← Back',
-    next: 'Review →',
+    continue: 'Continue to Details',
+    back: 'Back',
+    next: 'Review',
     submit: 'Submit Gate Entry',
     submitting: 'Submitting...',
-    success: 'Gate Entry Created',
-    proceedGRN: 'Proceed to Goods Receipt →',
-    newEntry: 'New Gate Entry',
     checklistTitle: 'Gate Entry Checklist',
-    tabs: { new: 'New Gate Entry', history: 'Documents / History' },
+    guided: "You'll be guided through each photo in sequence",
     reviewLabels: { transport: 'Transport', vehicleNumber: 'Vehicle Number', driverName: 'Driver Name', driverNumber: 'Driver Number', notes: 'Notes' },
-    transport: {
-      vehicle: 'Vehicle (Car, Truck, Bike)',
-      bicycle: 'Bicycle / Cycle Rickshaw',
-      manual: 'Manual (Foot / Hand Delivery)',
-      other: 'Other',
-    },
     validation: {
       vehiclePhoto: 'Vehicle photo is required.',
       invoicePhoto: 'Invoice photo is required.',
@@ -120,47 +60,37 @@ const T = {
   },
   hi: {
     title: 'गेट एंट्री',
-    steps: ['फ़ोटो लें', 'विवरण दर्ज करें', 'समीक्षा करें और सबमिट करें'],
+    steps: ['फ़ोटो लें', 'विवरण दर्ज करें', 'समीक्षा और सबमिट'],
     photoSubtitle: 'सत्यापन के लिए आवश्यक फ़ोटो लें',
-    transportType: 'परिवहन का प्रकार',
+    transportLabels: { vehicle: 'वाहन', bicycle: 'कूरियर', manual: 'पैदल' },
     vehiclePhoto: 'वाहन की फ़ोटो',
-    invoicePhoto: 'इनवॉयस / दस्तावेज़ फ़ोटो',
-    materialPhoto: 'सामान / माल की फ़ोटो',
-    vehiclePhotoHelp: 'वाहन की सामने या बगल से स्पष्ट फ़ोटो लें',
-    invoicePhotoHelp: 'इनवॉयस या डिलीवरी दस्तावेज़ की स्पष्ट फ़ोटो लें',
-    materialPhotoHelp: 'प्राप्त हो रहे सामान की फ़ोटो लें',
-    tapToUpload: 'अपलोड करने के लिए टैप करें',
+    invoicePhoto: 'इनवॉयस / दस्तावेज़',
+    materialPhoto: 'सामान / माल',
+    vehiclePhotoHelp: 'वाहन की सामने या बगल से स्पष्ट फ़ोटो',
+    invoicePhotoHelp: 'इनवॉयस या डिलीवरी दस्तावेज़ की स्पष्ट फ़ोटो',
+    materialPhotoHelp: 'प्राप्त हो रहे सामान की फ़ोटो',
     vehicleNumber: 'वाहन नंबर',
     driverName: 'चालक का नाम (वैकल्पिक)',
     driverNumber: 'चालक का मोबाइल नंबर',
     driverNumberPlaceholder: 'जैसे 9876543210',
     driverNamePlaceholder: 'चालक का नाम',
-    phoneValidation: '6–9 से शुरू होने वाला सही 10 अंकों का मोबाइल नंबर दर्ज करें',
+    phoneValidation: '6–9 से शुरू होने वाला 10 अंकों का मोबाइल नंबर दर्ज करें',
     notes: 'टिप्पणी',
     notesPlaceholder: 'कोई टिप्पणी...',
-    continue: 'विवरण की ओर जाएं →',
-    back: '← वापस',
-    next: 'समीक्षा करें →',
+    continue: 'विवरण की ओर जाएं',
+    back: 'वापस',
+    next: 'समीक्षा',
     submit: 'गेट एंट्री सबमिट करें',
     submitting: 'सबमिट हो रहा है...',
-    success: 'गेट एंट्री बनाई गई',
-    proceedGRN: 'माल रसीद की ओर जाएं →',
-    newEntry: 'नई गेट एंट्री',
     checklistTitle: 'गेट एंट्री चेकलिस्ट',
-    tabs: { new: 'नई गेट एंट्री', history: 'दस्तावेज़ / इतिहास' },
+    guided: 'आपको क्रम में प्रत्येक फ़ोटो के लिए गाइड किया जाएगा',
     reviewLabels: { transport: 'परिवहन', vehicleNumber: 'वाहन नंबर', driverName: 'चालक का नाम', driverNumber: 'चालक का नंबर', notes: 'टिप्पणी' },
-    transport: {
-      vehicle: 'वाहन (कार, ट्रक, बाइक)',
-      bicycle: 'साइकिल / साइकिल रिक्शा',
-      manual: 'पैदल / हाथ से डिलीवरी',
-      other: 'अन्य',
-    },
     validation: {
       vehiclePhoto: 'वाहन की फ़ोटो आवश्यक है।',
       invoicePhoto: 'इनवॉयस फ़ोटो आवश्यक है।',
       materialPhoto: 'सामान की फ़ोटो आवश्यक है।',
       driverNumber: 'चालक का मोबाइल नंबर आवश्यक है।',
-      driverNumberFormat: 'सही 10 अंकों का भारतीय मोबाइल नंबर दर्ज करें।',
+      driverNumberFormat: 'सही 10 अंकों का मोबाइल नंबर दर्ज करें।',
       vehicleNumber: 'वाहन नंबर आवश्यक है।',
     },
   },
@@ -187,9 +117,8 @@ export default function GateEntryPage() {
   const t = T[lang];
 
   const [user, setUser] = useState(null);
-  const [activeTab, setActiveTab] = useState('new');
+  const [showHistory, setShowHistory] = useState(false);
   const [step, setStep] = useState(0);
-  const [showInfo, setShowInfo] = useState(false);
   const [form, setForm, clearDraft, hasDraft] = useDraftSave('gate_entry', GATE_DRAFT_INITIAL);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(null);
@@ -200,6 +129,13 @@ export default function GateEntryPage() {
 
   function setField(k, v) { setForm(prev => ({ ...prev, [k]: v })); }
 
+  // Count completed photos
+  const photosRequired = form.transport_type === 'vehicle' ? 3 : 2;
+  const photosDone = [
+    form.transport_type === 'vehicle' && form.vehicle_photo,
+    form.invoice_photo,
+    form.material_photo,
+  ].filter(Boolean).length;
 
   function validateStep0() {
     if (form.transport_type === 'vehicle' && !form.vehicle_photo) {
@@ -281,250 +217,237 @@ export default function GateEntryPage() {
     setChecklistTemplate(null);
   }
 
-  // ── Success screen — just reset to new entry ─────────────────────────────────
   useEffect(() => {
     if (done) {
-      // Auto-reset to new form after success
       const timer = setTimeout(() => resetForm(), 100);
       return () => clearTimeout(timer);
     }
   }, [done]);
 
-  // ── Checklist screen ─────────────────────────────────────────────────────────
+  // Checklist screen
   if (checklistTemplate) {
     return (
-      <div className="min-h-screen bg-slate-50 pb-12">
-        <div className="max-w-4xl mx-auto px-3 md:px-4 lg:px-6 py-6 space-y-4">
-          <h2 className="text-2xl font-bold text-slate-900">{t.checklistTitle}</h2>
-          {loadingCL ? <Loader2 className="w-6 h-6 animate-spin mx-auto text-slate-400" /> : (
-            <ChecklistGate
-              template={checklistTemplate.tmpl}
-              entityId={checklistTemplate.gate_id}
-              entityType="GateEntry"
-              user={user}
-              onComplete={handleChecklistDone}
-              onSkip={() => setDone({ gate_id: checklistTemplate.gate_id })}
-            />
-          )}
-        </div>
+      <div className="max-w-lg mx-auto px-3 py-4 space-y-4">
+        <h2 className="text-xl font-bold text-slate-900">{t.checklistTitle}</h2>
+        {loadingCL ? <Loader2 className="w-6 h-6 animate-spin mx-auto text-slate-400" /> : (
+          <ChecklistGate
+            template={checklistTemplate.tmpl}
+            entityId={checklistTemplate.gate_id}
+            entityType="GateEntry"
+            user={user}
+            onComplete={handleChecklistDone}
+            onSkip={() => setDone({ gate_id: checklistTemplate.gate_id })}
+          />
+        )}
       </div>
     );
   }
 
-  // ── Main form ────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-slate-50 pb-12">
+    <div className="max-w-lg mx-auto pb-12">
       <ToastContainer />
-      <div className="max-w-4xl mx-auto px-3 md:px-4 lg:px-6 py-6 space-y-4">
-        {showInfo && <GateEntryInfoModal onClose={() => setShowInfo(false)} />}
+      <div className="px-1 md:px-0 space-y-4">
 
-        {/* Header bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
-          <h1 className="text-2xl font-bold text-slate-900">{t.title}</h1>
-          <div className="flex items-center gap-2">
-            <InfoButton onClick={() => setShowInfo(true)} />
-            <button
-              onClick={() => setLang(l => l === 'en' ? 'hi' : 'en')}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-full border border-slate-200 text-slate-600 text-xs font-medium hover:bg-slate-50 transition-colors"
-            >
-              <Languages className="w-4 h-4" />
-              {lang === 'en' ? 'हिंदी' : 'English'}
-            </button>
-          </div>
-        </div>
+        {/* Header */}
+        <GateEntryHeader
+          title={t.title}
+          lang={lang}
+          onLangToggle={() => setLang(l => l === 'en' ? 'hi' : 'en')}
+          onHistoryToggle={() => setShowHistory(h => !h)}
+          showHistory={showHistory}
+        />
 
-        {/* Tabs */}
-        <div className="flex justify-center border-b border-slate-200 overflow-x-auto">
-          {[{ id: 'new', labelKey: 'new', icon: FileText }, { id: 'history', labelKey: 'history', icon: History }].map(tab => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-                activeTab === tab.id ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-700'
-              }`}>
-              <tab.icon className="w-4 h-4" />{t.tabs[tab.labelKey]}
-            </button>
-          ))}
-        </div>
+        {/* History view */}
+        {showHistory && <GateHistoryMobile />}
 
-        {activeTab === 'history' && <GateEntryHistory />}
+        {/* Form view */}
+        {!showHistory && (
+          <>
+            {/* Step progress bar */}
+            <StepProgressBar
+              currentStep={step}
+              totalSteps={3}
+              stepLabel={t.steps[step]}
+              completionText={step === 0 ? `${photosDone}/${photosRequired} done` : null}
+            />
 
-        {/* Draft banner */}
-        {activeTab === 'new' && hasDraft && step === 0 && (
-          <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-            <p className="text-xs text-amber-700 font-medium">You have an unsaved draft Gate Entry</p>
-            <button onClick={resetForm} className="text-xs text-red-500 hover:text-red-700 font-medium">Clear Draft</button>
-          </div>
-        )}
-
-        {/* Step indicator */}
-        {activeTab === 'new' && <div className="flex items-center gap-1 overflow-x-auto pb-2">
-          {t.steps.map((s, i) => (
-            <div key={i} className="flex items-center gap-1 flex-1 min-w-max">
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                i < step ? 'bg-green-500 text-white' : i === step ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-400'
-              }`}>
-                {i < step ? '✓' : i + 1}
-              </div>
-              <span className={`text-xs font-medium hidden sm:block ${i === step ? 'text-slate-900' : 'text-slate-400'}`}>{s}</span>
-              {i < t.steps.length - 1 && <div className={`flex-1 h-0.5 hidden sm:block ${i < step ? 'bg-green-400' : 'bg-slate-200'}`} />}
-            </div>
-          ))}
-        </div>}
-
-        {/* ── Step 0: Photos ── */}
-        {activeTab === 'new' && step === 0 && (
-          <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-6 space-y-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
-                <Camera className="w-5 h-5 text-blue-600" />
-              </div>
-              <div>
-                <h2 className="font-bold text-lg text-slate-900">{t.steps[0]}</h2>
-                <p className="text-xs text-slate-500 mt-0.5">{t.photoSubtitle}</p>
-              </div>
-            </div>
-            
-            <div>
-              <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wide">{t.transportType} *</Label>
-              <select
-                value={form.transport_type}
-                onChange={e => setField('transport_type', e.target.value)}
-                className="w-full h-11 md:h-10 border border-slate-200 rounded-xl px-4 py-2.5 text-base md:text-sm mt-2 bg-white font-medium"
-              >
-                <option value="vehicle">{t.transport.vehicle}</option>
-                <option value="bicycle">{t.transport.bicycle}</option>
-                <option value="manual">{t.transport.manual}</option>
-                <option value="other">{t.transport.other}</option>
-              </select>
-            </div>
-            
-            <div className="grid grid-cols-1 gap-5">
-              {form.transport_type === 'vehicle' && (
-                <div className="bg-slate-50 rounded-xl border border-slate-200 p-4">
-                  <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-3 block">{t.vehiclePhoto} <span className="text-red-500">*</span></Label>
-                  <PhotoUploader required value={form.vehicle_photo} onChange={v => setField('vehicle_photo', v)} />
-                  <p className="text-xs text-slate-500 mt-2">{t.vehiclePhotoHelp}</p>
-                </div>
-              )}
-              <div className="bg-slate-50 rounded-xl border border-slate-200 p-4">
-                <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-3 block">{t.invoicePhoto} <span className="text-red-500">*</span></Label>
-                <PhotoUploader required value={form.invoice_photo} onChange={v => setField('invoice_photo', v)} />
-                <p className="text-xs text-slate-500 mt-2">{t.invoicePhotoHelp}</p>
-              </div>
-              <div className="bg-slate-50 rounded-xl border border-slate-200 p-4">
-                <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-3 block">{t.materialPhoto} <span className="text-red-500">*</span></Label>
-                <PhotoUploader required value={form.material_photo} onChange={v => setField('material_photo', v)} />
-                <p className="text-xs text-slate-500 mt-2">{t.materialPhotoHelp}</p>
-              </div>
-            </div>
-            
-            <Button onClick={() => { if (validateStep0()) setStep(1); }} className="w-full h-12 md:h-11 bg-slate-900 hover:bg-slate-800 text-base md:text-sm font-medium rounded-xl">
-              {t.continue}
-            </Button>
-          </div>
-        )}
-
-        {/* ── Step 1: Details ── */}
-        {activeTab === 'new' && step === 1 && (
-          <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-6 space-y-4">
-            <div className="flex items-center gap-2">
-              <Truck className="w-5 h-5 text-slate-600" />
-              <h2 className="font-bold text-slate-900">{t.steps[1]}</h2>
-            </div>
-
-            {form.transport_type === 'vehicle' && (
-              <div>
-                <Label className="text-xs font-medium text-slate-700">{t.vehicleNumber} *</Label>
-                <Input
-                  className="h-11 text-base md:text-sm mt-2 font-mono uppercase"
-                  value={form.vehicle_number}
-                  onChange={e => setField('vehicle_number', e.target.value.toUpperCase())}
-                  placeholder="e.g. MH12AB1234"
-                />
+            {/* Draft banner */}
+            {hasDraft && step === 0 && (
+              <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5">
+                <p className="text-xs text-amber-700 font-medium">You have an unsaved draft</p>
+                <button onClick={resetForm} className="text-xs text-red-500 hover:text-red-700 font-medium">Clear</button>
               </div>
             )}
 
-            <div>
-              <Label className="text-xs font-medium text-slate-700">{t.driverName}</Label>
-              <Input
-                className="h-11 md:h-9 text-base md:text-sm mt-2"
-                value={form.driver_name}
-                onChange={e => setField('driver_name', e.target.value)}
-                placeholder={t.driverNamePlaceholder}
-              />
-            </div>
+            {/* ── Step 0: Capture Photos ── */}
+            {step === 0 && (
+              <div className="space-y-4">
+                {/* Transport type picker */}
+                <TransportTypePicker
+                  value={form.transport_type}
+                  onChange={v => setField('transport_type', v)}
+                  labels={t.transportLabels}
+                />
 
-            <div>
-              <Label className="text-xs font-medium text-slate-700">{t.driverNumber} *</Label>
-              <Input
-                className="h-11 text-base mt-2"
-                type="tel"
-                inputMode="numeric"
-                maxLength={10}
-                value={form.driver_number}
-                onChange={e => setField('driver_number', e.target.value.replace(/\D/g, ''))}
-                placeholder={t.driverNumberPlaceholder}
-              />
-              {form.driver_number && !isValidIndianPhone(form.driver_number) && (
-                <p className="text-xs text-red-500 mt-1">{t.phoneValidation}</p>
-              )}
-            </div>
+                {/* Photo cards */}
+                <div className="space-y-3">
+                  {form.transport_type === 'vehicle' && (
+                    <PhotoCaptureCard
+                      type="vehicle"
+                      label={t.vehiclePhoto}
+                      helpText={t.vehiclePhotoHelp}
+                      value={form.vehicle_photo}
+                      onChange={v => setField('vehicle_photo', v)}
+                      large
+                    />
+                  )}
 
-            <div>
-              <Label className="text-xs font-medium text-slate-700">{t.notes}</Label>
-              <textarea
-                value={form.notes}
-                onChange={e => setField('notes', e.target.value)}
-                rows={2}
-                placeholder={t.notesPlaceholder}
-                className="w-full border border-slate-200 rounded-xl px-4 py-3 text-base md:text-sm resize-none mt-2"
-              />
-            </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <PhotoCaptureCard
+                      type="invoice"
+                      label={t.invoicePhoto}
+                      helpText={t.invoicePhotoHelp}
+                      value={form.invoice_photo}
+                      onChange={v => setField('invoice_photo', v)}
+                    />
+                    <PhotoCaptureCard
+                      type="material"
+                      label={t.materialPhoto}
+                      helpText={t.materialPhotoHelp}
+                      value={form.material_photo}
+                      onChange={v => setField('material_photo', v)}
+                    />
+                  </div>
+                </div>
 
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setStep(0)} className="flex-1 h-11 md:h-12 text-sm md:text-base">{t.back}</Button>
-              <Button onClick={() => { if (validateStep1()) setStep(2); }} className="flex-1 h-11 md:h-12 bg-slate-900 text-sm md:text-base">{t.next}</Button>
-            </div>
-          </div>
-        )}
+                {/* Progress indicator for photos */}
+                <div className="w-full bg-slate-100 rounded-full h-1.5">
+                  <div
+                    className="bg-blue-600 h-1.5 rounded-full transition-all duration-300"
+                    style={{ width: `${(photosDone / photosRequired) * 100}%` }}
+                  />
+                </div>
 
-        {/* ── Step 2: Review ── */}
-        {activeTab === 'new' && step === 2 && (
-          <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-6 space-y-4">
-            <div className="flex items-center gap-2">
-              <FileText className="w-5 h-5 text-slate-600" />
-              <h2 className="font-bold text-slate-900">{t.steps[2]}</h2>
-            </div>
-            <div className="space-y-2 text-sm">
-              <Row label={t.reviewLabels.transport} value={form.transport_type} />
-              {form.transport_type === 'vehicle' && <Row label={t.reviewLabels.vehicleNumber} value={form.vehicle_number} />}
-              {form.driver_name && <Row label={t.reviewLabels.driverName} value={form.driver_name} />}
-              <Row label={t.reviewLabels.driverNumber} value={form.driver_number} />
-              {form.notes && <Row label={t.reviewLabels.notes} value={form.notes} />}
-            </div>
-            <div className="flex gap-3 flex-wrap">
-              {form.vehicle_photo && <img src={form.vehicle_photo} alt="vehicle" className="w-20 h-16 object-cover rounded-lg border" />}
-              {form.invoice_photo && <img src={form.invoice_photo} alt="invoice" className="w-20 h-16 object-cover rounded-lg border" />}
-              {form.material_photo && <img src={form.material_photo} alt="material" className="w-20 h-16 object-cover rounded-lg border" />}
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setStep(1)} className="flex-1 h-11 md:h-12 text-sm md:text-base">{t.back}</Button>
-              <Button onClick={handleSubmit} disabled={submitting} className="flex-1 h-11 md:h-12 bg-green-600 hover:bg-green-700 text-sm md:text-base">
-                {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
-                {submitting ? t.submitting : t.submit}
-              </Button>
-            </div>
-          </div>
+                {/* CTA Button */}
+                <Button
+                  onClick={() => { if (validateStep0()) setStep(1); }}
+                  className="w-full h-12 bg-slate-900 hover:bg-slate-800 text-base font-medium rounded-xl gap-2"
+                >
+                  {t.continue} <ArrowRight className="w-4 h-4" />
+                </Button>
+
+                <p className="text-xs text-slate-400 text-center">{t.guided}</p>
+              </div>
+            )}
+
+            {/* ── Step 1: Enter Details ── */}
+            {step === 1 && (
+              <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-4">
+                <div className="flex items-center gap-2">
+                  <Truck className="w-5 h-5 text-slate-600" />
+                  <h2 className="font-bold text-slate-900">{t.steps[1]}</h2>
+                </div>
+
+                {form.transport_type === 'vehicle' && (
+                  <div>
+                    <Label className="text-xs font-medium text-slate-700">{t.vehicleNumber} *</Label>
+                    <Input
+                      className="h-11 text-base mt-1.5 font-mono uppercase rounded-xl"
+                      value={form.vehicle_number}
+                      onChange={e => setField('vehicle_number', e.target.value.toUpperCase())}
+                      placeholder="e.g. MH12AB1234"
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <Label className="text-xs font-medium text-slate-700">{t.driverName}</Label>
+                  <Input
+                    className="h-11 text-base mt-1.5 rounded-xl"
+                    value={form.driver_name}
+                    onChange={e => setField('driver_name', e.target.value)}
+                    placeholder={t.driverNamePlaceholder}
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-xs font-medium text-slate-700">{t.driverNumber} *</Label>
+                  <Input
+                    className="h-11 text-base mt-1.5 rounded-xl"
+                    type="tel"
+                    inputMode="numeric"
+                    maxLength={10}
+                    value={form.driver_number}
+                    onChange={e => setField('driver_number', e.target.value.replace(/\D/g, ''))}
+                    placeholder={t.driverNumberPlaceholder}
+                  />
+                  {form.driver_number && !isValidIndianPhone(form.driver_number) && (
+                    <p className="text-xs text-red-500 mt-1">{t.phoneValidation}</p>
+                  )}
+                </div>
+
+                <div>
+                  <Label className="text-xs font-medium text-slate-700">{t.notes}</Label>
+                  <textarea
+                    value={form.notes}
+                    onChange={e => setField('notes', e.target.value)}
+                    rows={2}
+                    placeholder={t.notesPlaceholder}
+                    className="w-full border border-slate-200 rounded-xl px-4 py-3 text-base resize-none mt-1.5"
+                  />
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <Button variant="outline" onClick={() => setStep(0)} className="flex-1 h-12 text-sm rounded-xl">{t.back}</Button>
+                  <Button onClick={() => { if (validateStep1()) setStep(2); }} className="flex-1 h-12 bg-slate-900 text-sm rounded-xl gap-2">
+                    {t.next} <ArrowRight className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* ── Step 2: Review & Submit ── */}
+            {step === 2 && (
+              <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-4">
+                <h2 className="font-bold text-slate-900">{t.steps[2]}</h2>
+
+                {/* Review details */}
+                <div className="bg-slate-50 rounded-xl p-3 space-y-2">
+                  <ReviewRow label={t.reviewLabels.transport} value={t.transportLabels[form.transport_type] || form.transport_type} />
+                  {form.transport_type === 'vehicle' && <ReviewRow label={t.reviewLabels.vehicleNumber} value={form.vehicle_number} />}
+                  {form.driver_name && <ReviewRow label={t.reviewLabels.driverName} value={form.driver_name} />}
+                  <ReviewRow label={t.reviewLabels.driverNumber} value={form.driver_number} />
+                  {form.notes && <ReviewRow label={t.reviewLabels.notes} value={form.notes} />}
+                </div>
+
+                {/* Photo previews */}
+                <div className="flex gap-2">
+                  {form.vehicle_photo && <img src={form.vehicle_photo} alt="vehicle" className="flex-1 h-20 object-cover rounded-xl border border-slate-200" />}
+                  {form.invoice_photo && <img src={form.invoice_photo} alt="invoice" className="flex-1 h-20 object-cover rounded-xl border border-slate-200" />}
+                  {form.material_photo && <img src={form.material_photo} alt="material" className="flex-1 h-20 object-cover rounded-xl border border-slate-200" />}
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <Button variant="outline" onClick={() => setStep(1)} className="flex-1 h-12 text-sm rounded-xl">{t.back}</Button>
+                  <Button onClick={handleSubmit} disabled={submitting} className="flex-1 h-12 bg-green-600 hover:bg-green-700 text-sm rounded-xl">
+                    {submitting && <Loader2 className="w-4 h-4 animate-spin mr-1" />}
+                    {submitting ? t.submitting : t.submit}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
   );
 }
 
-function Row({ label, value }) {
+function ReviewRow({ label, value }) {
   return (
-    <div className="flex justify-between py-1.5 border-b border-slate-100">
-      <span className="text-slate-600 font-medium">{label}</span>
-      <span className="font-semibold text-slate-900">{value}</span>
+    <div className="flex justify-between py-1.5 border-b border-slate-100 last:border-0">
+      <span className="text-xs text-slate-500">{label}</span>
+      <span className="text-sm font-semibold text-slate-900">{value}</span>
     </div>
   );
 }
