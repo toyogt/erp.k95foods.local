@@ -355,7 +355,7 @@ export default function GRNReceive() {
       {activeTab === 'master' && <GRNTable grns={allGrns} title="All Goods Received Notes" />}
 
       {/* Create Tab — Gate Entry List */}
-      {activeTab === 'create' && !selected ? (
+      {activeTab === 'create' && !selected && (
         <>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -398,8 +398,10 @@ export default function GRNReceive() {
             </div>
           )}
         </>
-      ) : (
-        /* ── Items Entry Form ── */
+      )}
+
+      {/* Create Tab — Items Entry Form */}
+      {activeTab === 'create' && selected && (
         <div className="space-y-4">
           {/* Header */}
           <div className="flex items-center gap-2">
