@@ -43,7 +43,7 @@ function ItemSearchDropdown({ storeItems, value, onSelect }) {
         />
       </div>
       {open && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-60 overflow-y-auto">
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-60 overflow-y-auto" style={{ zIndex: 9999 }}>
           {filtered.length === 0 ? (
             <div className="px-4 py-3 text-sm text-amber-600">No items found. Add items via Item Master first.</div>
           ) : filtered.map((s) => (

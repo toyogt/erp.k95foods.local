@@ -66,7 +66,7 @@ function ItemSearchSelect({ value, storeItems, onChangeName, onSelectItem }) {
         />
       </div>
       {open && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-72 overflow-y-auto">
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-72 overflow-y-auto" style={{ zIndex: 9999 }}>
           {filtered.length === 0 ? (
             <div className="px-4 py-3 text-sm text-amber-600">
               No items found. Please add items via Item Master first.
@@ -101,7 +101,7 @@ export default function GRNItemCard({ index, item, storeItems, canRemove, onUpda
   const hasItem = !!item.item_name?.trim();
 
   return (
-    <div className="border border-slate-200 rounded-xl overflow-hidden">
+    <div className="border border-slate-200 rounded-xl" style={{ overflow: 'visible' }}>
       {hasItem && rules && (
         <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 flex items-center gap-3">
           {rules.material_photo ? (

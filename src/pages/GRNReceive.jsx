@@ -598,9 +598,9 @@ export default function GRNReceive() {
             </div>
           </div>
 
-          <div className="bg-white/60 backdrop-blur-xl border border-white/40 rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] p-4 md:p-5">
+          <div className="bg-white/60 backdrop-blur-xl border border-white/40 rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] p-4 md:p-5" style={{ overflow: 'visible' }}>
             <p className="text-sm font-semibold text-slate-900 uppercase tracking-wide mb-3">Items Received <span className="text-red-500">*</span></p>
-            <div className="space-y-3">
+            <div className="space-y-3" style={{ overflow: 'visible' }}>
               {items.map((it, idx) => (
                 <GRNItemCard
                   key={idx}
