@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { motion } from 'framer-motion';
-import { Plus, Trash2, AlertCircle, PackageOpen, ScanLine, Keyboard, QrCode, CheckCircle2, Search, Clock, ListChecks } from 'lucide-react';
+import { Plus, Trash2, AlertCircle, PackageOpen, ScanLine, Keyboard, QrCode, CheckCircle2, Search, Clock, ListChecks, MapPin } from 'lucide-react';
 import { formatDateTime } from '@/lib/dateFormatter';
 import Swal from 'sweetalert2';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import StockIssueHistoryCards from '@/components/store/StockIssueHistoryCards';
 import useDraftSave from '@/hooks/useDraftSave';
 import NumericInput from '@/components/ui/NumericInput';
 import { showErrorAlert } from '@/lib/toastHelpers';
+import LocationIssueSelect from '@/components/store/LocationIssueSelect';
 
 
 function ItemSelect({ items, value, onChange }) {
@@ -161,11 +162,11 @@ function LotSelect({ lots, value, onChange }) {
 }
 
 function ManualModeIssue({ storedItems, onIssue, saving }) {
-  const [issueItems, setIssueItems] = useState([{}]);
+  const [issueItems, setIssueItems] = useState([{ location_id: '' }]);
 
   const handleItemChange = (index, itemCode, item) => {
     const newItems = [...issueItems];
-    newItems[index] = { item_code: itemCode, item_name: item.item_name, uom: item.uom, lot_id: '', quantity: '' };
+    newItems[index] = { item_code: itemCode, item_name: item.item_name, uom: item.uom, lot_id: '', location_id: '', quantity: '' };
     setIssueItems(newItems);
   };
 
@@ -173,6 +174,19 @@ function ManualModeIssue({ storedItems, onIssue, saving }) {
     const newItems = [...issueItems];
     newItems[index].lot_id = lotId;
     newItems[index].lot = lot;
+    newItems[index].location_id = '';
+    newItems[index].quantity = '';
+    // Auto-select location if only one
+    if (lot?.locations?.length === 1) {
+      newItems[index].location_id = lot.locations[0].location_id;
+    }
+    setIssueItems(newItems);
+  };
+
+  const handleLocationChange = (index, locationId) => {
+    const newItems = [...issueItems];
+    newItems[index].location_id = locationId;
+    newItems[index].quantity = '';
     setIssueItems(newItems);
   };
 
@@ -182,11 +196,11 @@ function ManualModeIssue({ storedItems, onIssue, saving }) {
     setIssueItems(newItems);
   };
 
-  const addRow = () => setIssueItems([...issueItems, {}]);
+  const addRow = () => setIssueItems([...issueItems, { location_id: '' }]);
   const removeRow = (index) => setIssueItems(issueItems.filter((_, i) => i !== index));
 
   const handleSubmit = () => {
-    const validItems = issueItems.filter(i => i.lot_id && i.quantity > 0);
+    const validItems = issueItems.filter(i => i.lot_id && i.location_id && i.quantity > 0);
     if (validItems.length === 0) {
         showErrorAlert("Invalid Input", "Please add at least one valid item to issue.");
         return;
@@ -197,12 +211,14 @@ function ManualModeIssue({ storedItems, onIssue, saving }) {
         quantityByLot[item.lot_id] = (quantityByLot[item.lot_id] || 0) + parseFloat(item.quantity);
     }
 
-    for (const lotId in quantityByLot) {
-        const lot = storedItems.flatMap(i => i.lots).find(l => l.lot_id === lotId);
-        if (lot && quantityByLot[lotId] > lot.actual_stock) {
-            showErrorAlert("Stock Exceeded", `Cannot issue ${quantityByLot[lotId]} for ${lot.item_name} (Lot: ${lotId}). Only ${lot.actual_stock} available.`);
-            return;
-        }
+    // Validate per location
+    for (const item of validItems) {
+      const lot = storedItems.flatMap(i => i.lots).find(l => l.lot_id === item.lot_id);
+      const locStock = lot?.locations?.find(loc => loc.location_id === item.location_id);
+      if (locStock && parseFloat(item.quantity) > locStock.stock) {
+        showErrorAlert("Stock Exceeded", `Cannot issue ${item.quantity} from ${locStock.location_code}. Only ${locStock.stock} available at this location.`);
+        return;
+      }
     }
     onIssue(validItems);
     setIssueItems([{}]);
@@ -214,24 +230,47 @@ function ManualModeIssue({ storedItems, onIssue, saving }) {
         const selectedItem = storedItems.find(i => i.item_code === item.item_code);
         const itemLots = selectedItem?.lots || [];
         const selectedLot = itemLots.find(l => l.lot_id === item.lot_id);
+        const lotLocations = selectedLot?.locations || [];
+        const hasMultipleLocations = lotLocations.length > 1;
+        const selectedLocation = lotLocations.find(loc => loc.location_id === item.location_id);
+        const maxQty = selectedLocation?.stock || selectedLot?.actual_stock || 0;
         return (
-          <div key={index} className="grid grid-cols-1 md:grid-cols-10 gap-3 items-end p-3 border rounded-lg bg-slate-50/50">
+          <div key={index} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end p-3 border rounded-lg bg-slate-50/50">
             <div className="md:col-span-3">
               <Label className="text-xs font-medium text-slate-700">Item</Label>
               <ItemSelect items={storedItems} value={item.item_code} onChange={(code, it) => handleItemChange(index, code, it)} />
             </div>
-            <div className="md:col-span-3">
+            <div className="md:col-span-2">
                 <Label className="text-xs font-medium text-slate-700">Lot</Label>
                 <LotSelect lots={itemLots} value={item.lot_id} onChange={(id, lot) => handleLotChange(index, id, lot)} />
             </div>
+            {selectedLot && (
+              <div className="md:col-span-3">
+                <Label className="text-xs font-medium text-slate-700">
+                  Location {hasMultipleLocations ? '*' : ''}
+                </Label>
+                {hasMultipleLocations ? (
+                  <LocationIssueSelect
+                    locations={lotLocations}
+                    value={item.location_id}
+                    onChange={(locId) => handleLocationChange(index, locId)}
+                  />
+                ) : (
+                  <div className="h-11 flex items-center px-3 mt-0 text-sm text-slate-700 bg-slate-100 rounded-md">
+                    <MapPin className="w-3.5 h-3.5 text-slate-400 mr-2 shrink-0" />
+                    {lotLocations[0]?.location_code || 'No location'} — {lotLocations[0]?.stock || 0} {item.uom || 'Nos'}
+                  </div>
+                )}
+              </div>
+            )}
             <div className="md:col-span-2">
               <Label className="text-xs font-medium text-slate-700">Quantity</Label>
               <NumericInput 
                 className="h-11 text-base mt-1" 
-                placeholder="0"
+                placeholder={maxQty ? `Max: ${maxQty}` : '0'}
                 value={item.quantity || ''} 
                 onChange={(e) => handleQuantityChange(index, e.target.value)} 
-                max={selectedLot?.actual_stock}
+                max={maxQty}
               />
             </div>
             <div className="md:col-span-1">
@@ -288,6 +327,20 @@ export default function SMSStockOut() {
       stockByLot[b.lot_id] = (stockByLot[b.lot_id] || 0) + (b.quantity || 0);
     });
 
+    // Build per-location breakdown for each lot
+    const locationsByLot = {};
+    balances.forEach(b => {
+      if ((b.quantity || 0) <= 0) return;
+      if (!locationsByLot[b.lot_id]) locationsByLot[b.lot_id] = [];
+      locationsByLot[b.lot_id].push({
+        location_id: b.location_id,
+        location_code: b.location_code,
+        stock: b.quantity || 0,
+        uom: b.uom,
+        balance_id: b.id,
+      });
+    });
+
     const itemMap = {};
     lots.forEach(l => {
       const lotStock = stockByLot[l.lot_id] || 0;
@@ -301,7 +354,7 @@ export default function SMSStockOut() {
           total_stock: 0,
         };
       }
-      const lotWithStock = { ...l, actual_stock: lotStock };
+      const lotWithStock = { ...l, actual_stock: lotStock, locations: locationsByLot[l.lot_id] || [] };
       itemMap[l.item_code].lots.push(lotWithStock);
       itemMap[l.item_code].total_stock += lotStock;
     });
@@ -334,8 +387,12 @@ export default function SMSStockOut() {
 
     for (const item of items) {
         let remainingToIssue = item.quantity;
-        const balancesForLot = allBalances.filter(b => b.lot_id === item.lot_id && b.quantity > 0)
-          .sort((a, b) => (a.putaway_date || '') < (b.putaway_date || '') ? -1 : 1); // FIFO
+        // If user selected a specific location, deduct from that location only
+        const balancesForLot = allBalances.filter(b => {
+          if (b.lot_id !== item.lot_id || b.quantity <= 0) return false;
+          if (item.location_id) return b.location_id === item.location_id;
+          return true;
+        }).sort((a, b) => (a.putaway_date || '') < (b.putaway_date || '') ? -1 : 1);
 
         for (const bal of balancesForLot) {
             if (remainingToIssue <= 0) break;
