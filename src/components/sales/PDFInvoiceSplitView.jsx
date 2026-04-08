@@ -86,6 +86,11 @@ export default function PDFInvoiceSplitView({ pdfEntry, onConfirm }) {
   const tax = items.reduce((s, i) => s + (i.igst_amount || (taxable * 0.12) || 0), 0);
   const total = taxable + tax;
 
+  // Compare system-computed total with PDF-extracted total
+  const pdfTotal = data?.total_amount || 0;
+  const totalGap = pdfTotal > 0 ? Math.abs(total - pdfTotal) : 0;
+  const hasTotalGap = totalGap > 0.001;
+
   // No-rate block screen
   if (noRateBlocked) {
     return (
@@ -215,7 +220,7 @@ export default function PDFInvoiceSplitView({ pdfEntry, onConfirm }) {
                 return (
                   <tr key={i} className={`hover:bg-slate-50 ${mismatch ? 'bg-amber-50/40' : ''}`}>
                     <td className="px-3 py-2 text-slate-700">
-                      <div className="font-medium truncate max-w-[140px]" title={item._product_name || item.description}>{item._product_name || item.description}</div>
+                      <div className="font-medium leading-snug" title={item._product_name || item.description}>{item._product_name || item.description}</div>
                       {item.item_code && <div className="text-slate-400 text-[10px] mt-0.5">{item.item_code}</div>}
                       <RateDiff pdfRate={pdfRate} sysRate={sysRate} />
                     </td>
@@ -255,7 +260,13 @@ export default function PDFInvoiceSplitView({ pdfEntry, onConfirm }) {
         </div>
 
         {/* Financial Summary */}
-        <div className="border-t border-slate-200 bg-white divide-y divide-slate-100 flex-shrink-0">
+        <div className={`border-t bg-white divide-y divide-slate-100 flex-shrink-0 ${hasTotalGap ? 'border-t-2 border-red-400' : 'border-slate-200'}`}>
+          {hasTotalGap && (
+            <div className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-700 text-xs font-medium">
+              <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+              <span>Invoice total mismatch — PDF: ₹{pdfTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })} vs System: ₹{total.toLocaleString('en-IN', { minimumFractionDigits: 2 })} (Gap: ₹{totalGap.toLocaleString('en-IN', { minimumFractionDigits: 2 })})</span>
+            </div>
+          )}
           <div className="flex justify-between px-4 py-2 text-xs text-slate-600">
             <span>Taxable</span>
             <span className="font-medium text-slate-900">₹{taxable.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
@@ -264,9 +275,9 @@ export default function PDFInvoiceSplitView({ pdfEntry, onConfirm }) {
             <span>Tax (GST)</span>
             <span className="font-medium text-slate-900">₹{tax.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
           </div>
-          <div className="flex justify-between px-4 py-2 text-sm font-semibold bg-slate-50">
+          <div className={`flex justify-between px-4 py-2 text-sm font-semibold ${hasTotalGap ? 'bg-red-50' : 'bg-slate-50'}`}>
             <span className="text-slate-900">Grand Total</span>
-            <span className="text-emerald-700">₹{total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+            <span className={hasTotalGap ? 'text-red-700' : 'text-emerald-700'}>₹{total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
           </div>
         </div>
       </div>
