@@ -15,19 +15,19 @@ const SOURCE_TABS = [
 
 async function fetchSystemItems() {
   const [ingredients, boxes, caps, containers, flavours, artworks] = await Promise.all([
-    base44.entities.IngredientItem.filter({ is_active: true }, 'brand_name', 500).catch(() => []),
-    base44.entities.BoxType.filter({ is_active: true }, 'box_name', 500).catch(() => []),
-    base44.entities.CapType.filter({ is_active: true }, 'cap_name', 500).catch(() => []),
+    base44.entities.IngredientItem.list('brand_name', 500).catch(() => []),
+    base44.entities.BoxType.list('box_name', 500).catch(() => []),
+    base44.entities.CapType.list('cap_name', 500).catch(() => []),
     base44.entities.ContainerType.list('auto_generated_name', 500).catch(() => []),
-    base44.entities.FlavourMaster.filter({ is_active: true }, 'flavour_name', 500).catch(() => []),
-    base44.entities.LabelArtwork.filter({ is_active: true }, 'artwork_name', 500).catch(() => []),
+    base44.entities.FlavourMaster.list('flavour_name', 500).catch(() => []),
+    base44.entities.LabelArtwork.list('artwork_name', 500).catch(() => []),
   ]);
 
   return [
-    ...ingredients.map(i => ({
+    ...ingredients.filter(i => i.brand_name).map(i => ({
       source_entity: 'IngredientItem', source_id: i.id,
       item_name: `${i.brand_name}${i.ingredient_id ? ' (' + i.ingredient_id + ')' : ''}`,
-      item_category: 'ingredient', uom: 'Kg', material_photo: '',
+      item_category: 'ingredient', uom: i.uom || 'Kg', material_photo: '',
     })),
     ...boxes.map(b => ({
       source_entity: 'BoxType', source_id: b.id,

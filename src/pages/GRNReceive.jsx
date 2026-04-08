@@ -319,7 +319,7 @@ export default function GRNReceive() {
         quantity: receivedQty, remaining_quantity: receivedQty,
         mismatch_type: mismatchType,
         mismatch_reason: it.mismatch_reason || '',
-        batch_number: it.batch_lot || '',
+        batch_number: it.batch_lot || undefined,
         mfg_date: it.mfg_date || undefined,
         expiry_date: it.expiry_date || undefined,
         supplier_name: supplierName || '',

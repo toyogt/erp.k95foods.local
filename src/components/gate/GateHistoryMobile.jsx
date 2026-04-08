@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ExternalLink } from 'lucide-react';
+import GateEntryDetailModal from '@/components/gate/GateEntryDetailModal';
 
 const STATUS_COLORS = {
   OPEN: 'bg-amber-100 text-amber-700',
@@ -10,6 +11,7 @@ const STATUS_COLORS = {
 export default function GateHistoryMobile() {
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedEntry, setSelectedEntry] = useState(null);
 
   useEffect(() => {
     base44.entities.GateEntry.list('-created_date', 100)
@@ -23,7 +25,7 @@ export default function GateHistoryMobile() {
   return (
     <div className="space-y-2">
       {entries.map(e => (
-        <div key={e.id} className="bg-white border border-slate-200 rounded-xl p-3">
+        <div key={e.id} className="bg-white border border-slate-200 rounded-xl p-3 cursor-pointer hover:bg-slate-50" onClick={() => setSelectedEntry(e)}>
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0 flex-1">
               <p className="font-mono text-xs font-bold text-slate-500">{e.gate_id}</p>
@@ -43,7 +45,6 @@ export default function GateHistoryMobile() {
               )}
             </div>
           </div>
-          {/* Photo thumbnails */}
           {(e.vehicle_photo || e.invoice_photo || e.material_photo) && (
             <div className="flex gap-2 mt-2">
               {e.vehicle_photo && <img src={e.vehicle_photo} alt="vehicle" className="w-14 h-10 object-cover rounded-lg border border-slate-200" />}
@@ -51,8 +52,14 @@ export default function GateHistoryMobile() {
               {e.material_photo && <img src={e.material_photo} alt="material" className="w-14 h-10 object-cover rounded-lg border border-slate-200" />}
             </div>
           )}
+          <div className="flex items-center gap-1 mt-2 text-xs text-blue-600 font-medium">
+            <ExternalLink className="w-3 h-3" /> View Details
+          </div>
         </div>
       ))}
+      {selectedEntry && (
+        <GateEntryDetailModal entry={selectedEntry} onClose={() => setSelectedEntry(null)} />
+      )}
     </div>
   );
 }

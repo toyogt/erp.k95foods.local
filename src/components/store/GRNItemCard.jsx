@@ -52,6 +52,11 @@ function ItemSearchSelect({ value, storeItems, onChangeName, onSelectItem }) {
     onSelectItem(s);
   }
 
+  // Sync query when value changes externally (e.g. when item is changed)
+  useEffect(() => {
+    if (!isUserTyping && value) setQuery(value);
+  }, [value, isUserTyping]);
+
   return (
     <div className="relative" ref={ref}>
       <div className="relative">

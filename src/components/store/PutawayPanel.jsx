@@ -216,7 +216,7 @@ export default function PutawayPanel({ lots: externalLots, locations: externalLo
        <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] p-4 space-y-3">
           <p className="text-sm font-semibold text-slate-700">Putaway Entries ({entries.length})</p>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="space-y-3">
           {entries.map((entry, idx) => {
             const lot = lots.find(l => l.lot_id === entry.lotId);
             // Calculate remaining available for this lot considering other entries

@@ -3,7 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Pencil, Trash2, Search, PackageOpen, ImageIcon, Download, AlertTriangle } from 'lucide-react';
+import { Pencil, Trash2, Search, PackageOpen, ImageIcon, Download, AlertTriangle } from 'lucide-react';
 import MaterialPhotoUpload from '@/components/store/MaterialPhotoUpload';
 import ImportSystemItemsModal from '@/components/store/ImportSystemItemsModal';
 import { showErrorAlert, showConfirmAlert, showSuccessToast } from '@/lib/toastHelpers';
@@ -25,12 +25,14 @@ const EMPTY_FORM = {
   item_name: '', item_category: 'other', uom: '',
   material_photo: '',
   batch_required: false, expiry_required: false,
-  mfg_date_required: false, qc_required: false,
-  min_shelf_life_days: '', opening_stock: '', reorder_level: '',
+  mfg_date_required: false,
+  opening_stock: '', 
   storage_notes: '', is_active: true,
 };
 
 function ItemFormModal({ item, onClose, onSaved }) {
+  const isEdit = !!item;
+  const isSystemItem = !!item?.source_entity;
   const [form, setForm] = useState(item ? { ...item } : { ...EMPTY_FORM });
   const [saving, setSaving] = useState(false);
   const [uomOptions, setUomOptions] = useState([]);
@@ -54,9 +56,7 @@ function ItemFormModal({ item, onClose, onSaved }) {
       const data = {
         ...form,
         item_name: form.item_name.trim(),
-        min_shelf_life_days: form.min_shelf_life_days !== '' ? Number(form.min_shelf_life_days) : undefined,
         opening_stock: form.opening_stock !== '' ? Number(form.opening_stock) : 0,
-        reorder_level: form.reorder_level !== '' ? Number(form.reorder_level) : 0,
       };
       if (item?.id) {
         await base44.entities.StoreItemMaster.update(item.id, data);
@@ -77,21 +77,24 @@ function ItemFormModal({ item, onClose, onSaved }) {
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-3 md:p-4">
       <div className="bg-white rounded-2xl w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto">
         <div className="p-4 md:p-5 border-b border-slate-200">
-          <h2 className="font-bold text-slate-900 text-lg">{item ? 'Edit Item' : 'New Item'}</h2>
+          <h2 className="font-bold text-slate-900 text-lg">{isEdit ? 'Edit Item' : 'New Item'}</h2>
+          {isSystemItem && <p className="text-xs text-teal-600 mt-0.5">Imported from system — details are read-only</p>}
         </div>
         <div className="p-4 md:p-5 space-y-3">
           <div>
             <label className="text-xs font-medium text-slate-700">Item Name *</label>
-            <Input className="h-9 text-sm mt-1" value={form.item_name} onChange={e => setField('item_name', e.target.value)} placeholder="Enter item name" />
+            <Input className="h-9 text-sm mt-1" value={form.item_name} onChange={e => setField('item_name', e.target.value)} placeholder="Enter item name" disabled={isSystemItem} />
           </div>
-          <MaterialPhotoUpload
-            value={form.material_photo}
-            onChange={v => setField('material_photo', v)}
-          />
+          {!isSystemItem && (
+            <MaterialPhotoUpload
+              value={form.material_photo}
+              onChange={v => setField('material_photo', v)}
+            />
+          )}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-medium text-slate-700">Category</label>
-              <select className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm mt-1" value={form.item_category} onChange={e => setField('item_category', e.target.value)}>
+              <select className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm mt-1" value={form.item_category} onChange={e => setField('item_category', e.target.value)} disabled={isSystemItem}>
                 {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
               </select>
             </div>
@@ -101,6 +104,7 @@ function ItemFormModal({ item, onClose, onSaved }) {
                 className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm mt-1 h-9 bg-white"
                 value={form.uom}
                 onChange={e => setField('uom', e.target.value)}
+                disabled={isSystemItem}
               >
                 <option value="">Select Unit of Measure</option>
                 {uomLoading ? (
@@ -116,20 +120,9 @@ function ItemFormModal({ item, onClose, onSaved }) {
             </div>
           </div>
           <div>
-            <label className="text-xs font-medium text-slate-700">Minimum Shelf Life (days)</label>
-            <Input className="h-9 text-sm mt-1" type="number" min="0" value={form.min_shelf_life_days} onChange={e => setField('min_shelf_life_days', e.target.value)} placeholder="0" />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs font-medium text-slate-700">Opening Stock</label>
-              <Input className="h-9 text-sm mt-1" type="number" min="0" value={form.opening_stock} onChange={e => setField('opening_stock', e.target.value)} placeholder="0" />
-              <p className="text-xs text-slate-400 mt-0.5">Initial stock quantity for this item</p>
-            </div>
-            <div>
-              <label className="text-xs font-medium text-slate-700">Reorder Level</label>
-              <Input className="h-9 text-sm mt-1" type="number" min="0" value={form.reorder_level} onChange={e => setField('reorder_level', e.target.value)} placeholder="0" />
-              <p className="text-xs text-slate-400 mt-0.5">Alert when stock falls below</p>
-            </div>
+            <label className="text-xs font-medium text-slate-700">Opening Stock</label>
+            <Input className="h-9 text-sm mt-1" type="number" min="0" value={form.opening_stock} onChange={e => setField('opening_stock', e.target.value)} placeholder="0" />
+            <p className="text-xs text-slate-400 mt-0.5">Initial stock quantity for this item</p>
           </div>
           <div className="border border-slate-100 rounded-xl p-4 space-y-2">
             <p className="text-xs font-semibold text-slate-600 mb-2">Validation Rules</p>
@@ -137,7 +130,6 @@ function ItemFormModal({ item, onClose, onSaved }) {
               { key: 'batch_required', label: 'Batch Number Required' },
               { key: 'expiry_required', label: 'Expiry Date Required' },
               { key: 'mfg_date_required', label: 'Manufacture Date Required' },
-              { key: 'qc_required', label: 'Quality Control Required' },
             ].map(({ key, label }) => (
               <label key={key} className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" className="w-4 h-4 rounded" checked={!!form[key]} onChange={e => setField(key, e.target.checked)} />
@@ -201,12 +193,16 @@ export default function SMSItemMaster() {
       });
       setIssuedByItem(ibi);
 
-      // Build blocked / not-stored: lots that have quantity but no stored balance
-      const storedLotIds = new Set(balances.filter(b => (b.quantity || 0) > 0).map(b => b.lot_id));
+      // Build blocked / pending-for-putaway: lots with status 'approved' → qty not yet stored
+      const storedByLot = {};
+      balances.forEach(b => {
+        if ((b.quantity || 0) > 0) storedByLot[b.lot_id] = (storedByLot[b.lot_id] || 0) + (b.quantity || 0);
+      });
       const nsbi = {};
-      lots.filter(l => !['consumed', 'rejected'].includes(l.status) && !storedLotIds.has(l.lot_id)).forEach(l => {
+      lots.filter(l => l.status === 'approved').forEach(l => {
         const code = l.item_code;
-        if (code) nsbi[code] = (nsbi[code] || 0) + (l.remaining_quantity || l.quantity || 0);
+        const pendingToStore = (l.quantity || 0) - (storedByLot[l.lot_id] || 0);
+        if (code && pendingToStore > 0) nsbi[code] = (nsbi[code] || 0) + pendingToStore;
       });
       setNotStoredByItem(nsbi);
     } catch {
@@ -269,9 +265,6 @@ export default function SMSItemMaster() {
           <Button variant="outline" onClick={() => setShowImport(true)} className="h-11 gap-2 text-sm whitespace-nowrap">
             <Download className="w-4 h-4" /> Import from System
           </Button>
-          <Button onClick={() => setModal('new')} className="h-11 gap-2 bg-slate-900 text-sm whitespace-nowrap">
-            <Plus className="w-4 h-4" /> Add Item
-          </Button>
         </div>
       </div>
 
@@ -308,7 +301,7 @@ export default function SMSItemMaster() {
                <th className="text-left px-4 py-3 font-medium hidden md:table-cell">Unit</th>
                <th className="text-right px-4 py-3 font-medium hidden md:table-cell">Opening Stock</th>
                <th className="text-right px-4 py-3 font-medium hidden md:table-cell">Current Stock</th>
-               <th className="text-right px-4 py-3 font-medium hidden lg:table-cell">Blocked Units</th>
+               <th className="text-right px-4 py-3 font-medium hidden lg:table-cell">Pending for Putaway</th>
                <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">Rules</th>
                <th className="text-left px-4 py-3 font-medium">Status</th>
                <th className="px-4 py-3" />

@@ -64,7 +64,7 @@ export default function GRNSupplierSelect({ value, onChange, itemNames = [] }) {
         <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
       </div>
       {open && (
-        <div className="absolute z-[200] top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-56 overflow-y-auto">
+        <div className="absolute z-[9999] top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-56 overflow-y-auto">
           {/* Relevant suppliers section */}
           {filteredSuppliers.length > 0 && itemNames.length > 0 && relevantSupplierIds.size > 0 && (
             <>
