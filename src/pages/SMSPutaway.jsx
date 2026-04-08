@@ -17,10 +17,10 @@ export default function SMSPutaway() {
   async function load() {
     setLoading(true);
     const [lots, locs, history, balances] = await Promise.all([
-      base44.entities.StoreLot.list('-created_date', 500),
+      base44.entities.StoreLot.filter({ status: 'approved' }, '-created_date', 500),
       base44.entities.StoreLocation.filter({ is_active: true }),
       base44.entities.StorePutaway.list('-created_date', 50),
-      base44.entities.StoreStockBalance.list('-created_date', 1000),
+      base44.entities.StoreStockBalance.list('-created_date', 2000),
     ]);
 
     // Build map: lot_id → total stored qty
