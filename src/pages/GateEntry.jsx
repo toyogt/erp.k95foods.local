@@ -291,7 +291,7 @@ export default function GateEntryPage() {
                 />
 
                 {/* Photo cards */}
-                <div className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   {form.transport_type === 'vehicle' && (
                     <PhotoCaptureCard
                       type="vehicle"
@@ -299,26 +299,22 @@ export default function GateEntryPage() {
                       helpText={t.vehiclePhotoHelp}
                       value={form.vehicle_photo}
                       onChange={v => setField('vehicle_photo', v)}
-                      large
                     />
                   )}
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <PhotoCaptureCard
-                      type="invoice"
-                      label={t.invoicePhoto}
-                      helpText={t.invoicePhotoHelp}
-                      value={form.invoice_photo}
-                      onChange={v => setField('invoice_photo', v)}
-                    />
-                    <PhotoCaptureCard
-                      type="material"
-                      label={t.materialPhoto}
-                      helpText={t.materialPhotoHelp}
-                      value={form.material_photo}
-                      onChange={v => setField('material_photo', v)}
-                    />
-                  </div>
+                  <PhotoCaptureCard
+                    type="invoice"
+                    label={t.invoicePhoto}
+                    helpText={t.invoicePhotoHelp}
+                    value={form.invoice_photo}
+                    onChange={v => setField('invoice_photo', v)}
+                  />
+                  <PhotoCaptureCard
+                    type="material"
+                    label={t.materialPhoto}
+                    helpText={t.materialPhotoHelp}
+                    value={form.material_photo}
+                    onChange={v => setField('material_photo', v)}
+                  />
                 </div>
 
                 {/* Progress indicator for photos */}
