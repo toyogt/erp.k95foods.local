@@ -57,10 +57,10 @@ export default function Layout({ children, currentPageName }) {
   const role = user?.role || 'user';
   const isAdmin = role === 'admin';
   const isOperator = isOperatorLayout(role);
-  const isDashboard = currentPageName === 'Dashboard';
+  const isHome = currentPageName === 'FMSMyTasks' || currentPageName === 'Dashboard';
   
   // Check if user has access to current page using unified resolver
-  const hasAccess = isDashboard || allowedPages.includes('*') || allowedPages.includes(currentPageName);
+  const hasAccess = isHome || allowedPages.includes('*') || allowedPages.includes(currentPageName);
 
   if (userLoading) return null;
   
@@ -103,16 +103,16 @@ export default function Layout({ children, currentPageName }) {
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-3 px-2.5 md:px-2 space-y-1 md:space-y-0.5">
-        {/* Dashboard */}
+        {/* My Tasks (Home) */}
         <Link
-          to={createPageUrl('Dashboard')}
+          to="/"
           onClick={onNavigate}
           className={`flex items-center gap-3 md:gap-2.5 px-3 py-3 md:py-2.5 rounded-xl md:rounded-lg text-base md:text-sm font-medium transition-all ${
-            isDashboard ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+            currentPageName === 'FMSMyTasks' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
           }`}
         >
           <LayoutDashboard className="w-5 h-5 md:w-4 md:h-4 shrink-0" />
-          {!sidebarCollapsed && <span>Dashboard</span>}
+          {!sidebarCollapsed && <span>My Tasks</span>}
         </Link>
 
         {/* Module groups */}
@@ -180,6 +180,11 @@ export default function Layout({ children, currentPageName }) {
         <div className="border-t border-slate-200 p-3 shrink-0">
           {!sidebarCollapsed && (
             <div className="px-2 py-1.5 md:py-1 text-sm md:text-xs text-slate-500 md:text-slate-400 truncate mb-1 font-medium md:font-normal">{user.full_name || user.email}</div>
+          )}
+          {!sidebarCollapsed && isAdmin && (
+            <div className="mb-2">
+              <PermissionDebugPanel />
+            </div>
           )}
           <button
             onClick={() => base44.auth.logout()}
@@ -270,8 +275,7 @@ export default function Layout({ children, currentPageName }) {
         </div>
       </div>
 
-      {/* Permission Debug Panel (super admin only) */}
-      {isAdmin && <PermissionDebugPanel />}
+
     </OfflineProvider>
   );
 }

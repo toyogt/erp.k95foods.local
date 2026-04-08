@@ -32,13 +32,13 @@ export default function PermissionDebugPanel() {
   };
 
   return (
-    <div className="fixed top-14 right-3 z-40 w-56">
-      <div className="bg-slate-900/95 backdrop-blur-sm text-white rounded-lg shadow-lg border border-slate-700">
+    <div className="w-full">
+      <div className="bg-slate-800 text-white rounded-lg border border-slate-700">
         <button
           onClick={() => setExpanded(!expanded)}
-          className="w-full flex items-center justify-between px-3 py-2 hover:bg-slate-800 transition-colors rounded-lg"
+          className="w-full flex items-center justify-between px-3 py-2 hover:bg-slate-700 transition-colors rounded-lg"
         >
-          <span className="text-[10px] font-semibold">🔐 Debug</span>
+          <span className="text-[10px] font-semibold">🔐 Permissions Debug</span>
           {expanded ? (
             <ChevronDown className="w-3 h-3" />
           ) : (
@@ -47,7 +47,7 @@ export default function PermissionDebugPanel() {
         </button>
 
         {expanded && (
-          <div className="border-t border-slate-700 p-3 space-y-2 max-h-72 overflow-y-auto bg-slate-950 rounded-b-lg">
+          <div className="border-t border-slate-700 p-3 space-y-2 max-h-72 overflow-y-auto bg-slate-900 rounded-b-lg">
             <div>
               <p className="text-[10px] font-semibold text-slate-300 mb-1">USER</p>
               <div className="text-[10px] bg-slate-800 rounded p-1.5 font-mono space-y-0.5">
