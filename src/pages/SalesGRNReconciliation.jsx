@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Search, RefreshCw, AlertTriangle, CheckCircle, Clock, FileText, ShieldAlert, PackageSearch } from 'lucide-react';
+import { Plus, Search, RefreshCw, AlertTriangle, CheckCircle, Clock, FileText, ShieldAlert, PackageSearch, ChevronRight } from 'lucide-react';
 import GRNEntryModal from '@/components/sales/GRNEntryModal';
 import ManagementReviewTab from '@/components/sales/ManagementReviewTab';
 import DebitNoteEntryModal from '@/components/sales/DebitNoteEntryModal';
@@ -220,6 +220,8 @@ export default function SalesGRNReconciliation() {
         {/* GRNs Tab */}
         <TabsContent value="grns" className="mt-3">
           <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+            {/* Desktop Table */}
+            <div className="hidden md:block">
             <table className="w-full text-sm">
               <thead className="bg-slate-100 text-slate-700">
                 <tr>
@@ -276,6 +278,40 @@ export default function SalesGRNReconciliation() {
                     })}
               </tbody>
             </table>
+            </div>
+
+            {/* Mobile Cards */}
+            <div className="md:hidden divide-y divide-slate-100">
+              {grnsLoading && <div className="p-8 text-center text-slate-400">Loading...</div>}
+              {!grnsLoading && filterGRNs(grns).length === 0 && <div className="p-8 text-center text-slate-400">No GRNs recorded yet.</div>}
+              {filterGRNs(grns).map(grn => {
+                const inv = invoices.find(i => i.invoice_number === grn.invoice_number || i.id === grn.invoice_id);
+                const invAmt = inv?.total_amount || grn.invoice_total_amount || 0;
+                const grnAmt = grn.grn_total_amount || 0;
+                const discPct = invAmt > 0 ? Math.abs((invAmt - grnAmt) / invAmt) * 100 : 0;
+                const flagged = discPct > 1;
+                return (
+                  <div key={grn.id} className={`px-4 py-3.5 active:bg-slate-50 cursor-pointer ${flagged ? 'bg-red-50' : ''}`} onClick={() => setSelectedGRN(grn)}>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-bold text-slate-900">{grn.grn_number}</p>
+                        <p className="text-sm text-slate-600 mt-0.5">Invoice: {grn.invoice_number}</p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${GRN_STATUS_COLORS[grn.status] || ''}`}>{GRN_STATUS_LABELS[grn.status] || grn.status}</span>
+                        <ChevronRight className="w-4 h-4 text-slate-400" />
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 mt-1.5 text-xs text-slate-500">
+                      <span className={`px-2 py-0.5 rounded-full font-medium ${PLATFORM_COLORS[grn.platform] || ''}`}>{grn.platform?.toUpperCase()}</span>
+                      <span className="font-medium text-slate-700">₹{(grnAmt).toLocaleString('en-IN')}</span>
+                      {grn.grn_date && <span>{grn.grn_date}</span>}
+                      {flagged && <span className="text-red-600 font-medium flex items-center gap-0.5"><AlertTriangle className="w-3 h-3" /> {discPct.toFixed(1)}%</span>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </TabsContent>
 
@@ -287,6 +323,8 @@ export default function SalesGRNReconciliation() {
         {/* Debit Notes Tab */}
         <TabsContent value="debitnotes" className="mt-3">
           <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+            {/* Desktop Table */}
+            <div className="hidden md:block">
             <table className="w-full text-sm">
               <thead className="bg-slate-100 text-slate-700">
                 <tr>
@@ -323,6 +361,29 @@ export default function SalesGRNReconciliation() {
                 ))}
               </tbody>
             </table>
+            </div>
+
+            {/* Mobile Cards */}
+            <div className="md:hidden divide-y divide-slate-100">
+              {dnsLoading && <div className="p-8 text-center text-slate-400">Loading...</div>}
+              {!dnsLoading && filterDNs(debitNotes).length === 0 && <div className="p-8 text-center text-slate-400">No debit notes recorded yet.</div>}
+              {filterDNs(debitNotes).map(dn => (
+                <div key={dn.id} className="px-4 py-3.5">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold text-slate-900">{dn.debit_note_number}</p>
+                      <p className="text-sm text-slate-600 mt-0.5">Invoice: {dn.invoice_number}</p>
+                    </div>
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${DN_STATUS_COLORS[dn.status] || ''}`}>{dn.status?.replace(/_/g, ' ')}</span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 mt-1.5 text-xs text-slate-500">
+                    <span className={`px-2 py-0.5 rounded-full font-medium ${PLATFORM_COLORS[dn.platform] || ''}`}>{dn.platform?.toUpperCase()}</span>
+                    <span className="text-red-600 font-medium">₹{(dn.debit_note_amount || 0).toLocaleString('en-IN')}</span>
+                    {dn.grn_number && <span>GRN: {dn.grn_number}</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </TabsContent>
       </Tabs>

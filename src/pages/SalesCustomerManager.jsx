@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
-import { Search, Download, Plus, Edit2, Loader2, Users, Tag, Upload, FileDown, Trash2, ChevronUp, ChevronDown, ArrowUpDown } from 'lucide-react';
+import { Search, Download, Plus, Edit2, Loader2, Users, Tag, Upload, FileDown, Trash2, ChevronUp, ChevronDown, ArrowUpDown, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import BulkActionBar from '@/components/sales/BulkActionBar';
 import BulkCSVUploadModal from '@/components/sales/BulkCSVUploadModal';
@@ -382,7 +382,8 @@ export default function SalesCustomerManager() {
           <div className="p-8 text-center"><Users className="w-10 h-10 text-slate-300 mx-auto mb-2" /><p className="text-sm text-slate-500">No customers found</p></div>
         ) : (
           <>
-          <div className="overflow-x-auto">
+          {/* Desktop Table */}
+          <div className="hidden lg:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 text-xs text-slate-700 font-medium">
@@ -399,8 +400,8 @@ export default function SalesCustomerManager() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {pagination.paged.map(c => (
-                  <tr key={c.id} className={`hover:bg-slate-50 ${selected.has(c.id) ? 'bg-blue-50' : ''}`}>
-                    <td className="px-3 py-2">
+                  <tr key={c.id} className={`hover:bg-slate-50 cursor-pointer ${selected.has(c.id) ? 'bg-blue-50' : ''}`} onClick={() => openEdit(c)}>
+                    <td className="px-3 py-2" onClick={e => e.stopPropagation()}>
                       <input type="checkbox" checked={selected.has(c.id)} onChange={() => toggleRow(c.id)} className="rounded" />
                     </td>
                     <td className="px-3 py-2 font-medium text-slate-900">{c.name}</td>
@@ -413,7 +414,7 @@ export default function SalesCustomerManager() {
                     </td>
                     <td className="px-3 py-2">
                       {c.price_list ? (
-                        <Link to={`/SalesPriceListView?list=${encodeURIComponent(c.price_list)}`} className="text-blue-600 hover:underline text-xs font-medium">{c.price_list}</Link>
+                        <Link to={`/SalesPriceListView?list=${encodeURIComponent(c.price_list)}`} className="text-blue-600 hover:underline text-xs font-medium" onClick={e => e.stopPropagation()}>{c.price_list}</Link>
                       ) : <span className="text-slate-400 text-xs">—</span>}
                     </td>
                     <td className="px-3 py-2 text-slate-600 text-xs">{c.payment_terms || '—'}</td>
@@ -424,7 +425,7 @@ export default function SalesCustomerManager() {
                         {c.status}
                       </span>
                     </td>
-                    <td className="px-3 py-2">
+                    <td className="px-3 py-2" onClick={e => e.stopPropagation()}>
                       <div className="flex items-center gap-1">
                         <button onClick={() => openEdit(c)} className="text-slate-400 hover:text-slate-900 p-1"><Edit2 className="w-3.5 h-3.5" /></button>
                         <button onClick={() => handleDeleteSingle(c)} className="text-slate-300 hover:text-red-600 p-1"><Trash2 className="w-3.5 h-3.5" /></button>
@@ -435,6 +436,32 @@ export default function SalesCustomerManager() {
               </tbody>
             </table>
           </div>
+
+          {/* Mobile Cards */}
+          <div className="lg:hidden divide-y divide-slate-100">
+            {pagination.paged.map(c => (
+              <div key={c.id} className="px-4 py-3.5 active:bg-slate-50 cursor-pointer" onClick={() => openEdit(c)}>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-slate-900">{c.name}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">{c.code || ''}{c.gstin ? ` · ${c.gstin}` : ''}</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${c.status === 'active' ? 'bg-green-100 text-green-700' : c.status === 'suspended' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-500'}`}>
+                      {c.status}
+                    </span>
+                    <ChevronRight className="w-4 h-4 text-slate-400" />
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 mt-1.5 text-xs text-slate-500">
+                  {c.customer_group && <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{c.customer_group}</span>}
+                  {c.price_list && <span className="text-blue-600 font-medium">{c.price_list}</span>}
+                  {c.payment_terms && <span>{c.payment_terms}</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+
           <TablePagination {...pagination} />
           </>
         )}

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
-import { Plus, Upload, Download, Edit2, X, Check, Loader2, Search, FileDown } from 'lucide-react';
+import { Plus, Upload, Download, Edit2, X, Check, Loader2, Search, FileDown, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import usePagination from '@/hooks/usePagination';
 import TablePagination from '@/components/sales/TablePagination';
@@ -178,7 +178,8 @@ export default function SalesRateListManager() {
           <div className="p-8 text-center text-slate-400 text-sm">No rates found. Add manually or upload a CSV.</div>
         ) : (
           <>
-          <div className="overflow-x-auto">
+          {/* Desktop Table */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 text-xs text-slate-700 font-medium">
@@ -196,7 +197,7 @@ export default function SalesRateListManager() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {pagination.paged.map(r => (
-                  <tr key={r.id} className="hover:bg-slate-50">
+                  <tr key={r.id} className="hover:bg-slate-50 cursor-pointer" onClick={() => openEdit(r)}>
                     <td className="px-3 py-2 font-mono text-xs text-slate-700">{r.item_code}</td>
                     <td className="px-3 py-2 text-slate-800 max-w-xs truncate">{r.item_name}</td>
                     <td className="px-3 py-2 text-slate-600 text-xs">{r.price_list}</td>
@@ -210,7 +211,7 @@ export default function SalesRateListManager() {
                       </span>
                     </td>
                     <td className="px-3 py-2 text-slate-500 text-xs">{r.valid_upto || '—'}</td>
-                    <td className="px-3 py-2">
+                    <td className="px-3 py-2" onClick={e => e.stopPropagation()}>
                       <button onClick={() => openEdit(r)} className="text-slate-400 hover:text-slate-900">
                         <Edit2 className="w-4 h-4" />
                       </button>
@@ -220,6 +221,33 @@ export default function SalesRateListManager() {
               </tbody>
             </table>
           </div>
+
+          {/* Mobile Cards */}
+          <div className="md:hidden divide-y divide-slate-100">
+            {pagination.paged.map(r => (
+              <div key={r.id} className="px-4 py-3.5 active:bg-slate-50 cursor-pointer" onClick={() => openEdit(r)}>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-slate-900 truncate">{r.item_name}</p>
+                    <p className="text-xs text-slate-500 font-mono mt-0.5">{r.item_code}</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-sm font-bold text-slate-900">₹{r.rate}</span>
+                    <ChevronRight className="w-4 h-4 text-slate-400" />
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 mt-1.5 text-xs text-slate-500">
+                  <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{r.price_list}</span>
+                  <span>MRP ₹{r.mrp || '—'}</span>
+                  <span>IGST {r.igst_rate}%</span>
+                  <span className={`px-1.5 py-0.5 rounded-full font-medium ${r.is_active ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
+                    {r.is_active ? 'Active' : 'Inactive'}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+
           <TablePagination {...pagination} />
           </>
         )}

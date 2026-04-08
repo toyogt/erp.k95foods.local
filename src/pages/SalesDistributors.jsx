@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
-import { Plus, Edit2, X, CheckCircle2, Users, Loader2, Download } from 'lucide-react';
+import { Plus, Edit2, X, CheckCircle2, Users, Loader2, Download, ChevronRight } from 'lucide-react';
 import usePagination from '@/hooks/usePagination';
 import TablePagination from '@/components/sales/TablePagination';
 
@@ -138,7 +138,8 @@ export default function SalesDistributors() {
           </div>
         ) : (
           <>
-          <div className="overflow-x-auto">
+          {/* Desktop Table */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 text-xs text-slate-700 font-medium">
@@ -156,7 +157,7 @@ export default function SalesDistributors() {
                 {pagination.paged.map(d => {
                   const available = (d.credit_limit || 0) - (d.utilized_limit || 0);
                   return (
-                    <tr key={d.id} className="hover:bg-slate-50">
+                    <tr key={d.id} className="hover:bg-slate-50 cursor-pointer" onClick={() => openEdit(d)}>
                       <td className="px-4 py-3 font-medium text-slate-900">{d.name}</td>
                       <td className="px-4 py-3 text-slate-600">
                         <div>{d.contact_name}</div>
@@ -167,13 +168,9 @@ export default function SalesDistributors() {
                       <td className="px-4 py-3 text-right text-amber-600">₹{(d.utilized_limit || 0).toLocaleString('en-IN')}</td>
                       <td className="px-4 py-3 text-right text-green-600 font-medium">₹{available.toLocaleString('en-IN')}</td>
                       <td className="px-4 py-3 text-center">
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                          d.status === 'active' ? 'bg-green-100 text-green-700' :
-                          d.status === 'suspended' ? 'bg-red-100 text-red-700' :
-                          'bg-slate-100 text-slate-600'
-                        }`}>{d.status}</span>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${d.status === 'active' ? 'bg-green-100 text-green-700' : d.status === 'suspended' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600'}`}>{d.status}</span>
                       </td>
-                      <td className="px-4 py-3 text-right">
+                      <td className="px-4 py-3 text-right" onClick={e => e.stopPropagation()}>
                         <button onClick={() => openEdit(d)} className="text-slate-400 hover:text-slate-900">
                           <Edit2 className="w-4 h-4" />
                         </button>
@@ -184,6 +181,42 @@ export default function SalesDistributors() {
               </tbody>
             </table>
           </div>
+
+          {/* Mobile Cards */}
+          <div className="md:hidden divide-y divide-slate-100">
+            {pagination.paged.map(d => {
+              const available = (d.credit_limit || 0) - (d.utilized_limit || 0);
+              return (
+                <div key={d.id} className="px-4 py-3.5 active:bg-slate-50 cursor-pointer" onClick={() => openEdit(d)}>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold text-slate-900">{d.name}</p>
+                      <p className="text-sm text-slate-600 mt-0.5">{d.contact_name || ''}{d.region ? ` · ${d.region}` : ''}</p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${d.status === 'active' ? 'bg-green-100 text-green-700' : d.status === 'suspended' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600'}`}>{d.status}</span>
+                      <ChevronRight className="w-4 h-4 text-slate-400" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 mt-2">
+                    <div className="bg-slate-50 rounded-lg px-2 py-1.5 text-center">
+                      <p className="text-xs text-slate-500">Limit</p>
+                      <p className="text-sm font-bold text-slate-800">₹{((d.credit_limit || 0) / 1000).toFixed(0)}K</p>
+                    </div>
+                    <div className="bg-amber-50 rounded-lg px-2 py-1.5 text-center">
+                      <p className="text-xs text-amber-500">Utilized</p>
+                      <p className="text-sm font-bold text-amber-600">₹{((d.utilized_limit || 0) / 1000).toFixed(0)}K</p>
+                    </div>
+                    <div className="bg-green-50 rounded-lg px-2 py-1.5 text-center">
+                      <p className="text-xs text-green-500">Available</p>
+                      <p className="text-sm font-bold text-green-600">₹{(available / 1000).toFixed(0)}K</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
           <TablePagination {...pagination} />
           </>
         )}

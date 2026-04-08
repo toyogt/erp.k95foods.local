@@ -4,7 +4,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Download, Tag, Users, ArrowLeft, Edit2 } from 'lucide-react';
+import { Search, Download, Tag, Users, ArrowLeft, Edit2, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 function exportCSV(priceListName, rows) {
@@ -191,7 +191,9 @@ export default function SalesPriceListView() {
           {filteredItems.length === 0 ? (
             <div className="p-8 text-center text-slate-400 text-sm">No items in this price list</div>
           ) : (
-            <div className="overflow-x-auto">
+            <>
+            {/* Desktop Table */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-slate-50 text-xs text-slate-700 font-medium">
@@ -241,6 +243,31 @@ export default function SalesPriceListView() {
                 </tbody>
               </table>
             </div>
+
+            {/* Mobile Cards */}
+            <div className="md:hidden divide-y divide-slate-100">
+              {filteredItems.map(r => (
+                <div key={r.id} className="px-4 py-3.5 active:bg-slate-50 cursor-pointer" onClick={() => setEditingRate({ id: r.id, rate: r.rate, mrp: r.mrp || 0, igst_rate: r.igst_rate || 0, packing_unit: r.packing_unit || 0 })}>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold text-slate-900 truncate">{r.item_name}</p>
+                      <p className="text-xs text-slate-500 font-mono mt-0.5">{r.item_code}</p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-sm font-bold text-slate-900">₹{r.rate}</span>
+                      <ChevronRight className="w-4 h-4 text-slate-400" />
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 mt-1.5 text-xs text-slate-500">
+                    {r.brand && <span>{r.brand}</span>}
+                    <span>MRP ₹{r.mrp || '—'}</span>
+                    <span>IGST {r.igst_rate || '—'}%</span>
+                    <span>Pack: {r.packing_unit || '—'}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            </>
           )}
         </div>
       )}

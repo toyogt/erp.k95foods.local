@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
-import { Plus, Upload, Package, TrendingUp, Clock, AlertTriangle, Search, Inbox, Download } from 'lucide-react';
+import { Plus, Upload, Package, TrendingUp, Clock, AlertTriangle, Search, Inbox, Download, ChevronRight } from 'lucide-react';
 
 function exportOrdersCSV(rows) {
   const headers = ['SO Number','Customer','Platform','PO Number','PO Date','PO Expiry','Total Amount','Status','Source'];
@@ -246,7 +246,8 @@ export default function SalesOrders() {
           </div>
         ) : (
           <>
-          <div className="overflow-x-auto">
+          {/* Desktop Table */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
             <thead>
               <tr className="bg-slate-100 text-slate-700 text-xs font-medium">
@@ -265,9 +266,9 @@ export default function SalesOrders() {
                   const isExpired = order.po_expiry_date && new Date(order.po_expiry_date) < new Date()
                     && !['paid', 'closed', 'cancelled'].includes(order.status);
                   return (
-                    <tr key={order.id} className="hover:bg-slate-50 transition-colors">
+                    <tr key={order.id} className="hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => window.location.href = `/SalesOrderDetail?id=${order.id}`}>
                       <td className="px-4 py-3 font-medium text-slate-900">
-                        <a href={`/SalesOrderDetail?id=${order.id}`} className="text-blue-600 hover:underline">{order.so_number || '—'}</a>
+                        <span className="text-blue-600">{order.so_number || '—'}</span>
                       </td>
                       <td className="px-4 py-3 text-slate-700">{order.customer_name}</td>
                       <td className="px-4 py-3">
@@ -277,11 +278,7 @@ export default function SalesOrders() {
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-3">
-                        {order.po_number ? (
-                          <a href={`/SalesOrderDetail?id=${order.id}`} className="text-blue-600 hover:underline">{order.po_number}</a>
-                        ) : '—'}
-                      </td>
+                      <td className="px-4 py-3">{order.po_number || '—'}</td>
                       <td className="px-4 py-3">
                         {order.po_expiry_date ? (
                           <span className={isExpired ? 'text-red-600 font-medium' : 'text-slate-600'}>
@@ -294,7 +291,7 @@ export default function SalesOrders() {
                         {order.total_amount ? `₹${order.total_amount.toLocaleString('en-IN')}` : '—'}
                       </td>
                       <td className="px-4 py-3"><SalesOrderStatusBadge status={order.status} /></td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                         <a href={`/SalesOrderDetail?id=${order.id}`} className="text-blue-600 hover:underline text-xs font-medium">Open →</a>
                       </td>
                     </tr>
@@ -303,6 +300,38 @@ export default function SalesOrders() {
               </tbody>
             </table>
           </div>
+
+          {/* Mobile Cards */}
+          <div className="md:hidden divide-y divide-slate-100">
+            {pagination.paged.map(order => {
+              const isExpired = order.po_expiry_date && new Date(order.po_expiry_date) < new Date()
+                && !['paid', 'closed', 'cancelled'].includes(order.status);
+              return (
+                <a key={order.id} href={`/SalesOrderDetail?id=${order.id}`} className="block px-4 py-3.5 active:bg-slate-50">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold text-slate-900">{order.so_number || '—'}</p>
+                      <p className="text-sm text-slate-600 mt-0.5 truncate">{order.customer_name}</p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <SalesOrderStatusBadge status={order.status} />
+                      <ChevronRight className="w-4 h-4 text-slate-400" />
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 mt-1.5 text-xs text-slate-500">
+                    {order.platform && (
+                      <span className={`px-2 py-0.5 rounded-full font-medium ${PLATFORM_COLORS[order.platform] || PLATFORM_COLORS.other}`}>
+                        {order.platform}
+                      </span>
+                    )}
+                    {order.total_amount && <span className="font-medium text-slate-700">₹{order.total_amount.toLocaleString('en-IN')}</span>}
+                    {isExpired && <span className="text-red-600 font-medium flex items-center gap-0.5"><AlertTriangle className="w-3 h-3" /> Expired</span>}
+                  </div>
+                </a>
+              );
+            })}
+          </div>
+
           <TablePagination {...pagination} />
           </>
         )}

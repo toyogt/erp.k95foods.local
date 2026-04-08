@@ -5,7 +5,7 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
-import { Search, ClipboardList, Package } from 'lucide-react';
+import { Search, ClipboardList, Package, ChevronRight } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import SalesOrderStatusBadge from '@/components/sales/SalesOrderStatusBadge';
 import usePagination from '@/hooks/usePagination';
@@ -112,7 +112,8 @@ export default function SalesPicklists() {
           </div>
         ) : (
           <>
-          <div className="overflow-x-auto">
+          {/* Desktop Table */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 text-slate-700 text-xs font-medium">
@@ -127,12 +128,10 @@ export default function SalesPicklists() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {pagination.paged.map(pl => (
-                  <tr key={pl.id} className="hover:bg-slate-50">
-                    <td className="px-4 py-3 font-medium text-blue-600">
-                      <Link to={`/SalesPicklistDetail?id=${pl.id}`} className="hover:underline">{pl.picklist_number}</Link>
-                    </td>
+                  <tr key={pl.id} className="hover:bg-slate-50 cursor-pointer" onClick={() => window.location.href = `/SalesPicklistDetail?id=${pl.id}`}>
+                    <td className="px-4 py-3 font-medium text-blue-600">{pl.picklist_number}</td>
                     <td className="px-4 py-3">
-                      <Link to={`/SalesOrderDetail?id=${pl.sales_order_id}`} className="text-blue-600 hover:underline text-xs">{pl.so_number}</Link>
+                      <Link to={`/SalesOrderDetail?id=${pl.sales_order_id}`} className="text-blue-600 hover:underline text-xs" onClick={e => e.stopPropagation()}>{pl.so_number}</Link>
                     </td>
                     <td className="px-4 py-3 text-slate-700">{pl.transporter || '—'}</td>
                     <td className="px-4 py-3 text-slate-700">{pl.packaging_type || '—'}</td>
@@ -142,7 +141,7 @@ export default function SalesPicklists() {
                         {pl.status?.replace(/_/g, ' ')}
                       </span>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                       <Link to={`/SalesPicklistDetail?id=${pl.id}`} className="text-blue-600 hover:underline text-xs font-medium">Open →</Link>
                     </td>
                   </tr>
@@ -150,6 +149,31 @@ export default function SalesPicklists() {
               </tbody>
             </table>
           </div>
+
+          {/* Mobile Cards */}
+          <div className="md:hidden divide-y divide-slate-100">
+            {pagination.paged.map(pl => (
+              <Link key={pl.id} to={`/SalesPicklistDetail?id=${pl.id}`} className="block px-4 py-3.5 active:bg-slate-50">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-slate-900">{pl.picklist_number}</p>
+                    <p className="text-sm text-slate-600 mt-0.5">{pl.so_number}{pl.transporter ? ` · ${pl.transporter}` : ''}</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_COLOR[pl.status] || 'bg-slate-100 text-slate-600'}`}>
+                      {pl.status?.replace(/_/g, ' ')}
+                    </span>
+                    <ChevronRight className="w-4 h-4 text-slate-400" />
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-500">
+                  {pl.dispatch_date && <span>Dispatch: {fmt(pl.dispatch_date)}</span>}
+                  {pl.packaging_type && <span>{pl.packaging_type}</span>}
+                </div>
+              </Link>
+            ))}
+          </div>
+
           <TablePagination {...pagination} />
           </>
         )}

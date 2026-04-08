@@ -5,7 +5,7 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
-import { Search, FileText, Receipt } from 'lucide-react';
+import { Search, FileText, Receipt, ChevronRight } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import usePagination from '@/hooks/usePagination';
 import TablePagination from '@/components/sales/TablePagination';
@@ -115,7 +115,8 @@ export default function SalesInvoices() {
           </div>
         ) : (
           <>
-          <div className="overflow-x-auto">
+          {/* Desktop Table */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 text-slate-700 text-xs font-medium">
@@ -131,12 +132,12 @@ export default function SalesInvoices() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {pagination.paged.map(inv => (
-                  <tr key={inv.id} className="hover:bg-slate-50">
+                  <tr key={inv.id} className="hover:bg-slate-50 cursor-pointer" onClick={() => window.location.href = `/SalesInvoiceDetail?id=${inv.id}`}>
                     <td className="px-4 py-3 font-medium">
-                      <Link to={`/SalesInvoiceDetail?id=${inv.id}`} className="text-blue-600 hover:underline">{inv.invoice_number}</Link>
+                      <span className="text-blue-600">{inv.invoice_number}</span>
                     </td>
                     <td className="px-4 py-3 text-slate-700">{inv.customer_name || '—'}</td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                       <Link to={`/SalesOrderDetail?id=${inv.sales_order_id}`} className="text-blue-600 hover:underline text-xs">{inv.so_number}</Link>
                     </td>
                     <td className="px-4 py-3 text-slate-600">{fmt(inv.invoice_date)}</td>
@@ -149,13 +150,9 @@ export default function SalesInvoices() {
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                        inv.status === 'paid' ? 'bg-green-100 text-green-700' :
-                        inv.status === 'overdue' ? 'bg-red-100 text-red-700' :
-                        'bg-slate-100 text-slate-600'
-                      }`}>{inv.status}</span>
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${inv.status === 'paid' ? 'bg-green-100 text-green-700' : inv.status === 'overdue' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600'}`}>{inv.status}</span>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                       <Link to={`/SalesInvoiceDetail?id=${inv.id}`} className="text-blue-600 hover:underline text-xs font-medium">Open →</Link>
                     </td>
                   </tr>
@@ -163,6 +160,32 @@ export default function SalesInvoices() {
               </tbody>
             </table>
           </div>
+
+          {/* Mobile Cards */}
+          <div className="md:hidden divide-y divide-slate-100">
+            {pagination.paged.map(inv => (
+              <Link key={inv.id} to={`/SalesInvoiceDetail?id=${inv.id}`} className="block px-4 py-3.5 active:bg-slate-50">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-slate-900">{inv.invoice_number}</p>
+                    <p className="text-sm text-slate-600 mt-0.5 truncate">{inv.customer_name || '—'}</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${inv.status === 'paid' ? 'bg-green-100 text-green-700' : inv.status === 'overdue' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600'}`}>{inv.status}</span>
+                    <ChevronRight className="w-4 h-4 text-slate-400" />
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 mt-1.5 text-xs text-slate-500">
+                  <span className="text-slate-600">{fmt(inv.invoice_date)}</span>
+                  {inv.total_amount && <span className="font-medium text-slate-700">₹{inv.total_amount.toLocaleString('en-IN')}</span>}
+                  <span className={`px-2 py-0.5 rounded-full font-medium ${WORKFLOW_COLORS[inv.workflow_state] || 'bg-slate-100 text-slate-600'}`}>
+                    {(inv.workflow_state || 'draft').replace(/_/g, ' ')}
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
+
           <TablePagination {...pagination} />
           </>
         )}
