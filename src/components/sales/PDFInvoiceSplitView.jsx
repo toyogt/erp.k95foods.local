@@ -84,21 +84,29 @@ export default function PDFInvoiceSplitView({ pdfEntry, onConfirm }) {
   // Block SO creation if no price list found and no rates matched
   const noRateBlocked = !!(data?._no_rate || (!priceList && items.length > 0 && items.every(i => !i._rate_matched)));
 
-  const taxable = items.reduce((s, i) => s + (i.taxable_value || (i.unit_base_cost * i.quantity) || 0), 0);
-  const tax = items.reduce((s, i) => {
-    // Sum all tax components: IGST or CGST+SGST
-    const itemTax = (i.igst_amount || 0) + (i.cgst_amount || 0) + (i.sgst_amount || 0);
-    if (itemTax > 0) return s + itemTax;
-    // Per-item fallback: use item's own taxable value * its GST rate
-    const itemTaxable = i.taxable_value || (i.unit_base_cost * i.quantity) || 0;
-    const gstRate = i.igst_rate || i.cgst_rate || 0;
-    return s + (gstRate > 0 ? itemTaxable * (gstRate / 100) : 0);
+  // Use PDF-extracted footer totals as authoritative source.
+  // Only fall back to item-level recalculation if PDF totals are missing.
+  const itemTaxable = items.reduce((s, i) => s + (i.taxable_value || (i.unit_base_cost * i.quantity) || 0), 0);
+  const itemTax = items.reduce((s, i) => {
+    const t = (i.igst_amount || 0) + (i.cgst_amount || 0) + (i.sgst_amount || 0);
+    if (t > 0) return s + t;
+    const base = i.taxable_value || (i.unit_base_cost * i.quantity) || 0;
+    const rate = i.igst_rate || i.cgst_rate || 0;
+    return s + (rate > 0 ? base * (rate / 100) : 0);
   }, 0);
-  const total = taxable + tax;
 
-  // Compare system-computed total with PDF-extracted total
+  const pdfTaxable = data?.taxable_amount || 0;
+  const pdfTax = data?.tax_amount || 0;
   const pdfTotal = data?.total_amount || 0;
-  const totalGap = pdfTotal > 0 ? Math.abs(total - pdfTotal) : 0;
+
+  // Prefer PDF footer totals; fall back to item sums
+  const taxable = pdfTaxable > 0 ? pdfTaxable : itemTaxable;
+  const tax = pdfTax > 0 ? pdfTax : itemTax;
+  const total = pdfTotal > 0 ? pdfTotal : (taxable + tax);
+
+  // Compare system item-level total with PDF-extracted total for mismatch detection
+  const systemTotal = itemTaxable + itemTax;
+  const totalGap = pdfTotal > 0 && systemTotal > 0 ? Math.abs(systemTotal - pdfTotal) : 0;
   const hasTotalGap = totalGap > 0.001;
 
   // No-rate block screen
@@ -278,7 +286,7 @@ export default function PDFInvoiceSplitView({ pdfEntry, onConfirm }) {
             <div className="px-4 py-2 bg-red-50 space-y-2">
               <div className="flex items-center gap-2 text-red-700 text-xs font-medium">
                 <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                <span>Invoice total mismatch — PDF: ₹{pdfTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })} vs System: ₹{total.toLocaleString('en-IN', { minimumFractionDigits: 2 })} (Gap: ₹{totalGap.toLocaleString('en-IN', { minimumFractionDigits: 2 })})</span>
+                <span>Invoice total mismatch — PDF: ₹{pdfTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })} vs System: ₹{systemTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })} (Gap: ₹{totalGap.toLocaleString('en-IN', { minimumFractionDigits: 2 })})</span>
               </div>
               <textarea
                 className="w-full border border-red-300 rounded-md px-2 py-1.5 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-red-400 bg-white resize-none"
