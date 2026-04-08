@@ -27,9 +27,10 @@ export default function SMSPutaway() {
     const storedMap = {};
     balances.forEach(b => { storedMap[b.lot_id] = (storedMap[b.lot_id] || 0) + (b.quantity || 0); });
 
-    // Pending putaway = not rejected/damaged/consumed AND pendingToStore (original - stored) > 0
+    // Pending putaway = not rejected/damaged AND pendingToStore (original - stored) > 0
+    // Note: don't exclude 'consumed' status — check actual stored qty instead (status may be stale)
     const pending = lots.filter(l => {
-      if (['rejected', 'damaged', 'consumed'].includes(l.status)) return false;
+      if (['rejected', 'damaged'].includes(l.status)) return false;
       const original = l.quantity || 0;
       const stored = storedMap[l.lot_id] || 0;
       const pendingToStore = original - stored;
