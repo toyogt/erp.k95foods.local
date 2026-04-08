@@ -217,6 +217,9 @@ export default function GRNReceive() {
       item_name: masterItem.item_name,
       item_code: masterItem.item_code || masterItem.item_name,
       uom: masterItem.uom || 'Nos',
+      batch_lot: '',
+      mfg_date: '',
+      expiry_date: '',
       _rules: {
         batch_required: masterItem.batch_required,
         expiry_required: masterItem.expiry_required,
@@ -309,7 +312,8 @@ export default function GRNReceive() {
         damaged_qty: mismatchType === 'damaged' ? (originalQty - receivedQty) : 0,
       });
 
-      const lotId = `LOT-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+      const lotSeq = Math.random().toString(36).slice(2, 6).toUpperCase();
+      const lotId = `LOT-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${lotSeq}`;
       await base44.entities.StoreLot.create({
         lot_id: lotId, qr_code: lotId,
         item_code: it.item_code || it.item_name,

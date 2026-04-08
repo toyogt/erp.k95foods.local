@@ -3,7 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Pencil, Trash2, Search, PackageOpen, ImageIcon, Download, AlertTriangle } from 'lucide-react';
+import { Pencil, Search, PackageOpen, ImageIcon, Download, AlertTriangle, Eye, X } from 'lucide-react';
 import MaterialPhotoUpload from '@/components/store/MaterialPhotoUpload';
 import ImportSystemItemsModal from '@/components/store/ImportSystemItemsModal';
 import { showErrorAlert, showConfirmAlert, showSuccessToast } from '@/lib/toastHelpers';
@@ -21,144 +21,81 @@ const CATEGORIES = [
   { value: 'other', label: 'Other' },
 ];
 
-const EMPTY_FORM = {
-  item_name: '', item_category: 'other', uom: '',
-  material_photo: '',
-  batch_required: false, expiry_required: false,
-  mfg_date_required: false, qc_required: false,
-  min_shelf_life_days: '', opening_stock: '', reorder_level: '',
-  storage_notes: '', is_active: true,
-};
-
-function ItemFormModal({ item, onClose, onSaved }) {
-  const [form, setForm] = useState(item ? { ...item } : { ...EMPTY_FORM });
+function ItemViewModal({ item, onClose, onSaved }) {
+  const [openingStock, setOpeningStock] = useState(item?.opening_stock ?? 0);
   const [saving, setSaving] = useState(false);
-  const [uomOptions, setUomOptions] = useState([]);
-  const [uomLoading, setUomLoading] = useState(true);
+  const isSystem = !!item?.source_entity;
 
-  useEffect(() => {
-    base44.entities.UOMMaster.filter({ is_active: true }, 'uom_name', 200)
-      .then(d => { setUomOptions(d); setUomLoading(false); })
-      .catch(() => setUomLoading(false));
-  }, []);
-
-  function setField(k, v) { setForm(prev => ({ ...prev, [k]: v })); }
-
-  async function handleSave() {
-    if (!form.item_name?.trim()) {
-      showErrorAlert('Validation Error', 'Item name is required');
-      return;
-    }
+  async function handleSaveOpeningStock() {
     setSaving(true);
-    try {
-      const data = {
-        ...form,
-        item_name: form.item_name.trim(),
-        min_shelf_life_days: form.min_shelf_life_days !== '' ? Number(form.min_shelf_life_days) : undefined,
-        opening_stock: form.opening_stock !== '' ? Number(form.opening_stock) : 0,
-        reorder_level: form.reorder_level !== '' ? Number(form.reorder_level) : 0,
-      };
-      if (item?.id) {
-        await base44.entities.StoreItemMaster.update(item.id, data);
-        showSuccessToast('Item updated successfully');
-      } else {
-        await base44.entities.StoreItemMaster.create(data);
-        showSuccessToast('Item created successfully');
-      }
-      setSaving(false);
-      onSaved();
-    } catch (err) {
-      showErrorAlert('Save Failed', 'Failed to save item');
-      setSaving(false);
-    }
+    await base44.entities.StoreItemMaster.update(item.id, { opening_stock: Number(openingStock) || 0 });
+    showSuccessToast('Opening stock updated');
+    setSaving(false);
+    onSaved();
   }
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-3 md:p-4">
       <div className="bg-white rounded-2xl w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto">
-        <div className="p-4 md:p-5 border-b border-slate-200">
-          <h2 className="font-bold text-slate-900 text-lg">{item ? 'Edit Item' : 'New Item'}</h2>
+        <div className="p-4 md:p-5 border-b border-slate-200 flex items-center justify-between">
+          <h2 className="font-bold text-slate-900 text-lg">Item Details</h2>
+          <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400">
+            <X className="w-5 h-5" />
+          </button>
         </div>
         <div className="p-4 md:p-5 space-y-3">
-          <div>
-            <label className="text-xs font-medium text-slate-700">Item Name *</label>
-            <Input className="h-9 text-sm mt-1" value={form.item_name} onChange={e => setField('item_name', e.target.value)} placeholder="Enter item name" />
-          </div>
-          <MaterialPhotoUpload
-            value={form.material_photo}
-            onChange={v => setField('material_photo', v)}
-          />
+          {item.material_photo && (
+            <div className="flex justify-center">
+              <img src={item.material_photo} alt="" className="w-20 h-20 rounded-xl object-cover border border-slate-200" />
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs font-medium text-slate-700">Category</label>
-              <select className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm mt-1" value={form.item_category} onChange={e => setField('item_category', e.target.value)}>
-                {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="text-xs font-medium text-slate-700">Unit of Measure</label>
-              <select
-                className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm mt-1 h-9 bg-white"
-                value={form.uom}
-                onChange={e => setField('uom', e.target.value)}
-              >
-                <option value="">Select Unit of Measure</option>
-                {uomLoading ? (
-                  <option disabled>Loading...</option>
-                ) : uomOptions.length === 0 ? (
-                  <option disabled>No units found — add in System → Unit of Measure</option>
-                ) : (
-                  uomOptions.map(u => (
-                    <option key={u.id} value={u.uom_code}>{u.uom_name} ({u.uom_code})</option>
-                  ))
-                )}
-              </select>
-            </div>
-          </div>
-          <div>
-            <label className="text-xs font-medium text-slate-700">Minimum Shelf Life (days)</label>
-            <Input className="h-9 text-sm mt-1" type="number" min="0" value={form.min_shelf_life_days} onChange={e => setField('min_shelf_life_days', e.target.value)} placeholder="0" />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs font-medium text-slate-700">Opening Stock</label>
-              <Input className="h-9 text-sm mt-1" type="number" min="0" value={form.opening_stock} onChange={e => setField('opening_stock', e.target.value)} placeholder="0" />
-              <p className="text-xs text-slate-400 mt-0.5">Initial stock quantity for this item</p>
-            </div>
-            <div>
-              <label className="text-xs font-medium text-slate-700">Reorder Level</label>
-              <Input className="h-9 text-sm mt-1" type="number" min="0" value={form.reorder_level} onChange={e => setField('reorder_level', e.target.value)} placeholder="0" />
-              <p className="text-xs text-slate-400 mt-0.5">Alert when stock falls below</p>
-            </div>
+            <DetailField label="Item Name" value={item.item_name} />
+            <DetailField label="Item Code" value={item.item_code || '—'} />
+            <DetailField label="Category" value={item.item_category?.replace(/_/g, ' ')} />
+            <DetailField label="Unit of Measure" value={item.uom || 'Nos'} />
+            {isSystem && <DetailField label="Source" value={item.source_entity} />}
+            <DetailField label="Status" value={item.is_active ? 'Active' : 'Inactive'} />
           </div>
           <div className="border border-slate-100 rounded-xl p-4 space-y-2">
             <p className="text-xs font-semibold text-slate-600 mb-2">Validation Rules</p>
-            {[
-              { key: 'batch_required', label: 'Batch Number Required' },
-              { key: 'expiry_required', label: 'Expiry Date Required' },
-              { key: 'mfg_date_required', label: 'Manufacture Date Required' },
-              { key: 'qc_required', label: 'Quality Control Required' },
-            ].map(({ key, label }) => (
-              <label key={key} className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" className="w-4 h-4 rounded" checked={!!form[key]} onChange={e => setField(key, e.target.checked)} />
-                <span className="text-sm text-slate-700">{label}</span>
-              </label>
-            ))}
+            <div className="flex flex-wrap gap-2">
+              {item.batch_required && <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">Batch Required</span>}
+              {item.expiry_required && <span className="px-2 py-0.5 bg-orange-100 text-orange-700 rounded text-xs">Expiry Required</span>}
+              {item.mfg_date_required && <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs">Manufacture Date Required</span>}
+              {!item.batch_required && !item.expiry_required && !item.mfg_date_required && (
+                <span className="text-xs text-slate-400">No special validation rules</span>
+              )}
+            </div>
           </div>
-          <div>
-            <label className="text-xs font-medium text-slate-700">Storage Notes</label>
-            <textarea rows={2} className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm mt-1 resize-none" value={form.storage_notes || ''} onChange={e => setField('storage_notes', e.target.value)} placeholder="Optional storage instructions" />
+          {item.storage_notes && <DetailField label="Storage Notes" value={item.storage_notes} />}
+
+          {/* Editable Opening Stock */}
+          <div className="border border-slate-100 rounded-xl p-4 space-y-2">
+            <label className="text-xs font-medium text-slate-700">Opening Stock</label>
+            <div className="flex items-center gap-2">
+              <Input className="h-9 text-sm flex-1" type="number" min="0" value={openingStock} onChange={e => setOpeningStock(e.target.value)} />
+              <span className="text-sm text-slate-500">{item.uom || 'Nos'}</span>
+              <Button size="sm" onClick={handleSaveOpeningStock} disabled={saving} className="h-9">
+                {saving ? 'Saving…' : 'Update'}
+              </Button>
+            </div>
+            <p className="text-xs text-slate-400">Initial stock quantity for this item</p>
           </div>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" className="w-4 h-4 rounded" checked={!!form.is_active} onChange={e => setField('is_active', e.target.checked)} />
-            <span className="text-sm text-slate-700">Active</span>
-          </label>
         </div>
-        <div className="p-4 md:p-5 border-t border-slate-200 flex gap-2">
-          <Button variant="outline" onClick={onClose} className="flex-1 h-11 text-sm">{saving ? 'Saving…' : 'Cancel'}</Button>
-          <Button onClick={handleSave} disabled={saving} className="flex-1 h-11 bg-slate-900 text-sm">{saving ? 'Saving…' : 'Save Item'}</Button>
+        <div className="p-4 md:p-5 border-t border-slate-200">
+          <Button variant="outline" onClick={onClose} className="w-full h-11 text-sm">Close</Button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function DetailField({ label, value }) {
+  return (
+    <div>
+      <p className="text-xs text-slate-500">{label}</p>
+      <p className="text-sm font-medium text-slate-900 capitalize mt-0.5">{value || '—'}</p>
     </div>
   );
 }
@@ -167,71 +104,52 @@ export default function SMSItemMaster() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [modal, setModal] = useState(null);
+  const [viewItem, setViewItem] = useState(null);
   const [showImport, setShowImport] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [stockByItem, setStockByItem] = useState({});
-  const [issuedByItem, setIssuedByItem] = useState({});
-  const [notStoredByItem, setNotStoredByItem] = useState({});
+  const [pendingPutawayByItem, setPendingPutawayByItem] = useState({});
 
   async function load() {
     setLoading(true);
-    try {
-      const [data, balances, issueLines, lots] = await Promise.all([
-        base44.entities.StoreItemMaster.list('-created_date', 200),
-        base44.entities.StoreStockBalance.list('-created_date', 1000),
-        base44.entities.StoreIssueLine.list('-created_date', 2000),
-        base44.entities.StoreLot.list('-created_date', 500),
-      ]);
-      setItems(data);
+    const [data, balances, lots] = await Promise.all([
+      base44.entities.StoreItemMaster.list('-created_date', 200),
+      base44.entities.StoreStockBalance.list('-created_date', 1000),
+      base44.entities.StoreLot.filter({ status: 'approved' }, '-created_date', 500),
+    ]);
+    setItems(data);
 
-      // Build current stock from balances (stored stock)
-      const sbi = {};
-      balances.forEach(b => {
-        const code = b.item_code;
-        if (code) sbi[code] = (sbi[code] || 0) + (b.quantity || 0);
-      });
-      setStockByItem(sbi);
+    // Build current stock from balances (stored stock)
+    const sbi = {};
+    balances.forEach(b => {
+      const code = b.item_code;
+      if (code) sbi[code] = (sbi[code] || 0) + (b.quantity || 0);
+    });
+    setStockByItem(sbi);
 
-      // Build issued from issue lines
-      const ibi = {};
-      issueLines.forEach(l => {
+    // Build stored quantity by lot
+    const storedByLot = {};
+    balances.forEach(b => {
+      if (b.lot_id) storedByLot[b.lot_id] = (storedByLot[b.lot_id] || 0) + (b.quantity || 0);
+    });
+
+    // Blocked / Pending Putaway = approved lots where (lot qty - stored qty) > 0
+    const ppbi = {};
+    lots.forEach(l => {
+      if (l.status !== 'approved') return;
+      const stored = storedByLot[l.lot_id] || 0;
+      const pending = (l.quantity || 0) - stored;
+      if (pending > 0) {
         const code = l.item_code;
-        if (code) ibi[code] = (ibi[code] || 0) + (l.issued_quantity || 0);
-      });
-      setIssuedByItem(ibi);
+        if (code) ppbi[code] = (ppbi[code] || 0) + pending;
+      }
+    });
+    setPendingPutawayByItem(ppbi);
 
-      // Build blocked / not-stored: lots that have quantity but no stored balance
-      const storedLotIds = new Set(balances.filter(b => (b.quantity || 0) > 0).map(b => b.lot_id));
-      const nsbi = {};
-      lots.filter(l => !['consumed', 'rejected'].includes(l.status) && !storedLotIds.has(l.lot_id)).forEach(l => {
-        const code = l.item_code;
-        if (code) nsbi[code] = (nsbi[code] || 0) + (l.remaining_quantity || l.quantity || 0);
-      });
-      setNotStoredByItem(nsbi);
-    } catch {
-      showErrorAlert('Load Failed', 'Failed to load items');
-    }
     setLoading(false);
   }
 
   useEffect(() => { load(); }, []);
-
-  async function handleDelete(item) {
-    showConfirmAlert(
-      'Delete Item?',
-      `Are you sure you want to delete "${item.item_name}"? This cannot be undone.`,
-      async () => {
-        try {
-          await base44.entities.StoreItemMaster.delete(item.id);
-          showSuccessToast('Item deleted successfully');
-          load();
-        } catch (err) {
-          showErrorAlert('Delete Failed', 'Could not delete this item. It may be referenced elsewhere.');
-        }
-      }
-    );
-  }
 
   const filtered = items.filter(i => {
     const matchSearch = i.item_name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -252,25 +170,22 @@ export default function SMSItemMaster() {
           onImported={load}
         />
       )}
-      {modal && (
-        <ItemFormModal
-          item={modal === 'new' ? null : modal}
-          onClose={() => setModal(null)}
-          onSaved={() => { setModal(null); load(); }}
+      {viewItem && (
+        <ItemViewModal
+          item={viewItem}
+          onClose={() => setViewItem(null)}
+          onSaved={() => { setViewItem(null); load(); }}
         />
       )}
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Store Item Master</h1>
-          <p className="text-xs text-slate-500">Central repository of items with validation rules</p>
+          <p className="text-xs text-slate-500">Central repository of items — import from system masters</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setShowImport(true)} className="h-11 gap-2 text-sm whitespace-nowrap">
             <Download className="w-4 h-4" /> Import from System
-          </Button>
-          <Button onClick={() => setModal('new')} className="h-11 gap-2 bg-slate-900 text-sm whitespace-nowrap">
-            <Plus className="w-4 h-4" /> Add Item
           </Button>
         </div>
       </div>
@@ -308,7 +223,7 @@ export default function SMSItemMaster() {
                <th className="text-left px-4 py-3 font-medium hidden md:table-cell">Unit</th>
                <th className="text-right px-4 py-3 font-medium hidden md:table-cell">Opening Stock</th>
                <th className="text-right px-4 py-3 font-medium hidden md:table-cell">Current Stock</th>
-               <th className="text-right px-4 py-3 font-medium hidden lg:table-cell">Blocked Units</th>
+               <th className="text-right px-4 py-3 font-medium hidden lg:table-cell">Pending Putaway</th>
                <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">Rules</th>
                <th className="text-left px-4 py-3 font-medium">Status</th>
                <th className="px-4 py-3" />
@@ -353,10 +268,10 @@ export default function SMSItemMaster() {
                   <td className="px-4 py-3 text-right hidden lg:table-cell">
                     {(() => {
                       const code = item.item_code || item.item_name;
-                      const blocked = notStoredByItem[code] || 0;
-                      return blocked > 0 ? (
+                      const pending = pendingPutawayByItem[code] || 0;
+                      return pending > 0 ? (
                         <span className="text-amber-600 font-medium flex items-center gap-1 justify-end">
-                          <AlertTriangle className="w-3 h-3" />{blocked.toFixed(1)}
+                          <AlertTriangle className="w-3 h-3" />{pending.toFixed(1)}
                         </span>
                       ) : <span className="text-slate-400">0</span>;
                     })()}
@@ -366,7 +281,6 @@ export default function SMSItemMaster() {
                       {item.batch_required && <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">Batch</span>}
                       {item.expiry_required && <span className="px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded text-xs">Expiry</span>}
                       {item.mfg_date_required && <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded text-xs">Mfg Date</span>}
-                      {item.qc_required && <span className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-xs">Quality Control</span>}
                     </div>
                   </td>
                   <td className="px-4 py-3">
@@ -376,8 +290,9 @@ export default function SMSItemMaster() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1 justify-end">
-                      <button onClick={() => setModal(item)} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500"><Pencil className="w-4 h-4" /></button>
-                      <button onClick={() => handleDelete(item)} className="p-1.5 hover:bg-red-50 rounded-lg text-red-400"><Trash2 className="w-4 h-4" /></button>
+                      <button onClick={() => setViewItem(item)} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500" title="View Details">
+                        <Eye className="w-4 h-4" />
+                      </button>
                     </div>
                   </td>
                 </tr>
