@@ -15,7 +15,7 @@ const SOURCE_TABS = [
 
 async function fetchSystemItems() {
   const [ingredients, boxes, caps, containers, flavours, artworks] = await Promise.all([
-    base44.entities.IngredientItem.list('brand_name', 500).catch(() => []),
+    base44.entities.IngredientItem.filter({ is_active: true }, 'brand_name', 500).catch(() => []),
     base44.entities.BoxType.filter({ is_active: true }, 'box_name', 500).catch(() => []),
     base44.entities.CapType.filter({ is_active: true }, 'cap_name', 500).catch(() => []),
     base44.entities.ContainerType.list('auto_generated_name', 500).catch(() => []),

@@ -344,9 +344,9 @@ export default function GRNItemCard({ index, item, storeItems, canRemove, onUpda
           <Label className="text-xs font-medium text-slate-700">
             Manufacturer Batch / Lot Number <span className="text-red-500">*</span>
           </Label>
-          <input className="h-11 text-sm mt-1 w-full border border-slate-200 rounded-xl px-3" value={item.batch_lot || ''}
+          <input className="h-11 text-sm mt-1 w-full border border-slate-200 rounded-xl px-3" value={item.batch_lot}
             onChange={e => onUpdate('batch_lot', e.target.value)}
-            placeholder="Enter batch number" />
+            placeholder={'Enter batch number'} />
           {!item.batch_lot?.trim() && (
             <p className="text-xs text-red-500 mt-0.5">Batch number is mandatory for this item</p>
           )}
