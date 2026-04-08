@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
-import { Edit2, Check, AlertTriangle, TrendingUp, TrendingDown, User, Tag, Ban } from 'lucide-react';
+import { Edit2, Check, AlertTriangle, TrendingUp, TrendingDown, User, Tag, Ban, Calendar, FileText } from 'lucide-react';
 
 // Shows diff between system rate and PDF rate
 function RateDiff({ pdfRate, sysRate }) {
@@ -15,6 +15,13 @@ function RateDiff({ pdfRate, sysRate }) {
       PDF ₹{pdfRate} ({diff > 0 ? '+' : ''}{pct}%)
     </span>
   );
+}
+
+function formatDisplayDate(dateStr) {
+  if (!dateStr) return '';
+  const m = dateStr.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+  return dateStr;
 }
 
 export default function PDFInvoiceSplitView({ pdfEntry, onConfirm }) {
@@ -136,6 +143,23 @@ export default function PDFInvoiceSplitView({ pdfEntry, onConfirm }) {
           {data?.shipping_address && (
             <div className="text-slate-500 text-[11px] leading-relaxed pl-[22px]">
               📍 {data.shipping_address}
+            </div>
+          )}
+          {/* Purchase Order Metadata */}
+          {(data?.po_number || data?.po_date || data?.po_release_date || data?.po_delivery_date || data?.po_expiry_date || data?.payment_terms) && (
+            <div className="bg-white border border-slate-200 rounded-lg p-2 mt-1">
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <FileText className="w-3 h-3 text-slate-400" />
+                <span className="font-semibold text-slate-700 text-[11px]">Purchase Order Details</span>
+              </div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px]">
+                {data.po_number && <div><span className="text-slate-500">PO No:</span> <span className="font-medium text-slate-800">{data.po_number}</span></div>}
+                {data.po_date && <div><span className="text-slate-500">PO Date:</span> <span className="font-medium text-slate-800">{formatDisplayDate(data.po_date)}</span></div>}
+                {data.po_release_date && <div><span className="text-slate-500">Release Date:</span> <span className="font-medium text-slate-800">{formatDisplayDate(data.po_release_date)}</span></div>}
+                {data.payment_terms && <div><span className="text-slate-500">Payment Terms:</span> <span className="font-medium text-slate-800">{data.payment_terms}</span></div>}
+                {data.po_delivery_date && <div><span className="text-slate-500">Expected Delivery:</span> <span className="font-medium text-slate-800">{formatDisplayDate(data.po_delivery_date)}</span></div>}
+                {data.po_expiry_date && <div><span className="text-slate-500">PO Expiry:</span> <span className="font-medium text-slate-800">{formatDisplayDate(data.po_expiry_date)}</span></div>}
+              </div>
             </div>
           )}
         </div>

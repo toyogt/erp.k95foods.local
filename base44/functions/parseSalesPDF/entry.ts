@@ -39,6 +39,7 @@ function parseZepto(text) {
 
   const po_number = (full.match(/PO\s*No:\s*\n\s*(P?\d+)/i) || full.match(/PO\s*No[:\s]*(P?\d+)/i) || [])[1] || '';
   const po_date = parseDate((full.match(/PO\s*Date:\s*\n\s*([\d\-]+)/i) || full.match(/PO\s*Date[:\s]*([\d\-]+)/i) || [])[1]);
+  const po_release_date = parseDate((full.match(/PO\s*Release\s*Date:\s*\n\s*([\d\-]+)/i) || full.match(/PO\s*Release\s*Date[:\s]*([\d\-]+)/i) || [])[1]);
   const po_expiry_date = parseDate((full.match(/PO\s*Expiry\s*Date:\s*\n\s*([\d\-]+)/i) || full.match(/PO\s*Expiry\s*Date[:\s]*([\d\-]+)/i) || [])[1]);
   const po_delivery_date = parseDate((full.match(/Expected\s*Delivery\s*Date:\s*\n\s*([\d\-]+)/i) || full.match(/Expected\s*Delivery\s*Date[:\s]*([\d\-]+)/i) || [])[1]);
   const payment_terms = (full.match(/Payment\s*Terms:\s*\n\s*([^\n]+)/i) || full.match(/Payment\s*Terms[:\s]*([^\n]*)/i) || [])[1]?.trim() || '';
@@ -118,8 +119,11 @@ function parseZepto(text) {
         totalAmt = Math.round(taxVal * 1.4 * 100) / 100;
       }
 
+      // For Zepto: use SKU Code as item_code for matching
       items.push({
-        item_code: materialCode, sku_code: skuCode,
+        item_code: skuCode || materialCode,
+        material_code: materialCode,
+        sku_code: skuCode,
         hsn_code: hsn.match(/^\d{8}$/) ? hsn : '22029990',
         ean_number: ean.match(/^\d{10,14}$/) ? ean : '',
         description: desc, quantity: qty, mrp,
@@ -135,7 +139,7 @@ function parseZepto(text) {
   const tax_amount = num((full.match(/Total\s*Tax\s*\(INR\)[:\s]*([\d,.]+)/i) || [])[1]) || items.reduce((s, i) => s + i.igst_amount, 0);
   const total_amount = num((full.match(/Grand\s*Total\s*Amount\s*\(INR\)[:\s]*([\d,.]+)/i) || [])[1]) || taxable_amount + tax_amount;
 
-  return { platform: 'zepto', po_number, po_date, po_expiry_date, po_delivery_date, payment_terms, customer_name, customer_gstin: billingGstin, billing_address, shipping_address, taxable_amount, tax_amount, total_amount, items };
+  return { platform: 'zepto', po_number, po_date, po_release_date, po_expiry_date, po_delivery_date, payment_terms, customer_name, customer_gstin: billingGstin, billing_address, shipping_address, taxable_amount, tax_amount, total_amount, items };
 }
 
 // ─── SWIGGY / SCOOTSY PARSER ─────────────────────────────────────────────
@@ -144,11 +148,12 @@ function parseZepto(text) {
 function parseSwiggy(text) {
   const full = text;
 
-  // Header extraction — handles "Mar 10, 2026" style dates
+  // Header extraction — handles "Mar 10, 2026" style dates and ISO dates
   const po_number = (full.match(/PO\s*No\s*[:\s]*([A-Z]*\d+)/i) || [])[1] || '';
-  const po_date = parseDate((full.match(/PO\s*Date\s*[:\s]*([A-Za-z]+\s+\d{1,2},?\s*\d{4})/i) || [])[1]?.trim());
-  const po_expiry_date = parseDate((full.match(/PO\s*Expiry\s*Date\s*[:\s]*([A-Za-z]+\s+\d{1,2},?\s*\d{4})/i) || [])[1]?.trim());
-  const po_delivery_date = parseDate((full.match(/Expected\s*Delivery\s*Date\s*[:\s]*([A-Za-z]+\s+\d{1,2},?\s*\d{4})/i) || [])[1]?.trim());
+  const po_date = parseDate((full.match(/PO\s*Date\s*[:\s]*([A-Za-z]+\s+\d{1,2},?\s*\d{4})/i) || full.match(/PO\s*Date[:\s]*([\d\-]+)/i) || [])[1]?.trim());
+  const po_release_date = parseDate((full.match(/PO\s*Release\s*Date\s*[:\s]*([A-Za-z]+\s+\d{1,2},?\s*\d{4})/i) || full.match(/PO\s*Release\s*Date[:\s]*([\d\-]+)/i) || [])[1]?.trim());
+  const po_expiry_date = parseDate((full.match(/PO\s*Expiry\s*Date\s*[:\s]*([A-Za-z]+\s+\d{1,2},?\s*\d{4})/i) || full.match(/PO\s*Expiry\s*Date[:\s]*([\d\-]+)/i) || [])[1]?.trim());
+  const po_delivery_date = parseDate((full.match(/Expected\s*Delivery\s*Date\s*[:\s]*([A-Za-z]+\s+\d{1,2},?\s*\d{4})/i) || full.match(/Expected\s*Delivery\s*Date[:\s]*([\d\-]+)/i) || [])[1]?.trim());
   const payment_terms = (full.match(/Payment\s*Terms\s*[:\s]*(\d+\s*Days?)/i) || [])[1]?.trim() || '';
 
   // Customer GSTIN (from Billing Address block)
@@ -289,6 +294,7 @@ function parseSwiggy(text) {
     platform: 'swiggy',
     po_number,
     po_date,
+    po_release_date,
     po_expiry_date,
     po_delivery_date,
     payment_terms,
