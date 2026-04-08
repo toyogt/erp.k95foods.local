@@ -165,12 +165,16 @@ export default function RecipeEditor({ group, specs, uoms, brandItems, user, onG
     }));
 
     await base44.entities.AuditLog.create({
+      audit_id: `AUD-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       action: 'RECIPE_VERSION_SAVED',
+      action_type: 'create',
+      module: 'PRODUCTION',
       entity_type: 'RecipeVersion',
       entity_id: newVer.version_id,
-      user_email: user?.email || '',
-      user_name: user?.full_name || '',
-      details: { recipe_group_id: group.recipe_group_id, option_id: activeOptionId, version_no: maxVer + 1, change_note: changeNote },
+      entity_code: newVer.version_id,
+      actor_email: user?.email || '',
+      actor_name: user?.full_name || '',
+      reason_text: changeNote || '',
     });
 
     setShowSaveModal(false);
