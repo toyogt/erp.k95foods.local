@@ -1,4 +1,5 @@
-import { ArrowRight, Printer, FileText } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowRight, Printer, ChevronDown, ChevronUp } from 'lucide-react';
 import { formatDateTime } from '@/lib/dateFormatter';
 
 /**
@@ -14,7 +15,9 @@ import { formatDateTime } from '@/lib/dateFormatter';
  * @param {string} props.from - source location (for transfers)
  * @param {string} props.to - destination location (for transfers)
  */
-export default function HistoryCard({ id, title, subtitle, details = [], status, statusColor = 'green', date, from, to }) {
+export default function HistoryCard({ id, title, subtitle, details = [], status, statusColor = 'green', date, from, to, expandedContent, children }) {
+  const [expanded, setExpanded] = useState(false);
+
   function handlePrint() {
     const printWin = window.open('', '_blank', 'width=600,height=700');
     printWin.document.write(`
@@ -54,24 +57,32 @@ export default function HistoryCard({ id, title, subtitle, details = [], status,
     slate: 'bg-slate-100 text-slate-600',
   };
 
+  const hasExpandable = expandedContent || children;
+
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-sm transition-shadow">
+    <div className={`bg-white border border-slate-200 rounded-xl hover:shadow-sm transition-shadow ${hasExpandable ? 'cursor-pointer' : ''}`}>
+      <div className="p-4" onClick={() => hasExpandable && setExpanded(!expanded)}>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <p className="font-mono text-xs font-bold text-slate-500">{id}</p>
           <p className="text-sm font-semibold text-slate-900 mt-0.5 truncate">{title}</p>
           {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
         </div>
-        <div className="flex flex-col items-end gap-1 shrink-0">
-          {status && (
-            <span className={`px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${colorMap[statusColor] || colorMap.green}`}>
-              {status}
-            </span>
-          )}
-          {date && (
-            <span className="text-xs text-slate-400">
-              {formatDateTime(date)}
-            </span>
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="flex flex-col items-end gap-1">
+            {status && (
+              <span className={`px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${colorMap[statusColor] || colorMap.green}`}>
+                {status}
+              </span>
+            )}
+            {date && (
+              <span className="text-xs text-slate-400">
+                {formatDateTime(date)}
+              </span>
+            )}
+          </div>
+          {hasExpandable && (
+            expanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />
           )}
         </div>
       </div>
@@ -96,9 +107,21 @@ export default function HistoryCard({ id, title, subtitle, details = [], status,
         </div>
       )}
 
+      {hasExpandable && !expanded && (
+        <p className="text-xs text-blue-500 font-medium mt-2">Tap to view full details</p>
+      )}
+      </div>
+
+      {/* Expanded content */}
+      {expanded && hasExpandable && (
+        <div className="px-4 pb-3 border-t border-slate-100 pt-3">
+          {expandedContent || children}
+        </div>
+      )}
+
       {/* Print button */}
-      <div className="flex gap-2 mt-3 pt-2 border-t border-slate-100">
-        <button onClick={handlePrint} className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-700 transition-colors">
+      <div className="flex gap-2 px-4 pb-3 pt-2 border-t border-slate-100">
+        <button onClick={(e) => { e.stopPropagation(); handlePrint(); }} className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-700 transition-colors">
           <Printer className="w-3.5 h-3.5" /> Print
         </button>
       </div>

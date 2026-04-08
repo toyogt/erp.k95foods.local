@@ -3,7 +3,8 @@ import { base44 } from '@/api/base44Client';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Loader2, RefreshCw, CheckCircle2, Plus, Trash2, Search, AlertTriangle, Camera, ListChecks, FileText, Eye, ChevronRight } from 'lucide-react';
+import { Loader2, RefreshCw, CheckCircle2, Plus, Trash2, Search, AlertTriangle, Camera, ListChecks, FileText, Eye, ChevronRight, QrCode, ExternalLink } from 'lucide-react';
+import GRNDetailModal from '@/components/store/GRNDetailModal';
 import InvoicePreviewModal from '@/components/store/InvoicePreviewModal';
 import { logGrnAudit, getChecklistTemplate } from '@/components/grn/grnHelpers';
 import { fireFMSEvent } from '@/lib/useFMSAutoComplete';
@@ -20,7 +21,7 @@ import { useToast } from "@/components/ui/use-toast";
 import TablePagination from '@/components/store/TablePagination';
 
 
-function GRNTable({ grns, title, allGateEntries, onViewInvoice }) {
+function GRNTable({ grns, title, allGateEntries, onViewInvoice, onOpenGrn }) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   if (!grns || grns.length === 0) {
@@ -41,7 +42,7 @@ function GRNTable({ grns, title, allGateEntries, onViewInvoice }) {
               <th className="text-left px-4 py-3 font-medium">Status</th>
               <th className="text-left px-4 py-3 font-medium">Received By</th>
               <th className="text-left px-4 py-3 font-medium">Date</th>
-              <th className="text-center px-4 py-3 font-medium">Invoice Photo</th>
+              <th className="text-center px-4 py-3 font-medium">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -67,11 +68,16 @@ function GRNTable({ grns, title, allGateEntries, onViewInvoice }) {
                     {formatDateTime(g.received_at || g.created_date)}
                   </td>
                   <td className="px-4 py-3 text-center">
-                    {invoiceUrl ? (
-                      <button onClick={() => onViewInvoice(invoiceUrl)} className="p-1.5 rounded hover:bg-blue-50 text-blue-500" title="View Invoice">
-                        <Eye className="w-4 h-4" />
+                    <div className="flex items-center justify-center gap-1">
+                      <button onClick={() => onOpenGrn(g)} className="p-1.5 rounded hover:bg-slate-100 text-slate-600" title="View Details">
+                        <ExternalLink className="w-4 h-4" />
                       </button>
-                    ) : <span className="text-slate-300">—</span>}
+                      {invoiceUrl && (
+                        <button onClick={() => onViewInvoice(invoiceUrl)} className="p-1.5 rounded hover:bg-blue-50 text-blue-500" title="View Invoice">
+                          <Eye className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               );
@@ -139,6 +145,7 @@ export default function GRNReceive() {
   const [grnItems, setGrnItems] = useState({});
   const [invoicePreview, setInvoicePreview] = useState(null);
   const [allGateMap, setAllGateMap] = useState({});
+  const [selectedGrn, setSelectedGrn] = useState(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -443,7 +450,7 @@ export default function GRNReceive() {
         ))}
       </div>
 
-      {activeTab === 'master' && <GRNTable grns={allGrns} title="All Goods Received Notes" allGateEntries={allGateMap} onViewInvoice={url => setInvoicePreview(url)} />}
+      {activeTab === 'master' && <GRNTable grns={allGrns} title="All Goods Received Notes" allGateEntries={allGateMap} onViewInvoice={url => setInvoicePreview(url)} onOpenGrn={g => setSelectedGrn(g)} />}
 
       {activeTab === 'create' && !selected && (
         <>
@@ -634,6 +641,9 @@ export default function GRNReceive() {
       )}
       {invoicePreview && (
         <InvoicePreviewModal imageUrl={invoicePreview} title="Invoice Preview" onClose={() => setInvoicePreview(null)} />
+      )}
+      {selectedGrn && (
+        <GRNDetailModal grn={selectedGrn} gateEntry={allGateMap[selectedGrn.gate_id]} onClose={() => setSelectedGrn(null)} />
       )}
     </motion.div>
   );
