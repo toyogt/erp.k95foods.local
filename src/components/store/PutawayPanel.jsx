@@ -132,9 +132,7 @@ export default function PutawayPanel({ lots: externalLots, locations: externalLo
   function addEntry() { setEntries(prev => [...prev, emptyEntry()]); }
   function removeEntry(idx) { setEntries(prev => prev.filter((_, i) => i !== idx)); }
 
-  // Same lot can be used in multiple entries (different locations)
-
-  async function processEntry(lot, location, qty, notes, user, now) {
+  async function processEntry(lot, location, qty, notes, user, now, cumulativeQtyForLot) {
     const putawayId = `PUT-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`;
     await base44.entities.StorePutaway.create({
       putaway_id: putawayId, lot_id: lot.lot_id, location_id: location.id,
@@ -152,9 +150,9 @@ export default function PutawayPanel({ lots: externalLots, locations: externalLo
         putaway_date: now, putaway_by: user?.email, putaway_id: putawayId,
       });
     }
-    // pendingToStore = original - stored (before this putaway). After putaway, recalculate.
+    // Use cumulative qty for this lot across all entries in this batch
     const pendingBefore = lot._pendingToStore ?? lot.quantity;
-    const pendingAfter = pendingBefore - qty;
+    const pendingAfter = pendingBefore - (cumulativeQtyForLot || qty);
     await base44.entities.StoreLot.update(lot.id, { 
       status: pendingAfter <= 0 ? 'putaway' : 'approved', 
       remaining_quantity: Math.max(0, pendingAfter) 
@@ -194,8 +192,12 @@ export default function PutawayPanel({ lots: externalLots, locations: externalLo
     const user = await base44.auth.me();
     const now = new Date().toISOString();
     try {
+        // Group by lot to calculate cumulative putaway for status update
+        const lotCumulativeQty = {};
         for (const item of toProcess) {
-          await processEntry(item.lot, item.location, item.quantity, item.notes, user, now);
+          const lotId = item.lot.lot_id;
+          lotCumulativeQty[lotId] = (lotCumulativeQty[lotId] || 0) + item.quantity;
+          await processEntry(item.lot, item.location, item.quantity, item.notes, user, now, lotCumulativeQty[lotId]);
         }
         Swal.fire({ icon: 'success', title: 'Putaway Confirmed', text: `${toProcess.length} lot(s) successfully stored`, timer: 2500, showConfirmButton: false });
         setEntries([emptyEntry()]);
@@ -210,14 +212,13 @@ export default function PutawayPanel({ lots: externalLots, locations: externalLo
   if (loading) return <div className="text-sm text-slate-400 py-4 text-center">Loading...</div>;
 
   return (
-    <div className={`space-y-4`}>
+    <div className="space-y-4">
        <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] p-4 space-y-3">
           <p className="text-sm font-semibold text-slate-700">Putaway Entries ({entries.length})</p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {entries.map((entry, idx) => {
             const lot = lots.find(l => l.lot_id === entry.lotId);
-            const location = locations.find(l => l.id === entry.locationId);
             // Calculate remaining available for this lot considering other entries
             const totalUsedByOthers = entries.reduce((sum, e, i) => {
               if (i !== idx && e.lotId === entry.lotId && e.quantity) return sum + parseFloat(e.quantity || 0);

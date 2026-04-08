@@ -277,7 +277,7 @@ export default function SMSStockOut() {
   async function loadData() {
     setLoading(true);
     const [lots, balances, issues] = await Promise.all([
-      base44.entities.StoreLot.filter({ status: 'putaway' }, '-created_date', 500),
+      base44.entities.StoreLot.list('-created_date', 500),
       base44.entities.StoreStockBalance.list('-created_date', 1000),
       base44.entities.StoreIssue.list('-created_date', 100),
     ]);
