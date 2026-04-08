@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { motion } from 'framer-motion';
-import { Plus, Edit2, X, Bell, Upload, Send, Loader2 } from 'lucide-react';
+import { Plus, Edit2, X, Bell, Upload, Send, Loader2, Search, ImageIcon } from 'lucide-react';
 import ExportButton from '@/components/store/ExportButton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,25 +11,80 @@ import { showSuccessToast, showErrorAlert } from '@/lib/toastHelpers';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
+function ItemSearchDropdown({ storeItems, value, onSelect }) {
+  const [query, setQuery] = useState('');
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    function onClick(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, []);
+
+  const q = query.trim().toLowerCase();
+  const filtered = q
+    ? storeItems.filter(s =>
+        (s.item_name || '').toLowerCase().includes(q) ||
+        (s.item_code || '').toLowerCase().includes(q)
+      )
+    : storeItems;
+
+  return (
+    <div className="relative" ref={ref}>
+      <div className="relative">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+        <input
+          className="w-full h-11 pl-8 pr-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-teal-400 mt-1"
+          placeholder="Search items by name or code..."
+          value={query}
+          onChange={e => { setQuery(e.target.value); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+        />
+      </div>
+      {open && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-60 overflow-y-auto">
+          {filtered.length === 0 ? (
+            <div className="px-4 py-3 text-sm text-amber-600">No items found. Add items via Item Master first.</div>
+          ) : filtered.map((s) => (
+            <div key={s.id} className="px-4 py-2.5 text-sm cursor-pointer hover:bg-slate-50 flex items-start gap-2 border-b border-slate-50 last:border-0"
+              onClick={() => { setQuery(s.item_name); setOpen(false); onSelect(s); }}>
+              {s.material_photo ? (
+                <img src={s.material_photo} alt="" className="w-7 h-7 rounded object-cover border border-slate-200 shrink-0 mt-0.5" />
+              ) : (
+                <div className="w-7 h-7 rounded bg-slate-100 flex items-center justify-center shrink-0 mt-0.5">
+                  <ImageIcon className="w-3 h-3 text-slate-400" />
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="font-medium text-slate-800 break-words leading-snug">{s.item_name}</p>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  {s.item_code && `${s.item_code} · `}{s.item_category?.replace('_', ' ')} · {s.uom || 'Nos'}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ConfigModal({ config, storeItems, onSave, onClose }) {
   const [form, setForm] = useState(config || { item_code: '', item_name: '', uom: 'Nos', reorder_level: '', reorder_quantity: '', alert_emails: '', is_active: true });
   const [saving, setSaving] = useState(false);
   function set(k, v) { setForm(f => ({ ...f, [k]: v })); }
 
-  // Initialize alert_emails as comma string for editing
   useEffect(() => {
     if (config?.alert_emails && Array.isArray(config.alert_emails)) {
       set('alert_emails', config.alert_emails.join(', '));
     }
   }, []);
 
-  function handleItemSelect(e) {
-    const selected = storeItems.find(s => s.item_code === e.target.value);
-    if (selected) {
-      set('item_code', selected.item_code);
-      set('item_name', selected.item_name);
-      set('uom', selected.uom || 'Nos');
-    }
+  function handleItemSelect(item) {
+    set('item_code', item.item_code);
+    set('item_name', item.item_name);
+    set('uom', item.uom || 'Nos');
   }
 
   async function handleSave() {
@@ -63,21 +118,14 @@ function ConfigModal({ config, storeItems, onSave, onClose }) {
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2">
               <Label className="text-xs font-medium text-slate-700">Item <span className="text-red-500">*</span></Label>
-              <select
-                className="w-full h-11 border border-slate-200 rounded-xl px-3 text-sm mt-1"
-                value={form.item_code || ''}
-                onChange={handleItemSelect}
-              >
-                <option value="">Select item...</option>
-                {storeItems.map(s => (
-                  <option key={s.id} value={s.item_code}>{s.item_name} ({s.item_code})</option>
-                ))}
-              </select>
+              <ItemSearchDropdown storeItems={storeItems} value={form.item_code} onSelect={handleItemSelect} />
             </div>
             {form.item_name && (
-              <div className="col-span-2 flex items-center gap-2 bg-slate-50 rounded-lg px-3 py-2">
+              <div className="col-span-2 flex items-center gap-2 bg-teal-50 border border-teal-200 rounded-lg px-3 py-2">
+                <div className="w-2 h-2 rounded-full bg-teal-500 shrink-0" />
                 <span className="text-sm font-medium text-slate-800">{form.item_name}</span>
-                <span className="text-xs text-slate-400">{form.uom || 'Nos'}</span>
+                <span className="text-xs text-slate-500">{form.item_code}</span>
+                <span className="text-xs text-slate-400 ml-auto">{form.uom || 'Nos'}</span>
               </div>
             )}
             <div>
@@ -199,14 +247,52 @@ export default function SMSReorderConfig() {
       return;
     }
     setSendingAlert(cfg.id);
-    const subject = `Low Stock Alert: ${cfg.item_name || cfg.item_code}`;
-    const body = `<h2>Low Stock Alert</h2>
-<p><strong>Item:</strong> ${cfg.item_name} (${cfg.item_code})</p>
-<p><strong>Current Stock:</strong> ${current.toFixed(2)} ${cfg.uom || 'Nos'}</p>
-<p><strong>Reorder Level:</strong> ${cfg.reorder_level}</p>
-<p><strong>Suggested Order Quantity:</strong> ${cfg.reorder_quantity || 'Not set'}</p>
-<p>Please take necessary action to replenish stock.</p>
-<p style="color:#94a3b8;font-size:12px">Sent from K95 ERP Store Management</p>`;
+    const subject = `⚠️ Low Stock Alert — ${cfg.item_name || cfg.item_code}`;
+    const alertDate = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const alertTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+    const body = `
+<div style="font-family:'Inter',Arial,sans-serif;max-width:600px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden">
+  <div style="background:#0f172a;padding:24px 32px">
+    <h1 style="color:#ffffff;font-size:20px;margin:0;font-weight:700">⚠️ Low Stock Alert</h1>
+    <p style="color:#94a3b8;font-size:13px;margin:4px 0 0">K95 ERP — Store Management System</p>
+  </div>
+  <div style="padding:24px 32px">
+    <p style="font-size:14px;color:#334155;margin:0 0 16px">The following item has fallen below its configured reorder level and requires immediate attention:</p>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+      <tr style="border-bottom:1px solid #f1f5f9">
+        <td style="padding:10px 12px;font-size:13px;color:#64748b;width:45%">Item Name</td>
+        <td style="padding:10px 12px;font-size:14px;color:#0f172a;font-weight:600">${cfg.item_name || '—'}</td>
+      </tr>
+      <tr style="border-bottom:1px solid #f1f5f9">
+        <td style="padding:10px 12px;font-size:13px;color:#64748b">Item Code</td>
+        <td style="padding:10px 12px;font-size:14px;color:#0f172a;font-family:monospace">${cfg.item_code}</td>
+      </tr>
+      <tr style="border-bottom:1px solid #f1f5f9">
+        <td style="padding:10px 12px;font-size:13px;color:#64748b">Unit of Measure</td>
+        <td style="padding:10px 12px;font-size:14px;color:#0f172a">${cfg.uom || 'Nos'}</td>
+      </tr>
+      <tr style="border-bottom:1px solid #f1f5f9;background:#fef2f2">
+        <td style="padding:10px 12px;font-size:13px;color:#991b1b;font-weight:600">Current Stock</td>
+        <td style="padding:10px 12px;font-size:16px;color:#dc2626;font-weight:700">${current.toFixed(2)} ${cfg.uom || 'Nos'}</td>
+      </tr>
+      <tr style="border-bottom:1px solid #f1f5f9">
+        <td style="padding:10px 12px;font-size:13px;color:#64748b">Reorder Level</td>
+        <td style="padding:10px 12px;font-size:14px;color:#0f172a;font-weight:600">${cfg.reorder_level} ${cfg.uom || 'Nos'}</td>
+      </tr>
+      <tr>
+        <td style="padding:10px 12px;font-size:13px;color:#64748b">Suggested Order Quantity</td>
+        <td style="padding:10px 12px;font-size:14px;color:#0f172a;font-weight:600">${cfg.reorder_quantity ? cfg.reorder_quantity + ' ' + (cfg.uom || 'Nos') : 'Not configured'}</td>
+      </tr>
+    </table>
+    <div style="background:#fffbeb;border:1px solid #fbbf24;border-radius:8px;padding:12px 16px;margin-bottom:16px">
+      <p style="font-size:13px;color:#92400e;margin:0;font-weight:600">⏰ Action Required</p>
+      <p style="font-size:13px;color:#78350f;margin:4px 0 0">Please initiate a purchase order or stock replenishment for this item at the earliest.</p>
+    </div>
+  </div>
+  <div style="background:#f8fafc;padding:16px 32px;border-top:1px solid #e2e8f0">
+    <p style="font-size:11px;color:#94a3b8;margin:0">Alert generated on ${alertDate} at ${alertTime} · K95 ERP Store Management</p>
+  </div>
+</div>`;
     for (const email of emails) {
       await base44.integrations.Core.SendEmail({ to: email, subject, body });
     }
