@@ -417,7 +417,7 @@ export default function CreateSalesOrderModal({ defaultType = 'manual', onClose,
                           {extractedData.items.map((item, i) => (
                             <tr key={i} className="hover:bg-slate-50">
                               <td className="px-3 py-2 text-slate-700">
-                                <div>{item.description}</div>
+                                <div>{item._product_name || item.description}</div>
                                 {item.item_code && <div className="text-slate-400 text-[10px] mt-0.5">{item.item_code}</div>}
                               </td>
                               <td className="px-3 py-2 text-right text-slate-700">{item.quantity}</td>

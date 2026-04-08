@@ -439,14 +439,14 @@ Deno.serve(async (req) => {
       parseMethod = 'llm_fallback';
       parsedData = await base44.asServiceRole.integrations.Core.InvokeLLM({
         model: 'gemini_3_flash', file_urls: [pdf_url],
-        prompt: `Extract PO data from PDF. Return JSON: po_number, po_date (YYYY-MM-DD), po_expiry_date, po_delivery_date, payment_terms, customer_name, customer_gstin, billing_address, shipping_address, vendor_no, platform, taxable_amount, tax_amount, total_amount, items: [{item_code, sku_code, hsn_code, ean_number, description, quantity, mrp, unit_base_cost, taxable_value, igst_rate, igst_amount, total_amount}]`,
+        prompt: `Extract PO data from PDF. Return JSON: po_number, po_date (YYYY-MM-DD), po_expiry_date, po_delivery_date, payment_terms, customer_name, customer_gstin, billing_address, shipping_address, vendor_no, platform, taxable_amount, tax_amount, total_amount, items: [{item_code, quantity}]`,
         response_json_schema: {
           type: 'object', properties: {
             platform:{type:'string'}, po_number:{type:'string'}, po_date:{type:'string'}, po_expiry_date:{type:'string'},
             po_delivery_date:{type:'string'}, payment_terms:{type:'string'}, customer_name:{type:'string'},
             customer_gstin:{type:'string'}, billing_address:{type:'string'}, shipping_address:{type:'string'},
             vendor_no:{type:'string'}, taxable_amount:{type:'number'}, tax_amount:{type:'number'}, total_amount:{type:'number'},
-            items:{type:'array',items:{type:'object',properties:{item_code:{type:'string'},sku_code:{type:'string'},hsn_code:{type:'string'},ean_number:{type:'string'},description:{type:'string'},quantity:{type:'number'},mrp:{type:'number'},unit_base_cost:{type:'number'},taxable_value:{type:'number'},igst_rate:{type:'number'},igst_amount:{type:'number'},total_amount:{type:'number'}}}}
+            items:{type:'array',items:{type:'object',properties:{item_code:{type:'string'},quantity:{type:'number'}}}}
           }
         }
       });
@@ -455,11 +455,10 @@ Deno.serve(async (req) => {
 
     let enrichedData = { ...parsedData };
 
-    const productByCode = {}, productByEAN = {}, productByName = [];
+    const productByCode = {}, productByEAN = {};
     for (const p of allProducts) {
       if (p.item_code) productByCode[p.item_code.trim().toUpperCase()] = p;
       if (p.product_barcode) productByEAN[p.product_barcode.trim()] = p;
-      if (p.product_name) productByName.push({ p, words: p.product_name.toLowerCase().split(' ').filter(w => w.length > 3) });
     }
     const barcodeToItemCode = {};
     for (const cb of allCustomerBarcodes) {
@@ -475,75 +474,70 @@ Deno.serve(async (req) => {
       allCustomers.find(c => c.name && extractedName.includes(c.name.toLowerCase().slice(0, 15)));
 
     // Price list resolution — strict priority: customer → group → platform (only if no customer)
-    // Exclude any price list that contains "internal transfer"
-    const isInternalTransfer = (pl) => pl.toLowerCase().includes('internal transfer');
-
     let priceListUsed = null, rateSource = 'none';
-    if (customerFound?.price_list && !isInternalTransfer(customerFound.price_list)) {
+    if (customerFound?.price_list) {
       priceListUsed = customerFound.price_list;
       rateSource = `customer:${customerFound.name}`;
     } else if (customerFound?.customer_group) {
       const grp = customerFound.customer_group.trim().toLowerCase();
-      const pls = [...new Set(allRates.map(r => r.price_list).filter(Boolean))].filter(pl => !isInternalTransfer(pl));
+      const pls = [...new Set(allRates.map(r => r.price_list).filter(Boolean))];
       const gm = pls.find(pl => pl.trim().toLowerCase() === grp || pl.trim().toLowerCase().startsWith(grp));
       if (gm) { priceListUsed = gm; rateSource = `group:${customerFound.customer_group}`; }
     }
     // Platform fallback ONLY when no customer found
     if (!priceListUsed && !customerFound && enrichedData.platform && enrichedData.platform !== 'direct' && enrichedData.platform !== 'unknown') {
-      const pls = [...new Set(allRates.map(r => r.price_list).filter(Boolean))].filter(pl => !isInternalTransfer(pl));
+      const pls = [...new Set(allRates.map(r => r.price_list).filter(Boolean))];
       const pm = pls.find(pl => pl.trim().toLowerCase() === enrichedData.platform.toLowerCase() || pl.trim().toLowerCase().startsWith(enrichedData.platform.toLowerCase()));
       if (pm) { priceListUsed = pm; rateSource = `platform:${enrichedData.platform}`; }
     }
 
     const filteredRates = priceListUsed ? allRates.filter(r => r.price_list === priceListUsed) : allRates;
-    const rateByItemCode = {}, rateByEAN = {}, rateByNameWords = [];
+    const rateByItemCode = {};
     for (const r of filteredRates) {
       if (r.item_code) rateByItemCode[r.item_code.trim()] = r;
-      if (r.ean_number) rateByEAN[r.ean_number.trim()] = r;
-      if (r.item_name) rateByNameWords.push({ r, words: r.item_name.toLowerCase().split(' ').filter(w => w.length > 3) });
     }
 
     let matchedCount = 0;
     if (enrichedData.items?.length) {
       enrichedData.items = enrichedData.items.map(item => {
-        let resolvedItemCode = item.item_code || '';
-        const pdfCode = (item.sku_code || item.item_code || '').trim().toUpperCase();
-        const pdfEAN = (item.ean_number || '').trim().toUpperCase();
-        if (pdfCode && barcodeToItemCode[pdfCode]) resolvedItemCode = barcodeToItemCode[pdfCode];
-        else if (pdfEAN && barcodeToItemCode[pdfEAN]) resolvedItemCode = barcodeToItemCode[pdfEAN];
-
-        let product = resolvedItemCode ? productByCode[resolvedItemCode.toUpperCase()] : null;
-        if (!product && pdfEAN) { product = productByEAN[pdfEAN]; if (product) resolvedItemCode = product.item_code; }
-        if (!product && item.description) {
-          const dl = item.description.toLowerCase();
-          const f = productByName.find(({ words }) => words.filter(w => dl.includes(w)).length >= Math.min(2, words.length));
-          if (f) { product = f.p; resolvedItemCode = f.p.item_code; }
+        let resolvedItemCode = (item.item_code || '').trim().toUpperCase();
+        if (barcodeToItemCode[resolvedItemCode]) {
+          resolvedItemCode = barcodeToItemCode[resolvedItemCode];
         }
 
-        let rm = (resolvedItemCode && rateByItemCode[resolvedItemCode.trim()]) || (item.sku_code && rateByItemCode[item.sku_code.trim()]) || (item.ean_number && rateByEAN[item.ean_number.trim()]);
-        if (!rm && item.description) {
-          const dl = item.description.toLowerCase();
-          rm = rateByNameWords.find(({ words }) => words.filter(w => dl.includes(w)).length >= Math.min(2, words.length))?.r;
-        }
-
+        const product = productByCode[resolvedItemCode];
+        const rm = rateByItemCode[resolvedItemCode];
+        
         const enriched = { ...item };
-        if (resolvedItemCode) enriched.item_code = resolvedItemCode;
+        enriched.item_code = resolvedItemCode;
         if (product) {
-          enriched.hsn_code = product.hsn_code || enriched.hsn_code || '22029990';
-          enriched.packing_unit = product.bottles_per_box || enriched.packing_unit || 12;
+          enriched.description = product.product_name;
+          enriched.hsn_code = product.hsn_code || '22029990';
+          enriched.packing_unit = product.bottles_per_box || 12;
           enriched._product_name = product.product_name;
           enriched._product_matched = true;
         }
+        
         if (rm) {
           matchedCount++;
-          enriched.item_code = rm.item_code || enriched.item_code;
-          enriched.hsn_code = rm.hsn_code || enriched.hsn_code || '22029990';
-          enriched.packing_unit = rm.packing_unit || enriched.packing_unit || 12;
-          enriched.rate_snapshot = rm.rate; enriched.unit_base_cost = rm.rate;
-          enriched.mrp = rm.mrp || enriched.mrp;
-          enriched.igst_rate = rm.igst_rate ?? enriched.igst_rate;
-          enriched._rate_matched = true; enriched._price_list = priceListUsed;
-        } else { enriched.hsn_code = enriched.hsn_code || '22029990'; enriched._rate_matched = false; }
+          enriched.unit_base_cost = rm.rate;
+          enriched.mrp = rm.mrp;
+          enriched.igst_rate = rm.igst_rate;
+          enriched._rate_matched = true;
+          enriched._price_list = priceListUsed;
+        } else {
+          enriched._rate_matched = false;
+        }
+        
+        // Recalculate financial fields based on system data
+        if (enriched.unit_base_cost && enriched.quantity) {
+          enriched.taxable_value = enriched.unit_base_cost * enriched.quantity;
+          if (enriched.igst_rate) {
+            enriched.igst_amount = enriched.taxable_value * (enriched.igst_rate / 100);
+          }
+          enriched.total_amount = (enriched.taxable_value || 0) + (enriched.igst_amount || 0);
+        }
+        
         return enriched;
       });
     }

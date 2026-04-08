@@ -19,11 +19,10 @@ export async function enrichParsedData(parsedData) {
   ]);
 
   // Build lookup maps
-  const productByCode = {}, productByEAN = {}, productByName = [];
+  const productByCode = {}, productByEAN = {};
   for (const p of allProducts) {
     if (p.item_code) productByCode[p.item_code.trim().toUpperCase()] = p;
     if (p.product_barcode) productByEAN[p.product_barcode.trim()] = p;
-    if (p.product_name) productByName.push({ p, words: p.product_name.toLowerCase().split(' ').filter(w => w.length > 3) });
   }
   const barcodeToItemCode = {};
   for (const cb of allCustomerBarcodes) {
@@ -40,88 +39,71 @@ export async function enrichParsedData(parsedData) {
     allCustomers.find(c => c.name && extractedName.includes(c.name.toLowerCase().slice(0, 15)));
 
   // Price list resolution — strict priority: customer → group → platform (only if no customer)
-  // Exclude any price list that contains "internal transfer" to prevent accidental matching
-  const isInternalTransfer = (pl) => pl.toLowerCase().includes('internal transfer');
-
   let priceListUsed = null, rateSource = 'none';
-  if (customerFound?.price_list && !isInternalTransfer(customerFound.price_list)) {
-    // 1. Customer has an explicit price list assigned — always use this
+  if (customerFound?.price_list) {
     priceListUsed = customerFound.price_list;
     rateSource = `customer:${customerFound.name}`;
   } else if (customerFound?.customer_group) {
-    // 2. Match by customer_group — only exact or starts-with match, never partial reverse
     const grp = customerFound.customer_group.trim().toLowerCase();
-    const pls = [...new Set(allRates.map(r => r.price_list).filter(Boolean))]
-      .filter(pl => !isInternalTransfer(pl));
+    const pls = [...new Set(allRates.map(r => r.price_list).filter(Boolean))];
     const gm = pls.find(pl => pl.trim().toLowerCase() === grp || pl.trim().toLowerCase().startsWith(grp));
     if (gm) { priceListUsed = gm; rateSource = `group:${customerFound.customer_group}`; }
   }
 
-  // 3. Platform fallback — ONLY when customer was NOT found at all
+  // Platform fallback ONLY when no customer found
   if (!priceListUsed && !customerFound && parsedData.platform && parsedData.platform !== 'direct' && parsedData.platform !== 'unknown') {
-    const pls = [...new Set(allRates.map(r => r.price_list).filter(Boolean))]
-      .filter(pl => !isInternalTransfer(pl));
+    const pls = [...new Set(allRates.map(r => r.price_list).filter(Boolean))];
     const pm = pls.find(pl => pl.trim().toLowerCase() === parsedData.platform.toLowerCase()
       || pl.trim().toLowerCase().startsWith(parsedData.platform.toLowerCase()));
     if (pm) { priceListUsed = pm; rateSource = `platform:${parsedData.platform}`; }
   }
 
   const filteredRates = priceListUsed ? allRates.filter(r => r.price_list === priceListUsed) : allRates;
-  const rateByItemCode = {}, rateByEAN = {}, rateByNameWords = [];
+  const rateByItemCode = {};
   for (const r of filteredRates) {
     if (r.item_code) rateByItemCode[r.item_code.trim()] = r;
-    if (r.ean_number) rateByEAN[r.ean_number.trim()] = r;
-    if (r.item_name) rateByNameWords.push({ r, words: r.item_name.toLowerCase().split(' ').filter(w => w.length > 3) });
   }
 
   // Enrich items
   let matchedCount = 0;
   const enrichedItems = (parsedData.items || []).map(item => {
-    let resolvedItemCode = item.item_code || '';
-    const pdfCode = (item.sku_code || item.item_code || '').trim().toUpperCase();
-    const pdfEAN = (item.ean_number || '').trim().toUpperCase();
-    if (pdfCode && barcodeToItemCode[pdfCode]) resolvedItemCode = barcodeToItemCode[pdfCode];
-    else if (pdfEAN && barcodeToItemCode[pdfEAN]) resolvedItemCode = barcodeToItemCode[pdfEAN];
-
-    let product = resolvedItemCode ? productByCode[resolvedItemCode.toUpperCase()] : null;
-    if (!product && pdfEAN) { product = productByEAN[pdfEAN]; if (product) resolvedItemCode = product.item_code; }
-    if (!product && item.description) {
-      const dl = item.description.toLowerCase();
-      const f = productByName.find(({ words }) => words.filter(w => dl.includes(w)).length >= Math.min(2, words.length));
-      if (f) { product = f.p; resolvedItemCode = f.p.item_code; }
+    let resolvedItemCode = (item.item_code || '').trim().toUpperCase();
+    if (barcodeToItemCode[resolvedItemCode]) {
+      resolvedItemCode = barcodeToItemCode[resolvedItemCode];
     }
-
-    let rm = (resolvedItemCode && rateByItemCode[resolvedItemCode.trim()])
-      || (item.sku_code && rateByItemCode[item.sku_code.trim()])
-      || (item.ean_number && rateByEAN[item.ean_number.trim()]);
-    if (!rm && item.description) {
-      const dl = item.description.toLowerCase();
-      rm = rateByNameWords.find(({ words }) => words.filter(w => dl.includes(w)).length >= Math.min(2, words.length))?.r;
-    }
+    
+    const product = productByCode[resolvedItemCode];
+    const rm = rateByItemCode[resolvedItemCode];
 
     const enriched = { ...item };
-    if (resolvedItemCode) enriched.item_code = resolvedItemCode;
+    enriched.item_code = resolvedItemCode;
     if (product) {
-      enriched.hsn_code = product.hsn_code || enriched.hsn_code || '22029990';
-      enriched.packing_unit = product.bottles_per_box || enriched.packing_unit || 12;
+      enriched.description = product.product_name;
+      enriched.hsn_code = product.hsn_code || '22029990';
+      enriched.packing_unit = product.bottles_per_box || 12;
       enriched._product_name = product.product_name;
       enriched._product_matched = true;
     }
     if (rm) {
       matchedCount++;
-      enriched.item_code = rm.item_code || enriched.item_code;
-      enriched.hsn_code = rm.hsn_code || enriched.hsn_code || '22029990';
-      enriched.packing_unit = rm.packing_unit || enriched.packing_unit || 12;
-      enriched.rate_snapshot = rm.rate;
       enriched.unit_base_cost = rm.rate;
-      enriched.mrp = rm.mrp || enriched.mrp;
-      enriched.igst_rate = rm.igst_rate ?? enriched.igst_rate;
+      enriched.mrp = rm.mrp;
+      enriched.igst_rate = rm.igst_rate;
       enriched._rate_matched = true;
       enriched._price_list = priceListUsed;
     } else {
-      enriched.hsn_code = enriched.hsn_code || '22029990';
       enriched._rate_matched = false;
     }
+
+    // Recalculate financial fields based on system data
+    if (enriched.unit_base_cost && enriched.quantity) {
+      enriched.taxable_value = enriched.unit_base_cost * enriched.quantity;
+      if (enriched.igst_rate) {
+        enriched.igst_amount = enriched.taxable_value * (enriched.igst_rate / 100);
+      }
+      enriched.total_amount = (enriched.taxable_value || 0) + (enriched.igst_amount || 0);
+    }
+
     return enriched;
   });
 

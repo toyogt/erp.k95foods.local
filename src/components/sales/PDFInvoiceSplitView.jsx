@@ -125,20 +125,18 @@ export default function PDFInvoiceSplitView({ pdfEntry, onConfirm }) {
       {/* Right — Extracted Data */}
       <div className="w-1/2 flex flex-col overflow-hidden">
 
-        {/* Customer + Price List Info */}
-        <div className="bg-slate-50 border-b border-slate-100 px-3 py-2 flex items-center gap-4 text-xs flex-wrap">
-          <span className="flex items-center gap-1 text-slate-600">
-            <User className="w-3 h-3" />
+        {/* Customer + Price List + Address Info */}
+        <div className="bg-slate-50 border-b border-slate-100 px-3 py-2 space-y-1.5 text-xs">
+          <div className="flex items-center gap-2 text-slate-600">
+            <User className="w-3.5 h-3.5" />
             <span className="font-medium text-slate-900">{data?.customer_name || <span className="text-slate-400 italic">Customer not detected</span>}</span>
-          </span>
-          {priceList && (
-            <span className="flex items-center gap-1 text-slate-600">
-              <Tag className="w-3 h-3" />
-              <span className="font-medium text-emerald-700">{priceList}</span>
-            </span>
-          )}
-          {!priceList && customer && (
-            <span className="text-amber-600 text-[10px]">No price list assigned to this customer</span>
+            {priceList && <span className="font-medium text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">{priceList}</span>}
+            {!priceList && customer && <span className="text-amber-600 text-[10px]">No price list assigned</span>}
+          </div>
+          {data?.shipping_address && (
+            <div className="text-slate-500 text-[11px] leading-relaxed pl-[22px]">
+              📍 {data.shipping_address}
+            </div>
           )}
         </div>
 
@@ -193,7 +191,7 @@ export default function PDFInvoiceSplitView({ pdfEntry, onConfirm }) {
                 return (
                   <tr key={i} className={`hover:bg-slate-50 ${mismatch ? 'bg-amber-50/40' : ''}`}>
                     <td className="px-3 py-2 text-slate-700">
-                      <div className="font-medium truncate max-w-[140px]" title={item.description}>{item.description}</div>
+                      <div className="font-medium truncate max-w-[140px]" title={item._product_name || item.description}>{item._product_name || item.description}</div>
                       {item.item_code && <div className="text-slate-400 text-[10px] mt-0.5">{item.item_code}</div>}
                       <RateDiff pdfRate={pdfRate} sysRate={sysRate} />
                     </td>
