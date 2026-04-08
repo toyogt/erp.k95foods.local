@@ -214,7 +214,42 @@ export default function PutawayPanel({ lots: externalLots, locations: externalLo
   return (
     <div className="space-y-4">
        <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] p-4 space-y-3">
-          <p className="text-sm font-semibold text-slate-700">Putaway Entries ({entries.length})</p>
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-slate-700">Putaway Entries ({entries.length})</p>
+            <div className="flex gap-2">
+              <QRScanner label="Scan Lot QR" onScan={(val) => {
+                const matchedLot = lots.find(l => l.lot_id === val || l.qr_code === val);
+                if (matchedLot) {
+                  const emptyIdx = entries.findIndex(e => !e.lotId);
+                  if (emptyIdx >= 0) {
+                    setEntry(emptyIdx, 'lotId', matchedLot.lot_id);
+                  } else {
+                    setEntries(prev => [...prev, { ...emptyEntry(), lotId: matchedLot.lot_id }]);
+                  }
+                  toast({ title: 'Lot Scanned', description: `${matchedLot.item_name} (${matchedLot.lot_id})` });
+                } else {
+                  showErrorAlert('Lot Not Found', `No pending lot found for QR code: ${val}`);
+                }
+              }} />
+              <QRScanner label="Scan Location" onScan={(val) => {
+                const matchedLoc = locations.find(l => l.location_code === val || l.code === val);
+                if (matchedLoc) {
+                  const emptyIdx = entries.findIndex(e => !e.locationId);
+                  if (emptyIdx >= 0) {
+                    setEntry(emptyIdx, 'locationId', matchedLoc.id);
+                  } else {
+                    const lastIdx = entries.length - 1;
+                    if (!entries[lastIdx].locationId) {
+                      setEntry(lastIdx, 'locationId', matchedLoc.id);
+                    }
+                  }
+                  toast({ title: 'Location Scanned', description: `${matchedLoc.location_code} — ${matchedLoc.display_name}` });
+                } else {
+                  showErrorAlert('Location Not Found', `No active location for QR: ${val}`);
+                }
+              }} />
+            </div>
+          </div>
 
           <div className="space-y-3">
           {entries.map((entry, idx) => {
