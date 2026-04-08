@@ -7,18 +7,22 @@ import NumericInput from '@/components/ui/NumericInput';
 function ItemSearchSelect({ value, storeItems, onChangeName, onSelectItem }) {
   const [query, setQuery] = useState(value || '');
   const [open, setOpen] = useState(false);
+  const [isUserTyping, setIsUserTyping] = useState(false);
   const ref = useRef(null);
-
-  useEffect(() => { setQuery(value || ''); }, [value]);
+  const inputRef = useRef(null);
 
   useEffect(() => {
-    function onClick(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
+    if (!isUserTyping) setQuery(value || '');
+  }, [value]);
+
+  useEffect(() => {
+    function onClick(e) { if (ref.current && !ref.current.contains(e.target)) { setOpen(false); setIsUserTyping(false); } }
     document.addEventListener('mousedown', onClick);
     return () => document.removeEventListener('mousedown', onClick);
   }, []);
 
-  // Always show all items; filter only when user types a query
-  const q = query.trim().toLowerCase();
+  // Only filter when user is actively typing a search query
+  const q = isUserTyping ? query.trim().toLowerCase() : '';
   const filtered = q
     ? storeItems.filter(s =>
         (s.item_name || '').toLowerCase().includes(q) ||
@@ -26,27 +30,50 @@ function ItemSearchSelect({ value, storeItems, onChangeName, onSelectItem }) {
       )
     : storeItems;
 
+  function handleFocus() {
+    setOpen(true);
+    // Clear query to show all items, but only visually
+    if (value && !isUserTyping) {
+      setQuery('');
+      setIsUserTyping(true);
+    }
+  }
+
+  function handleChange(e) {
+    setQuery(e.target.value);
+    setIsUserTyping(true);
+    setOpen(true);
+  }
+
+  function handleSelect(s) {
+    setQuery(s.item_name);
+    setOpen(false);
+    setIsUserTyping(false);
+    onSelectItem(s);
+  }
+
   return (
     <div className="relative" ref={ref}>
       <div className="relative">
         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
         <input
+          ref={inputRef}
           className="w-full h-11 pl-8 pr-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-teal-400"
-          placeholder="Search from Store Item Master..."
+          placeholder="Search items by name or code..."
           value={query}
-          onChange={e => { setQuery(e.target.value); setOpen(true); }}
-          onFocus={() => setOpen(true)}
+          onChange={handleChange}
+          onFocus={handleFocus}
         />
       </div>
       {open && (
         <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-72 overflow-y-auto">
           {filtered.length === 0 ? (
             <div className="px-4 py-3 text-sm text-amber-600">
-              Item not found in Store Item Master. Please add it via Item Master first.
+              No items found. Please add items via Item Master first.
             </div>
           ) : filtered.map((s, i) => (
-            <div key={i} className="px-4 py-2.5 text-sm cursor-pointer hover:bg-slate-50 flex items-start gap-2 border-b border-slate-50 last:border-0"
-              onClick={() => { setQuery(s.item_name); setOpen(false); onSelectItem(s); }}>
+            <div key={s.id || i} className="px-4 py-2.5 text-sm cursor-pointer hover:bg-slate-50 flex items-start gap-2 border-b border-slate-50 last:border-0"
+              onClick={() => handleSelect(s)}>
               {s.material_photo ? (
                 <img src={s.material_photo} alt="" className="w-7 h-7 rounded object-cover border border-slate-200 shrink-0 mt-0.5" />
               ) : (
