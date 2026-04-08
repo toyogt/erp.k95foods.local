@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, RefreshCw, CheckCircle2, Plus, Trash2, Search, AlertTriangle, Camera, ListChecks, FileText, Eye } from 'lucide-react';
+import { Loader2, RefreshCw, CheckCircle2, Plus, Trash2, Search, AlertTriangle, Camera, ListChecks, FileText, Eye, ChevronRight } from 'lucide-react';
 import InvoicePreviewModal from '@/components/store/InvoicePreviewModal';
 import { logGrnAudit, getChecklistTemplate } from '@/components/grn/grnHelpers';
 import { fireFMSEvent, linkFMSRef } from '@/lib/useFMSAutoComplete';
@@ -443,7 +443,8 @@ export default function GRNReceive() {
             </div>
           ) : (
             <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] overflow-hidden">
-              <div className="overflow-x-auto">
+              {/* Desktop Table */}
+              <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-slate-100 text-slate-700 text-xs">
@@ -457,7 +458,7 @@ export default function GRNReceive() {
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {filteredEntries.map(e => (
-                      <tr key={e.id} className="hover:bg-slate-50">
+                      <tr key={e.id} className="hover:bg-slate-50 cursor-pointer" onClick={() => selectGateEntry(e)}>
                         <td className="px-4 py-3 font-mono font-bold text-slate-900">{e.gate_id}</td>
                         <td className="px-4 py-3 text-slate-700">{e.vehicle_number || '—'}</td>
                         <td className="px-4 py-3 text-slate-600">
@@ -470,7 +471,7 @@ export default function GRNReceive() {
                         <td className="px-4 py-3 text-xs text-slate-500">
                           {e.arrived_at ? new Date(e.arrived_at).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'}
                         </td>
-                        <td className="px-4 py-3 text-center">
+                        <td className="px-4 py-3 text-center" onClick={ev => ev.stopPropagation()}>
                           <div className="flex items-center justify-center gap-2">
                             {e.invoice_photo && (
                               <button onClick={() => setInvoicePreview(e.invoice_photo)} className="p-1.5 rounded hover:bg-blue-50 text-blue-500" title="View Invoice">
@@ -487,6 +488,33 @@ export default function GRNReceive() {
                   </tbody>
                 </table>
               </div>
+
+              {/* Mobile Cards */}
+              <div className="md:hidden divide-y divide-slate-100">
+                {filteredEntries.map(e => (
+                  <div key={e.id} className="px-4 py-3.5 active:bg-slate-50 cursor-pointer" onClick={() => selectGateEntry(e)}>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-bold text-slate-900 font-mono">{e.gate_id}</p>
+                        <p className="text-sm text-slate-600 mt-0.5">{e.vehicle_number || 'No vehicle'}{e.driver_name ? ` · ${e.driver_name}` : ''}</p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">{e.status}</span>
+                        <ChevronRight className="w-4 h-4 text-slate-400" />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-500">
+                      <span>{e.arrived_at ? new Date(e.arrived_at).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'}</span>
+                      {e.invoice_photo && (
+                        <button onClick={ev => { ev.stopPropagation(); setInvoicePreview(e.invoice_photo); }} className="flex items-center gap-1 text-blue-500 font-medium">
+                          <Eye className="w-3.5 h-3.5" /> Invoice
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
               <div className="px-4 py-2.5 bg-slate-50/80 border-t border-slate-100 text-xs text-slate-500 font-medium">{filteredEntries.length} entry(ies)</div>
             </div>
           )}
