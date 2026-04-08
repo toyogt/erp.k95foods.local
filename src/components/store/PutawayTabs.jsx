@@ -33,7 +33,7 @@ export default function PutawayTabs({ pendingLots, putawayHistory, loading }) {
       {/* Pending Lots Tab */}
       {tab === 'pending' && (
         loading ? (
-          <SkeletonTable rows={5} cols={7} headers={['Lot ID', 'Item Name', 'Supplier', 'Quantity', 'Unit', 'Created Date', 'Status']} />
+          <SkeletonTable rows={5} cols={8} headers={['Lot ID', 'Item Name', 'Supplier', 'Original Qty', 'Pending to Store', 'Unit', 'Created Date', 'Status']} />
         ) : pendingLots.length === 0 ? (
           <p className="text-sm text-slate-400 text-center py-8">No approved lots pending putaway.</p>
         ) : (
@@ -47,7 +47,8 @@ export default function PutawayTabs({ pendingLots, putawayHistory, loading }) {
                     <th className="text-left px-4 py-3 font-medium">Lot ID</th>
                     <th className="text-left px-4 py-3 font-medium">Item Name</th>
                     <th className="text-left px-4 py-3 font-medium">Supplier</th>
-                    <th className="text-right px-4 py-3 font-medium">Quantity</th>
+                    <th className="text-right px-4 py-3 font-medium">Original Qty</th>
+                    <th className="text-right px-4 py-3 font-medium">Pending to Store</th>
                     <th className="text-left px-4 py-3 font-medium">Unit</th>
                     <th className="text-left px-4 py-3 font-medium">Created Date</th>
                     <th className="text-left px-4 py-3 font-medium">Status</th>
@@ -59,7 +60,8 @@ export default function PutawayTabs({ pendingLots, putawayHistory, loading }) {
                       <td className="px-4 py-3 font-mono text-sm font-bold text-slate-800">{lot.lot_id}</td>
                       <td className="px-4 py-3 text-slate-800">{lot.item_name}</td>
                       <td className="px-4 py-3 text-slate-600">{lot.supplier_name || '—'}</td>
-                      <td className="px-4 py-3 text-right font-bold text-slate-800">{lot.remaining_quantity ?? lot.quantity}</td>
+                      <td className="px-4 py-3 text-right text-slate-600">{lot.quantity} {lot.uom}</td>
+                      <td className="px-4 py-3 text-right font-bold text-amber-600">{lot._pendingToStore ?? lot.quantity}</td>
                       <td className="px-4 py-3 text-slate-600">{lot.uom}</td>
                       <td className="px-4 py-3 text-sm text-slate-500">
                         {formatDateTime(lot.created_date)}
@@ -87,7 +89,8 @@ export default function PutawayTabs({ pendingLots, putawayHistory, loading }) {
                   <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 shrink-0">Ready</span>
                 </div>
                 <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-slate-500">
-                  <span>Quantity: <strong className="text-slate-700">{lot.remaining_quantity ?? lot.quantity} {lot.uom}</strong></span>
+                  <span>Original: <strong className="text-slate-700">{lot.quantity} {lot.uom}</strong></span>
+                  <span>Pending to Store: <strong className="text-amber-600">{lot._pendingToStore ?? lot.quantity} {lot.uom}</strong></span>
                   {lot.created_date && <span>{formatDateTime(lot.created_date)}</span>}
                 </div>
               </div>

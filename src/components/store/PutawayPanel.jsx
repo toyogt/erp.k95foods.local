@@ -62,12 +62,8 @@ function LotSelect({ lots, value, onChange, usedLotIds = [] }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const selected = lots.find(l => l.lot_id === value);
-  // Show lots with remaining qty > 0, OR approved lots with original qty > 0 (remaining_quantity may be 0 before first putaway)
-  const available = lots.filter(l => {
-    if ((l.remaining_quantity ?? 0) > 0) return true;
-    if (l.status === 'approved' && (l.quantity || 0) > 0) return true;
-    return false;
-  });
+  // Show lots that have pending-to-store qty > 0
+  const available = lots.filter(l => (l._pendingToStore || (l.quantity || 0)) > 0);
   const filtered = (query.trim()
     ? available.filter(l => l.lot_id?.toLowerCase().includes(query.toLowerCase()) || l.item_name?.toLowerCase().includes(query.toLowerCase()))
     : available
@@ -101,7 +97,7 @@ function LotSelect({ lots, value, onChange, usedLotIds = [] }) {
                 <div key={l.lot_id} className={`px-4 py-2.5 text-sm cursor-pointer hover:bg-slate-50 ${l.lot_id === value ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-700'}`}
                   onClick={() => { onChange(l.lot_id); setOpen(false); setQuery(''); }}>
                   <p className="font-mono font-semibold text-slate-800">{l.lot_id}</p>
-                  <p className="text-xs text-slate-500">{l.item_name} · Available: {l.remaining_quantity ?? l.quantity} {l.uom}</p>
+                  <p className="text-xs text-slate-500">{l.item_name} · Pending to Store: {l._pendingToStore ?? l.quantity} {l.uom}</p>
                 </div>
               ))}
           </div>
@@ -157,9 +153,13 @@ export default function PutawayPanel({ lots: externalLots, locations: externalLo
         putaway_date: now, putaway_by: user?.email, putaway_id: putawayId,
       });
     }
-    const maxQty = lot.remaining_quantity ?? lot.quantity;
-    const remaining = maxQty - qty;
-    await base44.entities.StoreLot.update(lot.id, { status: remaining <= 0 ? 'putaway' : 'approved', remaining_quantity: Math.max(0, remaining) });
+    // pendingToStore = original - stored (before this putaway). After putaway, recalculate.
+    const pendingBefore = lot._pendingToStore ?? lot.quantity;
+    const pendingAfter = pendingBefore - qty;
+    await base44.entities.StoreLot.update(lot.id, { 
+      status: pendingAfter <= 0 ? 'putaway' : 'approved', 
+      remaining_quantity: Math.max(0, pendingAfter) 
+    });
   }
 
   async function handleConfirmAll() {
@@ -178,9 +178,9 @@ export default function PutawayPanel({ lots: externalLots, locations: externalLo
 
     // Validation for capacity
     for(const item of toProcess) {
-        const maxQty = item.lot.remaining_quantity ?? item.lot.quantity;
+        const maxQty = item.lot._pendingToStore ?? item.lot.quantity;
         if(item.quantity > maxQty) {
-            showErrorAlert("Capacity Exceeded", `Cannot put away ${item.quantity} of ${item.lot.item_name}. Only ${maxQty} available.`);
+            showErrorAlert("Capacity Exceeded", `Cannot put away ${item.quantity} of ${item.lot.item_name}. Only ${maxQty} pending to store.`);
             return;
         }
     }
@@ -212,7 +212,7 @@ export default function PutawayPanel({ lots: externalLots, locations: externalLo
           {entries.map((entry, idx) => {
             const lot = lots.find(l => l.lot_id === entry.lotId);
             const location = locations.find(l => l.id === entry.locationId);
-            const maxQty = lot ? ((lot.remaining_quantity > 0 ? lot.remaining_quantity : lot.quantity) || 0) : 0;
+            const maxQty = lot ? (lot._pendingToStore ?? lot.quantity ?? 0) : 0;
             return (
               <div key={idx} className="border border-slate-200 rounded-lg p-3 space-y-3 bg-slate-50/50">
                 <div className="flex items-center justify-between">
@@ -230,7 +230,7 @@ export default function PutawayPanel({ lots: externalLots, locations: externalLo
                 <div>
                   <Label className="text-xs font-medium text-slate-700">Lot *</Label>
                   <div className="mt-1"><LotSelect lots={lots} value={entry.lotId} onChange={v => setEntry(idx, 'lotId', v)} usedLotIds={usedLotIds.filter((_, i) => i !== idx)} /></div>
-                  {lot && <p className="text-xs text-green-600 mt-1 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" />{lot.item_name} · Available: {maxQty} {lot.uom}</p>}
+                  {lot && <p className="text-xs text-green-600 mt-1 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" />{lot.item_name} · Pending to Store: {maxQty} {lot.uom}</p>}
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>

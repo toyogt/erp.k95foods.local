@@ -131,7 +131,7 @@ function QRModal({ lot, onClose }) {
 
 const LOT_HEADERS = [
   'Lot ID', 'Item', 'Batch', 'Supplier', 'Original Qty',
-  'Stored Stock', 'Issued / Consumed', 'Remaining Qty', 'Stored At', 'Manufacture Date', 'Expiry', 'Goods Received Note Age', 'Stock Age', 'Status', 'Invoice', 'QR',
+  'Stored Stock', 'Issued / Consumed', 'Remaining Qty', 'Pending to Store', 'Stored At', 'Manufacture Date', 'Expiry', 'Goods Received Note Age', 'Stock Age', 'Status', 'Invoice', 'QR',
 ];
 
 export default function SMSLotManager() {
@@ -204,11 +204,17 @@ export default function SMSLotManager() {
     return matchSearch && effective === statusFilter;
   });
 
-  const exportData = filtered.map(l => ({
-    ...l,
-    stored_stock: storedByLot[l.lot_id] ?? 0,
-    issued_consumed: issuedByLot[l.lot_id] ?? 0,
-  }));
+  const exportData = filtered.map(l => {
+    const stored = storedByLot[l.lot_id] ?? 0;
+    const issued = issuedByLot[l.lot_id] ?? 0;
+    return {
+      ...l,
+      stored_stock: stored,
+      issued_consumed: issued,
+      remaining_stock: Math.max(0, stored - issued),
+      pending_to_store: Math.max(0, (l.quantity || 0) - stored),
+    };
+  });
 
   return (
     <motion.div className="pb-12" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
@@ -222,6 +228,7 @@ export default function SMSLotManager() {
           { key: 'lot_id', label: 'Lot ID' }, { key: 'item_name', label: 'Item' }, { key: 'item_code', label: 'Code' },
           { key: 'supplier_name', label: 'Supplier' }, { key: 'quantity', label: 'Original Qty' },
           { key: 'stored_stock', label: 'Stored Stock' }, { key: 'issued_consumed', label: 'Issued / Consumed' },
+          { key: 'remaining_stock', label: 'Remaining Qty' }, { key: 'pending_to_store', label: 'Pending to Store' },
           { key: 'uom', label: 'Unit' }, { key: 'mfg_date', label: 'Manufacture Date' },
           { key: 'expiry_date', label: 'Expiry' }, { key: 'status', label: 'Status' },
         ]} filename="lots" />
@@ -275,12 +282,14 @@ export default function SMSLotManager() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filtered.length === 0 ? (
-                  <tr><td colSpan={16} className="text-center py-12 text-slate-400">No lots found</td></tr>
+                  <tr><td colSpan={17} className="text-center py-12 text-slate-400">No lots found</td></tr>
                 ) : filtered.slice((page - 1) * pageSize, page * pageSize).map(lot => {
-                  const stored = storedByLot[lot.lot_id] ?? 0;
-                  const issued = issuedByLot[lot.lot_id] ?? 0;
-                  const lotGateEntry = gateEntries[lot.gate_entry_id];
-                  const lotInvoiceUrl = lotGateEntry?.invoice_photo;
+                 const stored = storedByLot[lot.lot_id] ?? 0;
+                 const issued = issuedByLot[lot.lot_id] ?? 0;
+                 const remaining = Math.max(0, stored - issued);
+                 const pendingToStore = Math.max(0, (lot.quantity || 0) - stored);
+                 const lotGateEntry = gateEntries[lot.gate_entry_id];
+                 const lotInvoiceUrl = lotGateEntry?.invoice_photo;
                   return (
                     <tr key={lot.id} className="hover:bg-slate-50">
                       <td className="px-3 md:px-4 py-3 font-mono text-sm font-bold text-slate-800 whitespace-nowrap min-w-[180px]">{lot.lot_id}</td>
@@ -306,7 +315,11 @@ export default function SMSLotManager() {
                         <span className="text-xs text-slate-400 ml-1">{lot.uom}</span>
                       </td>
                       <td className="px-3 md:px-4 py-3 text-right">
-                        <span className={`font-bold ${(lot.remaining_quantity ?? lot.quantity) > 0 ? 'text-green-700' : 'text-slate-400'}`}>{(lot.remaining_quantity ?? lot.quantity).toFixed(2)}</span>
+                        <span className={`font-bold ${remaining > 0 ? 'text-green-700' : 'text-slate-400'}`}>{remaining.toFixed(2)}</span>
+                        <span className="text-xs text-slate-400 ml-1">{lot.uom}</span>
+                      </td>
+                      <td className="px-3 md:px-4 py-3 text-right">
+                        <span className={`font-bold ${pendingToStore > 0 ? 'text-amber-600' : 'text-slate-400'}`}>{pendingToStore.toFixed(2)}</span>
                         <span className="text-xs text-slate-400 ml-1">{lot.uom}</span>
                       </td>
                       <td className="px-3 md:px-4 py-3">
@@ -351,6 +364,8 @@ export default function SMSLotManager() {
           ) : filtered.slice((page - 1) * pageSize, page * pageSize).map(lot => {
             const stored = storedByLot[lot.lot_id] ?? 0;
             const issued = issuedByLot[lot.lot_id] ?? 0;
+            const remaining = Math.max(0, stored - issued);
+            const pendingToStore = Math.max(0, (lot.quantity || 0) - stored);
             const lotGateEntry = gateEntries[lot.gate_entry_id];
             const lotInvoiceUrl = lotGateEntry?.invoice_photo;
             return (
@@ -366,7 +381,7 @@ export default function SMSLotManager() {
                    <StatusBadge status={lot.status} storedQty={stored} issuedQty={issued} originalQty={lot.quantity} />
                   </div>
                 </div>
-                <div className="grid grid-cols-3 gap-2 mt-2">
+                <div className="grid grid-cols-2 gap-2 mt-2">
                   <div className="bg-slate-50 rounded-lg px-2 py-1.5 text-center">
                     <p className="text-xs text-slate-500">Original</p>
                     <p className="text-sm font-bold text-slate-800">{lot.quantity}</p>
@@ -379,6 +394,16 @@ export default function SMSLotManager() {
                     <p className="text-xs text-orange-500">Issued</p>
                     <p className="text-sm font-bold text-orange-600">{issued.toFixed(1)}</p>
                   </div>
+                  <div className="bg-green-50 rounded-lg px-2 py-1.5 text-center">
+                    <p className="text-xs text-green-500">Remaining</p>
+                    <p className="text-sm font-bold text-green-700">{remaining.toFixed(1)}</p>
+                  </div>
+                  {pendingToStore > 0 && (
+                    <div className="bg-amber-50 rounded-lg px-2 py-1.5 text-center col-span-2">
+                      <p className="text-xs text-amber-500">Pending to Store</p>
+                      <p className="text-sm font-bold text-amber-600">{pendingToStore.toFixed(1)}</p>
+                    </div>
+                  )}
                 </div>
                 {locationsByLot[lot.lot_id]?.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-2">
