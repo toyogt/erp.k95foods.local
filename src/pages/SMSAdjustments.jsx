@@ -1,13 +1,65 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { motion } from 'framer-motion';
-import { Plus, CheckCircle2, XCircle, X } from 'lucide-react';
+import { Plus, CheckCircle2, XCircle, X, Search } from 'lucide-react';
 import { formatDateTime } from '@/lib/dateFormatter';
 import ExportButton from '@/components/store/ExportButton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
+
+function LotSearchDropdown({ lots, value, onSelect }) {
+  const [query, setQuery] = useState('');
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    function onClick(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, []);
+
+  const q = query.trim().toLowerCase();
+  const filtered = q
+    ? lots.filter(l =>
+        (l.lot_id || '').toLowerCase().includes(q) ||
+        (l.item_name || '').toLowerCase().includes(q) ||
+        (l.item_code || '').toLowerCase().includes(q) ||
+        (l.batch_number || '').toLowerCase().includes(q)
+      )
+    : lots;
+
+  return (
+    <div className="relative" ref={ref}>
+      <div className="relative">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+        <input
+          className="w-full h-11 pl-8 pr-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-teal-400 mt-1"
+          placeholder="Search lots by ID, item name, or batch..."
+          value={query}
+          onChange={e => { setQuery(e.target.value); setOpen(true); }}
+          onFocus={() => { setQuery(''); setOpen(true); }}
+        />
+      </div>
+      {open && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-60 overflow-y-auto" style={{ zIndex: 9999 }}>
+          {filtered.length === 0 ? (
+            <div className="px-4 py-3 text-sm text-amber-600">No lots found.</div>
+          ) : filtered.map(l => (
+            <div key={l.id} className="px-4 py-2.5 text-sm cursor-pointer hover:bg-slate-50 border-b border-slate-50 last:border-0"
+              onClick={() => { setQuery(`${l.lot_id} — ${l.item_name}`); setOpen(false); onSelect(l); }}>
+              <p className="font-medium text-slate-800">{l.item_name}</p>
+              <p className="text-xs text-slate-400 mt-0.5">
+                {l.lot_id}{l.batch_number ? ` · Batch: ${l.batch_number}` : ''} · {l.remaining_quantity ?? '?'} {l.uom || 'Nos'} remaining
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function AdjModal({ onSave, onClose }) {
   const { toast } = useToast();
@@ -25,6 +77,7 @@ function AdjModal({ onSave, onClose }) {
     ]).then(([l, s, locs]) => { setLots(l); setStock(s); setLocations(locs); });
   }, []);
 
+  const activeLots = lots.filter(l => !['consumed'].includes(l.status));
   const selectedLotStock = stock.filter(s => s.lot_id === form.lot_id);
   const totalQty = selectedLotStock.reduce((s, b) => s + (b.quantity || 0), 0);
 
@@ -64,12 +117,15 @@ function AdjModal({ onSave, onClose }) {
         </div>
         <div className="p-5 space-y-3">
           <div>
-            <Label className="text-xs font-medium text-slate-700">Lot *</Label>
-            <select className="w-full h-9 border border-slate-200 rounded-md px-2 text-sm mt-1" value={form.lot_id} onChange={e => set('lot_id', e.target.value)}>
-              <option value="">Select lot...</option>
-              {lots.filter(l => !['consumed'].includes(l.status)).map(l => <option key={l.id} value={l.lot_id}>{l.lot_id} — {l.item_name}</option>)}
-            </select>
-            {form.lot_id && <p className="text-xs text-slate-400 mt-1">Current stock: {totalQty.toFixed(2)} {selectedLotStock[0]?.uom}</p>}
+            <Label className="text-xs font-medium text-slate-700">Lot <span className="text-red-500">*</span></Label>
+            <LotSearchDropdown lots={activeLots} value={form.lot_id} onSelect={l => set('lot_id', l.lot_id)} />
+            {form.lot_id && (
+              <div className="flex items-center gap-2 bg-teal-50 border border-teal-200 rounded-lg px-3 py-2 mt-1.5">
+                <div className="w-2 h-2 rounded-full bg-teal-500 shrink-0" />
+                <span className="text-sm font-medium text-slate-800">{form.lot_id}</span>
+                <span className="text-xs text-slate-500 ml-auto">Current stock: {totalQty.toFixed(2)} {selectedLotStock[0]?.uom}</span>
+              </div>
+            )}
           </div>
           <div>
             <Label className="text-xs font-medium text-slate-700">Adjustment Type *</Label>
