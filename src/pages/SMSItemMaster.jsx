@@ -386,6 +386,6 @@ export default function SMSItemMaster() {
         </div>
         )}
         </div>
-        </div>
+        </motion.div>
         );
         }
