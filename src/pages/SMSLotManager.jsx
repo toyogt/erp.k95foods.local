@@ -10,11 +10,22 @@ import { SkeletonTable } from '@/components/store/StoreSkeleton';
 import QRCode from 'react-qr-code';
 import { Button } from '@/components/ui/button';
 
-function WeekBadge({ weeks }) {
-  if (!weeks || weeks <= 1) return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Week 1</span>;
-  if (weeks === 2) return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">Week 2</span>;
-  if (weeks === 3) return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700">Week 3</span>;
-  return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">Week {weeks}+</span>;
+function calcDaysAgo(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return null;
+  const now = new Date();
+  const diff = Math.floor((now - d) / (1000 * 60 * 60 * 24));
+  return diff >= 0 ? diff : null;
+}
+
+function AgingBadge({ days }) {
+  if (days === null || days === undefined) return <span className="text-slate-400">—</span>;
+  let cls = 'bg-green-100 text-green-700';
+  if (days > 30) cls = 'bg-red-100 text-red-700';
+  else if (days > 14) cls = 'bg-orange-100 text-orange-700';
+  else if (days > 7) cls = 'bg-yellow-100 text-yellow-700';
+  return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${cls}`}>{days}d</span>;
 }
 
 // Effective status: always driven by actual stored stock + issued qty, not just DB status field
@@ -92,7 +103,7 @@ function QRModal({ lot, onClose }) {
 
 const LOT_HEADERS = [
   'Lot ID', 'Item', 'Batch', 'Supplier', 'Original Qty',
-  'Stored Stock', 'Issued / Consumed', 'Remaining Qty', 'Stored At', 'Manufacture Date', 'Expiry', 'Aging', 'Status', 'Invoice', 'QR',
+  'Stored Stock', 'Issued / Consumed', 'Remaining Qty', 'Stored At', 'Manufacture Date', 'Expiry', 'Goods Received Note Age', 'Stock Age', 'Status', 'Invoice', 'QR',
 ];
 
 export default function SMSLotManager() {
@@ -188,15 +199,15 @@ export default function SMSLotManager() {
         ]} filename="lots" />
       </div>
 
-      {/* Week Color Legend */}
+      {/* Aging Legend */}
       <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/70 shadow-sm p-3">
-        <p className="text-xs font-semibold text-slate-500 mb-2">Week Aging Legend</p>
+        <p className="text-xs font-semibold text-slate-500 mb-2">Stock Aging Legend (Days)</p>
         <div className="flex flex-wrap gap-2">
           {[
-            { label: 'Week 1 (Current)', cls: 'bg-green-100 text-green-700' },
-            { label: 'Week 2', cls: 'bg-yellow-100 text-yellow-700' },
-            { label: 'Week 3', cls: 'bg-orange-100 text-orange-700' },
-            { label: 'Week 4+', cls: 'bg-red-100 text-red-700' },
+            { label: '0–7 days', cls: 'bg-green-100 text-green-700' },
+            { label: '8–14 days', cls: 'bg-yellow-100 text-yellow-700' },
+            { label: '15–30 days', cls: 'bg-orange-100 text-orange-700' },
+            { label: '30+ days', cls: 'bg-red-100 text-red-700' },
           ].map(w => <span key={w.label} className={`px-3 py-1 rounded-full text-xs font-medium ${w.cls}`}>{w.label}</span>)}
         </div>
       </div>
@@ -209,7 +220,7 @@ export default function SMSLotManager() {
         </div>
         <select className="h-11 md:h-9 border border-slate-200 rounded-md px-3 text-base md:text-sm" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
           <option value="">All Statuses</option>
-          <option value="approved">Pending Putaway</option>
+          <option value="pending_putaway">Pending Putaway</option>
           <option value="putaway">Available for Issue</option>
           <option value="partial">Partially Consumed</option>
           <option value="consumed">Fully Consumed</option>
@@ -236,7 +247,7 @@ export default function SMSLotManager() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filtered.length === 0 ? (
-                  <tr><td colSpan={15} className="text-center py-12 text-slate-400">No lots found</td></tr>
+                  <tr><td colSpan={16} className="text-center py-12 text-slate-400">No lots found</td></tr>
                 ) : filtered.map(lot => {
                   const stored = storedByLot[lot.lot_id] ?? 0;
                   const issued = issuedByLot[lot.lot_id] ?? 0;
@@ -281,7 +292,8 @@ export default function SMSLotManager() {
                       </td>
                       <td className="px-3 md:px-4 py-3 text-slate-600 text-xs">{lot.mfg_date || '—'}</td>
                       <td className="px-3 md:px-4 py-3 text-slate-600 text-xs">{lot.expiry_date || '—'}</td>
-                      <td className="px-3 md:px-4 py-3"><WeekBadge weeks={lot.weeks_elapsed} /></td>
+                      <td className="px-3 md:px-4 py-3"><AgingBadge days={calcDaysAgo(lot.created_date)} /></td>
+                      <td className="px-3 md:px-4 py-3">{lot.mfg_date ? <AgingBadge days={calcDaysAgo(lot.mfg_date)} /> : <span className="text-slate-400">—</span>}</td>
                       <td className="px-3 md:px-4 py-3"><StatusBadge status={lot.status} storedQty={stored} issuedQty={issued} originalQty={lot.quantity} /></td>
                       <td className="px-3 md:px-4 py-3">
                         {lotInvoiceUrl ? (
@@ -323,8 +335,7 @@ export default function SMSLotManager() {
                     {lot.supplier_name && <p className="text-xs text-slate-500">{lot.supplier_name}</p>}
                   </div>
                   <div className="flex flex-col items-end gap-1 shrink-0">
-                    <StatusBadge status={lot.status} storedQty={stored} issuedQty={issued} originalQty={lot.quantity} />
-                    <WeekBadge weeks={lot.weeks_elapsed} />
+                   <StatusBadge status={lot.status} storedQty={stored} issuedQty={issued} originalQty={lot.quantity} />
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-2 mt-2">
@@ -353,6 +364,8 @@ export default function SMSLotManager() {
                   {lot.expiry_date && <span>Expiry: <strong className="text-slate-700">{lot.expiry_date}</strong></span>}
                   {lot.invoice_number && <span>Invoice: <strong className="text-slate-700">{lot.invoice_number}</strong></span>}
                   {lot.invoice_date && <span>Invoice Date: <strong className="text-slate-700">{lot.invoice_date}</strong></span>}
+                  <span>Goods Received Note Age: <strong className="text-slate-700">{calcDaysAgo(lot.created_date) !== null ? `${calcDaysAgo(lot.created_date)} days` : '—'}</strong></span>
+                  {lot.mfg_date && <span>Stock Age: <strong className="text-slate-700">{calcDaysAgo(lot.mfg_date) !== null ? `${calcDaysAgo(lot.mfg_date)} days` : '—'}</strong></span>}
                 </div>
                 <div className="flex gap-2 mt-3">
                   {lotInvoiceUrl && (

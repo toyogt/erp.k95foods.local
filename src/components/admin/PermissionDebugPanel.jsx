@@ -32,35 +32,34 @@ export default function PermissionDebugPanel() {
   };
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 max-w-sm">
-      <div className="bg-slate-900 text-white rounded-lg shadow-xl border border-slate-700">
+    <div className="fixed top-14 right-3 z-40 w-56">
+      <div className="bg-slate-900/95 backdrop-blur-sm text-white rounded-lg shadow-lg border border-slate-700">
         <button
           onClick={() => setExpanded(!expanded)}
-          className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-800 transition-colors"
+          className="w-full flex items-center justify-between px-3 py-2 hover:bg-slate-800 transition-colors rounded-lg"
         >
-          <span className="text-xs font-semibold">🔐 Permission Debug</span>
+          <span className="text-[10px] font-semibold">🔐 Debug</span>
           {expanded ? (
-            <ChevronDown className="w-4 h-4" />
+            <ChevronDown className="w-3 h-3" />
           ) : (
-            <ChevronRight className="w-4 h-4" />
+            <ChevronRight className="w-3 h-3" />
           )}
         </button>
 
         {expanded && (
-          <div className="border-t border-slate-700 p-4 space-y-3 max-h-96 overflow-y-auto bg-slate-950">
+          <div className="border-t border-slate-700 p-3 space-y-2 max-h-72 overflow-y-auto bg-slate-950 rounded-b-lg">
             <div>
-              <p className="text-xs font-semibold text-slate-300 mb-1">USER</p>
-              <div className="text-xs bg-slate-800 rounded p-2 font-mono space-y-1">
+              <p className="text-[10px] font-semibold text-slate-300 mb-1">USER</p>
+              <div className="text-[10px] bg-slate-800 rounded p-1.5 font-mono space-y-0.5">
                 <p><span className="text-amber-300">email:</span> {debugInfo.user.email}</p>
                 <p><span className="text-amber-300">role:</span> {debugInfo.user.role}</p>
-                <p><span className="text-amber-300">name:</span> {debugInfo.user.name}</p>
               </div>
             </div>
 
             {debugInfo.policy && (
               <div>
-                <p className="text-xs font-semibold text-slate-300 mb-1">MODULE ACCESS</p>
-                <div className="text-xs bg-slate-800 rounded p-2 font-mono">
+                <p className="text-[10px] font-semibold text-slate-300 mb-1">MODULES</p>
+                <div className="text-[10px] bg-slate-800 rounded p-1.5 font-mono max-h-24 overflow-y-auto">
                   {debugInfo.policy.module_access?.length > 0 ? (
                     <div className="space-y-0.5">
                       {debugInfo.policy.module_access.map(m => (
@@ -68,7 +67,7 @@ export default function PermissionDebugPanel() {
                       ))}
                     </div>
                   ) : (
-                    <p className="text-slate-500">No modules assigned</p>
+                    <p className="text-slate-500">No modules</p>
                   )}
                 </div>
               </div>
@@ -76,8 +75,8 @@ export default function PermissionDebugPanel() {
 
             {debugInfo.policy?.page_overrides?.length > 0 && (
               <div>
-                <p className="text-xs font-semibold text-slate-300 mb-1">PAGE OVERRIDES</p>
-                <div className="text-xs bg-slate-800 rounded p-2 font-mono space-y-0.5">
+                <p className="text-[10px] font-semibold text-slate-300 mb-1">PAGE OVERRIDES</p>
+                <div className="text-[10px] bg-slate-800 rounded p-1.5 font-mono space-y-0.5 max-h-20 overflow-y-auto">
                   {debugInfo.policy.page_overrides.map((o, i) => (
                     <div key={i} className={o.allow ? 'text-green-400' : 'text-red-400'}>
                       {o.allow ? '✓' : '✗'} {o.page_key}
@@ -89,15 +88,11 @@ export default function PermissionDebugPanel() {
 
             <button
               onClick={copyToClipboard}
-              className="w-full flex items-center justify-center gap-1 px-2 py-1 text-xs bg-slate-800 hover:bg-slate-700 rounded transition-colors"
+              className="w-full flex items-center justify-center gap-1 px-2 py-1 text-[10px] bg-slate-800 hover:bg-slate-700 rounded transition-colors"
             >
               <Copy className="w-3 h-3" />
-              Copy Debug JSON
+              Copy JSON
             </button>
-
-            <p className="text-xs text-slate-500 text-center pt-2 border-t border-slate-700">
-              Last updated: {new Date(debugInfo.timestamp).toLocaleTimeString()}
-            </p>
           </div>
         )}
       </div>
