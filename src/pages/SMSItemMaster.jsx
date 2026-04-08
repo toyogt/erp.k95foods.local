@@ -299,8 +299,9 @@ export default function SMSItemMaster() {
         </div>
       ) : (
         <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] overflow-hidden">
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-slate-100 text-slate-700">
+            <thead className="bg-slate-100 text-slate-700 text-xs">
              <tr>
                <th className="text-left px-4 py-3 font-medium">Item Name</th>
                <th className="text-left px-4 py-3 font-medium hidden md:table-cell">Category</th>
@@ -383,6 +384,8 @@ export default function SMSItemMaster() {
               ))}
             </tbody>
           </table>
+          </div>
+          <div className="px-4 py-2.5 bg-slate-50/80 border-t border-slate-100 text-xs text-slate-500 font-medium">{filtered.length} item(s)</div>
         </div>
         )}
         </div>

@@ -224,7 +224,7 @@ export default function SMSLotManager() {
       ) : (
         <>
         {/* Desktop Table */}
-        <div className="hidden lg:block bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/70 shadow-sm overflow-hidden">
+        <div className="hidden lg:block bg-white/50 backdrop-blur-xl border border-white/30 rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm table-auto">
               <thead>
@@ -301,7 +301,7 @@ export default function SMSLotManager() {
               </tbody>
             </table>
           </div>
-          <div className="px-4 py-2 bg-slate-50 border-t text-xs text-slate-400">{filtered.length} lot(s)</div>
+          <div className="px-4 py-2.5 bg-slate-50/80 border-t border-slate-100 text-xs text-slate-500 font-medium">{filtered.length} lot(s)</div>
         </div>
 
         {/* Mobile Cards */}

@@ -11,6 +11,7 @@ export default function TransportTypePicker({ value, onChange, labels }) {
     <div className="flex rounded-xl border border-slate-200 overflow-hidden bg-slate-50">
       {TYPES.map(t => {
         const active = value === t.key;
+        const Icon = t.icon;
         return (
           <button
             key={t.key}
@@ -21,6 +22,7 @@ export default function TransportTypePicker({ value, onChange, labels }) {
                 : 'text-slate-500 hover:text-slate-700'
             }`}
           >
+            <Icon className="w-4 h-4" />
             {labels?.[t.key] || t.key}
           </button>
         );

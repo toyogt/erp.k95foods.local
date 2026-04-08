@@ -22,7 +22,7 @@ function GRNTable({ grns, title, allGateEntries, onViewInvoice }) {
     return <div className="text-center py-12 text-slate-400"><p className="font-semibold">No records found.</p></div>;
   }
   return (
-    <div className="bg-white/60 backdrop-blur-xl border border-white/40 rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] overflow-hidden">
+    <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
@@ -73,6 +73,7 @@ function GRNTable({ grns, title, allGateEntries, onViewInvoice }) {
           </tbody>
         </table>
       </div>
+      <div className="px-4 py-2.5 bg-slate-50/80 border-t border-slate-100 text-xs text-slate-500 font-medium">{grns.length} record(s)</div>
     </div>
   );
 }
@@ -441,7 +442,7 @@ export default function GRNReceive() {
               <p className="text-xs mt-1">Complete a Gate Entry first to create a Goods Received Note.</p>
             </div>
           ) : (
-            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+            <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
@@ -486,6 +487,7 @@ export default function GRNReceive() {
                   </tbody>
                 </table>
               </div>
+              <div className="px-4 py-2.5 bg-slate-50/80 border-t border-slate-100 text-xs text-slate-500 font-medium">{filteredEntries.length} entry(ies)</div>
             </div>
           )}
         </>
