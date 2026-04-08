@@ -57,17 +57,16 @@ function LocationSelect({ locations, value, onChange }) {
   );
 }
 
-function LotSelect({ lots, value, onChange, usedLotIds = [] }) {
+function LotSelect({ lots, value, onChange }) {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const selected = lots.find(l => l.lot_id === value);
   // Show lots that have pending-to-store qty > 0
   const available = lots.filter(l => (l._pendingToStore || (l.quantity || 0)) > 0);
-  const filtered = (query.trim()
+  const filtered = query.trim()
     ? available.filter(l => l.lot_id?.toLowerCase().includes(query.toLowerCase()) || l.item_name?.toLowerCase().includes(query.toLowerCase()))
-    : available
-  ).filter(l => !usedLotIds.includes(l.lot_id) || l.lot_id === value);
+    : available;
 
   useEffect(() => {
     function handleClick(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
@@ -133,7 +132,7 @@ export default function PutawayPanel({ lots: externalLots, locations: externalLo
   function addEntry() { setEntries(prev => [...prev, emptyEntry()]); }
   function removeEntry(idx) { setEntries(prev => prev.filter((_, i) => i !== idx)); }
 
-  const usedLotIds = entries.map(e => e.lotId).filter(Boolean);
+  // Same lot can be used in multiple entries (different locations)
 
   async function processEntry(lot, location, qty, notes, user, now) {
     const putawayId = `PUT-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`;
@@ -176,13 +175,19 @@ export default function PutawayPanel({ lots: externalLots, locations: externalLo
 
     if (toProcess.length === 0) { toast({ title: 'No valid entries to submit', variant: 'destructive' }); return; }
 
-    // Validation for capacity
-    for(const item of toProcess) {
-        const maxQty = item.lot._pendingToStore ?? item.lot.quantity;
-        if(item.quantity > maxQty) {
-            showErrorAlert("Capacity Exceeded", `Cannot put away ${item.quantity} of ${item.lot.item_name}. Only ${maxQty} pending to store.`);
-            return;
-        }
+    // Validate consolidated quantity per lot does not exceed available
+    const lotTotals = {};
+    for (const item of toProcess) {
+      const key = item.lot.lot_id;
+      lotTotals[key] = (lotTotals[key] || 0) + item.quantity;
+    }
+    for (const [lotId, total] of Object.entries(lotTotals)) {
+      const lot = lots.find(l => l.lot_id === lotId);
+      const maxQty = lot._pendingToStore ?? lot.quantity;
+      if (total > maxQty) {
+        showErrorAlert("Capacity Exceeded", `Total putaway for ${lot.item_name} (${lotId}) is ${total}, but only ${maxQty} ${lot.uom} pending to store.`);
+        return;
+      }
     }
 
     setSaving(true);
@@ -209,14 +214,21 @@ export default function PutawayPanel({ lots: externalLots, locations: externalLo
        <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] p-4 space-y-3">
           <p className="text-sm font-semibold text-slate-700">Putaway Entries ({entries.length})</p>
 
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {entries.map((entry, idx) => {
             const lot = lots.find(l => l.lot_id === entry.lotId);
             const location = locations.find(l => l.id === entry.locationId);
-            const maxQty = lot ? (lot._pendingToStore ?? lot.quantity ?? 0) : 0;
+            // Calculate remaining available for this lot considering other entries
+            const totalUsedByOthers = entries.reduce((sum, e, i) => {
+              if (i !== idx && e.lotId === entry.lotId && e.quantity) return sum + parseFloat(e.quantity || 0);
+              return sum;
+            }, 0);
+            const lotMax = lot ? (lot._pendingToStore ?? lot.quantity ?? 0) : 0;
+            const maxQty = Math.max(0, lotMax - totalUsedByOthers);
             return (
               <div key={idx} className="border border-slate-200 rounded-lg p-3 space-y-3 bg-slate-50/50">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-semibold text-slate-600">Lot {idx + 1}</p>
+                  <p className="text-xs font-semibold text-slate-600">Entry {idx + 1}</p>
                   {entries.length > 1 && (
                     <button onClick={() => removeEntry(idx)} className="text-red-400 hover:text-red-600 p-1">
                       <Trash2 className="w-4 h-4" />
@@ -229,8 +241,8 @@ export default function PutawayPanel({ lots: externalLots, locations: externalLo
                 </div>
                 <div>
                   <Label className="text-xs font-medium text-slate-700">Lot *</Label>
-                  <div className="mt-1"><LotSelect lots={lots} value={entry.lotId} onChange={v => setEntry(idx, 'lotId', v)} usedLotIds={usedLotIds.filter((_, i) => i !== idx)} /></div>
-                  {lot && <p className="text-xs text-green-600 mt-1 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" />{lot.item_name} · Pending to Store: {maxQty} {lot.uom}</p>}
+                  <div className="mt-1"><LotSelect lots={lots} value={entry.lotId} onChange={v => setEntry(idx, 'lotId', v)} /></div>
+                  {lot && <p className="text-xs text-green-600 mt-1 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" />{lot.item_name} · Available: {maxQty} {lot.uom}</p>}
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -245,6 +257,7 @@ export default function PutawayPanel({ lots: externalLots, locations: externalLo
               </div>
             );
           })}
+          </div>
 
           <button onClick={addEntry} className="w-full border-2 border-dashed border-slate-300 rounded-lg py-3 text-sm text-slate-500 hover:border-blue-400 hover:text-blue-600 flex items-center justify-center gap-2 transition-colors">
             <Plus className="w-4 h-4" /> Add More Lots
