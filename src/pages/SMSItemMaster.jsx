@@ -85,12 +85,10 @@ function ItemFormModal({ item, onClose, onSaved }) {
             <label className="text-xs font-medium text-slate-700">Item Name *</label>
             <Input className="h-9 text-sm mt-1" value={form.item_name} onChange={e => setField('item_name', e.target.value)} placeholder="Enter item name" disabled={isSystemItem} />
           </div>
-          {!isSystemItem && (
-            <MaterialPhotoUpload
-              value={form.material_photo}
-              onChange={v => setField('material_photo', v)}
-            />
-          )}
+          <MaterialPhotoUpload
+            value={form.material_photo}
+            onChange={v => setField('material_photo', v)}
+          />
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-medium text-slate-700">Category</label>
