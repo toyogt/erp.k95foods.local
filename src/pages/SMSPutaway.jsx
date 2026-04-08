@@ -31,10 +31,17 @@ export default function SMSPutaway() {
     issueLines.forEach(l => { issuedMap[l.lot_id] = (issuedMap[l.lot_id] || 0) + (l.issued_quantity || 0); });
 
     // Pending putaway = not rejected/damaged/consumed AND still has remaining quantity
-    const pending = lots.filter(l =>
-      !['rejected', 'damaged', 'consumed'].includes(l.status) &&
-      (l.remaining_quantity ?? l.quantity) > 0
-    );
+    // For 'approved' lots (pending putaway), use quantity if remaining_quantity is 0 or not set
+    const pending = lots.filter(l => {
+      if (['rejected', 'damaged', 'consumed'].includes(l.status)) return false;
+      const remaining = l.remaining_quantity;
+      const original = l.quantity || 0;
+      // If remaining is explicitly > 0, show it
+      if (remaining > 0) return true;
+      // If lot is approved (not yet put away) and has original quantity, show it even if remaining is 0
+      if (l.status === 'approved' && original > 0) return true;
+      return false;
+    });
 
     setPendingLots(pending);
     setLocations(locs);

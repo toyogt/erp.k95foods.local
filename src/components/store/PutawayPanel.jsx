@@ -62,7 +62,12 @@ function LotSelect({ lots, value, onChange, usedLotIds = [] }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const selected = lots.find(l => l.lot_id === value);
-  const available = lots.filter(l => (l.remaining_quantity ?? l.quantity) > 0);
+  // Show lots with remaining qty > 0, OR approved lots with original qty > 0 (remaining_quantity may be 0 before first putaway)
+  const available = lots.filter(l => {
+    if ((l.remaining_quantity ?? 0) > 0) return true;
+    if (l.status === 'approved' && (l.quantity || 0) > 0) return true;
+    return false;
+  });
   const filtered = (query.trim()
     ? available.filter(l => l.lot_id?.toLowerCase().includes(query.toLowerCase()) || l.item_name?.toLowerCase().includes(query.toLowerCase()))
     : available
@@ -207,7 +212,7 @@ export default function PutawayPanel({ lots: externalLots, locations: externalLo
           {entries.map((entry, idx) => {
             const lot = lots.find(l => l.lot_id === entry.lotId);
             const location = locations.find(l => l.id === entry.locationId);
-            const maxQty = lot ? (lot.remaining_quantity ?? lot.quantity) : 0;
+            const maxQty = lot ? ((lot.remaining_quantity > 0 ? lot.remaining_quantity : lot.quantity) || 0) : 0;
             return (
               <div key={idx} className="border border-slate-200 rounded-lg p-3 space-y-3 bg-slate-50/50">
                 <div className="flex items-center justify-between">
