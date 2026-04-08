@@ -245,7 +245,7 @@ export default function GateEntryPage() {
   }
 
   return (
-    <motion.div className="max-w-4xl mx-auto pb-12" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+    <motion.div className="max-w-6xl mx-auto pb-12" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
       <ToastContainer />
       <div className="px-1 md:px-0 space-y-4">
 
