@@ -194,10 +194,10 @@ export default function SMSReorderConfig() {
         </div>
       </div>
       {/* Desktop Table */}
-      <div className="hidden md:block bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <div className="hidden md:block bg-white/50 backdrop-blur-xl border border-white/30 rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead><tr className="bg-slate-100 text-slate-700 text-xs"><th className="text-left px-4 py-3">Item</th><th className="text-right px-4 py-3">Current Stock</th><th className="text-right px-4 py-3">Suggest Order</th><th className="text-left px-4 py-3">Status</th><th className="text-left px-4 py-3">Alert</th><th className="text-left px-4 py-3">Actions</th></tr></thead>
+            <thead><tr className="bg-slate-100 text-slate-700 text-xs"><th className="text-left px-4 py-3 font-medium">Item</th><th className="text-right px-4 py-3 font-medium">Current Stock</th><th className="text-right px-4 py-3 font-medium">Suggest Order</th><th className="text-left px-4 py-3 font-medium">Status</th><th className="text-left px-4 py-3 font-medium">Alert</th><th className="text-left px-4 py-3 font-medium">Actions</th></tr></thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? <tr><td colSpan={6} className="text-center py-8 text-slate-400">Loading...</td></tr> : configs.length === 0 ? <tr><td colSpan={6} className="text-center py-8 text-slate-400">No reorder configs set</td></tr> : configs.map(c => {
                 const current = stockByItem[c.item_code] || 0;
@@ -217,6 +217,7 @@ export default function SMSReorderConfig() {
             </tbody>
           </table>
         </div>
+        <div className="px-4 py-2.5 bg-slate-50/80 border-t border-slate-100 text-xs text-slate-500 font-medium">{configs.length} config(s)</div>
       </div>
 
       {/* Mobile Cards */}

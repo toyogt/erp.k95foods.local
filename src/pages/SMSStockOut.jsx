@@ -469,7 +469,7 @@ export default function SMSStockOut() {
         </div>
       )}
       {/* Issue header */}
-      <div className="bg-white rounded-xl border border-slate-200 p-4 md:p-6">
+      <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] p-4 md:p-6">
         <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Issue Details</p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
@@ -508,7 +508,7 @@ export default function SMSStockOut() {
       </div>
 
       {/* Issue form */}
-      <div className="bg-white rounded-xl border border-slate-200 p-4 md:p-6">
+      <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] p-4 md:p-6">
         {loading ? (
           <p className="text-sm text-slate-400 text-center py-6">Loading stored items...</p>
         ) : storedItems.length === 0 ? (

@@ -255,7 +255,7 @@ export default function SMSTransfer() {
 
         {/* Manual Entry Mode */}
         {mode === 'manual' && (
-          <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/70 shadow-sm p-4 md:p-6 space-y-4">
+          <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] p-4 md:p-6 space-y-4">
             <p className="text-sm font-semibold text-slate-700">Transfer Details</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -347,7 +347,7 @@ export default function SMSTransfer() {
         )}
 
         {/* QR Scan Mode */}
-        {mode === 'scan' && <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/70 shadow-sm p-4 md:p-6 space-y-4">
+        {mode === 'scan' && <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] p-4 md:p-6 space-y-4">
           {/* Source */}
           <div>
             <Label className="text-xs font-medium text-slate-700">Step 1 — Source Location QR *</Label>

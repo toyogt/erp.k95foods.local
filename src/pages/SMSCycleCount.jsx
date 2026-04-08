@@ -208,7 +208,7 @@ export default function SMSCycleCount() {
       </div>
 
       {/* Start new session */}
-      <div className="bg-white rounded-xl border border-slate-200 p-3 md:p-4 flex flex-col sm:flex-row gap-3 sm:items-end">
+      <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] p-3 md:p-4 flex flex-col sm:flex-row gap-3 sm:items-end">
         <div className="flex-1">
           <Label className="text-xs font-medium text-slate-700">New Count Session Name</Label>
           <Input className="h-11 md:h-9 text-base md:text-sm mt-1" placeholder="e.g. Monthly Count Jan 2025" value={sessionName} onChange={e => setSessionName(e.target.value)} />
@@ -220,8 +220,8 @@ export default function SMSCycleCount() {
 
       {/* Session list */}
       {sessions.length > 0 && (
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-          <div className="px-4 py-3 border-b bg-slate-50">
+        <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] overflow-hidden">
+          <div className="px-4 py-3 border-b bg-slate-100">
             <p className="text-sm font-semibold text-slate-700">Count Sessions</p>
           </div>
           <div className="divide-y divide-slate-100">
@@ -251,8 +251,8 @@ export default function SMSCycleCount() {
 
       {/* Count entries */}
       {activeSession && entries.length > 0 && (
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-          <div className="px-4 py-3 border-b bg-slate-50">
+        <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] overflow-hidden">
+          <div className="px-4 py-3 border-b bg-slate-100">
             <p className="text-sm font-semibold text-slate-700">{activeSession} — Physical Count</p>
           </div>
           <div className="divide-y divide-slate-100">
