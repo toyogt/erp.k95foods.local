@@ -17,10 +17,12 @@ function ItemSearchSelect({ value, storeItems, onChangeName, onSelectItem }) {
     return () => document.removeEventListener('mousedown', onClick);
   }, []);
 
-  const filtered = query.trim()
+  // Always show all items; filter only when user types a query
+  const q = query.trim().toLowerCase();
+  const filtered = q
     ? storeItems.filter(s =>
-        s.item_name?.toLowerCase().includes(query.toLowerCase()) ||
-        s.item_code?.toLowerCase().includes(query.toLowerCase())
+        (s.item_name || '').toLowerCase().includes(q) ||
+        (s.item_code || '').toLowerCase().includes(q)
       )
     : storeItems;
 
@@ -39,11 +41,8 @@ function ItemSearchSelect({ value, storeItems, onChangeName, onSelectItem }) {
       {open && (
         <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-72 overflow-y-auto">
           {filtered.length === 0 ? (
-            <div className="px-4 py-3 text-sm text-slate-400">
-              {query.trim()
-                ? <span className="text-amber-600">Item not found in Store Item Master. Please add it via Item Master first.</span>
-                : 'Start typing to search items...'
-              }
+            <div className="px-4 py-3 text-sm text-amber-600">
+              Item not found in Store Item Master. Please add it via Item Master first.
             </div>
           ) : filtered.map((s, i) => (
             <div key={i} className="px-4 py-2.5 text-sm cursor-pointer hover:bg-slate-50 flex items-start gap-2 border-b border-slate-50 last:border-0"
@@ -148,76 +147,167 @@ export default function GRNItemCard({ index, item, storeItems, canRemove, onUpda
         </div>
         
         {item.original_quantity && parseFloat(item.original_quantity) > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 bg-slate-50 rounded-lg p-3 border border-slate-100">
-            <div>
-              <Label className="text-xs font-medium text-slate-700">Quantity Mismatch?</Label>
-              <select className="w-full h-11 border border-slate-200 rounded-xl px-2 text-sm mt-1"
-                value={item.qty_mismatch || 'no'} onChange={e => {
-                  onUpdate('qty_mismatch', e.target.value);
-                  if (e.target.value === 'no') {
-                    onUpdate('quantity', item.original_quantity);
-                    onUpdate('mismatch_type', 'none');
-                    onUpdate('mismatch_reason', '');
-                  } else {
-                    onUpdate('quantity', '');
-                  }
-                }}>
-                <option value="no">No</option>
-                <option value="yes">Yes</option>
-              </select>
+          <div className="bg-slate-50 rounded-lg p-3 border border-slate-100 space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs font-medium text-slate-700">Quantity Mismatch?</Label>
+                <select className="w-full h-11 border border-slate-200 rounded-xl px-2 text-sm mt-1"
+                  value={item.qty_mismatch || 'no'} onChange={e => {
+                    onUpdate('qty_mismatch', e.target.value);
+                    if (e.target.value === 'no') {
+                      onUpdate('quantity', item.original_quantity);
+                      onUpdate('mismatch_type', 'none');
+                      onUpdate('mismatch_reason', '');
+                      onUpdate('short_qty', '');
+                      onUpdate('damaged_qty', '');
+                      onUpdate('damage_reason', '');
+                    } else {
+                      onUpdate('quantity', '');
+                    }
+                  }}>
+                  <option value="no">No</option>
+                  <option value="yes">Yes</option>
+                </select>
+              </div>
+              {(!item.qty_mismatch || item.qty_mismatch === 'no') && (
+                <div>
+                  <Label className="text-xs font-medium text-slate-700">Received Quantity</Label>
+                  <div className="h-11 flex items-center text-sm font-bold text-green-700 mt-1">
+                    {item.original_quantity} {item.uom}
+                  </div>
+                </div>
+              )}
             </div>
 
             {item.qty_mismatch === 'yes' && (
-              <>
-                <div>
-                  <Label className="text-xs font-medium text-slate-700">Mismatch Type <span className="text-red-500">*</span></Label>
-                  <select className="w-full h-11 border border-slate-200 rounded-xl px-2 text-sm mt-1"
-                    value={item.mismatch_type || ''} onChange={e => {
-                      onUpdate('mismatch_type', e.target.value);
-                      onUpdate('mismatch_qty', '');
-                      onUpdate('quantity', '');
-                    }}>
-                    <option value="">Select type</option>
-                    <option value="damaged">Damaged</option>
-                    <option value="decreased">Decreased (Short received)</option>
-                    <option value="increased">Increased (Excess received)</option>
-                  </select>
-                </div>
-                <div>
-                  <Label className="text-xs font-medium text-slate-700">
-                    {item.mismatch_type === 'decreased' ? 'Short By' : item.mismatch_type === 'increased' ? 'Excess By' : item.mismatch_type === 'damaged' ? 'Damaged Quantity' : 'Difference'} <span className="text-red-500">*</span>
-                  </Label>
-                  <NumericInput className="h-11 text-sm mt-1" value={item.mismatch_qty || ''}
-                    onChange={e => {
-                      const diff = parseFloat(e.target.value) || 0;
-                      const orig = parseFloat(item.original_quantity) || 0;
-                      let actual = orig;
-                      if (item.mismatch_type === 'decreased' || item.mismatch_type === 'damaged') actual = orig - diff;
-                      else if (item.mismatch_type === 'increased') actual = orig + diff;
-                      onUpdate('mismatch_qty', e.target.value);
-                      onUpdate('quantity', actual > 0 ? String(actual) : '0');
-                    }} placeholder="Enter difference quantity" />
-                </div>
-                <div>
-                  <Label className="text-xs font-medium text-slate-700">Actual Received Quantity</Label>
-                  <div className="h-11 flex items-center text-sm font-bold text-slate-900 mt-1 px-3 border border-slate-200 rounded-xl bg-slate-50">
-                    {item.quantity || '—'} {item.uom}
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs font-medium text-slate-700">Mismatch Type <span className="text-red-500">*</span></Label>
+                    <select className="w-full h-11 border border-slate-200 rounded-xl px-2 text-sm mt-1"
+                      value={item.mismatch_type || ''} onChange={e => {
+                        onUpdate('mismatch_type', e.target.value);
+                        onUpdate('short_qty', '');
+                        onUpdate('damaged_qty', '');
+                        onUpdate('damage_reason', '');
+                        onUpdate('mismatch_reason', '');
+                        onUpdate('quantity', '');
+                      }}>
+                      <option value="">Select type</option>
+                      <option value="damaged">Damaged Only</option>
+                      <option value="decreased">Short Received Only</option>
+                      <option value="increased">Excess Received</option>
+                      <option value="short_and_damaged">Short + Damaged</option>
+                    </select>
+                  </div>
+                  <div>
+                    <Label className="text-xs font-medium text-slate-700">Reason <span className="text-red-500">*</span></Label>
+                    <input className="h-11 text-sm mt-1 w-full border border-slate-200 rounded-xl px-3" value={item.mismatch_reason || ''}
+                      onChange={e => onUpdate('mismatch_reason', e.target.value)} placeholder="Reason for mismatch" />
                   </div>
                 </div>
-                <div>
-                  <Label className="text-xs font-medium text-slate-700">Reason <span className="text-red-500">*</span></Label>
-                  <input className="h-11 text-sm mt-1 w-full border border-slate-200 rounded-xl px-3" value={item.mismatch_reason || ''}
-                    onChange={e => onUpdate('mismatch_reason', e.target.value)} placeholder="Reason for mismatch" />
-                </div>
-              </>
-            )}
 
-            {(!item.qty_mismatch || item.qty_mismatch === 'no') && (
-              <div>
-                <Label className="text-xs font-medium text-slate-700">Received Quantity</Label>
-                <div className="h-11 flex items-center text-sm font-bold text-green-700 mt-1">
-                  {item.original_quantity} {item.uom}
-                </div>
+                {/* Short + Damaged: two separate inputs */}
+                {item.mismatch_type === 'short_and_damaged' && (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                      <Label className="text-xs font-medium text-red-600">Short Quantity <span className="text-red-500">*</span></Label>
+                      <NumericInput className="h-11 text-sm mt-1" value={item.short_qty || ''}
+                        onChange={e => {
+                          const short = parseFloat(e.target.value) || 0;
+                          const damaged = parseFloat(item.damaged_qty) || 0;
+                          const orig = parseFloat(item.original_quantity) || 0;
+                          const actual = Math.max(0, orig - short - damaged);
+                          onUpdate('short_qty', e.target.value);
+                          onUpdate('quantity', String(actual));
+                        }} placeholder="Units short" />
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-orange-600">Damaged Quantity <span className="text-red-500">*</span></Label>
+                      <NumericInput className="h-11 text-sm mt-1" value={item.damaged_qty || ''}
+                        onChange={e => {
+                          const damaged = parseFloat(e.target.value) || 0;
+                          const short = parseFloat(item.short_qty) || 0;
+                          const orig = parseFloat(item.original_quantity) || 0;
+                          const actual = Math.max(0, orig - short - damaged);
+                          onUpdate('damaged_qty', e.target.value);
+                          onUpdate('quantity', String(actual));
+                        }} placeholder="Units damaged" />
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-slate-700">Usable Received</Label>
+                      <div className="h-11 flex items-center text-sm font-bold text-slate-900 mt-1 px-3 border border-slate-200 rounded-xl bg-white">
+                        {item.quantity || '—'} {item.uom}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Single type: Damaged only */}
+                {item.mismatch_type === 'damaged' && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs font-medium text-orange-600">Damaged Quantity <span className="text-red-500">*</span></Label>
+                      <NumericInput className="h-11 text-sm mt-1" value={item.damaged_qty || ''}
+                        onChange={e => {
+                          const diff = parseFloat(e.target.value) || 0;
+                          const orig = parseFloat(item.original_quantity) || 0;
+                          onUpdate('damaged_qty', e.target.value);
+                          onUpdate('quantity', String(Math.max(0, orig - diff)));
+                        }} placeholder="Number of damaged units" />
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-slate-700">Actual Received Quantity</Label>
+                      <div className="h-11 flex items-center text-sm font-bold text-slate-900 mt-1 px-3 border border-slate-200 rounded-xl bg-white">
+                        {item.quantity || '—'} {item.uom}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Single type: Short received */}
+                {item.mismatch_type === 'decreased' && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs font-medium text-red-600">Short By <span className="text-red-500">*</span></Label>
+                      <NumericInput className="h-11 text-sm mt-1" value={item.short_qty || ''}
+                        onChange={e => {
+                          const diff = parseFloat(e.target.value) || 0;
+                          const orig = parseFloat(item.original_quantity) || 0;
+                          onUpdate('short_qty', e.target.value);
+                          onUpdate('quantity', String(Math.max(0, orig - diff)));
+                        }} placeholder="Short quantity" />
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-slate-700">Actual Received Quantity</Label>
+                      <div className="h-11 flex items-center text-sm font-bold text-slate-900 mt-1 px-3 border border-slate-200 rounded-xl bg-white">
+                        {item.quantity || '—'} {item.uom}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Single type: Excess */}
+                {item.mismatch_type === 'increased' && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs font-medium text-blue-600">Excess By <span className="text-red-500">*</span></Label>
+                      <NumericInput className="h-11 text-sm mt-1" value={item.mismatch_qty || ''}
+                        onChange={e => {
+                          const diff = parseFloat(e.target.value) || 0;
+                          const orig = parseFloat(item.original_quantity) || 0;
+                          onUpdate('mismatch_qty', e.target.value);
+                          onUpdate('quantity', String(orig + diff));
+                        }} placeholder="Excess quantity" />
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-slate-700">Actual Received Quantity</Label>
+                      <div className="h-11 flex items-center text-sm font-bold text-slate-900 mt-1 px-3 border border-slate-200 rounded-xl bg-white">
+                        {item.quantity || '—'} {item.uom}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -255,32 +345,6 @@ export default function GRNItemCard({ index, item, storeItems, canRemove, onUpda
           </div>
         </div>
 
-        {/* Additional damaged handling when already short */}
-        {item.qty_mismatch === 'yes' && item.mismatch_type === 'decreased' && (
-          <div className="bg-amber-50 rounded-lg p-3 border border-amber-200">
-            <Label className="text-xs font-medium text-amber-700">Additional Damage on Received Quantity?</Label>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
-              <div>
-                <NumericInput className="h-11 text-sm" value={item.damaged_qty || ''}
-                  onChange={e => onUpdate('damaged_qty', e.target.value)}
-                  placeholder="Damaged quantity (from received)" />
-              </div>
-              {item.damaged_qty && parseFloat(item.damaged_qty) > 0 && (
-                <div>
-                  <input className="h-11 text-sm w-full border border-slate-200 rounded-xl px-3"
-                    value={item.damage_reason || ''}
-                    onChange={e => onUpdate('damage_reason', e.target.value)}
-                    placeholder="Reason for damage" />
-                </div>
-              )}
-            </div>
-            {item.damaged_qty && parseFloat(item.damaged_qty) > 0 && (
-              <p className="text-xs text-amber-700 mt-1">
-                Usable quantity: <strong>{Math.max(0, (parseFloat(item.quantity) || 0) - (parseFloat(item.damaged_qty) || 0))} {item.uom}</strong>
-              </p>
-            )}
-          </div>
-        )}
       </div>
     </div>
   );
