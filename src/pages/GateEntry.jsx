@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
+import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -244,7 +245,7 @@ export default function GateEntryPage() {
   }
 
   return (
-    <div className="max-w-lg mx-auto pb-12">
+    <motion.div className="max-w-lg mx-auto pb-12" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
       <ToastContainer />
       <div className="px-1 md:px-0 space-y-4">
 
@@ -439,7 +440,7 @@ export default function GateEntryPage() {
           </>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }
 

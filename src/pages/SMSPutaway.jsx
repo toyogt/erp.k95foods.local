@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
+import { motion } from 'framer-motion';
 import { Package } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import ExportButton from '@/components/store/ExportButton';
@@ -55,7 +56,7 @@ export default function SMSPutaway() {
   ];
 
   return (
-    <div className="pb-12">
+    <motion.div className="pb-12" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
       <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
         <div>
@@ -86,6 +87,6 @@ export default function SMSPutaway() {
       {/* Tabs */}
       <PutawayTabs pendingLots={pendingLots} putawayHistory={putawayHistory} loading={loading} />
       </div>
-      </div>
+      </motion.div>
       );
       }

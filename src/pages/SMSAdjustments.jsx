@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
+import { motion } from 'framer-motion';
 import { Plus, CheckCircle2, XCircle, X } from 'lucide-react';
 import ExportButton from '@/components/store/ExportButton';
 import { Button } from '@/components/ui/button';
@@ -176,7 +177,7 @@ export default function SMSAdjustments() {
   const isAdmin = user?.role === 'admin';
 
   return (
-    <div className="space-y-4">
+    <motion.div className="space-y-4" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-slate-900">Stock Adjustments</h1>
@@ -297,6 +298,6 @@ export default function SMSAdjustments() {
       </div>
 
       {showModal && <AdjModal onSave={() => { setShowModal(false); load(); }} onClose={() => setShowModal(false)} />}
-    </div>
+    </motion.div>
   );
 }

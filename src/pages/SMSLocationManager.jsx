@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
+import { motion } from 'framer-motion';
 import toast, { Toaster } from 'react-hot-toast';
 import { Plus, QrCode, Edit2, Search, X, Printer } from 'lucide-react';
 import { SkeletonTable } from '@/components/store/StoreSkeleton';
@@ -159,7 +160,7 @@ export default function SMSLocationManager() {
   });
 
   return (
-    <div className="space-y-4">
+    <motion.div className="space-y-4" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
       <Toaster position="top-right" />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
@@ -261,6 +262,6 @@ export default function SMSLocationManager() {
 
       {showModal && <LocationModal loc={editLoc} onSave={() => { setShowModal(false); load(); }} onClose={() => setShowModal(false)} />}
       {qrLoc && <QRModal location={qrLoc} onClose={() => setQrLoc(null)} />}
-    </div>
+    </motion.div>
   );
 }

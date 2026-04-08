@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
+import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,7 +22,7 @@ function GRNTable({ grns, title, allGateEntries, onViewInvoice }) {
     return <div className="text-center py-12 text-slate-400"><p className="font-semibold">No records found.</p></div>;
   }
   return (
-    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div className="bg-white/60 backdrop-blur-xl border border-white/40 rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
@@ -29,10 +30,12 @@ function GRNTable({ grns, title, allGateEntries, onViewInvoice }) {
               <th className="text-left px-4 py-3 font-medium">Goods Received Note ID</th>
               <th className="text-left px-4 py-3 font-medium">Gate Entry</th>
               <th className="text-left px-4 py-3 font-medium">Supplier</th>
+              <th className="text-left px-4 py-3 font-medium">Invoice Number</th>
+              <th className="text-left px-4 py-3 font-medium">Invoice Date</th>
               <th className="text-left px-4 py-3 font-medium">Status</th>
               <th className="text-left px-4 py-3 font-medium">Received By</th>
               <th className="text-left px-4 py-3 font-medium">Date</th>
-              <th className="text-center px-4 py-3 font-medium">Invoice</th>
+              <th className="text-center px-4 py-3 font-medium">Invoice Photo</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -44,6 +47,8 @@ function GRNTable({ grns, title, allGateEntries, onViewInvoice }) {
                   <td className="px-4 py-3 font-mono font-bold text-slate-900">{g.grn_id}</td>
                   <td className="px-4 py-3 text-slate-600">{g.gate_id || '—'}</td>
                   <td className="px-4 py-3 text-slate-600">{g.supplier_name || '—'}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-slate-600">{g.invoice_number || '—'}</td>
+                  <td className="px-4 py-3 text-xs text-slate-500">{g.invoice_date ? moment(g.invoice_date).format('DD/MM/YYYY') : '—'}</td>
                   <td className="px-4 py-3">
                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                       g.status === 'RECEIVED' ? 'bg-green-100 text-green-700' :
@@ -73,10 +78,10 @@ function GRNTable({ grns, title, allGateEntries, onViewInvoice }) {
 }
 
 function emptyItem() {
-  return { item_code: '', item_name: '', original_quantity: '', quantity: '', qty_mismatch: 'no', mismatch_type: 'none', mismatch_reason: '', uom: 'Nos', batch_lot: '', expiry_date: '', mfg_date: '', material_photo: '', supplier_name: '', notes: '', _rules: null };
+  return { item_code: '', item_name: '', original_quantity: '', quantity: '', qty_mismatch: 'no', mismatch_type: 'none', mismatch_reason: '', uom: 'Nos', batch_lot: '', expiry_date: '', mfg_date: '', material_photo: '', notes: '', _rules: null };
 }
 
-const GRN_DRAFT_INITIAL = { items: [emptyItem()], grnNotes: '', selectedGateId: '' };
+const GRN_DRAFT_INITIAL = { items: [emptyItem()], grnNotes: '', selectedGateId: '', supplierName: '', invoiceNumber: '', invoiceDate: '' };
 
 export default function GRNReceive() {
   const [user, setUser] = useState(null);
@@ -86,6 +91,21 @@ export default function GRNReceive() {
   const [draft, setDraftState, clearGrnDraft, hasGrnDraft] = useDraftSave('grn_receive', GRN_DRAFT_INITIAL);
   const [items, setItemsRaw] = useState(draft.items || [emptyItem()]);
   const [grnNotes, setGrnNotesRaw] = useState(draft.grnNotes || '');
+  const [supplierName, setSupplierNameRaw] = useState(draft.supplierName || '');
+  const [invoiceNumber, setInvoiceNumberRaw] = useState(draft.invoiceNumber || '');
+  const [invoiceDate, setInvoiceDateRaw] = useState(draft.invoiceDate || '');
+  function setSupplierName(v) {
+    setSupplierNameRaw(v);
+    setDraftState(d => ({ ...d, supplierName: v }));
+  }
+  function setInvoiceNumber(v) {
+    setInvoiceNumberRaw(v);
+    setDraftState(d => ({ ...d, invoiceNumber: v }));
+  }
+  function setInvoiceDate(v) {
+    setInvoiceDateRaw(v);
+    setDraftState(d => ({ ...d, invoiceDate: v }));
+  }
   // Sync items/notes to draft
   function setItems(updater) {
     setItemsRaw(prev => {
@@ -152,14 +172,19 @@ export default function GRNReceive() {
 
   function selectGateEntry(entry) {
     setSelected(entry);
-    // Restore draft items if selecting same gate entry
     if (draft.selectedGateId === entry.gate_id && draft.items?.length > 0) {
       setItemsRaw(draft.items);
       setGrnNotesRaw(draft.grnNotes || '');
+      setSupplierNameRaw(draft.supplierName || '');
+      setInvoiceNumberRaw(draft.invoiceNumber || '');
+      setInvoiceDateRaw(draft.invoiceDate || '');
     } else {
       setItemsRaw([emptyItem()]);
       setGrnNotesRaw('');
-      setDraftState(d => ({ ...d, selectedGateId: entry.gate_id, items: [emptyItem()], grnNotes: '' }));
+      setSupplierNameRaw('');
+      setInvoiceNumberRaw('');
+      setInvoiceDateRaw('');
+      setDraftState(d => ({ ...d, selectedGateId: entry.gate_id, items: [emptyItem()], grnNotes: '', supplierName: '', invoiceNumber: '', invoiceDate: '' }));
     }
     setDone(null);
     setShowChecklist(false);
@@ -235,13 +260,13 @@ export default function GRNReceive() {
     setSubmitting(true);
     const grn_id = `GRN-${Date.now().toString(36).toUpperCase()}`;
 
-    // Collect unique supplier names from items
-    const uniqueSuppliers = [...new Set(validItems.map(it => it.supplier_name).filter(Boolean))];
 
     const grnHeader = await base44.entities.GRNHeader.create({
       grn_id,
       gate_id: selected.gate_id,
-      supplier_name: uniqueSuppliers.join(', '),
+      supplier_name: supplierName,
+      invoice_number: invoiceNumber || undefined,
+      invoice_date: invoiceDate || undefined,
       status: 'RECEIVED',
       received_at: new Date().toISOString(),
       received_by: user?.email || '',
@@ -278,9 +303,12 @@ export default function GRNReceive() {
         quantity: receivedQty, remaining_quantity: receivedQty,
         mismatch_type: mismatchType,
         mismatch_reason: it.mismatch_reason || '',
+        batch_number: it.batch_lot || '',
         mfg_date: it.mfg_date || undefined,
         expiry_date: it.expiry_date || undefined,
-        supplier_name: it.supplier_name || '',
+        supplier_name: supplierName || '',
+        invoice_number: invoiceNumber || '',
+        invoice_date: invoiceDate || '',
         gate_entry_id: selected.gate_id, grn_id,
         status: it._rules?.qc_required ? 'approved' : 'approved',
       });
@@ -290,7 +318,7 @@ export default function GRNReceive() {
 
     await logGrnAudit({
       action: 'GRN_RECEIVED', entity_type: 'GRNHeader',
-      entity_id: grn_id, details: { gate_id: selected.gate_id, item_count: validItems.length, suppliers: uniqueSuppliers }, user,
+      entity_id: grn_id, details: { gate_id: selected.gate_id, item_count: validItems.length, supplier: supplierName, invoice: invoiceNumber }, user,
     });
     await fireFMSEvent('grn_received', grnHeader.id);
 
@@ -365,7 +393,7 @@ export default function GRNReceive() {
   }
 
   return (
-  <div className="space-y-4 pb-12">
+  <motion.div className="space-y-4 pb-12" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
     <ToastContainer />
 
       <div className="flex items-center justify-between">
@@ -498,8 +526,39 @@ export default function GRNReceive() {
             </div>
           )}
 
+          {/* Supplier & Invoice Header */}
+          <div className="bg-white/60 backdrop-blur-xl border border-white/40 rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] p-4 md:p-5">
+            <p className="text-sm font-semibold text-slate-900 uppercase tracking-wide mb-3">Supplier & Invoice Details</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <Label className="text-xs font-medium text-slate-700">Supplier Name <span className="text-red-500">*</span></Label>
+                <div className="mt-1 relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                  <input
+                    className="w-full h-11 pl-8 pr-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-teal-400"
+                    placeholder="Search or type supplier name..."
+                    value={supplierName}
+                    onChange={e => setSupplierName(e.target.value)}
+                    list="supplier-list"
+                  />
+                  <datalist id="supplier-list">
+                    {suppliers.map(s => <option key={s.id} value={s.supplier_name} />)}
+                  </datalist>
+                </div>
+              </div>
+              <div>
+                <Label className="text-xs font-medium text-slate-700">Invoice Number</Label>
+                <Input className="h-11 text-sm mt-1 rounded-xl" value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} placeholder="e.g. INV-2025-001" />
+              </div>
+              <div>
+                <Label className="text-xs font-medium text-slate-700">Invoice Date</Label>
+                <Input type="date" className="h-11 text-sm mt-1 rounded-xl" value={invoiceDate} onChange={e => setInvoiceDate(e.target.value)} />
+              </div>
+            </div>
+          </div>
+
           {/* Items section */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-5">
+          <div className="bg-white/60 backdrop-blur-xl border border-white/40 rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] p-4 md:p-5">
             <p className="text-sm font-semibold text-slate-900 uppercase tracking-wide mb-3">Items Received <span className="text-red-500">*</span></p>
             <div className="space-y-3">
               {items.map((it, idx) => (
@@ -508,7 +567,6 @@ export default function GRNReceive() {
                   index={idx}
                   item={it}
                   storeItems={storeItems}
-                  suppliers={suppliers}
                   canRemove={items.length > 1}
                   onUpdate={(k, v) => setItem(idx, k, v)}
                   onSelectMasterItem={(masterItem) => onSelectMasterItem(idx, masterItem)}
@@ -549,6 +607,6 @@ export default function GRNReceive() {
       {invoicePreview && (
         <InvoicePreviewModal imageUrl={invoicePreview} title="Invoice Preview" onClose={() => setInvoicePreview(null)} />
       )}
-    </div>
+    </motion.div>
   );
 }

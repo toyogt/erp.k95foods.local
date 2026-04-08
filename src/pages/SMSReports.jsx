@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
+import { motion } from 'framer-motion';
 import { MapPin, Package, ArrowLeftRight, AlertTriangle, Layers, Search, Download } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { SkeletonTable } from '@/components/store/StoreSkeleton';
@@ -105,7 +106,7 @@ export default function SMSReports() {
   );
 
   return (
-    <div className="space-y-4">
+    <motion.div className="space-y-4" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
       <div>
         <h1 className="text-xl font-bold text-slate-900">Store Reports</h1>
         <p className="text-sm text-slate-500">Stock visibility, aging, movement history, and alerts</p>
@@ -295,6 +296,6 @@ export default function SMSReports() {
           ))}
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

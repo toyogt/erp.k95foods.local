@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
+import { motion } from 'framer-motion';
 import { ArrowRight, CheckCircle2, AlertCircle, ListChecks } from 'lucide-react';
 import ExportButton from '@/components/store/ExportButton';
 import { Button } from '@/components/ui/button';
@@ -113,7 +114,7 @@ export default function SMSTransfer() {
   }
 
   return (
-    <div className="space-y-4">
+    <motion.div className="space-y-4" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
       <div>
         <h1 className="text-xl font-bold text-slate-900">Internal Transfer</h1>
         <p className="text-sm text-slate-500">Move stock between locations</p>
@@ -208,6 +209,6 @@ export default function SMSTransfer() {
             {saving ? 'Processing...' : 'Confirm Transfer'}
           </Button>
       </div>}
-    </div>
+    </motion.div>
   );
 }

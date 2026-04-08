@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
+import { motion } from 'framer-motion';
 import { Plus, Edit2, X, Bell, Upload } from 'lucide-react';
 import ExportButton from '@/components/store/ExportButton';
 import { Button } from '@/components/ui/button';
@@ -172,7 +173,7 @@ export default function SMSReorderConfig() {
   useEffect(() => { load(); }, []);
 
   return (
-    <div className="space-y-4">
+    <motion.div className="space-y-4" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
       <ToastContainer />
       <input type="file" ref={fileInputRef} accept=".csv,.xlsx,.xls,.json" className="hidden" onChange={handleBulkImport} />
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -253,6 +254,6 @@ export default function SMSReorderConfig() {
       </div>
 
       {showModal && <ConfigModal config={editing} storeItems={storeItems} onSave={() => { setShowModal(false); load(); }} onClose={() => setShowModal(false)} />}
-    </div>
+    </motion.div>
   );
 }

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
+import { motion } from 'framer-motion';
 import { Plus, CheckCircle2, X, ClipboardCheck } from 'lucide-react';
 import { SkeletonList } from '@/components/store/StoreSkeleton';
 import ExportButton from '@/components/store/ExportButton';
@@ -105,8 +106,8 @@ function CountRow({ entry, onCount }) {
           <span>Variance: <strong className={`${(entry.variance || 0) === 0 ? 'text-green-600' : 'text-red-500'}`}>{entry.variance > 0 ? '+' : ''}{entry.variance ?? '—'}</strong></span>
         </div>
       </div>
-    );
-  }
+      );
+      }
 
   return (
     <>
@@ -200,7 +201,7 @@ export default function SMSCycleCount() {
   );
 
   return (
-    <div className="space-y-4">
+    <motion.div className="space-y-4" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
       <div>
         <h1 className="text-xl font-bold text-slate-900">Cycle Count</h1>
         <p className="text-sm text-slate-500">Physical stock verification with discrepancy tracking</p>
@@ -259,6 +260,6 @@ export default function SMSCycleCount() {
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

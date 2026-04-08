@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
+import { motion } from 'framer-motion';
 import { Plus, Trash2, AlertCircle, PackageOpen, ScanLine, Keyboard, QrCode, CheckCircle2, Search, Clock, ListChecks } from 'lucide-react';
 import ExportButton from '@/components/store/ExportButton';
 import { Button } from '@/components/ui/button';
@@ -75,16 +76,28 @@ function ItemSelect({ items, value, onChange }) {
   );
 }
 
-// Searchable lot dropdown — filtered by item and status=putaway
+// Searchable lot dropdown — filtered by item and status=putaway, sorted FIFO by expiry then batch
 function LotSelect({ lots, value, onChange }) {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
   const selected = lots.find(l => l.lot_id === value);
+
+  // Sort FIFO: earliest expiry first, then earliest mfg_date, then batch_number
+  const sortedLots = [...lots].sort((a, b) => {
+    const expA = a.expiry_date || '9999-12-31';
+    const expB = b.expiry_date || '9999-12-31';
+    if (expA !== expB) return expA.localeCompare(expB);
+    const mfgA = a.mfg_date || '9999-12-31';
+    const mfgB = b.mfg_date || '9999-12-31';
+    if (mfgA !== mfgB) return mfgA.localeCompare(mfgB);
+    return (a.batch_number || '').localeCompare(b.batch_number || '');
+  });
+
   const filtered = query.trim()
-    ? lots.filter(l => l.lot_id?.toLowerCase().includes(query.toLowerCase()))
-    : lots;
+    ? sortedLots.filter(l => l.lot_id?.toLowerCase().includes(query.toLowerCase()) || l.batch_number?.toLowerCase().includes(query.toLowerCase()))
+    : sortedLots;
 
   useEffect(() => {
     function handleClick(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
@@ -112,21 +125,29 @@ function LotSelect({ lots, value, onChange }) {
               <input
                 autoFocus
                 className="flex-1 text-sm outline-none"
-                placeholder="Search lot ID..."
+                placeholder="Search lot ID or batch..."
                 value={query}
                 onChange={e => setQuery(e.target.value)}
               />
             </div>
           </div>
-          <div className="max-h-48 overflow-y-auto">
-            {filtered.map(l => (
+          <div className="max-h-56 overflow-y-auto">
+            {filtered.map((l, idx) => (
               <div
                 key={l.lot_id}
                 className={`px-4 py-2.5 text-sm cursor-pointer hover:bg-slate-50 ${l.lot_id === value ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-700'}`}
                 onClick={() => { onChange(l.lot_id, l); setOpen(false); setQuery(''); }}
               >
-                <p className="font-mono font-semibold">{l.lot_id}</p>
-                <p className="text-xs text-slate-400">Available: {l.remaining_quantity ?? l.quantity} {l.uom} · Supplier: {l.supplier_name || '—'}</p>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-mono font-semibold">{l.lot_id}</p>
+                  {idx === 0 && <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-700">FIFO Suggested</span>}
+                </div>
+                <p className="text-xs text-slate-400">
+                  Available: {l.remaining_quantity ?? l.quantity} {l.uom}
+                  {l.batch_number ? ` · Batch: ${l.batch_number}` : ''}
+                  {l.expiry_date ? ` · Expiry: ${l.expiry_date}` : ''}
+                  {l.supplier_name ? ` · ${l.supplier_name}` : ''}
+                </p>
               </div>
             ))}
           </div>
@@ -415,7 +436,7 @@ export default function SMSStockOut() {
   }
 
   return (
-    <div className="pb-12">
+    <motion.div className="pb-12" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
       <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Stock Issue</h1>
@@ -502,6 +523,6 @@ export default function SMSStockOut() {
         </div>
         </>}
         </div>
-        </div>
+        </motion.div>
         );
         }

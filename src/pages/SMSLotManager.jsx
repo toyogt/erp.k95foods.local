@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
+import { motion } from 'framer-motion';
 import { useToast } from '@/components/ui/use-toast';
 import { QrCode, Search, Printer, FileText, Eye } from 'lucide-react';
 import InvoicePreviewModal from '@/components/store/InvoicePreviewModal';
@@ -90,7 +91,7 @@ function QRModal({ lot, onClose }) {
 }
 
 const LOT_HEADERS = [
-  'Lot ID', 'Item', 'Supplier', 'Original Qty',
+  'Lot ID', 'Item', 'Batch', 'Supplier', 'Original Qty',
   'Stored Stock', 'Issued / Consumed', 'Remaining Qty', 'Stored At', 'Manufacture Date', 'Expiry', 'Aging', 'Status', 'Invoice', 'QR',
 ];
 
@@ -171,7 +172,7 @@ export default function SMSLotManager() {
   }));
 
   return (
-    <div className="pb-12">
+    <motion.div className="pb-12" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
       <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
         <div>
@@ -235,7 +236,7 @@ export default function SMSLotManager() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filtered.length === 0 ? (
-                  <tr><td colSpan={14} className="text-center py-12 text-slate-400">No lots found</td></tr>
+                  <tr><td colSpan={15} className="text-center py-12 text-slate-400">No lots found</td></tr>
                 ) : filtered.map(lot => {
                   const stored = storedByLot[lot.lot_id] ?? 0;
                   const issued = issuedByLot[lot.lot_id] ?? 0;
@@ -247,6 +248,11 @@ export default function SMSLotManager() {
                       <td className="px-3 md:px-4 py-3">
                         <p className="font-medium text-slate-800 truncate">{lot.item_name}</p>
                         <p className="text-xs text-slate-400">{lot.item_code}</p>
+                      </td>
+                      <td className="px-3 md:px-4 py-3 text-sm">
+                        {lot.batch_number ? (
+                          <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-full text-xs font-medium font-mono">{lot.batch_number}</span>
+                        ) : <span className="text-slate-400 text-xs">—</span>}
                       </td>
                       <td className="px-3 md:px-4 py-3 text-slate-600 truncate text-sm">{lot.supplier_name || '—'}</td>
                       <td className="px-3 md:px-4 py-3 text-right font-medium text-slate-800 text-sm">
@@ -313,6 +319,7 @@ export default function SMSLotManager() {
                   <div className="min-w-0 flex-1">
                     <p className="font-mono text-xs font-bold text-slate-500">{lot.lot_id}</p>
                     <p className="text-sm font-semibold text-slate-900 mt-0.5 truncate">{lot.item_name}</p>
+                    {lot.batch_number && <p className="text-xs text-indigo-600 font-mono">Batch: {lot.batch_number}</p>}
                     {lot.supplier_name && <p className="text-xs text-slate-500">{lot.supplier_name}</p>}
                   </div>
                   <div className="flex flex-col items-end gap-1 shrink-0">
@@ -344,6 +351,8 @@ export default function SMSLotManager() {
                 <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-slate-500">
                   {lot.mfg_date && <span>Manufacture: <strong className="text-slate-700">{lot.mfg_date}</strong></span>}
                   {lot.expiry_date && <span>Expiry: <strong className="text-slate-700">{lot.expiry_date}</strong></span>}
+                  {lot.invoice_number && <span>Invoice: <strong className="text-slate-700">{lot.invoice_number}</strong></span>}
+                  {lot.invoice_date && <span>Invoice Date: <strong className="text-slate-700">{lot.invoice_date}</strong></span>}
                 </div>
                 <div className="flex gap-2 mt-3">
                   {lotInvoiceUrl && (
@@ -365,6 +374,6 @@ export default function SMSLotManager() {
         <InvoicePreviewModal imageUrl={invoicePreview} title="Invoice Preview" onClose={() => setInvoicePreview(null)} />
       )}
       </div>
-      </div>
+      </motion.div>
       );
 }

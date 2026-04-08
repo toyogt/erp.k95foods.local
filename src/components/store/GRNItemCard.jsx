@@ -114,7 +114,7 @@ function PerItemSupplierSelect({ value, onChange, suppliers }) {
   );
 }
 
-export default function GRNItemCard({ index, item, storeItems, suppliers, canRemove, onUpdate, onSelectMasterItem, onRemove }) {
+export default function GRNItemCard({ index, item, storeItems, canRemove, onUpdate, onSelectMasterItem, onRemove }) {
   const rules = item._rules;
   const hasItem = !!item.item_name?.trim();
 
@@ -255,29 +255,17 @@ export default function GRNItemCard({ index, item, storeItems, suppliers, canRem
           </div>
         )}
 
-        {/* Row 2: Batch/Lot, Supplier */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div>
-            <Label className="text-xs font-medium text-slate-700">
-              Batch / Lot {rules?.batch_required && <span className="text-red-500">*</span>}
-            </Label>
-            <Input className="h-11 text-sm mt-1" value={item.batch_lot}
-              onChange={e => onUpdate('batch_lot', e.target.value)}
-              placeholder={rules?.batch_required ? 'Enter batch number' : 'Optional'} />
-            {rules?.batch_required && !item.batch_lot?.trim() && (
-              <p className="text-xs text-red-500 mt-0.5">Batch number is mandatory for this item</p>
-            )}
-          </div>
-          <div>
-            <Label className="text-xs font-medium text-slate-700">Supplier Name</Label>
-            <div className="mt-1">
-              <PerItemSupplierSelect
-                value={item.supplier_name}
-                onChange={v => onUpdate('supplier_name', v)}
-                suppliers={suppliers || []}
-              />
-            </div>
-          </div>
+        {/* Row 2: Batch/Lot */}
+        <div>
+          <Label className="text-xs font-medium text-slate-700">
+            Batch / Lot Number {rules?.batch_required && <span className="text-red-500">*</span>}
+          </Label>
+          <Input className="h-11 text-sm mt-1" value={item.batch_lot}
+            onChange={e => onUpdate('batch_lot', e.target.value)}
+            placeholder={rules?.batch_required ? 'Enter batch number' : 'Optional — for FIFO tracking'} />
+          {rules?.batch_required && !item.batch_lot?.trim() && (
+            <p className="text-xs text-red-500 mt-0.5">Batch number is mandatory for this item</p>
+          )}
         </div>
 
         {/* Row 3: Expiry + Mfg date (conditional) */}

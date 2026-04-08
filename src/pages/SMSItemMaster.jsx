@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
+import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Pencil, Trash2, Search, PackageOpen, ImageIcon, Download, AlertTriangle } from 'lucide-react';
@@ -241,7 +242,7 @@ export default function SMSItemMaster() {
   });
 
   return (
-    <div className="pb-12">
+    <motion.div className="pb-12" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
       <ToastContainer />
       <div className="space-y-4">
       {showImport && (
@@ -297,7 +298,7 @@ export default function SMSItemMaster() {
           <p className="text-slate-400">No items found.</p>
         </div>
       ) : (
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+        <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-slate-100 text-slate-700">
              <tr>
