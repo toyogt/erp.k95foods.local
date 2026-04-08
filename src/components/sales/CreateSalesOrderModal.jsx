@@ -108,7 +108,7 @@ export default function CreateSalesOrderModal({ defaultType = 'manual', onClose,
     }
   }
 
-  // Credit limit check — mirrors ERPNext "Restrict Customer Outstanding" server script
+  // Credit limit check — mirrors ERPNext \"Restrict Customer Outstanding\" server script
   async function checkCreditLimit(customerName) {
     const customers = await base44.entities.Customer.filter({ name: customerName });
     const customer = customers[0];
@@ -123,7 +123,7 @@ export default function CreateSalesOrderModal({ defaultType = 'manual', onClose,
     return null;
   }
 
-  // Mirrors "Validate DD & TD" — delivery_date cannot be before po_date (order date)
+  // Mirrors \"Validate DD & TD\" — delivery_date cannot be before po_date (order date)
   function validateDates() {
     if (form.po_delivery_date && form.po_date && form.po_delivery_date < form.po_date) {
       toast({ title: 'Delivery Date cannot be before Purchase Order Date', variant: 'destructive' });
@@ -147,7 +147,7 @@ export default function CreateSalesOrderModal({ defaultType = 'manual', onClose,
       const allRates = await base44.entities.SalesRateList.filter({ is_active: true });
       const groupName = c.customer_group.toLowerCase();
       const groupList = [...new Set(allRates.map(r => r.price_list).filter(Boolean))]
-        .find(pl => pl.toLowerCase().includes(groupName) || groupName.includes(pl.toLowerCase()));
+        .find(pl => (pl.toLowerCase().includes(groupName) || groupName.includes(pl.toLowerCase())) && pl !== 'Internal Transfer');
       if (groupList) resolvedPriceList = groupList;
     }
 
@@ -163,12 +163,12 @@ export default function CreateSalesOrderModal({ defaultType = 'manual', onClose,
     }));
   }
 
-  // Mirrors ERPNext "Validate Sales Order Price List" server script
+  // Mirrors ERPNext \"Validate Sales Order Price List\" server script
   function validatePriceList() {
     if (!form._customer_price_list) return true; // no restriction if customer has no price list set
     if (form.price_list && form.price_list !== form._customer_price_list) {
       toast({
-        title: `Price List "${form.price_list}" is not assigned to this customer. Only "${form._customer_price_list}" is allowed.`,
+        title: `Price List \"${form.price_list}\" is not assigned to this customer. Only \"${form._customer_price_list}\" is allowed.`,
         variant: 'destructive'
       });
       return false;
@@ -339,7 +339,7 @@ export default function CreateSalesOrderModal({ defaultType = 'manual', onClose,
                   <Input className="h-9 text-sm mt-1" value={form.price_list || ''}
                     onChange={e => setForm(f => ({ ...f, price_list: e.target.value }))}
                     placeholder={form._customer_price_list ? `Default: ${form._customer_price_list}` : 'e.g. Standard Selling'} />
-                  {form._customer_price_list && <p className="text-xs text-slate-400 mt-0.5">Customer's assigned price list: {form._customer_price_list}</p>}
+                  {form._customer_price_list && form._customer_price_list !== 'Internal Transfer' && <p className="text-xs text-slate-400 mt-0.5">Customer's assigned price list: {form._customer_price_list}</p>}
                   </div>
                   <div>
                     <Label className="text-xs font-medium text-slate-700">Platform</Label>
