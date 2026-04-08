@@ -522,7 +522,7 @@ export default function GRNReceive() {
           {hasGrnDraft && (
             <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
               <p className="text-xs text-amber-700 font-medium">You have an unsaved draft Goods Received Note for this entry</p>
-              <button onClick={() => { clearGrnDraft(); setItemsRaw([emptyItem()]); setGrnNotesRaw(''); }} className="text-xs text-red-500 hover:text-red-700 font-medium">Clear Draft</button>
+              <button onClick={() => { clearGrnDraft(); setItemsRaw([emptyItem()]); setGrnNotesRaw(''); setSupplierNameRaw(''); setInvoiceNumberRaw(''); setInvoiceDateRaw(''); }} className="text-xs text-red-500 hover:text-red-700 font-medium">Clear Draft</button>
             </div>
           )}
 

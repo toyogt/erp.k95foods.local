@@ -84,8 +84,9 @@ function LotSelect({ lots, value, onChange }) {
 
   const selected = lots.find(l => l.lot_id === value);
 
-  // Sort FIFO: earliest expiry first, then earliest mfg_date, then batch_number
-  const sortedLots = [...lots].sort((a, b) => {
+  // Filter lots with available stock > 0, then sort FIFO
+  const availableLots = lots.filter(l => (l.remaining_quantity ?? l.quantity) > 0);
+  const sortedLots = [...availableLots].sort((a, b) => {
     const expA = a.expiry_date || '9999-12-31';
     const expB = b.expiry_date || '9999-12-31';
     if (expA !== expB) return expA.localeCompare(expB);
@@ -105,7 +106,7 @@ function LotSelect({ lots, value, onChange }) {
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
-  if (lots.length === 0) return <p className="text-xs text-slate-400 mt-1">No stored lots found for this item</p>;
+  if (availableLots.length === 0) return <p className="text-xs text-slate-400 mt-1">No lots with available stock found for this item</p>;
 
   return (
     <div className="relative" ref={ref}>

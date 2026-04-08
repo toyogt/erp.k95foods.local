@@ -205,7 +205,7 @@ export default function PutawayPanel({ lots: externalLots, locations: externalLo
   if (loading) return <div className="text-sm text-slate-400 py-4 text-center">Loading...</div>;
 
   return (
-    <div className={`space-y-4 ${compact ? '' : 'max-w-2xl mx-auto'}`}>
+    <div className={`space-y-4`}>
       {/* Mode Toggle */}
       <div className="flex rounded-lg border border-slate-200 overflow-hidden">
         <button onClick={() => setMode('scan')} className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium transition-colors ${mode === 'scan' ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}>

@@ -1,9 +1,9 @@
-import { Truck, Bike, Footprints } from 'lucide-react';
+import { Truck, PackageCheck, Footprints } from 'lucide-react';
 
 const TYPES = [
   { key: 'vehicle', icon: Truck },
-  { key: 'bicycle', icon: Bike },
-  { key: 'manual', icon: Footprints },
+  { key: 'courier', icon: PackageCheck },
+  { key: 'on_foot', icon: Footprints },
 ];
 
 export default function TransportTypePicker({ value, onChange, labels }) {
