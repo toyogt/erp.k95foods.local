@@ -101,12 +101,17 @@ export default function SMSReports() {
   const exportRows = filteredItems.flatMap(i =>
     i.entries
       .filter(e => !locationFilter || e.location_code === locationFilter)
-      .map(e => ({
-        'Item Code': i.item_code, 'Item Name': i.item_name, 'Unit': i.uom,
-        'Location': e.location_code, 'Lot ID': e.lot_id,
-        'Available Quantity': e.quantity, 'Expiry Date': e.expiry_date || '',
-        'Putaway Date': e.putaway_date ? new Date(e.putaway_date).toLocaleDateString('en-IN') : '',
-      }))
+      .map(e => {
+        const matchLot = lots.find(l => l.lot_id === e.lot_id);
+        return {
+          'Item Code': i.item_code, 'Item Name': i.item_name, 'Unit': i.uom,
+          'Location': e.location_code, 'Lot ID': e.lot_id,
+          'Batch Number': matchLot?.batch_number || '',
+          'Manufacture Date': e.mfg_date || matchLot?.mfg_date || '',
+          'Available Quantity': e.quantity, 'Expiry Date': e.expiry_date || '',
+          'Putaway Date': e.putaway_date ? new Date(e.putaway_date).toLocaleDateString('en-IN') : '',
+        };
+      })
   );
 
   return (
@@ -170,25 +175,33 @@ export default function SMSReports() {
                       <tr className="bg-slate-100 text-xs text-slate-600">
                         <th className="text-left px-4 py-2">Lot ID</th>
                         <th className="text-left px-4 py-2">Location</th>
+                        <th className="text-left px-4 py-2">Batch Number</th>
+                        <th className="text-left px-4 py-2">Manufacture Date</th>
                         <th className="text-right px-4 py-2">Available Quantity</th>
                         <th className="text-left px-4 py-2">Expiry Date</th>
                         <th className="text-left px-4 py-2">Stored On</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {visibleEntries.map(e => (
-                        <tr key={e.id} className="hover:bg-slate-50">
-                          <td className="px-4 py-2.5 font-mono text-xs font-bold text-slate-700">{e.lot_id}</td>
-                          <td className="px-4 py-2.5">
-                            <span className="flex items-center gap-1 text-xs font-medium text-slate-700">
-                              <MapPin className="w-3 h-3 text-slate-400" />{e.location_code}
-                            </span>
-                          </td>
-                          <td className="px-4 py-2.5 text-right font-bold text-blue-700">{(e.quantity || 0).toFixed(2)} <span className="text-xs font-normal text-slate-400">{e.uom}</span></td>
-                          <td className="px-4 py-2.5 text-xs text-slate-500">{formatDate(e.expiry_date)}</td>
-                          <td className="px-4 py-2.5 text-xs text-slate-400">{formatDateTime(e.putaway_date)}</td>
-                        </tr>
-                      ))}
+                      {visibleEntries.map(e => {
+                        // Find matching lot for batch/mfg data
+                        const matchLot = lots.find(l => l.lot_id === e.lot_id);
+                        return (
+                          <tr key={e.id} className="hover:bg-slate-50">
+                            <td className="px-4 py-2.5 font-mono text-xs font-bold text-slate-700">{e.lot_id}</td>
+                            <td className="px-4 py-2.5">
+                              <span className="flex items-center gap-1 text-xs font-medium text-slate-700">
+                                <MapPin className="w-3 h-3 text-slate-400" />{e.location_code}
+                              </span>
+                            </td>
+                            <td className="px-4 py-2.5 text-xs font-mono text-indigo-600">{matchLot?.batch_number || '—'}</td>
+                            <td className="px-4 py-2.5 text-xs text-slate-500">{formatDate(e.mfg_date || matchLot?.mfg_date)}</td>
+                            <td className="px-4 py-2.5 text-right font-bold text-blue-700">{(e.quantity || 0).toFixed(2)} <span className="text-xs font-normal text-slate-400">{e.uom}</span></td>
+                            <td className="px-4 py-2.5 text-xs text-slate-500">{formatDate(e.expiry_date)}</td>
+                            <td className="px-4 py-2.5 text-xs text-slate-400">{formatDateTime(e.putaway_date)}</td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

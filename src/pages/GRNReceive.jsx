@@ -394,6 +394,10 @@ export default function GRNReceive() {
               notes={grnNotes}
               receivedBy={user?.email}
               receivedAt={new Date().toISOString()}
+              supplierName={supplierName}
+              invoiceNumber={invoiceNumber}
+              invoiceDate={invoiceDate}
+              status="RECEIVED"
             />
           </div>
         </div>

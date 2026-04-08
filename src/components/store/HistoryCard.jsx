@@ -19,29 +19,53 @@ export default function HistoryCard({ id, title, subtitle, details = [], status,
   const [expanded, setExpanded] = useState(false);
 
   function handlePrint() {
-    const printWin = window.open('', '_blank', 'width=600,height=700');
+    const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—';
+    const fmtDT = (d) => d ? new Date(d).toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+
+    const statusBadge = status ? `<span class="badge">${status}</span>` : '';
+    const transferBlock = from && to ? `
+      <div class="transfer-box">
+        <span class="from">${from}</span>
+        <span class="arrow">→</span>
+        <span class="to">${to}</span>
+      </div>` : '';
+
+    const detailsHtml = details.length > 0 ? `
+      <table class="details-table">
+        <tbody>
+          ${details.map(d => `<tr><td class="dt-label">${d.label}</td><td class="dt-value">${d.value}</td></tr>`).join('')}
+        </tbody>
+      </table>` : '';
+
+    const printWin = window.open('', '_blank', 'width=700,height=800');
     printWin.document.write(`
       <html><head><title>${id}</title>
       <style>
-        body { font-family: 'Inter', sans-serif; padding: 32px; color: #1e293b; }
-        .header { border-bottom: 2px solid #e2e8f0; padding-bottom: 16px; margin-bottom: 16px; }
-        .header h1 { font-size: 18px; margin: 0 0 4px; }
-        .header p { font-size: 12px; color: #64748b; margin: 2px 0; }
-        .badge { display: inline-block; padding: 2px 10px; border-radius: 99px; font-size: 11px; font-weight: 600; background: #dcfce7; color: #15803d; }
-        .row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
-        .row .label { color: #64748b; } .row .value { font-weight: 600; }
-        .transfer { background: #f8fafc; padding: 10px 16px; border-radius: 8px; margin: 12px 0; font-size: 13px; font-weight: 600; }
-        .transfer .arrow { color: #94a3b8; margin: 0 8px; }
+        body { font-family: 'Inter', Arial, sans-serif; padding: 32px; color: #1e293b; max-width: 700px; margin: 0 auto; }
+        .header { padding-bottom: 16px; margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; }
+        .header h1 { font-size: 20px; font-weight: 700; margin: 0 0 4px; color: #0f172a; }
+        .header .doc-id { font-size: 13px; color: #64748b; font-family: monospace; margin: 0 0 4px; }
+        .header .sub { font-size: 12px; color: #64748b; margin: 2px 0; }
+        .badge { display: inline-block; padding: 3px 12px; border-radius: 99px; font-size: 11px; font-weight: 600; background: #dcfce7; color: #15803d; margin-top: 8px; }
+        .transfer-box { background: #f8fafc; padding: 12px 20px; border-radius: 8px; margin: 16px 0; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 12px; border: 1px solid #e2e8f0; }
+        .transfer-box .arrow { color: #94a3b8; font-size: 18px; }
+        .details-table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+        .details-table td { padding: 10px 12px; font-size: 13px; border-bottom: 1px solid #f1f5f9; }
+        .dt-label { color: #64748b; width: 40%; }
+        .dt-value { font-weight: 600; color: #1e293b; }
+        .footer { margin-top: 32px; padding-top: 12px; border-top: 1px solid #e2e8f0; font-size: 10px; color: #94a3b8; display: flex; justify-content: space-between; }
+        @media print { body { padding: 16px; } }
       </style></head><body>
       <div class="header">
         <h1>${title || '—'}</h1>
-        <p>${id}</p>
-        ${subtitle ? `<p>${subtitle}</p>` : ''}
-        <p>Date: ${date ? formatDateTime(date) : '—'}</p>
-        ${status ? `<span class="badge">${status}</span>` : ''}
+        <p class="doc-id">${id}</p>
+        ${subtitle ? `<p class="sub">${subtitle}</p>` : ''}
+        <p class="sub">Date: ${date ? fmtDT(date) : '—'}</p>
+        ${statusBadge}
       </div>
-      ${from && to ? `<div class="transfer">${from} <span class="arrow">→</span> ${to}</div>` : ''}
-      ${details.map(d => `<div class="row"><span class="label">${d.label}</span><span class="value">${d.value}</span></div>`).join('')}
+      ${transferBlock}
+      ${detailsHtml}
+      <div class="footer"><span>K95 ERP — Store Management</span><span>Printed on ${fmtDate(new Date())}</span></div>
       </body></html>
     `);
     printWin.document.close();

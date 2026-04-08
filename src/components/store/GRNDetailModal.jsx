@@ -27,46 +27,81 @@ export default function GRNDetailModal({ grn, gateEntry, onClose }) {
   if (!grn) return null;
 
   function handlePrintGRN() {
-    const win = window.open('', '_blank', 'width=800,height=900');
-    const itemsHtml = items.map((it, i) => `
-      <tr>
-        <td>${i + 1}</td>
-        <td>${it.item_name || '—'}</td>
-        <td>${it.item_code || '—'}</td>
+    const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—';
+    const fmtDT = (d) => d ? new Date(d).toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+
+    const itemsHtml = items.map((it, i) => {
+      const mismatch = it.mismatch_type && it.mismatch_type !== 'none'
+        ? `<span style="color:#dc2626;font-weight:600">${it.mismatch_type}${it.mismatch_reason ? ' — ' + it.mismatch_reason : ''}</span>`
+        : '—';
+      return `<tr>
+        <td style="text-align:center">${i + 1}</td>
+        <td style="font-weight:600">${it.item_name || '—'}</td>
+        <td style="font-family:monospace;font-size:11px">${it.item_code || '—'}</td>
+        <td style="font-family:monospace">${it.batch_or_lot_text || '—'}</td>
         <td style="text-align:right">${it.ordered_qty ?? '—'}</td>
-        <td style="text-align:right">${it.received_qty ?? '—'}</td>
+        <td style="text-align:right;font-weight:700">${it.received_qty ?? '—'}</td>
         <td>${it.uom_code || 'Nos'}</td>
-        <td>${it.batch_or_lot_text || '—'}</td>
-        <td>${it.mismatch_type !== 'none' ? it.mismatch_type : '—'}</td>
-        <td>${it.line_notes || '—'}</td>
-      </tr>`).join('');
+        <td>${mismatch}</td>
+        <td style="font-size:11px;color:#64748b">${it.line_notes || '—'}</td>
+      </tr>`;
+    }).join('');
+
+    const lotsHtml = lots.length > 0 ? `
+      <p style="font-size:14px;font-weight:700;margin:24px 0 8px;padding-bottom:6px;border-bottom:2px solid #e2e8f0">Lots Created (${lots.length})</p>
+      <table><thead><tr>
+        <th>Lot ID</th><th>Item</th><th>Batch Number</th><th>Manufacture Date</th><th>Expiry Date</th><th style="text-align:right">Quantity</th><th style="text-align:right">Remaining</th><th>Status</th>
+      </tr></thead><tbody>
+      ${lots.map(l => `<tr>
+        <td style="font-family:monospace;font-weight:700;font-size:11px">${l.lot_id}</td>
+        <td>${l.item_name || '—'}</td>
+        <td style="font-family:monospace;color:#4f46e5">${l.batch_number || '—'}</td>
+        <td>${fmtDate(l.mfg_date)}</td>
+        <td>${fmtDate(l.expiry_date)}</td>
+        <td style="text-align:right">${l.quantity} ${l.uom || ''}</td>
+        <td style="text-align:right;font-weight:700">${l.remaining_quantity ?? l.quantity} ${l.uom || ''}</td>
+        <td><span style="text-transform:capitalize">${l.status || '—'}</span></td>
+      </tr>`).join('')}
+      </tbody></table>` : '';
+
+    const win = window.open('', '_blank', 'width=900,height=1000');
     win.document.write(`<html><head><title>GRN - ${grn.grn_id}</title>
       <style>
-        body{font-family:'Inter',sans-serif;padding:32px;color:#1e293b}
-        h1{font-size:20px;margin:0 0 4px}
-        .meta{font-size:12px;color:#64748b;margin-bottom:16px}
-        .meta p{margin:2px 0}
-        table{width:100%;border-collapse:collapse;margin-top:12px}
+        body{font-family:'Inter',Arial,sans-serif;padding:32px;color:#1e293b;max-width:900px;margin:0 auto}
+        h1{font-size:22px;font-weight:700;margin:0 0 4px;color:#0f172a}
+        .doc-id{font-size:13px;color:#64748b;font-family:monospace;margin:0 0 20px}
+        .header-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 24px;margin-bottom:20px;padding:16px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0}
+        .header-grid .field{font-size:12px}
+        .header-grid .field .label{color:#64748b}
+        .header-grid .field .val{color:#1e293b;font-weight:600}
+        .section-title{font-size:14px;font-weight:700;color:#0f172a;margin:24px 0 8px;padding-bottom:6px;border-bottom:2px solid #e2e8f0}
+        table{width:100%;border-collapse:collapse;margin-top:4px}
         th{background:#f1f5f9;text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:#475569;border-bottom:2px solid #e2e8f0}
-        td{padding:8px 10px;font-size:12px;border-bottom:1px solid #f1f5f9}
-        .footer{margin-top:24px;font-size:10px;color:#94a3b8}
+        td{padding:8px 10px;font-size:12px;border-bottom:1px solid #f1f5f9;vertical-align:top}
+        .notes-box{margin-top:16px;padding:12px 16px;background:#f8fafc;border-radius:6px;font-size:12px;border:1px solid #e2e8f0}
+        .footer{margin-top:32px;padding-top:12px;border-top:1px solid #e2e8f0;font-size:10px;color:#94a3b8;display:flex;justify-content:space-between}
         @media print{body{padding:12px}}
       </style></head><body>
-      <h1>Goods Received Note — ${grn.grn_id}</h1>
-      <div class="meta">
-        <p><strong>Gate Entry:</strong> ${grn.gate_id || '—'}</p>
-        <p><strong>Supplier:</strong> ${grn.supplier_name || '—'}</p>
-        <p><strong>Invoice:</strong> ${grn.invoice_number || '—'} ${grn.invoice_date ? '(' + grn.invoice_date + ')' : ''}</p>
-        <p><strong>Status:</strong> ${grn.status || '—'}</p>
-        <p><strong>Received By:</strong> ${grn.received_by || '—'}</p>
-        <p><strong>Received At:</strong> ${grn.received_at ? new Date(grn.received_at).toLocaleString('en-IN') : '—'}</p>
-        ${grn.notes ? `<p><strong>Notes:</strong> ${grn.notes}</p>` : ''}
+      <h1>Goods Received Note</h1>
+      <p class="doc-id">${grn.grn_id}</p>
+      <div class="header-grid">
+        <div class="field"><span class="label">Supplier: </span><span class="val">${grn.supplier_name || '—'}</span></div>
+        <div class="field"><span class="label">Gate Entry: </span><span class="val">${grn.gate_id || '—'}</span></div>
+        <div class="field"><span class="label">Invoice Number: </span><span class="val">${grn.invoice_number || '—'}</span></div>
+        <div class="field"><span class="label">Invoice Date: </span><span class="val">${fmtDate(grn.invoice_date)}</span></div>
+        ${grn.po_id ? `<div class="field"><span class="label">Purchase Order: </span><span class="val">${grn.po_id}</span></div>` : ''}
+        <div class="field"><span class="label">Received By: </span><span class="val">${grn.received_by || '—'}</span></div>
+        <div class="field"><span class="label">Received At: </span><span class="val">${fmtDT(grn.received_at)}</span></div>
+        <div class="field"><span class="label">Status: </span><span class="val">${grn.status || '—'}</span></div>
       </div>
+      ${grn.notes ? `<div class="notes-box"><strong>Notes:</strong> ${grn.notes}</div>` : ''}
+      <p class="section-title">Items Received (${items.length})</p>
       <table><thead><tr>
-        <th>#</th><th>Item</th><th>Code</th><th style="text-align:right">Ordered</th><th style="text-align:right">Received</th><th>Unit</th><th>Batch</th><th>Mismatch</th><th>Notes</th>
+        <th style="text-align:center">#</th><th>Item</th><th>Code</th><th>Batch</th><th style="text-align:right">Ordered</th><th style="text-align:right">Received</th><th>Unit</th><th>Mismatch</th><th>Notes</th>
       </tr></thead><tbody>${itemsHtml}</tbody></table>
-      <div class="footer"><p>Printed on ${new Date().toLocaleDateString('en-IN')} — K95 ERP</p></div>
-      <script>window.onload=function(){window.print()}</script>
+      ${lotsHtml}
+      <div class="footer"><span>K95 ERP — Store Management</span><span>Printed on ${fmtDate(new Date())}</span></div>
+      <script>window.onload=function(){window.print()}<\/script>
     </body></html>`);
     win.document.close();
   }

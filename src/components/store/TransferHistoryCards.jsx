@@ -1,5 +1,5 @@
 import HistoryCard from './HistoryCard';
-import { formatDateTime } from '@/lib/dateFormatter';
+import { formatDateTime, formatDate } from '@/lib/dateFormatter';
 
 function TransferExpandedDetails({ record }) {
   return (
@@ -13,6 +13,9 @@ function TransferExpandedDetails({ record }) {
         <DetailItem label="From Location" value={record.from_location_code} />
         <DetailItem label="To Location" value={record.to_location_code} />
         <DetailItem label="Quantity" value={`${record.quantity} ${record.uom || ''}`} />
+        <DetailItem label="Batch Number" value={record.batch_number} />
+        <DetailItem label="Manufacture Date" value={record.mfg_date ? formatDate(record.mfg_date) : '—'} />
+        <DetailItem label="Expiry Date" value={record.expiry_date ? formatDate(record.expiry_date) : '—'} />
         <DetailItem label="Status" value={record.status} />
         <DetailItem label="Reason" value={record.reason} />
         <DetailItem label="Transferred By" value={record.transferred_by} />
@@ -53,6 +56,8 @@ export default function TransferHistoryCards({ transfers }) {
             { label: 'Quantity', value: `${t.quantity} ${t.uom || ''}` },
             { label: 'Reason', value: t.reason || '—' },
             { label: 'By', value: t.transferred_by || '—' },
+            ...(t.batch_number ? [{ label: 'Batch', value: t.batch_number }] : []),
+            ...(t.mfg_date ? [{ label: 'Manufacture', value: formatDate(t.mfg_date) }] : []),
           ]}
           expandedContent={<TransferExpandedDetails record={t} />}
         />

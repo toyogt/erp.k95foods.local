@@ -1,5 +1,5 @@
 import HistoryCard from './HistoryCard';
-import { formatDateTime } from '@/lib/dateFormatter';
+import { formatDateTime, formatDate } from '@/lib/dateFormatter';
 
 function PutawayExpandedDetails({ record }) {
   return (
@@ -12,6 +12,9 @@ function PutawayExpandedDetails({ record }) {
         <DetailItem label="Item Name" value={record.item_name} />
         <DetailItem label="Location" value={record.location_code} />
         <DetailItem label="Quantity" value={`${record.quantity} ${record.uom || ''}`} />
+        <DetailItem label="Batch Number" value={record.batch_number} />
+        <DetailItem label="Manufacture Date" value={record.mfg_date ? formatDate(record.mfg_date) : '—'} />
+        <DetailItem label="Expiry Date" value={record.expiry_date ? formatDate(record.expiry_date) : '—'} />
         <DetailItem label="Performed By" value={record.putaway_by} />
         <DetailItem label="Date & Time" value={formatDateTime(record.putaway_at || record.created_date)} />
         {record.notes && <DetailItem label="Notes" value={record.notes} span />}
@@ -49,6 +52,9 @@ export default function PutawayHistoryCards({ history }) {
             { label: 'Location', value: p.location_code || '—' },
             { label: 'Quantity', value: `${p.quantity} ${p.uom || ''}` },
             { label: 'Done By', value: p.putaway_by || '—' },
+            ...(p.batch_number ? [{ label: 'Batch Number', value: p.batch_number }] : []),
+            ...(p.mfg_date ? [{ label: 'Manufacture Date', value: formatDate(p.mfg_date) }] : []),
+            ...(p.expiry_date ? [{ label: 'Expiry Date', value: formatDate(p.expiry_date) }] : []),
           ]}
           expandedContent={<PutawayExpandedDetails record={p} />}
         />

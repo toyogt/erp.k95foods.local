@@ -33,7 +33,7 @@ function LotQRPrint({ lots }) {
 
 export { LotQRPrint };
 
-export default function GRNPrintTemplate({ grnId, gateId, items, notes, receivedBy, receivedAt, lotItems }) {
+export default function GRNPrintTemplate({ grnId, gateId, items, notes, receivedBy, receivedAt, lotItems, supplierName, invoiceNumber, invoiceDate, poId, status }) {
   const printRef = useRef(null);
 
   function handlePrint() {
@@ -43,25 +43,39 @@ export default function GRNPrintTemplate({ grnId, gateId, items, notes, received
     win.document.write(`
       <html><head><title>Goods Received Note — ${grnId}</title>
       <style>
-        body { font-family: 'Inter', Arial, sans-serif; padding: 24px; color: #1e293b; }
-        h1 { font-size: 20px; margin-bottom: 4px; }
-        .meta { font-size: 12px; color: #64748b; margin-bottom: 16px; }
-        .meta p { margin: 2px 0; }
-        table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-        th { background: #f1f5f9; text-align: left; padding: 8px 12px; font-size: 12px; font-weight: 600; color: #475569; border-bottom: 2px solid #e2e8f0; }
-        td { padding: 8px 12px; font-size: 13px; border-bottom: 1px solid #f1f5f9; }
-        .footer { margin-top: 24px; font-size: 11px; color: #94a3b8; }
-        .notes { margin-top: 12px; padding: 8px 12px; background: #f8fafc; border-radius: 6px; font-size: 12px; }
-        @media print { body { padding: 0; } }
+        body { font-family: 'Inter', Arial, sans-serif; padding: 32px; color: #1e293b; max-width: 800px; margin: 0 auto; }
+        .doc-title { font-size: 22px; font-weight: 700; margin: 0 0 4px; color: #0f172a; }
+        .doc-id { font-size: 13px; color: #64748b; font-family: monospace; margin: 0 0 20px; }
+        .header-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 24px; margin-bottom: 20px; padding: 16px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; }
+        .header-grid .field { font-size: 12px; }
+        .header-grid .field .label { color: #64748b; font-weight: 400; }
+        .header-grid .field .val { color: #1e293b; font-weight: 600; }
+        .section-title { font-size: 14px; font-weight: 700; color: #0f172a; margin: 24px 0 8px; padding-bottom: 6px; border-bottom: 2px solid #e2e8f0; }
+        table { width: 100%; border-collapse: collapse; margin-top: 4px; }
+        th { background: #f1f5f9; text-align: left; padding: 8px 10px; font-size: 11px; font-weight: 600; color: #475569; border-bottom: 2px solid #e2e8f0; }
+        td { padding: 8px 10px; font-size: 12px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+        .mono { font-family: monospace; }
+        .bold { font-weight: 700; }
+        .notes-box { margin-top: 16px; padding: 12px 16px; background: #f8fafc; border-radius: 6px; font-size: 12px; border: 1px solid #e2e8f0; }
+        .footer { margin-top: 32px; padding-top: 12px; border-top: 1px solid #e2e8f0; font-size: 10px; color: #94a3b8; display: flex; justify-content: space-between; }
+        .mismatch { color: #dc2626; font-weight: 600; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 10px; font-weight: 600; }
+        .badge-green { background: #dcfce7; color: #15803d; }
+        .badge-amber { background: #fef3c7; color: #92400e; }
+        .badge-red { background: #fee2e2; color: #991b1b; }
+        @media print { body { padding: 16px; } }
       </style></head><body>
       ${content.innerHTML}
-      <script>window.onload = function() { window.print(); }</script>
+      <script>window.onload = function() { window.print(); }<\/script>
       </body></html>
     `);
     win.document.close();
   }
 
   const dateStr = receivedAt ? new Date(receivedAt).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—';
+  const invDateStr = invoiceDate ? new Date(invoiceDate).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
 
   return (
     <div className="flex gap-1.5 items-center">
@@ -72,42 +86,60 @@ export default function GRNPrintTemplate({ grnId, gateId, items, notes, received
 
       {/* Hidden print content */}
       <div ref={printRef} style={{ display: 'none' }}>
-        <h1>Goods Received Note</h1>
-        <div className="meta">
-          <p><strong>Goods Received Note ID:</strong> {grnId}</p>
-          <p><strong>Gate Entry:</strong> {gateId}</p>
-          <p><strong>Received By:</strong> {receivedBy || '—'}</p>
-          <p><strong>Date:</strong> {dateStr}</p>
+        <p className="doc-title">Goods Received Note</p>
+        <p className="doc-id">{grnId}</p>
+
+        <div className="header-grid">
+          <div className="field"><span className="label">Supplier: </span><span className="val">{supplierName || '—'}</span></div>
+          <div className="field"><span className="label">Gate Entry: </span><span className="val">{gateId || '—'}</span></div>
+          <div className="field"><span className="label">Invoice Number: </span><span className="val">{invoiceNumber || '—'}</span></div>
+          <div className="field"><span className="label">Invoice Date: </span><span className="val">{invDateStr || '—'}</span></div>
+          {poId && <div className="field"><span className="label">Purchase Order: </span><span className="val">{poId}</span></div>}
+          <div className="field"><span className="label">Received By: </span><span className="val">{receivedBy || '—'}</span></div>
+          <div className="field"><span className="label">Received Date: </span><span className="val">{dateStr}</span></div>
+          {status && <div className="field"><span className="label">Status: </span><span className="val">{status}</span></div>}
         </div>
+
+        <p className="section-title">Items Received ({items.length})</p>
         <table>
           <thead>
             <tr>
-              <th>#</th>
+              <th className="text-center">#</th>
               <th>Item Name</th>
               <th>Item Code</th>
-              <th>Quantity</th>
-              <th>Unit</th>
               <th>Batch / Lot</th>
-              <th>Supplier</th>
+              <th>Manufacture Date</th>
+              <th>Expiry Date</th>
+              <th className="text-right">Original Quantity</th>
+              <th className="text-right">Received Quantity</th>
+              <th>Unit</th>
+              <th>Mismatch</th>
             </tr>
           </thead>
           <tbody>
             {items.map((it, i) => (
               <tr key={i}>
-                <td>{i + 1}</td>
-                <td>{it.item_name}</td>
-                <td>{it.item_code || '—'}</td>
-                <td>{it.quantity || it.received_qty || '—'}</td>
+                <td className="text-center">{i + 1}</td>
+                <td className="bold">{it.item_name}</td>
+                <td className="mono">{it.item_code || '—'}</td>
+                <td className="mono">{it.batch_lot || it.batch_or_lot_text || it.batch_number || '—'}</td>
+                <td>{it.mfg_date ? new Date(it.mfg_date).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'}</td>
+                <td>{it.expiry_date ? new Date(it.expiry_date).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'}</td>
+                <td className="text-right">{it.original_quantity || it.ordered_qty || '—'}</td>
+                <td className="text-right bold">{it.quantity || it.received_qty || '—'}</td>
                 <td>{it.uom || it.uom_code || 'Nos'}</td>
-                <td>{it.batch_lot || it.batch_or_lot_text || '—'}</td>
-                <td>{it.supplier_name || '—'}</td>
+                <td>{it.mismatch_type && it.mismatch_type !== 'none'
+                  ? <span className="mismatch">{it.mismatch_type}{it.mismatch_reason ? ` — ${it.mismatch_reason}` : ''}</span>
+                  : '—'
+                }</td>
               </tr>
             ))}
           </tbody>
         </table>
-        {notes && <div className="notes"><strong>Notes:</strong> {notes}</div>}
+        {notes && <div className="notes-box"><strong>Notes:</strong> {notes}</div>}
         <div className="footer">
-          <p>Printed on {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })} — K95 ERP Store Management</p>
+          <span>K95 ERP — Store Management</span>
+          <span>Printed on {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
         </div>
       </div>
     </div>
