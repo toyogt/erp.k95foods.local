@@ -15,12 +15,16 @@ import moment from 'moment';
 import useDraftSave from '@/hooks/useDraftSave';
 import NumericInput from '@/components/ui/NumericInput';
 import { useToast } from "@/components/ui/use-toast";
+import TablePagination from '@/components/store/TablePagination';
 
 
 function GRNTable({ grns, title, allGateEntries, onViewInvoice }) {
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
   if (!grns || grns.length === 0) {
     return <div className="text-center py-12 text-slate-400"><p className="font-semibold">No records found.</p></div>;
   }
+  const paged = grns.slice((page - 1) * pageSize, page * pageSize);
   return (
     <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] overflow-hidden">
       <div className="overflow-x-auto">
@@ -39,7 +43,7 @@ function GRNTable({ grns, title, allGateEntries, onViewInvoice }) {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {grns.map(g => {
+            {paged.map(g => {
               const gateEntry = allGateEntries?.[g.gate_id];
               const invoiceUrl = gateEntry?.invoice_photo;
               return (
@@ -73,7 +77,7 @@ function GRNTable({ grns, title, allGateEntries, onViewInvoice }) {
           </tbody>
         </table>
       </div>
-      <div className="px-4 py-2.5 bg-slate-50/80 border-t border-slate-100 text-xs text-slate-500 font-medium">{grns.length} record(s)</div>
+      <TablePagination total={grns.length} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
     </div>
   );
 }

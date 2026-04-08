@@ -3,6 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { motion } from 'framer-motion';
 import toast, { Toaster } from 'react-hot-toast';
 import { Plus, QrCode, Edit2, Search, X, Printer } from 'lucide-react';
+import TablePagination from '@/components/store/TablePagination';
 import { SkeletonTable } from '@/components/store/StoreSkeleton';
 import ExportButton from '@/components/store/ExportButton';
 import { Button } from '@/components/ui/button';
@@ -141,6 +142,8 @@ export default function SMSLocationManager() {
   const [showModal, setShowModal] = useState(false);
   const [editLoc, setEditLoc] = useState(null);
   const [qrLoc, setQrLoc] = useState(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   async function load() {
     setLoading(true);
@@ -213,7 +216,7 @@ export default function SMSLocationManager() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filtered.map(loc => (
+              {filtered.slice((page - 1) * pageSize, page * pageSize).map(loc => (
                 <tr key={loc.id} className="hover:bg-slate-50">
                   <td className="px-4 py-3 font-mono text-xs font-bold text-slate-800">{loc.location_code}</td>
                   <td className="px-4 py-3 text-slate-700">{loc.warehouse}</td>
@@ -232,11 +235,11 @@ export default function SMSLocationManager() {
             </tbody>
           </table>
         </div>
-        <div className="px-4 py-2.5 bg-slate-50/80 border-t border-slate-100 text-xs text-slate-500 font-medium">{filtered.length} location(s)</div>
+        <TablePagination total={filtered.length} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
       </div>
       {/* Mobile Cards */}
       <div className="md:hidden space-y-2">
-        {filtered.map(loc => (
+        {filtered.slice((page - 1) * pageSize, page * pageSize).map(loc => (
           <div key={loc.id} className="bg-white border border-slate-200 rounded-xl p-3">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0 flex-1">
@@ -255,7 +258,7 @@ export default function SMSLocationManager() {
             </div>
           </div>
         ))}
-        <p className="text-xs text-slate-400 text-center py-1">{filtered.length} location(s)</p>
+        <TablePagination total={filtered.length} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
       </div>
       </>
       )}

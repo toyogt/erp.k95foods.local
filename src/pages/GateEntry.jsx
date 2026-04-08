@@ -245,7 +245,7 @@ export default function GateEntryPage() {
   }
 
   return (
-    <motion.div className="max-w-lg mx-auto pb-12" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+    <motion.div className="max-w-2xl mx-auto pb-12" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
       <ToastContainer />
       <div className="px-1 md:px-0 space-y-4">
 
@@ -303,7 +303,7 @@ export default function GateEntryPage() {
                     />
                   )}
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <PhotoCaptureCard
                       type="invoice"
                       label={t.invoicePhoto}
@@ -343,7 +343,7 @@ export default function GateEntryPage() {
 
             {/* ── Step 1: Enter Details ── */}
             {step === 1 && (
-              <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-4">
+              <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-6 space-y-4">
                 <div className="flex items-center gap-2">
                   <Truck className="w-5 h-5 text-slate-600" />
                   <h2 className="font-bold text-slate-900">{t.steps[1]}</h2>
@@ -409,7 +409,7 @@ export default function GateEntryPage() {
 
             {/* ── Step 2: Review & Submit ── */}
             {step === 2 && (
-              <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-4">
+              <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-6 space-y-4">
                 <h2 className="font-bold text-slate-900">{t.steps[2]}</h2>
 
                 {/* Review details */}

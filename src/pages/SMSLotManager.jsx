@@ -3,6 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { motion } from 'framer-motion';
 import { useToast } from '@/components/ui/use-toast';
 import { QrCode, Search, Printer, FileText, Eye } from 'lucide-react';
+import TablePagination from '@/components/store/TablePagination';
 import InvoicePreviewModal from '@/components/store/InvoicePreviewModal';
 import ExportButton from '@/components/store/ExportButton';
 import { Input } from '@/components/ui/input';
@@ -112,36 +113,44 @@ export default function SMSLotManager() {
   const [storedByLot, setStoredByLot] = useState({});
   const [issuedByLot, setIssuedByLot] = useState({});
   const [locationsByLot, setLocationsByLot] = useState({});
+  const [allLocations, setAllLocations] = useState({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [qrLot, setQrLot] = useState(null);
   const [gateEntries, setGateEntries] = useState({});
   const [invoicePreview, setInvoicePreview] = useState(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
 
   async function load() {
     setLoading(true);
     // Parallel fetch: lots + stock balances + issue lines
-    const [lotsData, balances, issueLines, gates] = await Promise.all([
+    const [lotsData, balances, issueLines, gates, locations] = await Promise.all([
       base44.entities.StoreLot.list('-created_date', 500),
       base44.entities.StoreStockBalance.list('-created_date', 1000),
       base44.entities.StoreIssueLine.list('-created_date', 2000),
       base44.entities.GateEntry.list('-created_date', 500),
+      base44.entities.StoreLocation.list('-created_date', 500),
     ]);
+
+    // Build location ID → display_name map
+    const locMap = {};
+    locations.forEach(l => { locMap[l.id] = l.display_name || l.location_code; });
+    setAllLocations(locMap);
 
     // Build gate entry map: gate_id → entry
     const gateMap = {};
     gates.forEach(g => { gateMap[g.gate_id] = g; });
     setGateEntries(gateMap);
 
-    // Build locations map: lot_id → unique location codes with qty
+    // Build locations map: lot_id → [{location_id, location_code, quantity}]
     const lbl = {};
     balances.filter(b => (b.quantity || 0) > 0).forEach(b => {
       if (!b.lot_id) return;
       if (!lbl[b.lot_id]) lbl[b.lot_id] = [];
-      const entry = `${b.location_code || b.location_id} (${b.quantity})`;
-      if (!lbl[b.lot_id].includes(entry)) lbl[b.lot_id].push(entry);
+      lbl[b.lot_id].push({ location_id: b.location_id, location_code: b.location_code, quantity: b.quantity });
     });
 
     // Build stored stock map: lot_id → sum of current balances
@@ -248,7 +257,7 @@ export default function SMSLotManager() {
               <tbody className="divide-y divide-slate-100">
                 {filtered.length === 0 ? (
                   <tr><td colSpan={16} className="text-center py-12 text-slate-400">No lots found</td></tr>
-                ) : filtered.map(lot => {
+                ) : filtered.slice((page - 1) * pageSize, page * pageSize).map(lot => {
                   const stored = storedByLot[lot.lot_id] ?? 0;
                   const issued = issuedByLot[lot.lot_id] ?? 0;
                   const lotGateEntry = gateEntries[lot.gate_entry_id];
@@ -285,7 +294,7 @@ export default function SMSLotManager() {
                         {locationsByLot[lot.lot_id]?.length > 0 ? (
                           <div className="flex flex-col gap-0.5">
                             {locationsByLot[lot.lot_id].map((loc, i) => (
-                              <span key={i} className="px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded text-xs font-mono whitespace-nowrap">{loc}</span>
+                              <span key={i} className="px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded text-xs font-mono whitespace-nowrap">{allLocations[loc.location_id] || loc.location_code} ({loc.quantity})</span>
                             ))}
                           </div>
                         ) : <span className="text-slate-400 text-xs">—</span>}
@@ -313,14 +322,14 @@ export default function SMSLotManager() {
               </tbody>
             </table>
           </div>
-          <div className="px-4 py-2.5 bg-slate-50/80 border-t border-slate-100 text-xs text-slate-500 font-medium">{filtered.length} lot(s)</div>
+          <TablePagination total={filtered.length} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
         </div>
 
         {/* Mobile Cards */}
         <div className="lg:hidden space-y-2">
           {filtered.length === 0 ? (
             <div className="text-center py-12 text-slate-400">No lots found</div>
-          ) : filtered.map(lot => {
+          ) : filtered.slice((page - 1) * pageSize, page * pageSize).map(lot => {
             const stored = storedByLot[lot.lot_id] ?? 0;
             const issued = issuedByLot[lot.lot_id] ?? 0;
             const lotGateEntry = gateEntries[lot.gate_entry_id];
@@ -355,7 +364,7 @@ export default function SMSLotManager() {
                 {locationsByLot[lot.lot_id]?.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-2">
                     {locationsByLot[lot.lot_id].map((loc, i) => (
-                      <span key={i} className="px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded text-xs font-mono">{loc}</span>
+                      <span key={i} className="px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded text-xs font-mono">{allLocations[loc.location_id] || loc.location_code} ({loc.quantity})</span>
                     ))}
                   </div>
                 )}
@@ -376,7 +385,7 @@ export default function SMSLotManager() {
               </div>
             );
           })}
-          <p className="text-xs text-slate-400 text-center py-1">{filtered.length} lot(s)</p>
+          <TablePagination total={filtered.length} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
         </div>
         </>
       )}
