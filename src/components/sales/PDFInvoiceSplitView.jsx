@@ -31,11 +31,13 @@ export default function PDFInvoiceSplitView({ pdfEntry, onConfirm }) {
   const [sysRates, setSysRates] = useState({});           // item_code → system rate
   const [editing, setEditing] = useState(false);
   const [items, setItems] = useState([]);
+  const [mismatchRemarks, setMismatchRemarks] = useState('');
 
   // Sync items from pdfEntry whenever the entry changes
   useEffect(() => {
     setItems(data?.items || []);
     setEditing(false);
+    setMismatchRemarks('');
   }, [pdfEntry.id]);
 
   // Resolve customer → price list (skip if already resolved server-side)
@@ -83,7 +85,15 @@ export default function PDFInvoiceSplitView({ pdfEntry, onConfirm }) {
   const noRateBlocked = !!(data?._no_rate || (!priceList && items.length > 0 && items.every(i => !i._rate_matched)));
 
   const taxable = items.reduce((s, i) => s + (i.taxable_value || (i.unit_base_cost * i.quantity) || 0), 0);
-  const tax = items.reduce((s, i) => s + (i.igst_amount || (taxable * 0.12) || 0), 0);
+  const tax = items.reduce((s, i) => {
+    // Sum all tax components: IGST or CGST+SGST
+    const itemTax = (i.igst_amount || 0) + (i.cgst_amount || 0) + (i.sgst_amount || 0);
+    if (itemTax > 0) return s + itemTax;
+    // Per-item fallback: use item's own taxable value * its GST rate
+    const itemTaxable = i.taxable_value || (i.unit_base_cost * i.quantity) || 0;
+    const gstRate = i.igst_rate || i.cgst_rate || 0;
+    return s + (gstRate > 0 ? itemTaxable * (gstRate / 100) : 0);
+  }, 0);
   const total = taxable + tax;
 
   // Compare system-computed total with PDF-extracted total
@@ -186,6 +196,8 @@ export default function PDFInvoiceSplitView({ pdfEntry, onConfirm }) {
             <Button
               size="sm"
               className="h-7 text-xs px-3 gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+              disabled={hasTotalGap && !mismatchRemarks.trim()}
+              title={hasTotalGap && !mismatchRemarks.trim() ? 'Please add mismatch remarks before confirming' : ''}
               onClick={() => onConfirm({
                 ...data,
                 items,
@@ -193,6 +205,7 @@ export default function PDFInvoiceSplitView({ pdfEntry, onConfirm }) {
                 taxable_amount: taxable,
                 tax_amount: tax,
                 total_amount: total,
+                ...(hasTotalGap ? { mismatch_remarks: mismatchRemarks.trim(), mismatch_gap: totalGap } : {}),
               })}
             >
               <Check className="w-3 h-3" /> Confirm &amp; Create SO
@@ -262,9 +275,18 @@ export default function PDFInvoiceSplitView({ pdfEntry, onConfirm }) {
         {/* Financial Summary */}
         <div className={`border-t bg-white divide-y divide-slate-100 flex-shrink-0 ${hasTotalGap ? 'border-t-2 border-red-400' : 'border-slate-200'}`}>
           {hasTotalGap && (
-            <div className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-700 text-xs font-medium">
-              <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-              <span>Invoice total mismatch — PDF: ₹{pdfTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })} vs System: ₹{total.toLocaleString('en-IN', { minimumFractionDigits: 2 })} (Gap: ₹{totalGap.toLocaleString('en-IN', { minimumFractionDigits: 2 })})</span>
+            <div className="px-4 py-2 bg-red-50 space-y-2">
+              <div className="flex items-center gap-2 text-red-700 text-xs font-medium">
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                <span>Invoice total mismatch — PDF: ₹{pdfTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })} vs System: ₹{total.toLocaleString('en-IN', { minimumFractionDigits: 2 })} (Gap: ₹{totalGap.toLocaleString('en-IN', { minimumFractionDigits: 2 })})</span>
+              </div>
+              <textarea
+                className="w-full border border-red-300 rounded-md px-2 py-1.5 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-red-400 bg-white resize-none"
+                rows={2}
+                placeholder="Mismatch remarks required before confirming..."
+                value={mismatchRemarks}
+                onChange={e => setMismatchRemarks(e.target.value)}
+              />
             </div>
           )}
           <div className="flex justify-between px-4 py-2 text-xs text-slate-600">
