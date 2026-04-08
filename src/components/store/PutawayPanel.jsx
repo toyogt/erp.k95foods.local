@@ -2,10 +2,12 @@ import { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { QrCode, ScanLine, Keyboard, CheckCircle2, AlertCircle, Search, MapPin, Package, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import QRScanner from '@/components/store/QRScanner';
+import NumericInput from '@/components/ui/NumericInput';
+import { showErrorAlert } from '@/lib/toastHelpers';
+
 
 function LocationSelect({ locations, value, onChange }) {
   const [query, setQuery] = useState('');
@@ -59,7 +61,6 @@ function LotSelect({ lots, value, onChange, usedLotIds = [] }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const selected = lots.find(l => l.lot_id === value);
-  // Show all lots that still have remaining quantity (partial storage fix)
   const available = lots.filter(l => (l.remaining_quantity ?? l.quantity) > 0);
   const filtered = (query.trim()
     ? available.filter(l => l.lot_id?.toLowerCase().includes(query.toLowerCase()) || l.item_name?.toLowerCase().includes(query.toLowerCase()))
@@ -108,21 +109,13 @@ function emptyEntry() { return { lotId: '', locationId: '', quantity: '', notes:
 
 export default function PutawayPanel({ lots: externalLots, locations: externalLocations, onSuccess, compact = false }) {
   const { toast } = useToast();
-  const [mode, setMode] = useState('manual'); // 'scan' | 'manual'
+  const [mode, setMode] = useState('manual'); 
   const [lots, setLots] = useState(externalLots || []);
   const [locations, setLocations] = useState(externalLocations || []);
   const [loading, setLoading] = useState(!externalLots || !externalLocations);
   const [saving, setSaving] = useState(false);
 
-  // Multi-entry queue
   const [entries, setEntries] = useState([emptyEntry()]);
-
-  // Scan mode state (single scan → add to queue)
-  const [locationScan, setLocationScan] = useState('');
-  const [lotScan, setLotScan] = useState('');
-  const [scanQty, setScanQty] = useState('');
-  const [scanNotes, setScanNotes] = useState('');
-  const [scanQueue, setScanQueue] = useState([]);
 
   useEffect(() => {
     if (externalLots && externalLocations) return;
@@ -139,17 +132,6 @@ export default function PutawayPanel({ lots: externalLots, locations: externalLo
   function removeEntry(idx) { setEntries(prev => prev.filter((_, i) => i !== idx)); }
 
   const usedLotIds = entries.map(e => e.lotId).filter(Boolean);
-
-  // Scan mode resolve
-  const scanLocation = locations.find(l => l.qr_code === locationScan.trim() || l.location_code === locationScan.trim()) || null;
-  const scanLot = lots.find(l => l.qr_code === lotScan.trim() || l.lot_id === lotScan.trim()) || null;
-  const scanMax = scanLot ? (scanLot.remaining_quantity ?? scanLot.quantity) : 0;
-
-  function addToScanQueue() {
-    if (!scanLot || !scanLocation || !scanQty) return;
-    setScanQueue(prev => [...prev, { lot: scanLot, location: scanLocation, quantity: parseFloat(scanQty), notes: scanNotes }]);
-    setLotScan(''); setScanQty(''); setScanNotes('');
-  }
 
   async function processEntry(lot, location, qty, notes, user, now) {
     const putawayId = `PUT-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`;
@@ -171,12 +153,11 @@ export default function PutawayPanel({ lots: externalLots, locations: externalLo
     }
     const maxQty = lot.remaining_quantity ?? lot.quantity;
     const remaining = maxQty - qty;
-    // Keep lot 'approved' if still has remaining quantity so it stays in dropdown
     await base44.entities.StoreLot.update(lot.id, { status: remaining <= 0 ? 'putaway' : 'approved', remaining_quantity: Math.max(0, remaining) });
   }
 
   async function handleConfirmAll() {
-    const toProcess = mode === 'scan' ? scanQueue : entries.filter(e => {
+    const toProcess = entries.filter(e => {
       const lot = lots.find(l => l.lot_id === e.lotId);
       const loc = locations.find(l => l.id === e.locationId);
       return lot && loc && e.quantity && parseFloat(e.quantity) > 0;
@@ -189,35 +170,37 @@ export default function PutawayPanel({ lots: externalLots, locations: externalLo
 
     if (toProcess.length === 0) { toast({ title: 'No valid entries to submit', variant: 'destructive' }); return; }
 
+    // Validation for capacity
+    for(const item of toProcess) {
+        const maxQty = item.lot.remaining_quantity ?? item.lot.quantity;
+        if(item.quantity > maxQty) {
+            showErrorAlert("Capacity Exceeded", `Cannot put away ${item.quantity} of ${item.lot.item_name}. Only ${maxQty} available.`);
+            return;
+        }
+    }
+
     setSaving(true);
     const user = await base44.auth.me();
     const now = new Date().toISOString();
-    for (const item of toProcess) {
-      await processEntry(item.lot, item.location, item.quantity, item.notes, user, now);
+    try {
+        for (const item of toProcess) {
+          await processEntry(item.lot, item.location, item.quantity, item.notes, user, now);
+        }
+        toast({ title: `${toProcess.length} putaway(s) confirmed!`, description: `Items successfully stored` });
+        setEntries([emptyEntry()]);
+        setSaving(false);
+        if (onSuccess) onSuccess();
+    } catch (error) {
+        setSaving(false);
+        showErrorAlert("Putaway Failed", error.message);
     }
-    toast({ title: `${toProcess.length} putaway(s) confirmed!`, description: `Items successfully stored` });
-    setEntries([emptyEntry()]);
-    setScanQueue([]); setLocationScan(''); setLotScan(''); setScanQty(''); setScanNotes('');
-    setSaving(false);
-    if (onSuccess) onSuccess();
   }
 
   if (loading) return <div className="text-sm text-slate-400 py-4 text-center">Loading...</div>;
 
   return (
     <div className={`space-y-4`}>
-      {/* Mode Toggle */}
-      <div className="flex rounded-lg border border-slate-200 overflow-hidden">
-        <button onClick={() => setMode('scan')} className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium transition-colors ${mode === 'scan' ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}>
-          <ScanLine className="w-4 h-4" /> QR / Barcode Scan
-        </button>
-        <button onClick={() => setMode('manual')} className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium transition-colors ${mode === 'manual' ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}>
-          <Keyboard className="w-4 h-4" /> Manual Entry
-        </button>
-      </div>
-
-      {mode === 'manual' ? (
-        <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] p-4 space-y-3">
+       <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] p-4 space-y-3">
           <p className="text-sm font-semibold text-slate-700">Putaway Entries ({entries.length})</p>
 
           {entries.map((entry, idx) => {
@@ -246,11 +229,11 @@ export default function PutawayPanel({ lots: externalLots, locations: externalLo
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label className="text-xs font-medium text-slate-700">Quantity *</Label>
-                    <Input type="number" className="h-9 text-sm mt-1" value={entry.quantity} onChange={e => setEntry(idx, 'quantity', e.target.value)} placeholder={lot ? `Max: ${maxQty}` : '0'} min="0.01" max={maxQty} />
+                    <NumericInput className="h-9 text-sm mt-1" value={entry.quantity} onChange={e => setEntry(idx, 'quantity', e.target.value)} placeholder={lot ? `Max: ${maxQty}` : '0'} max={maxQty} />
                   </div>
                   <div>
                     <Label className="text-xs font-medium text-slate-700">Notes</Label>
-                    <Input className="h-9 text-sm mt-1" value={entry.notes} onChange={e => setEntry(idx, 'notes', e.target.value)} placeholder="Optional" />
+                    <input className="h-9 text-sm mt-1 w-full border border-slate-200 rounded-md px-3" value={entry.notes} onChange={e => setEntry(idx, 'notes', e.target.value)} placeholder="Optional" />
                   </div>
                 </div>
               </div>
@@ -265,68 +248,6 @@ export default function PutawayPanel({ lots: externalLots, locations: externalLo
             {saving ? 'Saving...' : `Confirm Putaway (${entries.filter(e => e.lotId && e.locationId && e.quantity).length} entry/entries)`}
           </Button>
         </div>
-      ) : (
-        <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] p-4 space-y-4">
-          {/* Scan current lot */}
-          <div>
-            <Label className="text-xs font-medium text-slate-700 flex items-center gap-1"><QrCode className="w-3.5 h-3.5" /> Scan Location QR</Label>
-            <div className="flex gap-2 mt-1">
-              <Input className="h-11 text-base flex-1 font-mono" value={locationScan} onChange={e => setLocationScan(e.target.value)} placeholder="Scan or type location code" />
-              <QRScanner onScan={setLocationScan} label="Location" />
-            </div>
-            {locationScan && (scanLocation
-              ? <p className="mt-1 text-xs text-green-600 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" />{scanLocation.location_code} — {scanLocation.display_name}</p>
-              : <p className="mt-1 text-xs text-red-500 flex items-center gap-1"><AlertCircle className="w-3 h-3" />Location not found</p>)}
-          </div>
-          <div>
-            <Label className="text-xs font-medium text-slate-700 flex items-center gap-1"><QrCode className="w-3.5 h-3.5" /> Scan Lot QR</Label>
-            <div className="flex gap-2 mt-1">
-              <Input className="h-11 text-base flex-1 font-mono" value={lotScan} onChange={e => setLotScan(e.target.value)} placeholder="Scan or type Lot ID" />
-              <QRScanner onScan={setLotScan} label="Lot" />
-            </div>
-            {lotScan && (scanLot
-              ? <p className="mt-1 text-xs text-green-600 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" />{scanLot.item_name} · Available: {scanMax} {scanLot.uom}</p>
-              : <p className="mt-1 text-xs text-red-500 flex items-center gap-1"><AlertCircle className="w-3 h-3" />Lot not found</p>)}
-          </div>
-          {scanLot && scanLocation && (
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs font-medium text-slate-700">Quantity *</Label>
-                <Input type="number" className="h-9 text-sm mt-1" value={scanQty} onChange={e => setScanQty(e.target.value)} placeholder={`Max: ${scanMax}`} />
-              </div>
-              <div>
-                <Label className="text-xs font-medium text-slate-700">Notes</Label>
-                <Input className="h-9 text-sm mt-1" value={scanNotes} onChange={e => setScanNotes(e.target.value)} placeholder="Optional" />
-              </div>
-            </div>
-          )}
-          <Button variant="outline" className="w-full h-11" disabled={!scanLot || !scanLocation || !scanQty} onClick={addToScanQueue}>
-            <Plus className="w-4 h-4 mr-2" /> Add to Queue
-          </Button>
-
-          {/* Queue display */}
-          {scanQueue.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-xs font-semibold text-slate-500">Queue ({scanQueue.length} lot(s) ready)</p>
-              {scanQueue.map((item, i) => (
-                <div key={i} className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg px-3 py-2">
-                  <div>
-                    <p className="text-sm font-medium text-slate-800">{item.lot.item_name}</p>
-                    <p className="text-xs text-slate-500 font-mono">{item.lot.lot_id} → {item.location.location_code}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold text-green-700">{item.quantity} {item.lot.uom}</span>
-                    <button onClick={() => setScanQueue(prev => prev.filter((_, j) => j !== i))} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
-                  </div>
-                </div>
-              ))}
-              <Button className="w-full h-11 text-base" disabled={saving} onClick={handleConfirmAll}>
-                {saving ? 'Saving...' : `Confirm All (${scanQueue.length} putaway(s))`}
-              </Button>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }

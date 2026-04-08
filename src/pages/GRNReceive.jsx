@@ -2,20 +2,20 @@ import { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, RefreshCw, CheckCircle2, Plus, Trash2, Search, AlertTriangle, Camera, ListChecks, FileText, Eye, ChevronRight } from 'lucide-react';
 import InvoicePreviewModal from '@/components/store/InvoicePreviewModal';
 import { logGrnAudit, getChecklistTemplate } from '@/components/grn/grnHelpers';
-import { fireFMSEvent, linkFMSRef } from '@/lib/useFMSAutoComplete';
+import { fireFMSEvent } from '@/lib/useFMSAutoComplete';
 import ChecklistGate from '@/components/grn/ChecklistGate';
 import GRNItemCard from '@/components/store/GRNItemCard';
 import GRNPrintTemplate from '@/components/store/GRNPrintTemplate';
-import { showErrorAlert, showWarningAlert, showValidationErrors, showSuccessToast } from '@/lib/toastHelpers';
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { showErrorAlert, showWarningAlert, showValidationErrors } from '@/lib/toastHelpers';
 import moment from 'moment';
 import useDraftSave from '@/hooks/useDraftSave';
+import NumericInput from '@/components/ui/NumericInput';
+import { useToast } from "@/components/ui/use-toast";
+
 
 function GRNTable({ grns, title, allGateEntries, onViewInvoice }) {
   if (!grns || grns.length === 0) {
@@ -95,6 +95,8 @@ export default function GRNReceive() {
   const [supplierName, setSupplierNameRaw] = useState(draft.supplierName || '');
   const [invoiceNumber, setInvoiceNumberRaw] = useState(draft.invoiceNumber || '');
   const [invoiceDate, setInvoiceDateRaw] = useState(draft.invoiceDate || '');
+  const { toast } = useToast();
+  
   function setSupplierName(v) {
     setSupplierNameRaw(v);
     setDraftState(d => ({ ...d, supplierName: v }));
@@ -107,7 +109,7 @@ export default function GRNReceive() {
     setInvoiceDateRaw(v);
     setDraftState(d => ({ ...d, invoiceDate: v }));
   }
-  // Sync items/notes to draft
+
   function setItems(updater) {
     setItemsRaw(prev => {
       const next = typeof updater === 'function' ? updater(prev) : updater;
@@ -148,7 +150,6 @@ export default function GRNReceive() {
       base44.entities.Supplier.filter({ approval_status: 'APPROVED' }, 'supplier_name', 500).catch(() => []),
       base44.entities.GateEntry.list('-created_date', 500),
     ]);
-    // Build gate entry map for invoice lookups
     const gateMap = {};
     allGates.forEach(g => { gateMap[g.gate_id] = g; });
     setAllGateMap(gateMap);
@@ -216,8 +217,12 @@ export default function GRNReceive() {
 
   const validItems = items.filter(it => it.item_name.trim() && parseFloat(it.original_quantity || it.quantity) > 0);
 
-  function validateItems() {
+  function validateForm() {
     const errors = [];
+    if (!supplierName.trim()) errors.push('Supplier Name is required.');
+    if (!invoiceNumber.trim()) errors.push('Invoice Number is required.');
+    if (!invoiceDate) errors.push('Invoice Date is required.');
+
     for (let i = 0; i < validItems.length; i++) {
       const it = validItems[i];
       const rules = it._rules;
@@ -230,9 +235,6 @@ export default function GRNReceive() {
       if (rules?.mfg_date_required && !it.mfg_date) {
         errors.push(`Item ${i + 1} (${it.item_name}): Manufacture date is required`);
       }
-      if (!it.material_photo && !rules?.material_photo) {
-        // Material photo warning (not blocking if master has one)
-      }
     }
     return errors;
   }
@@ -243,9 +245,9 @@ export default function GRNReceive() {
       return;
     }
 
-    const errors = validateItems();
+    const errors = validateForm();
     if (errors.length > 0) {
-      showValidationErrors('Validation Errors', errors);
+      showValidationErrors('Please fix the following issues:', errors);
       return;
     }
 
@@ -311,7 +313,7 @@ export default function GRNReceive() {
         invoice_number: invoiceNumber || '',
         invoice_date: invoiceDate || '',
         gate_entry_id: selected.gate_id, grn_id,
-        status: it._rules?.qc_required ? 'approved' : 'approved',
+        status: 'approved',
       });
     }
 
@@ -344,14 +346,12 @@ export default function GRNReceive() {
     setGrnItems(prev => ({ ...prev, [grnId]: itemsList }));
   }
 
-  // Load GRN items when viewing master tab
   useEffect(() => {
     if (activeTab === 'master') {
       allGrns.forEach(g => loadGrnItemsFor(g.grn_id));
     }
   }, [activeTab, allGrns]);
 
-  // ── Success ─────────────────────────────────────────────────
   if (done) {
     return (
       <div className="max-w-2xl mx-auto pt-12 text-center space-y-4">
@@ -376,7 +376,6 @@ export default function GRNReceive() {
     );
   }
 
-  // ── Checklist ────────────────────────────────────────────────
   if (showChecklist && checklistTemplate) {
     return (
       <div className="space-y-4 pb-12">
@@ -395,7 +394,12 @@ export default function GRNReceive() {
 
   return (
   <motion.div className="space-y-4 pb-12" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-    <ToastContainer />
+      {hasGrnDraft && (
+        <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+          <p className="text-xs text-amber-700 font-medium">You have an unsaved draft</p>
+          <button onClick={() => { clearGrnDraft(); setItemsRaw([emptyItem()]); setGrnNotesRaw(''); setSupplierNameRaw(''); setInvoiceNumberRaw(''); setInvoiceDateRaw(''); }} className="text-xs text-red-500 hover:text-red-700 font-medium">Clear Draft</button>
+        </div>
+      )}
 
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-slate-900">Goods Received Note</h1>
@@ -404,7 +408,6 @@ export default function GRNReceive() {
         </button>
       </div>
 
-      {/* Tabs */}
       <div className="flex justify-center border-b border-slate-200 overflow-x-auto">
         {[
           { id: 'create', label: 'Create New', icon: Plus },
@@ -419,10 +422,8 @@ export default function GRNReceive() {
         ))}
       </div>
 
-      {/* Master Tab */}
       {activeTab === 'master' && <GRNTable grns={allGrns} title="All Goods Received Notes" allGateEntries={allGateMap} onViewInvoice={url => setInvoicePreview(url)} />}
 
-      {/* Create Tab — Gate Entry Table */}
       {activeTab === 'create' && !selected && (
         <>
           <div className="relative">
@@ -443,7 +444,6 @@ export default function GRNReceive() {
             </div>
           ) : (
             <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] overflow-hidden">
-              {/* Desktop Table */}
               <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
@@ -489,7 +489,6 @@ export default function GRNReceive() {
                 </table>
               </div>
 
-              {/* Mobile Cards */}
               <div className="md:hidden divide-y divide-slate-100">
                 {filteredEntries.map(e => (
                   <div key={e.id} className="px-4 py-3.5 active:bg-slate-50 cursor-pointer" onClick={() => selectGateEntry(e)}>
@@ -521,10 +520,8 @@ export default function GRNReceive() {
         </>
       )}
 
-      {/* Create Tab — Items Entry Form */}
       {activeTab === 'create' && selected && (
         <div className="space-y-4">
-          {/* Header — breadcrumb + gate info */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div>
               <div className="flex items-center gap-2 text-sm">
@@ -548,15 +545,6 @@ export default function GRNReceive() {
             </div>
           </div>
 
-          {/* Draft banner */}
-          {hasGrnDraft && (
-            <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-              <p className="text-xs text-amber-700 font-medium">You have an unsaved draft Goods Received Note for this entry</p>
-              <button onClick={() => { clearGrnDraft(); setItemsRaw([emptyItem()]); setGrnNotesRaw(''); setSupplierNameRaw(''); setInvoiceNumberRaw(''); setInvoiceDateRaw(''); }} className="text-xs text-red-500 hover:text-red-700 font-medium">Clear Draft</button>
-            </div>
-          )}
-
-          {/* Supplier & Invoice Header */}
           <div className="bg-white/60 backdrop-blur-xl border border-white/40 rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] p-4 md:p-5">
             <p className="text-sm font-semibold text-slate-900 uppercase tracking-wide mb-3">Supplier & Invoice Details</p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -577,17 +565,16 @@ export default function GRNReceive() {
                 </div>
               </div>
               <div>
-                <Label className="text-xs font-medium text-slate-700">Invoice Number</Label>
-                <Input className="h-11 text-sm mt-1 rounded-xl" value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} placeholder="e.g. INV-2025-001" />
+                <Label className="text-xs font-medium text-slate-700">Invoice Number <span className="text-red-500">*</span></Label>
+                <input className="h-11 text-sm mt-1 w-full border border-slate-200 rounded-xl px-3" value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} placeholder="e.g. INV-2025-001" />
               </div>
               <div>
-                <Label className="text-xs font-medium text-slate-700">Invoice Date</Label>
-                <Input type="date" className="h-11 text-sm mt-1 rounded-xl" value={invoiceDate} onChange={e => setInvoiceDate(e.target.value)} />
+                <Label className="text-xs font-medium text-slate-700">Invoice Date <span className="text-red-500">*</span></Label>
+                <input type="date" className="h-11 text-sm mt-1 w-full border border-slate-200 rounded-xl px-3" value={invoiceDate} onChange={e => setInvoiceDate(e.target.value)} />
               </div>
             </div>
           </div>
 
-          {/* Items section */}
           <div className="bg-white/60 backdrop-blur-xl border border-white/40 rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] p-4 md:p-5">
             <p className="text-sm font-semibold text-slate-900 uppercase tracking-wide mb-3">Items Received <span className="text-red-500">*</span></p>
             <div className="space-y-3">
@@ -612,7 +599,6 @@ export default function GRNReceive() {
             </button>
           </div>
 
-          {/* Notes */}
           <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-5">
             <label className="block text-sm font-semibold text-slate-900 uppercase tracking-wide mb-2">Goods Received Notes</label>
             <textarea

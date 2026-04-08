@@ -106,20 +106,19 @@ export const pageRegistry = [
   { pageKey: 'ReconciliationDashboard', title: 'Reconciliation Dashboard', moduleKey: 'ADMIN', icon: AlertTriangle, roles: ['admin', 'production_manager', 'warehouse_ops', 'supervisor'] },
 
   // ─── STORE MANAGEMENT ───
-  { pageKey: 'SMSDashboard',       title: 'Store Dashboard',    moduleKey: 'STORE', icon: Store,           roles: ['admin', 'store_manager', 'store_receiver', 'user'] },
-  { pageKey: 'GateEntry',          title: 'Gate Entry',         moduleKey: 'STORE', icon: ShieldCheck,     roles: ['admin', 'security_guard', 'store_receiver', 'user'] },
-  { pageKey: 'GRNReceive',         title: 'GRN (Goods Received Note)',      moduleKey: 'STORE', icon: PackageOpen,     roles: ['admin', 'store_receiver', 'user'] },
-  { pageKey: 'SMSItemMaster',       title: 'Item Master',        moduleKey: 'STORE', icon: PackageSearch,   roles: ['admin', 'store_manager', 'user'] },
-  { pageKey: 'SMSLotManager',      title: 'Lot Manager',        moduleKey: 'STORE', icon: QrCode,          roles: ['admin', 'store_manager', 'store_receiver', 'qc_inspector', 'user'] },
-  { pageKey: 'SMSPutaway',         title: 'Putaway',            moduleKey: 'STORE', icon: Archive,         roles: ['admin', 'store_manager', 'store_receiver', 'user'] },
-  { pageKey: 'SMSStockOut',        title: 'Stock Issue',        moduleKey: 'STORE', icon: PackageOpen,     roles: ['admin', 'store_manager', 'user'] },
-  { pageKey: 'SMSTransfer',        title: 'Internal Transfer',  moduleKey: 'STORE', icon: ArrowLeftRight,  roles: ['admin', 'store_manager', 'store_receiver', 'user'] },
-
-  { pageKey: 'SMSReorderConfig',   title: 'Reorder Alerts',     moduleKey: 'STORE', icon: TrendingDown,    roles: ['admin', 'store_manager'] },
-  { pageKey: 'SMSCycleCount',      title: 'Cycle Count',        moduleKey: 'STORE', icon: ClipboardCheck,  roles: ['admin', 'store_manager', 'user'] },
-  { pageKey: 'SMSAdjustments',     title: 'Adjustments',        moduleKey: 'STORE', icon: SlidersHorizontal, roles: ['admin', 'store_manager', 'user'] },
-  { pageKey: 'SMSLocationManager', title: 'Locations',          moduleKey: 'STORE', icon: MapPin,          roles: ['admin', 'store_manager'] },
-  { pageKey: 'SMSReports',         title: 'Store Reports',      moduleKey: 'STORE', icon: BarChart3,       roles: ['admin', 'store_manager', 'user'] },
+  { pageKey: 'SMSDashboard',       title: 'Store Dashboard',    moduleKey: 'STORE', icon: Store,           roles: ['admin', 'store_manager', 'store_receiver', 'user'], sortOrder: 1 },
+  { pageKey: 'GateEntry',          title: 'Gate Entry',         moduleKey: 'STORE', icon: ShieldCheck,     roles: ['admin', 'security_guard', 'store_receiver', 'user'], sortOrder: 2 },
+  { pageKey: 'GRNReceive',         title: 'Goods Received Note',moduleKey: 'STORE', icon: PackageOpen,     roles: ['admin', 'store_receiver', 'user'], sortOrder: 3 },
+  { pageKey: 'SMSPutaway',         title: 'Putaway',            moduleKey: 'STORE', icon: Archive,         roles: ['admin', 'store_manager', 'store_receiver', 'user'], sortOrder: 4 },
+  { pageKey: 'SMSStockOut',        title: 'Stock Issue',        moduleKey: 'STORE', icon: PackageOpen,     roles: ['admin', 'store_manager', 'user'], sortOrder: 5 },
+  { pageKey: 'SMSItemMaster',      title: 'Item Master',        moduleKey: 'STORE', icon: PackageSearch,   roles: ['admin', 'store_manager', 'user'], sortOrder: 10 },
+  { pageKey: 'SMSLotManager',      title: 'Lot Manager',        moduleKey: 'STORE', icon: QrCode,          roles: ['admin', 'store_manager', 'store_receiver', 'qc_inspector', 'user'], sortOrder: 11 },
+  { pageKey: 'SMSLocationManager', title: 'Locations',          moduleKey: 'STORE', icon: MapPin,          roles: ['admin', 'store_manager'], sortOrder: 12 },
+  { pageKey: 'SMSTransfer',        title: 'Internal Transfer',  moduleKey: 'STORE', icon: ArrowLeftRight,  roles: ['admin', 'store_manager', 'store_receiver', 'user'], sortOrder: 20 },
+  { pageKey: 'SMSReorderConfig',   title: 'Reorder Alerts',     moduleKey: 'STORE', icon: TrendingDown,    roles: ['admin', 'store_manager'], sortOrder: 21 },
+  { pageKey: 'SMSCycleCount',      title: 'Cycle Count',        moduleKey: 'STORE', icon: ClipboardCheck,  roles: ['admin', 'store_manager', 'user'], sortOrder: 22 },
+  { pageKey: 'SMSAdjustments',     title: 'Adjustments',        moduleKey: 'STORE', icon: SlidersHorizontal, roles: ['admin', 'store_manager', 'user'], sortOrder: 23 },
+  { pageKey: 'SMSReports',         title: 'Store Reports',      moduleKey: 'STORE', icon: BarChart3,       roles: ['admin', 'store_manager', 'user'], sortOrder: 24 },
 
   // ─── SALES ───
   { pageKey: 'SalesOrders',         title: 'Sales Orders',    moduleKey: 'SALES', icon: ShoppingCart, roles: ['admin', 'sales_manager', 'sales_user', 'user'] },
@@ -322,7 +321,7 @@ export function getVisiblePagesInModule(moduleKey, userRole) {
   return pages.filter(p => {
     if (p.adminOnly && !isAdmin) return false;
     return p.roles.includes(userRole) || p.roles.includes('user');
-  });
+  }).sort((a, b) => (a.sortOrder || 99) - (b.sortOrder || 99));
 }
 
 /**
