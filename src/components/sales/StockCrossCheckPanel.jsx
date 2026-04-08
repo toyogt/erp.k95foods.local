@@ -23,19 +23,21 @@ export default function StockCrossCheckPanel({ order }) {
     staleTime: 30000,
   });
 
-  const { data: stockBalances = [], isLoading } = useQuery({
-    queryKey: ['stock-balances-crosscheck'],
-    queryFn: () => base44.entities.StoreStockBalance.list('-updated_date', 2000),
+  // Use WarehouseLot (finished goods) for stock cross-check, matched by item_code → sku_code
+  const { data: warehouseLots = [], isLoading } = useQuery({
+    queryKey: ['warehouse-lots-crosscheck'],
+    queryFn: () => base44.entities.WarehouseLot.filter({ status: 'ACTIVE' }),
     staleTime: 60000,
   });
 
   const stockByCode = useMemo(() => {
     const map = {};
-    stockBalances.forEach(b => {
-      if (b.item_code) map[b.item_code] = (map[b.item_code] || 0) + (b.quantity || 0);
+    warehouseLots.forEach(lot => {
+      const code = (lot.sku_code || '').trim().toUpperCase();
+      if (code) map[code] = (map[code] || 0) + (lot.boxes_balance || 0);
     });
     return map;
-  }, [stockBalances]);
+  }, [warehouseLots]);
 
   function setEdit(itemId, key, val) {
     setEdits(prev => ({ ...prev, [itemId]: { ...(prev[itemId] || {}), [key]: val } }));
@@ -62,7 +64,7 @@ export default function StockCrossCheckPanel({ order }) {
         <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wide flex items-center gap-1.5">
           <PackageCheck className="w-3.5 h-3.5" /> Stock Cross-Check
         </h4>
-        <Button size="sm" variant="outline" className="h-8 text-xs gap-1" onClick={() => { refetchItems(); qc.invalidateQueries({ queryKey: ['stock-balances-crosscheck'] }); }}>
+        <Button size="sm" variant="outline" className="h-8 text-xs gap-1" onClick={() => { refetchItems(); qc.invalidateQueries({ queryKey: ['warehouse-lots-crosscheck'] }); }}>
           <RefreshCw className="w-3 h-3" /> Refresh
         </Button>
       </div>
@@ -87,8 +89,8 @@ export default function StockCrossCheckPanel({ order }) {
                 {soItems.length === 0 ? (
                   <tr><td colSpan={6} className="text-center py-6 text-slate-400">No items found</td></tr>
                 ) : soItems.map(item => {
-                  const code = item.sku_code || item.item_code || '';
-                  const stockQty = stockByCode[code] || 0;
+                 const code = (item.item_code || item.sku_code || '').trim().toUpperCase();
+                 const stockQty = stockByCode[code] || 0;
                   const ordered = item.quantity || 0;
                   const canFulfill = stockQty >= ordered;
                   const partial = stockQty > 0 && stockQty < ordered;
