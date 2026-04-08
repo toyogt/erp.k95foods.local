@@ -10,6 +10,7 @@ import { fireFMSEvent } from '@/lib/useFMSAutoComplete';
 import ChecklistGate from '@/components/grn/ChecklistGate';
 import GRNItemCard from '@/components/store/GRNItemCard';
 import GRNPrintTemplate from '@/components/store/GRNPrintTemplate';
+import GRNSupplierSelect from '@/components/store/GRNSupplierSelect';
 import { showErrorAlert, showWarningAlert, showValidationErrors } from '@/lib/toastHelpers';
 import moment from 'moment';
 import useDraftSave from '@/hooks/useDraftSave';
@@ -553,20 +554,11 @@ export default function GRNReceive() {
             <p className="text-sm font-semibold text-slate-900 uppercase tracking-wide mb-3">Supplier & Invoice Details</p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
-                <Label className="text-xs font-medium text-slate-700">Supplier Name <span className="text-red-500">*</span></Label>
-                <div className="mt-1 relative">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-                  <input
-                    className="w-full h-11 pl-8 pr-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-teal-400"
-                    placeholder="Search or type supplier name..."
-                    value={supplierName}
-                    onChange={e => setSupplierName(e.target.value)}
-                    list="supplier-list"
-                  />
-                  <datalist id="supplier-list">
-                    {suppliers.map(s => <option key={s.id} value={s.supplier_name} />)}
-                  </datalist>
-                </div>
+                <GRNSupplierSelect
+                  value={supplierName}
+                  onChange={({ supplier_name }) => setSupplierName(supplier_name)}
+                  itemNames={items.map(it => it.item_name).filter(Boolean)}
+                />
               </div>
               <div>
                 <Label className="text-xs font-medium text-slate-700">Invoice Number <span className="text-red-500">*</span></Label>
