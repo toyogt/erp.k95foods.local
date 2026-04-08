@@ -3,6 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { motion } from 'framer-motion';
 import { useToast } from '@/components/ui/use-toast';
 import { QrCode, Search, Printer, FileText, Eye } from 'lucide-react';
+import { formatDateTime, formatDate } from '@/lib/dateFormatter';
 import TablePagination from '@/components/store/TablePagination';
 import InvoicePreviewModal from '@/components/store/InvoicePreviewModal';
 import ExportButton from '@/components/store/ExportButton';
@@ -29,14 +30,13 @@ function AgingBadge({ days }) {
   return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${cls}`}>{days}d</span>;
 }
 
-// Effective status: always driven by actual stored stock + issued qty, not just DB status field
 function getEffectiveStatus(dbStatus, storedQty, issuedQty, originalQty) {
   if (['rejected', 'damaged'].includes(dbStatus)) return dbStatus;
-  if (storedQty > 0 && issuedQty > 0) return 'partial'; // has stock + some issued
-  if (storedQty > 0) return 'putaway';                   // has stock, nothing issued
-  if (issuedQty >= originalQty && originalQty > 0) return 'consumed'; // fully issued
-  if (issuedQty > 0 && storedQty === 0) return 'consumed'; // issued all, nothing left
-  return 'pending_putaway'; // stored=0, issued=0 → waiting for putaway
+  if (storedQty > 0 && issuedQty > 0) return 'partial';
+  if (storedQty > 0) return 'putaway';
+  if (issuedQty >= originalQty && originalQty > 0) return 'consumed';
+  if (issuedQty > 0 && storedQty === 0) return 'consumed';
+  return 'pending_putaway';
 }
 
 function StatusBadge({ status, storedQty, issuedQty, originalQty }) {
@@ -66,36 +66,63 @@ function StatusBadge({ status, storedQty, issuedQty, originalQty }) {
 
 function QRModal({ lot, onClose }) {
   function handlePrint() {
-    const printWin = window.open('', '_blank', 'width=400,height=500');
+    const printWin = window.open('', '_blank', 'width=500,height=700');
     const qrVal = lot.qr_code || lot.lot_id;
     printWin.document.write(`
       <html><head><title>Lot QR - ${lot.lot_id}</title>
-      <style>body{font-family:sans-serif;text-align:center;padding:24px} img{width:180px;height:180px} p{margin:4px 0} .mono{font-family:monospace;font-size:13px;font-weight:bold}</style>
+      <style>
+        @page { size: 3in 4in; margin: 0; }
+        body { font-family: 'Inter', sans-serif; text-align: center; padding: 12px; margin: 0; width: 3in; height: 4in; box-sizing: border-box; }
+        .qr-container { display: flex; justify-content: center; margin: 8px 0; }
+        .qr-container img { width: 2in; height: 2in; }
+        .lot-id { font-family: monospace; font-size: 14px; font-weight: bold; margin: 6px 0; letter-spacing: 0.5px; }
+        .item-name { font-size: 11px; font-weight: 600; margin: 4px 0; color: #333; }
+        .detail { font-size: 9px; color: #666; margin: 2px 0; }
+        .divider { border-top: 1px dashed #ccc; margin: 6px 0; }
+      </style>
       </head><body>
-      <p style="font-size:14px;font-weight:600">Lot QR Code</p>
-      <p style="font-size:12px;color:#666">${lot.item_name}</p>
-      <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrVal)}" />
-      <p class="mono">${lot.lot_id}</p>
-      <p style="font-size:11px;color:#999">${lot.supplier_name || ''}</p>
+        <p class="item-name">${lot.item_name || ''}</p>
+        <div class="qr-container">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrVal)}" />
+        </div>
+        <p class="lot-id">${lot.lot_id}</p>
+        <div class="divider"></div>
+        ${lot.batch_number ? `<p class="detail">Batch: ${lot.batch_number}</p>` : ''}
+        ${lot.supplier_name ? `<p class="detail">Supplier: ${lot.supplier_name}</p>` : ''}
+        ${lot.mfg_date ? `<p class="detail">Manufacture: ${lot.mfg_date}</p>` : ''}
+        ${lot.expiry_date ? `<p class="detail">Expiry: ${lot.expiry_date}</p>` : ''}
+        <p class="detail">Quantity: ${lot.quantity || ''} ${lot.uom || ''}</p>
       </body></html>
     `);
     printWin.document.close();
     printWin.focus();
-    setTimeout(() => { printWin.print(); printWin.close(); }, 500);
+    setTimeout(() => { printWin.print(); }, 400);
   }
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-white/60 p-6 w-full max-w-xs text-center">
-        <p className="text-sm font-semibold text-slate-700 mb-1">Lot QR Code</p>
-        <p className="text-xs text-slate-500 mb-1">{lot.item_name}</p>
-        <p className="text-xs text-slate-400 mb-4 font-mono">{lot.lot_id}</p>
-        <div className="flex justify-center mb-4 p-4 bg-white border border-slate-200 rounded-xl">
-          <QRCode value={lot.qr_code || lot.lot_id} size={160} />
+      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 p-6 w-full max-w-sm text-center">
+        <p className="text-base font-bold text-slate-900 mb-1">Lot QR Code</p>
+        <p className="text-sm text-slate-600 mb-0.5">{lot.item_name}</p>
+        <p className="text-xs text-slate-400 mb-1 font-mono">{lot.lot_id}</p>
+        {lot.batch_number && <p className="text-xs text-indigo-600 font-mono mb-1">Batch: {lot.batch_number}</p>}
+
+        <div className="mx-auto my-4 border-2 border-dashed border-slate-300 rounded-xl p-4" style={{ width: '3in', maxWidth: '100%' }}>
+          <p className="text-xs text-slate-400 mb-2">3" × 4" Print Preview</p>
+          <div className="flex justify-center mb-3">
+            <QRCode value={lot.qr_code || lot.lot_id} size={180} />
+          </div>
+          <p className="text-sm font-mono font-bold text-slate-800">{lot.lot_id}</p>
+          <div className="text-xs text-slate-500 mt-1 space-y-0.5">
+            {lot.supplier_name && <p>{lot.supplier_name}</p>}
+            {lot.mfg_date && <p>Manufacture: {formatDate(lot.mfg_date)}</p>}
+            {lot.expiry_date && <p>Expiry: {formatDate(lot.expiry_date)}</p>}
+            <p>Quantity: {lot.quantity} {lot.uom}</p>
+          </div>
         </div>
-        <p className="text-xs font-mono text-slate-600 mb-4">{lot.lot_id}</p>
+
         <div className="flex gap-2">
-          <Button variant="outline" className="flex-1 h-10" onClick={onClose}>Close</Button>
-          <Button className="flex-1 h-10 gap-2" onClick={handlePrint}><Printer className="w-4 h-4" /> Print QR</Button>
+          <Button variant="outline" className="flex-1 h-11" onClick={onClose}>Close</Button>
+          <Button className="flex-1 h-11 gap-2" onClick={handlePrint}><Printer className="w-4 h-4" /> Print QR (3×4")</Button>
         </div>
       </div>
     </div>
@@ -123,10 +150,8 @@ export default function SMSLotManager() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
 
-
   async function load() {
     setLoading(true);
-    // Parallel fetch: lots + stock balances + issue lines
     const [lotsData, balances, issueLines, gates, locations] = await Promise.all([
       base44.entities.StoreLot.list('-created_date', 500),
       base44.entities.StoreStockBalance.list('-created_date', 1000),
@@ -135,17 +160,14 @@ export default function SMSLotManager() {
       base44.entities.StoreLocation.list('-created_date', 500),
     ]);
 
-    // Build location ID → display_name map
     const locMap = {};
     locations.forEach(l => { locMap[l.id] = l.display_name || l.location_code; });
     setAllLocations(locMap);
 
-    // Build gate entry map: gate_id → entry
     const gateMap = {};
     gates.forEach(g => { gateMap[g.gate_id] = g; });
     setGateEntries(gateMap);
 
-    // Build locations map: lot_id → [{location_id, location_code, quantity}]
     const lbl = {};
     balances.filter(b => (b.quantity || 0) > 0).forEach(b => {
       if (!b.lot_id) return;
@@ -153,11 +175,9 @@ export default function SMSLotManager() {
       lbl[b.lot_id].push({ location_id: b.location_id, location_code: b.location_code, quantity: b.quantity });
     });
 
-    // Build stored stock map: lot_id → sum of current balances
     const sbl = {};
     balances.forEach(b => { sbl[b.lot_id] = (sbl[b.lot_id] || 0) + (b.quantity || 0); });
 
-    // Build issued map: lot_id → sum of issued quantities
     const ibl = {};
     issueLines.forEach(l => { ibl[l.lot_id] = (ibl[l.lot_id] || 0) + (l.issued_quantity || 0); });
 
@@ -178,7 +198,6 @@ export default function SMSLotManager() {
       l.item_code?.toLowerCase().includes(q) ||
       l.supplier_name?.toLowerCase().includes(q);
     if (!statusFilter) return matchSearch;
-    // Compute effective status for filtering
     const stored = storedByLot[l.lot_id] ?? 0;
     const issued = issuedByLot[l.lot_id] ?? 0;
     const effective = getEffectiveStatus(l.status, stored, issued, l.quantity);
@@ -299,8 +318,8 @@ export default function SMSLotManager() {
                           </div>
                         ) : <span className="text-slate-400 text-xs">—</span>}
                       </td>
-                      <td className="px-3 md:px-4 py-3 text-slate-600 text-xs">{lot.mfg_date || '—'}</td>
-                      <td className="px-3 md:px-4 py-3 text-slate-600 text-xs">{lot.expiry_date || '—'}</td>
+                      <td className="px-3 md:px-4 py-3 text-slate-600 text-xs">{formatDate(lot.mfg_date)}</td>
+                      <td className="px-3 md:px-4 py-3 text-slate-600 text-xs">{formatDate(lot.expiry_date)}</td>
                       <td className="px-3 md:px-4 py-3"><AgingBadge days={calcDaysAgo(lot.created_date)} /></td>
                       <td className="px-3 md:px-4 py-3">{lot.mfg_date ? <AgingBadge days={calcDaysAgo(lot.mfg_date)} /> : <span className="text-slate-400">—</span>}</td>
                       <td className="px-3 md:px-4 py-3"><StatusBadge status={lot.status} storedQty={stored} issuedQty={issued} originalQty={lot.quantity} /></td>
@@ -369,12 +388,13 @@ export default function SMSLotManager() {
                   </div>
                 )}
                 <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-slate-500">
-                  {lot.mfg_date && <span>Manufacture: <strong className="text-slate-700">{lot.mfg_date}</strong></span>}
-                  {lot.expiry_date && <span>Expiry: <strong className="text-slate-700">{lot.expiry_date}</strong></span>}
+                  {lot.mfg_date && <span>Manufacture: <strong className="text-slate-700">{formatDate(lot.mfg_date)}</strong></span>}
+                  {lot.expiry_date && <span>Expiry: <strong className="text-slate-700">{formatDate(lot.expiry_date)}</strong></span>}
                   {lot.invoice_number && <span>Invoice: <strong className="text-slate-700">{lot.invoice_number}</strong></span>}
-                  {lot.invoice_date && <span>Invoice Date: <strong className="text-slate-700">{lot.invoice_date}</strong></span>}
+                  {lot.invoice_date && <span>Invoice Date: <strong className="text-slate-700">{formatDate(lot.invoice_date)}</strong></span>}
                   <span>Goods Received Note Age: <strong className="text-slate-700">{calcDaysAgo(lot.created_date) !== null ? `${calcDaysAgo(lot.created_date)} days` : '—'}</strong></span>
                   {lot.mfg_date && <span>Stock Age: <strong className="text-slate-700">{calcDaysAgo(lot.mfg_date) !== null ? `${calcDaysAgo(lot.mfg_date)} days` : '—'}</strong></span>}
+                  {lot.created_date && <span>Created: <strong className="text-slate-700">{formatDateTime(lot.created_date)}</strong></span>}
                 </div>
                 <div className="flex gap-2 mt-3">
                   {lotInvoiceUrl && (
@@ -396,6 +416,6 @@ export default function SMSLotManager() {
         <InvoicePreviewModal imageUrl={invoicePreview} title="Invoice Preview" onClose={() => setInvoicePreview(null)} />
       )}
       </div>
-      </motion.div>
-      );
+    </motion.div>
+  );
 }

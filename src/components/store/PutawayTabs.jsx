@@ -3,6 +3,7 @@ import { Clock, ListChecks } from 'lucide-react';
 import { SkeletonTable } from '@/components/store/StoreSkeleton';
 import PutawayHistoryCards from '@/components/store/PutawayHistoryCards';
 import TablePagination from '@/components/store/TablePagination';
+import { formatDateTime } from '@/lib/dateFormatter';
 
 export default function PutawayTabs({ pendingLots, putawayHistory, loading }) {
   const [tab, setTab] = useState('pending');
@@ -61,7 +62,7 @@ export default function PutawayTabs({ pendingLots, putawayHistory, loading }) {
                       <td className="px-4 py-3 text-right font-bold text-slate-800">{lot.remaining_quantity ?? lot.quantity}</td>
                       <td className="px-4 py-3 text-slate-600">{lot.uom}</td>
                       <td className="px-4 py-3 text-sm text-slate-500">
-                        {lot.created_date ? new Date(lot.created_date).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'}
+                        {formatDateTime(lot.created_date)}
                       </td>
                       <td className="px-4 py-3">
                         <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Ready for putaway</span>
@@ -87,7 +88,7 @@ export default function PutawayTabs({ pendingLots, putawayHistory, loading }) {
                 </div>
                 <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-slate-500">
                   <span>Quantity: <strong className="text-slate-700">{lot.remaining_quantity ?? lot.quantity} {lot.uom}</strong></span>
-                  {lot.created_date && <span>{new Date(lot.created_date).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>}
+                  {lot.created_date && <span>{formatDateTime(lot.created_date)}</span>}
                 </div>
               </div>
             ))}

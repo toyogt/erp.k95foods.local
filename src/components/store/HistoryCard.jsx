@@ -1,5 +1,5 @@
-import { ArrowRight } from 'lucide-react';
-import moment from 'moment';
+import { ArrowRight, Printer, FileText } from 'lucide-react';
+import { formatDateTime } from '@/lib/dateFormatter';
 
 /**
  * Reusable card for history records across Store module.
@@ -15,6 +15,37 @@ import moment from 'moment';
  * @param {string} props.to - destination location (for transfers)
  */
 export default function HistoryCard({ id, title, subtitle, details = [], status, statusColor = 'green', date, from, to }) {
+  function handlePrint() {
+    const printWin = window.open('', '_blank', 'width=600,height=700');
+    printWin.document.write(`
+      <html><head><title>${id}</title>
+      <style>
+        body { font-family: 'Inter', sans-serif; padding: 32px; color: #1e293b; }
+        .header { border-bottom: 2px solid #e2e8f0; padding-bottom: 16px; margin-bottom: 16px; }
+        .header h1 { font-size: 18px; margin: 0 0 4px; }
+        .header p { font-size: 12px; color: #64748b; margin: 2px 0; }
+        .badge { display: inline-block; padding: 2px 10px; border-radius: 99px; font-size: 11px; font-weight: 600; background: #dcfce7; color: #15803d; }
+        .row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
+        .row .label { color: #64748b; } .row .value { font-weight: 600; }
+        .transfer { background: #f8fafc; padding: 10px 16px; border-radius: 8px; margin: 12px 0; font-size: 13px; font-weight: 600; }
+        .transfer .arrow { color: #94a3b8; margin: 0 8px; }
+      </style></head><body>
+      <div class="header">
+        <h1>${title || '—'}</h1>
+        <p>${id}</p>
+        ${subtitle ? `<p>${subtitle}</p>` : ''}
+        <p>Date: ${date ? formatDateTime(date) : '—'}</p>
+        ${status ? `<span class="badge">${status}</span>` : ''}
+      </div>
+      ${from && to ? `<div class="transfer">${from} <span class="arrow">→</span> ${to}</div>` : ''}
+      ${details.map(d => `<div class="row"><span class="label">${d.label}</span><span class="value">${d.value}</span></div>`).join('')}
+      </body></html>
+    `);
+    printWin.document.close();
+    printWin.focus();
+    setTimeout(() => { printWin.print(); }, 400);
+  }
+
   const colorMap = {
     green: 'bg-green-100 text-green-700',
     amber: 'bg-amber-100 text-amber-700',
@@ -39,7 +70,7 @@ export default function HistoryCard({ id, title, subtitle, details = [], status,
           )}
           {date && (
             <span className="text-xs text-slate-400">
-              {moment(date).format('DD/MM/YYYY')}
+              {formatDateTime(date)}
             </span>
           )}
         </div>
@@ -64,6 +95,13 @@ export default function HistoryCard({ id, title, subtitle, details = [], status,
           ))}
         </div>
       )}
+
+      {/* Print button */}
+      <div className="flex gap-2 mt-3 pt-2 border-t border-slate-100">
+        <button onClick={handlePrint} className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-700 transition-colors">
+          <Printer className="w-3.5 h-3.5" /> Print
+        </button>
+      </div>
     </div>
   );
 }

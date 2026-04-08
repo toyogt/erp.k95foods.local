@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { motion } from 'framer-motion';
 import { ArrowRight, CheckCircle2, AlertCircle, ListChecks, ScanLine, Keyboard, Search, MapPin, Package } from 'lucide-react';
+import { formatDateTime } from '@/lib/dateFormatter';
+import Swal from 'sweetalert2';
 import ExportButton from '@/components/store/ExportButton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -203,7 +205,7 @@ export default function SMSTransfer() {
       });
     }
 
-    toast({ title: 'Transfer completed!', description: `${qty} ${resolvedStock.uom} moved from ${fromLoc.location_code} → ${toLoc.location_code}` });
+    Swal.fire({ icon: 'success', title: 'Transfer Completed', text: `${qty} ${resolvedStock.uom} moved from ${fromLoc.location_code} → ${toLoc.location_code}`, timer: 2500, showConfirmButton: false });
     clearDraft();
     setFromLoc(null); setToLoc(null); setResolvedStock(null);
     setSaving(false);
@@ -336,7 +338,7 @@ export default function SMSTransfer() {
                     putaway_date: now, putaway_by: user?.email, putaway_id: transferId,
                   });
                 }
-                toast({ title: 'Transfer completed!', description: `${qty} ${manualResolvedStock.uom} moved from ${fromLocObj?.location_code} → ${toLocObj?.location_code}` });
+                Swal.fire({ icon: 'success', title: 'Transfer Completed', text: `${qty} ${manualResolvedStock.uom} moved from ${fromLocObj?.location_code} → ${toLocObj?.location_code}`, timer: 2500, showConfirmButton: false });
                 setManualFromLocId(''); setManualToLocId(''); setManualLotId(''); setManualResolvedStock(null); setManualQuantity(''); setManualReason('');
                 setSaving(false);
                 base44.entities.StoreTransfer.list('-created_date', 100).then(setTransferHistory);

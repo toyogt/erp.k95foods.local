@@ -3,6 +3,7 @@ import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
 import { Plus, Upload, Package, TrendingUp, Clock, AlertTriangle, Search, Inbox, Download, ChevronRight } from 'lucide-react';
+import { formatDate } from '@/lib/dateFormatter';
 
 function exportOrdersCSV(rows) {
   const headers = ['SO Number','Customer','Platform','PO Number','PO Date','PO Expiry','Total Amount','Status','Source'];
@@ -283,7 +284,7 @@ export default function SalesOrders() {
                         {order.po_expiry_date ? (
                           <span className={isExpired ? 'text-red-600 font-medium' : 'text-slate-600'}>
                             {isExpired && <AlertTriangle className="w-3 h-3 inline mr-1" />}
-                            {order.po_expiry_date}
+                            {formatDate(order.po_expiry_date)}
                           </span>
                         ) : '—'}
                       </td>

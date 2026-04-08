@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { motion } from 'framer-motion';
-import { MapPin, Package, ArrowLeftRight, AlertTriangle, Layers, Search, Download } from 'lucide-react';
+import { MapPin, Package, ArrowLeftRight, AlertTriangle, Layers, Search, Download, Calendar, Factory, Clock } from 'lucide-react';
+import { formatDateTime, formatDate } from '@/lib/dateFormatter';
 import { Input } from '@/components/ui/input';
 import { SkeletonTable } from '@/components/store/StoreSkeleton';
 
@@ -33,6 +34,9 @@ const TABS = [
   { key: 'item', label: 'Item Level Report', icon: Layers },
   { key: 'location', label: 'Stock by Location', icon: MapPin },
   { key: 'lot', label: 'Stock by Lot', icon: Package },
+  { key: 'batch', label: 'Batch Report', icon: Factory },
+  { key: 'expiry', label: 'Expiry Report', icon: Calendar },
+  { key: 'mfg', label: 'Manufacture Date Report', icon: Clock },
   { key: 'movements', label: 'Transfer History', icon: ArrowLeftRight },
   { key: 'reorder', label: 'Reorder Alerts', icon: AlertTriangle },
 ];
@@ -181,8 +185,8 @@ export default function SMSReports() {
                             </span>
                           </td>
                           <td className="px-4 py-2.5 text-right font-bold text-blue-700">{(e.quantity || 0).toFixed(2)} <span className="text-xs font-normal text-slate-400">{e.uom}</span></td>
-                          <td className="px-4 py-2.5 text-xs text-slate-500">{e.expiry_date || '—'}</td>
-                          <td className="px-4 py-2.5 text-xs text-slate-400">{e.putaway_date ? new Date(e.putaway_date).toLocaleDateString('en-IN') : '—'}</td>
+                          <td className="px-4 py-2.5 text-xs text-slate-500">{formatDate(e.expiry_date)}</td>
+                          <td className="px-4 py-2.5 text-xs text-slate-400">{formatDateTime(e.putaway_date)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -239,8 +243,8 @@ export default function SMSReports() {
                     <td className="px-4 py-3 text-slate-600">{lot.supplier_name || '—'}</td>
                     <td className="px-4 py-3 text-right font-medium text-slate-800">{lot.quantity} {lot.uom}</td>
                     <td className="px-4 py-3 text-right font-bold text-slate-800">{lot.remaining_quantity ?? lot.quantity} {lot.uom}</td>
-                    <td className="px-4 py-3 text-slate-600 text-xs">{lot.mfg_date || '—'}</td>
-                    <td className="px-4 py-3 text-slate-600 text-xs">{lot.expiry_date || '—'}</td>
+                    <td className="px-4 py-3 text-slate-600 text-xs">{formatDate(lot.mfg_date)}</td>
+                    <td className="px-4 py-3 text-slate-600 text-xs">{formatDate(lot.expiry_date)}</td>
                     <td className="px-4 py-3"><WeekBadge weeks={lot.weeks_elapsed} /></td>
                     <td className="px-4 py-3"><span className="text-xs capitalize">{lot.status}</span></td>
                   </tr>
@@ -251,9 +255,81 @@ export default function SMSReports() {
         </div>
       )}
 
+      {/* Batch Report */}
+      {tab === 'batch' && (() => {
+        const batchMap = {};
+        lots.forEach(lot => {
+          const bk = lot.batch_number || 'NO BATCH';
+          if (!batchMap[bk]) batchMap[bk] = [];
+          batchMap[bk].push(lot);
+        });
+        const batchEntries = Object.entries(batchMap).sort((a, b) => b[1].length - a[1].length);
+        return (
+          <div className="space-y-3">
+            {batchEntries.length === 0 ? (
+              <div className="bg-white rounded-xl border border-slate-200 p-8 text-center text-slate-400">No batch data</div>
+            ) : batchEntries.map(([batch, batchLots]) => (
+              <div key={batch} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                <div className="px-4 py-3 bg-slate-50 border-b flex items-center justify-between">
+                  <div><p className="text-sm font-bold text-slate-800 font-mono">{batch}</p><p className="text-xs text-slate-500">{batchLots.length} lot(s)</p></div>
+                  <p className="text-sm font-bold text-blue-700">{batchLots.reduce((s, l) => s + (l.remaining_quantity ?? l.quantity ?? 0), 0).toFixed(1)} total</p>
+                </div>
+                <table className="w-full text-sm"><thead><tr className="text-xs text-slate-500 border-b"><th className="text-left px-4 py-2">Lot</th><th className="text-left px-4 py-2">Item</th><th className="text-right px-4 py-2">Quantity</th><th className="text-left px-4 py-2">Manufacture</th><th className="text-left px-4 py-2">Expiry</th><th className="text-left px-4 py-2">Status</th></tr></thead>
+                <tbody className="divide-y divide-slate-50">{batchLots.map(l => (
+                  <tr key={l.id} className="hover:bg-slate-50"><td className="px-4 py-2 font-mono text-xs font-bold">{l.lot_id}</td><td className="px-4 py-2 text-slate-700">{l.item_name}</td><td className="px-4 py-2 text-right font-bold">{l.remaining_quantity ?? l.quantity} {l.uom}</td><td className="px-4 py-2 text-xs">{formatDate(l.mfg_date)}</td><td className="px-4 py-2 text-xs">{formatDate(l.expiry_date)}</td><td className="px-4 py-2"><span className="text-xs capitalize">{l.status}</span></td></tr>
+                ))}</tbody></table>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
+
+      {/* Expiry Date Report */}
+      {tab === 'expiry' && (() => {
+        const lotsWithExpiry = lots.filter(l => l.expiry_date && !['consumed'].includes(l.status)).sort((a, b) => (a.expiry_date || '').localeCompare(b.expiry_date || ''));
+        const now = new Date();
+        return (
+          <div className="space-y-2">
+            {lotsWithExpiry.length === 0 ? (
+              <div className="bg-white rounded-xl border border-slate-200 p-8 text-center text-slate-400">No lots with expiry dates</div>
+            ) : (
+              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                <table className="w-full text-sm"><thead><tr className="bg-slate-100 text-xs text-slate-600"><th className="text-left px-4 py-3">Lot</th><th className="text-left px-4 py-3">Item</th><th className="text-left px-4 py-3">Expiry Date</th><th className="text-left px-4 py-3">Days Until Expiry</th><th className="text-right px-4 py-3">Remaining</th><th className="text-left px-4 py-3">Status</th></tr></thead>
+                <tbody className="divide-y divide-slate-50">{lotsWithExpiry.map(l => {
+                  const expDays = Math.ceil((new Date(l.expiry_date) - now) / 86400000);
+                  const urgency = expDays < 0 ? 'bg-red-100 text-red-700' : expDays <= 7 ? 'bg-red-50 text-red-600' : expDays <= 30 ? 'bg-orange-50 text-orange-600' : 'text-slate-600';
+                  return (<tr key={l.id} className="hover:bg-slate-50"><td className="px-4 py-2.5 font-mono text-xs font-bold">{l.lot_id}</td><td className="px-4 py-2.5 text-slate-700">{l.item_name}</td><td className="px-4 py-2.5 text-xs font-medium">{formatDate(l.expiry_date)}</td><td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${urgency}`}>{expDays < 0 ? `Expired ${Math.abs(expDays)}d ago` : `${expDays} days`}</span></td><td className="px-4 py-2.5 text-right font-bold">{l.remaining_quantity ?? l.quantity} {l.uom}</td><td className="px-4 py-2.5 text-xs capitalize">{l.status}</td></tr>);
+                })}</tbody></table>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* Manufacture Date Report */}
+      {tab === 'mfg' && (() => {
+        const lotsWithMfg = lots.filter(l => l.mfg_date && !['consumed'].includes(l.status)).sort((a, b) => (b.mfg_date || '').localeCompare(a.mfg_date || ''));
+        return (
+          <div className="space-y-2">
+            {lotsWithMfg.length === 0 ? (
+              <div className="bg-white rounded-xl border border-slate-200 p-8 text-center text-slate-400">No lots with manufacture dates</div>
+            ) : (
+              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                <table className="w-full text-sm"><thead><tr className="bg-slate-100 text-xs text-slate-600"><th className="text-left px-4 py-3">Lot</th><th className="text-left px-4 py-3">Item</th><th className="text-left px-4 py-3">Manufacture Date</th><th className="text-left px-4 py-3">Stock Age</th><th className="text-right px-4 py-3">Remaining</th><th className="text-left px-4 py-3">Batch</th></tr></thead>
+                <tbody className="divide-y divide-slate-50">{lotsWithMfg.map(l => {
+                  const ageDays = Math.floor((new Date() - new Date(l.mfg_date)) / 86400000);
+                  const ageColor = ageDays > 30 ? 'bg-red-100 text-red-700' : ageDays > 14 ? 'bg-orange-100 text-orange-700' : ageDays > 7 ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700';
+                  return (<tr key={l.id} className="hover:bg-slate-50"><td className="px-4 py-2.5 font-mono text-xs font-bold">{l.lot_id}</td><td className="px-4 py-2.5 text-slate-700">{l.item_name}</td><td className="px-4 py-2.5 text-xs font-medium">{formatDate(l.mfg_date)}</td><td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${ageColor}`}>{ageDays} days</span></td><td className="px-4 py-2.5 text-right font-bold">{l.remaining_quantity ?? l.quantity} {l.uom}</td><td className="px-4 py-2.5 text-xs font-mono">{l.batch_number || '—'}</td></tr>);
+                })}</tbody></table>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* Transfer History */}
       {tab === 'movements' && (
-        <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] overflow-hidden">
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead><tr className="bg-slate-100 text-slate-700 text-xs"><th className="text-left px-4 py-3">Transfer ID</th><th className="text-left px-4 py-3">Item / Lot</th><th className="text-left px-4 py-3">From</th><th className="text-left px-4 py-3">To</th><th className="text-right px-4 py-3">Quantity</th><th className="text-left px-4 py-3">Reason</th><th className="text-left px-4 py-3">By / At</th></tr></thead>
@@ -268,7 +344,7 @@ export default function SMSReports() {
                     <td className="px-4 py-3 font-mono text-xs">{t.to_location_code}</td>
                     <td className="px-4 py-3 text-right font-bold">{t.quantity} {t.uom}</td>
                     <td className="px-4 py-3 text-xs text-slate-500">{t.reason || '—'}</td>
-                    <td className="px-4 py-3 text-xs text-slate-500"><p>{t.transferred_by}</p><p>{t.transferred_at ? new Date(t.transferred_at).toLocaleDateString('en-IN') : ''}</p></td>
+                    <td className="px-4 py-3 text-xs text-slate-500"><p>{t.transferred_by}</p><p>{formatDateTime(t.transferred_at)}</p></td>
                   </tr>
                 ))}
               </tbody>
@@ -283,7 +359,7 @@ export default function SMSReports() {
           {lowStock.length === 0 ? (
             <div className="bg-green-50 border border-green-200 rounded-xl p-8 text-center text-green-600 font-medium">All items are above reorder levels ✓</div>
           ) : lowStock.map(r => (
-            <div key={r.item_code} className="bg-white/50 backdrop-blur-xl border border-red-200/30 rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] p-4">
+            <div key={r.item_code} className="bg-white rounded-xl border border-red-200 p-4">
               <div className="flex items-center justify-between">
                 <div><p className="font-semibold text-slate-800">{r.item_name || r.item_code}</p><p className="text-xs text-slate-500">Code: {r.item_code} · Unit: {r.uom}</p></div>
                 <div className="text-right">

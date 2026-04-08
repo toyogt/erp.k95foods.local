@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { QrCode, ScanLine, Keyboard, CheckCircle2, AlertCircle, Search, MapPin, Package, Plus, Trash2 } from 'lucide-react';
+import Swal from 'sweetalert2';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
@@ -186,7 +187,7 @@ export default function PutawayPanel({ lots: externalLots, locations: externalLo
         for (const item of toProcess) {
           await processEntry(item.lot, item.location, item.quantity, item.notes, user, now);
         }
-        toast({ title: `${toProcess.length} putaway(s) confirmed!`, description: `Items successfully stored` });
+        Swal.fire({ icon: 'success', title: 'Putaway Confirmed', text: `${toProcess.length} lot(s) successfully stored`, timer: 2500, showConfirmButton: false });
         setEntries([emptyEntry()]);
         setSaving(false);
         if (onSuccess) onSuccess();

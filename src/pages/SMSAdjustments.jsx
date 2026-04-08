@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { motion } from 'framer-motion';
 import { Plus, CheckCircle2, XCircle, X } from 'lucide-react';
+import { formatDateTime } from '@/lib/dateFormatter';
 import ExportButton from '@/components/store/ExportButton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -233,7 +234,7 @@ export default function SMSAdjustments() {
                   <td className="px-4 py-3 text-right font-bold text-slate-800">{a.quantity_after}</td>
                   <td className="px-4 py-3 text-xs text-slate-500 max-w-xs truncate">{a.reason}</td>
                   <td className="px-4 py-3 text-sm text-slate-500">
-                    {a.created_date ? new Date(a.created_date).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'}
+                    {formatDateTime(a.created_date)}
                   </td>
                   <td className="px-4 py-3">
                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${a.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : a.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
@@ -287,7 +288,7 @@ export default function SMSAdjustments() {
               <span>After: <strong className="text-slate-700">{a.quantity_after}</strong></span>
             </div>
             {a.reason && <p className="text-xs text-slate-500 mt-1.5 line-clamp-2">{a.reason}</p>}
-            {a.created_date && <p className="text-xs text-slate-400 mt-1">{new Date(a.created_date).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })}</p>}
+            {a.created_date && <p className="text-xs text-slate-400 mt-1">{formatDateTime(a.created_date)}</p>}
             {isAdmin && a.status === 'pending' && (
               <div className="flex gap-2 mt-3">
                 <button onClick={() => approve(a, true)} className="flex-1 h-11 flex items-center justify-center gap-2 rounded-lg bg-green-50 border border-green-200 text-sm font-medium text-green-700"><CheckCircle2 className="w-4 h-4" /> Approve</button>

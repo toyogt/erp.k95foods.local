@@ -18,7 +18,10 @@ function ItemSearchSelect({ value, storeItems, onChangeName, onSelectItem }) {
   }, []);
 
   const filtered = query.trim()
-    ? storeItems.filter(s => s.item_name?.toLowerCase().includes(query.toLowerCase()))
+    ? storeItems.filter(s =>
+        s.item_name?.toLowerCase().includes(query.toLowerCase()) ||
+        s.item_code?.toLowerCase().includes(query.toLowerCase())
+      )
     : storeItems;
 
   return (
@@ -34,7 +37,7 @@ function ItemSearchSelect({ value, storeItems, onChangeName, onSelectItem }) {
         />
       </div>
       {open && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-60 overflow-y-auto">
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-72 overflow-y-auto">
           {filtered.length === 0 ? (
             <div className="px-4 py-3 text-sm text-slate-400">
               {query.trim()
@@ -232,23 +235,49 @@ export default function GRNItemCard({ index, item, storeItems, canRemove, onUpda
           )}
         </div>}
 
-        {(rules?.expiry_required || rules?.mfg_date_required) && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {rules?.expiry_required && (
+        {/* Always show Manufacture and Expiry date fields */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <Label className="text-xs font-medium text-slate-700">
+              Manufacture Date {rules?.mfg_date_required && <span className="text-red-500">*</span>}
+            </Label>
+            <input type="date" className="h-11 text-sm mt-1 w-full border border-slate-200 rounded-xl px-3" value={item.mfg_date || ''}
+              onChange={e => onUpdate('mfg_date', e.target.value)} />
+            {rules?.mfg_date_required && !item.mfg_date && <p className="text-xs text-red-500 mt-0.5">Manufacture date is mandatory</p>}
+          </div>
+          <div>
+            <Label className="text-xs font-medium text-slate-700">
+              Expiry Date {rules?.expiry_required && <span className="text-red-500">*</span>}
+            </Label>
+            <input type="date" className="h-11 text-sm mt-1 w-full border border-slate-200 rounded-xl px-3" value={item.expiry_date || ''}
+              onChange={e => onUpdate('expiry_date', e.target.value)} />
+            {rules?.expiry_required && !item.expiry_date && <p className="text-xs text-red-500 mt-0.5">Expiry date is mandatory</p>}
+          </div>
+        </div>
+
+        {/* Additional damaged handling when already short */}
+        {item.qty_mismatch === 'yes' && item.mismatch_type === 'decreased' && (
+          <div className="bg-amber-50 rounded-lg p-3 border border-amber-200">
+            <Label className="text-xs font-medium text-amber-700">Additional Damage on Received Quantity?</Label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
               <div>
-                <Label className="text-xs font-medium text-slate-700">Expiry Date <span className="text-red-500">*</span></Label>
-                <input type="date" className="h-11 text-sm mt-1 w-full border border-slate-200 rounded-xl px-3" value={item.expiry_date}
-                  onChange={e => onUpdate('expiry_date', e.target.value)} />
-                {!item.expiry_date && <p className="text-xs text-red-500 mt-0.5">Expiry date is mandatory</p>}
+                <NumericInput className="h-11 text-sm" value={item.damaged_qty || ''}
+                  onChange={e => onUpdate('damaged_qty', e.target.value)}
+                  placeholder="Damaged quantity (from received)" />
               </div>
-            )}
-            {rules?.mfg_date_required && (
-              <div>
-                <Label className="text-xs font-medium text-slate-700">Manufacture Date <span className="text-red-500">*</span></Label>
-                <input type="date" className="h-11 text-sm mt-1 w-full border border-slate-200 rounded-xl px-3" value={item.mfg_date}
-                  onChange={e => onUpdate('mfg_date', e.target.value)} />
-                {!item.mfg_date && <p className="text-xs text-red-500 mt-0.5">Manufacture date is mandatory</p>}
-              </div>
+              {item.damaged_qty && parseFloat(item.damaged_qty) > 0 && (
+                <div>
+                  <input className="h-11 text-sm w-full border border-slate-200 rounded-xl px-3"
+                    value={item.damage_reason || ''}
+                    onChange={e => onUpdate('damage_reason', e.target.value)}
+                    placeholder="Reason for damage" />
+                </div>
+              )}
+            </div>
+            {item.damaged_qty && parseFloat(item.damaged_qty) > 0 && (
+              <p className="text-xs text-amber-700 mt-1">
+                Usable quantity: <strong>{Math.max(0, (parseFloat(item.quantity) || 0) - (parseFloat(item.damaged_qty) || 0))} {item.uom}</strong>
+              </p>
             )}
           </div>
         )}

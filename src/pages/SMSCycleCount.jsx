@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { motion } from 'framer-motion';
 import { Plus, CheckCircle2, X, ClipboardCheck } from 'lucide-react';
+import { formatDateTime } from '@/lib/dateFormatter';
 import { SkeletonList } from '@/components/store/StoreSkeleton';
 import ExportButton from '@/components/store/ExportButton';
 import DiscrepancyModal from '@/components/store/DiscrepancyModal';
@@ -235,7 +236,7 @@ export default function SMSCycleCount() {
                     <p className="text-sm font-medium text-slate-800">{s.name}</p>
                     <p className="text-xs text-slate-500">
                       {counted}/{total} counted · {discrepancies} discrepancies
-                      {s.items[0]?.created_date && ` · ${new Date(s.items[0].created_date).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })}`}
+                      {s.items[0]?.created_date && ` · ${formatDateTime(s.items[0].created_date)}`}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">

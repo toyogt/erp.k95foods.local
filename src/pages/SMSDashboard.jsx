@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import StorePageAccessManager from '@/components/store/StorePageAccessManager';
 import { Building2, Package, AlertTriangle, Clock, ArrowRight, TrendingDown, CalendarClock, Users } from 'lucide-react';
+import { formatDate } from '@/lib/dateFormatter';
 import { SkeletonCards, SkeletonList } from '@/components/store/StoreSkeleton';
 import { Button } from '@/components/ui/button';
 
@@ -187,7 +188,7 @@ export default function SMSDashboard() {
           ) : expiryAlerts.slice(0, 5).map(l => (
             <div key={l.id} className="flex items-center justify-between bg-orange-50 rounded-lg px-3 py-2 mb-2">
               <div><p className="text-sm font-medium text-slate-800">{l.item_name}</p><p className="text-xs text-slate-500">{l.lot_id}</p></div>
-              <div className="text-right"><p className="text-sm font-bold text-orange-600">{l.expiry_date}</p><WeekBadge weeks={l.weeks_elapsed || 1} /></div>
+              <div className="text-right"><p className="text-sm font-bold text-orange-600">{formatDate(l.expiry_date)}</p><WeekBadge weeks={l.weeks_elapsed || 1} /></div>
             </div>
           ))}
         </div>

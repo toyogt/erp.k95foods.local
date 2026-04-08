@@ -97,35 +97,58 @@ function LocationModal({ loc, onSave, onClose }) {
 
 function QRModal({ location, onClose }) {
   function handlePrint() {
-    const printWin = window.open('', '_blank', 'width=400,height=500');
+    const printWin = window.open('', '_blank', 'width=500,height=700');
     const qrVal = location.qr_code || location.location_code;
     printWin.document.write(`
       <html><head><title>Location QR - ${location.location_code}</title>
-      <style>body{font-family:sans-serif;text-align:center;padding:24px} img{width:180px;height:180px} p{margin:4px 0} .mono{font-family:monospace;font-size:13px;font-weight:bold}</style>
+      <style>
+        @page { size: 3in 4in; margin: 0; }
+        body { font-family: 'Inter', sans-serif; text-align: center; padding: 12px; margin: 0; width: 3in; height: 4in; box-sizing: border-box; }
+        .qr-container { display: flex; justify-content: center; margin: 8px 0; }
+        .qr-container img { width: 2in; height: 2in; }
+        .code { font-family: monospace; font-size: 14px; font-weight: bold; margin: 6px 0; letter-spacing: 0.5px; }
+        .label { font-size: 11px; font-weight: 600; margin: 4px 0; color: #333; }
+        .detail { font-size: 9px; color: #666; margin: 2px 0; }
+        .divider { border-top: 1px dashed #ccc; margin: 6px 0; }
+      </style>
       </head><body>
-      <p style="font-size:14px;font-weight:600">Location QR Code</p>
-      <p style="font-size:12px;color:#666">${location.display_name || location.location_code}</p>
-      <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrVal)}" />
-      <p class="mono">${location.location_code}</p>
-      <p style="font-size:11px;color:#999">${location.location_type || 'storage'}</p>
+        <p class="label">${location.display_name || location.location_code}</p>
+        <div class="qr-container">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrVal)}" />
+        </div>
+        <p class="code">${location.location_code}</p>
+        <div class="divider"></div>
+        <p class="detail">Type: ${location.location_type || 'storage'}</p>
+        ${location.warehouse ? `<p class="detail">Warehouse: ${location.warehouse}</p>` : ''}
+        ${location.capacity_limit ? `<p class="detail">Capacity: ${location.capacity_limit} units</p>` : ''}
       </body></html>
     `);
     printWin.document.close();
     printWin.focus();
-    setTimeout(() => { printWin.print(); printWin.close(); }, 500);
+    setTimeout(() => { printWin.print(); }, 400);
   }
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-white/60 p-6 w-full max-w-xs text-center">
-        <p className="text-sm font-semibold text-slate-700 mb-1">Location QR Code</p>
-        <p className="text-xs text-slate-500 mb-4">{location.display_name || location.location_code}</p>
-        <div className="flex justify-center mb-4 p-4 bg-white border border-slate-200 rounded-xl">
-          <QRCode value={location.qr_code || location.location_code} size={160} />
+      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 p-6 w-full max-w-sm text-center">
+        <p className="text-base font-bold text-slate-900 mb-1">Location QR Code</p>
+        <p className="text-sm text-slate-600 mb-1">{location.display_name || location.location_code}</p>
+        <p className="text-xs text-slate-400 mb-1">{location.location_type || 'storage'}</p>
+
+        <div className="mx-auto my-4 border-2 border-dashed border-slate-300 rounded-xl p-4" style={{ width: '3in', maxWidth: '100%' }}>
+          <p className="text-xs text-slate-400 mb-2">3" × 4" Print Preview</p>
+          <div className="flex justify-center mb-3">
+            <QRCode value={location.qr_code || location.location_code} size={180} />
+          </div>
+          <p className="text-sm font-mono font-bold text-slate-800">{location.location_code}</p>
+          <div className="text-xs text-slate-500 mt-1 space-y-0.5">
+            {location.warehouse && <p>Warehouse: {location.warehouse}</p>}
+            {location.capacity_limit && <p>Capacity: {location.capacity_limit} units</p>}
+          </div>
         </div>
-        <p className="text-xs font-mono text-slate-600 mb-4">{location.location_code}</p>
+
         <div className="flex gap-2">
-          <Button variant="outline" className="flex-1 h-10" onClick={onClose}>Close</Button>
-          <Button className="flex-1 h-10 gap-2" onClick={handlePrint}><Printer className="w-4 h-4" /> Print QR</Button>
+          <Button variant="outline" className="flex-1 h-11" onClick={onClose}>Close</Button>
+          <Button className="flex-1 h-11 gap-2" onClick={handlePrint}><Printer className="w-4 h-4" /> Print QR (3×4")</Button>
         </div>
       </div>
     </div>

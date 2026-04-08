@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import { Link } from 'react-router-dom';
+import { formatDateTime, formatDate } from '@/lib/dateFormatter';
 import {
   ArrowLeft, ArrowRight, AlertTriangle, Send, Zap, FileCheck,
   ChevronDown, ChevronUp, ExternalLink, Trash2
@@ -185,13 +186,7 @@ export default function SalesOrderDetail() {
   const taxAmt = order.tax_amount || items.reduce((s, i) => s + (i.igst_amount || i.cgst_amount || 0), 0);
   const grandTotal = order.total_amount || (taxableAmt + taxAmt);
 
-  // Format date DD/MM/YYYY
-  const fmt = (d) => {
-    if (!d) return '—';
-    const parts = d.split('-');
-    if (parts.length === 3 && parts[0].length === 4) return `${parts[2]}/${parts[1]}/${parts[0]}`;
-    return d;
-  };
+  const fmt = formatDate;
 
   return (
     <div className="min-h-screen bg-slate-50">

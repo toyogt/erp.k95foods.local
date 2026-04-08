@@ -12,7 +12,8 @@ import GRNItemCard from '@/components/store/GRNItemCard';
 import GRNPrintTemplate from '@/components/store/GRNPrintTemplate';
 import GRNSupplierSelect from '@/components/store/GRNSupplierSelect';
 import { showErrorAlert, showWarningAlert, showValidationErrors } from '@/lib/toastHelpers';
-import moment from 'moment';
+import { formatDateTime, formatDate } from '@/lib/dateFormatter';
+import Swal from 'sweetalert2';
 import useDraftSave from '@/hooks/useDraftSave';
 import NumericInput from '@/components/ui/NumericInput';
 import { useToast } from "@/components/ui/use-toast";
@@ -53,7 +54,7 @@ function GRNTable({ grns, title, allGateEntries, onViewInvoice }) {
                   <td className="px-4 py-3 text-slate-600">{g.gate_id || '—'}</td>
                   <td className="px-4 py-3 text-slate-600">{g.supplier_name || '—'}</td>
                   <td className="px-4 py-3 font-mono text-xs text-slate-600">{g.invoice_number || '—'}</td>
-                  <td className="px-4 py-3 text-xs text-slate-500">{g.invoice_date ? moment(g.invoice_date).format('DD/MM/YYYY') : '—'}</td>
+                  <td className="px-4 py-3 text-xs text-slate-500">{formatDate(g.invoice_date)}</td>
                   <td className="px-4 py-3">
                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                       g.status === 'RECEIVED' ? 'bg-green-100 text-green-700' :
@@ -63,7 +64,7 @@ function GRNTable({ grns, title, allGateEntries, onViewInvoice }) {
                   </td>
                   <td className="px-4 py-3 text-slate-600">{g.received_by || '—'}</td>
                   <td className="px-4 py-3 text-xs text-slate-500">
-                    {g.received_at ? moment(g.received_at).format('DD/MM/YYYY') : g.created_date ? moment(g.created_date).format('DD/MM/YYYY') : '—'}
+                    {formatDateTime(g.received_at || g.created_date)}
                   </td>
                   <td className="px-4 py-3 text-center">
                     {invoiceUrl ? (
@@ -357,22 +358,37 @@ export default function GRNReceive() {
     }
   }, [activeTab, allGrns]);
 
+  // Show SweetAlert on GRN completion and auto-redirect
+  useEffect(() => {
+    if (done) {
+      Swal.fire({
+        icon: 'success',
+        title: 'Goods Received Note Confirmed',
+        html: `<p class="font-mono font-bold">${done.grn_id}</p><p>Gate Entry: ${done.gate_id} · ${done.item_count} item lot(s) created</p>`,
+        confirmButtonText: 'View Print / Back',
+        confirmButtonColor: '#0f172a',
+      }).then(() => {});
+    }
+  }, [done]);
+
   if (done) {
     return (
-      <div className="max-w-2xl mx-auto pt-12 text-center space-y-4">
-        <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto" />
-        <h2 className="text-2xl font-bold text-slate-900">Goods Received Note Confirmed</h2>
-        <p className="text-slate-500 font-mono text-lg">{done.grn_id}</p>
-        <p className="text-sm text-slate-400">Gate Entry: {done.gate_id} · {done.item_count} item lot(s) created</p>
-        <div className="flex gap-2 justify-center">
-          <GRNPrintTemplate
-            grnId={done.grn_id}
-            gateId={done.gate_id}
-            items={done.items || []}
-            notes={grnNotes}
-            receivedBy={user?.email}
-            receivedAt={new Date().toISOString()}
-          />
+      <div className="max-w-2xl mx-auto pt-8 text-center space-y-4">
+        <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
+          <CheckCircle2 className="w-14 h-14 text-green-500 mx-auto" />
+          <h2 className="text-xl font-bold text-slate-900">Goods Received Note Confirmed</h2>
+          <p className="text-slate-500 font-mono text-lg">{done.grn_id}</p>
+          <p className="text-sm text-slate-400">Gate Entry: {done.gate_id} · {done.item_count} item lot(s) created</p>
+          <div className="flex gap-2 justify-center">
+            <GRNPrintTemplate
+              grnId={done.grn_id}
+              gateId={done.gate_id}
+              items={done.items || []}
+              notes={grnNotes}
+              receivedBy={user?.email}
+              receivedAt={new Date().toISOString()}
+            />
+          </div>
         </div>
         <Button onClick={() => { setSelected(null); setDone(null); }} className="w-full h-12 bg-slate-900">
           Back to Goods Received Note List
@@ -474,7 +490,7 @@ export default function GRNReceive() {
                           <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">{e.status}</span>
                         </td>
                         <td className="px-4 py-3 text-xs text-slate-500">
-                          {e.arrived_at ? new Date(e.arrived_at).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'}
+                          {formatDateTime(e.arrived_at)}
                         </td>
                         <td className="px-4 py-3 text-center" onClick={ev => ev.stopPropagation()}>
                           <div className="flex items-center justify-center gap-2">
@@ -508,7 +524,7 @@ export default function GRNReceive() {
                       </div>
                     </div>
                     <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-500">
-                      <span>{e.arrived_at ? new Date(e.arrived_at).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'}</span>
+                      <span>{formatDateTime(e.arrived_at)}</span>
                       {e.invoice_photo && (
                         <button onClick={ev => { ev.stopPropagation(); setInvoicePreview(e.invoice_photo); }} className="flex items-center gap-1 text-blue-500 font-medium">
                           <Eye className="w-3.5 h-3.5" /> Invoice

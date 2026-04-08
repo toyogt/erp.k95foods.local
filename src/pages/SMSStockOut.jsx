@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { motion } from 'framer-motion';
 import { Plus, Trash2, AlertCircle, PackageOpen, ScanLine, Keyboard, QrCode, CheckCircle2, Search, Clock, ListChecks } from 'lucide-react';
+import { formatDateTime } from '@/lib/dateFormatter';
+import Swal from 'sweetalert2';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
@@ -24,6 +26,8 @@ function ItemSelect({ items, value, onChange }) {
         i.item_code?.toLowerCase().includes(query.toLowerCase())
       )
     : items;
+
+  // Show ALL items in dropdown - no limit
 
   useEffect(() => {
     function handleClick(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
@@ -56,7 +60,7 @@ function ItemSelect({ items, value, onChange }) {
               />
             </div>
           </div>
-          <div className="max-h-48 overflow-y-auto">
+          <div className="max-h-64 overflow-y-auto">
             {filtered.length === 0 ? (
               <p className="text-sm text-slate-400 text-center py-4">No stored items found</p>
             ) : filtered.map(i => (
@@ -379,7 +383,7 @@ export default function SMSStockOut() {
         }
     }
 
-    toast({ title: 'Stock issued successfully!', description: `Issue ${issueId} confirmed` });
+    Swal.fire({ icon: 'success', title: 'Stock Issued', text: `Issue ${issueId} confirmed with ${items.length} item(s)`, timer: 2500, showConfirmButton: false });
     clearDraft();
     setSaving(false);
     loadData();
