@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
-import { X, Upload, Loader2, FileText, CheckCircle2, AlertCircle } from 'lucide-react';
+import { X, Upload, Loader2, FileText, CheckCircle2, AlertCircle, AlertTriangle, Trash2 } from 'lucide-react';
 import { extractTextFromFile } from '@/lib/pdfTextExtractor';
 import { parsePDFText } from '@/lib/salesPDFParser';
 import { enrichParsedData } from '@/lib/salesPDFEnricher';
@@ -16,6 +16,7 @@ import { generateDocNumber } from '@/lib/docNumberHelper';
 function FilePill({ entry, active, onClick }) {
   const statusIcon = entry.status === 'done' ? <CheckCircle2 className="w-3 h-3 text-green-500" />
     : entry.status === 'error' ? <AlertCircle className="w-3 h-3 text-red-400" />
+    : entry.status === 'duplicate' ? <AlertTriangle className="w-3 h-3 text-amber-500" />
     : entry.status === 'parsing' ? <Loader2 className="w-3 h-3 animate-spin text-slate-400" />
     : entry.status === 'confirmed' ? <CheckCircle2 className="w-3 h-3 text-emerald-600" />
     : <FileText className="w-3 h-3 text-slate-400" />;
@@ -105,6 +106,22 @@ export default function PDFBulkUploadModal({ onClose, onCreated }) {
       setStep(id, 'customer', 'done', d._customer_found ? `Matched: ${d.customer_name}` : 'Not found — please verify');
       setStep(id, 'pricelist', 'done', d._price_list_used ? `Using: ${d._price_list_used}` : 'No specific price list');
       setStep(id, 'rates', 'done', `${d._matched_count || 0} of ${d._total_items || 0} items rate-matched`);
+    }
+
+    // Check for duplicate PO — match po_number + platform against existing Sales Orders
+    if (d?.po_number) {
+      const existingOrders = await base44.entities.SalesOrder.filter(
+        { po_number: d.po_number, platform: d.platform || 'direct' }, undefined, 5
+      ).catch(() => []);
+      // Also check within current upload batch (excluding this entry)
+      const batchDup = entries.find(e => e.id !== id && e.data?.po_number === d.po_number && e.data?.platform === (d.platform || 'direct'));
+      if (existingOrders.length > 0 || batchDup) {
+        const dupSource = existingOrders.length > 0
+          ? `Sales Order ${existingOrders[0].so_number || existingOrders[0].id} already exists`
+          : 'Duplicate within this upload batch';
+        setEntries(prev => prev.map(e => e.id === id ? { ...e, status: 'duplicate', data: d, duplicateInfo: dupSource } : e));
+        return;
+      }
     }
 
     setEntries(prev => prev.map(e => e.id === id ? { ...e, status: 'done', data: d } : e));
@@ -248,6 +265,40 @@ export default function PDFBulkUploadModal({ onClose, onCreated }) {
                   <AlertCircle className="w-8 h-8" />
                   <p className="text-sm">Could not extract data from this PDF</p>
                 </div>
+              ) : activeEntry.status === 'duplicate' ? (
+                <div className="flex-1 flex flex-col items-center justify-center h-full gap-4 p-8">
+                  <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center">
+                    <AlertTriangle className="w-8 h-8 text-amber-600" />
+                  </div>
+                  <div className="text-center">
+                    <h3 className="text-base font-semibold text-amber-800">Duplicate Purchase Order Detected</h3>
+                    <p className="text-sm text-slate-600 mt-1 max-w-sm">
+                      PO <strong>{activeEntry.data?.po_number}</strong> ({activeEntry.data?.platform}) — {activeEntry.duplicateInfo}
+                    </p>
+                  </div>
+                  <div className="flex gap-3">
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="h-9 text-sm gap-1.5"
+                      onClick={() => {
+                        setEntries(prev => prev.filter(e => e.id !== activeEntry.id));
+                        const next = entries.find(e => e.id !== activeEntry.id && (e.status === 'done' || e.status === 'duplicate'));
+                        setActiveId(next?.id || null);
+                      }}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" /> Remove This File
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-9 text-sm"
+                      onClick={() => setEntries(prev => prev.map(e => e.id === activeEntry.id ? { ...e, status: 'done' } : e))}
+                    >
+                      Proceed Anyway
+                    </Button>
+                  </div>
+                </div>
               ) : activeEntry.status === 'confirmed' ? (
                 <div className="flex-1 flex flex-col items-center justify-center h-full text-emerald-500 gap-3">
                   <CheckCircle2 className="w-10 h-10" />
@@ -273,7 +324,10 @@ export default function PDFBulkUploadModal({ onClose, onCreated }) {
           accept=".pdf"
           multiple
           className="hidden"
-          onChange={e => { if (e.target.files) handleFiles(e.target.files); }}
+          onChange={e => {
+            if (e.target.files?.length) handleFiles(e.target.files);
+            e.target.value = '';
+          }}
         />
       </div>
     </div>
