@@ -4,7 +4,6 @@ const RULES = [
   { key: 'batch_required', label: 'Batch Number Required' },
   { key: 'mfg_date_required', label: 'Manufacture Date Required' },
   { key: 'expiry_required', label: 'Expiry Date Required' },
-  { key: 'qc_required', label: 'Quality Control Required' },
 ];
 
 function RuleCheckbox({ checked, onChange }) {
@@ -35,7 +34,6 @@ export default function ImportRulesTable({ items, rulesMap, onToggleRule, onChan
             {RULES.map(r => (
               <th key={r.key} className="px-3 py-2.5 text-center font-semibold whitespace-nowrap">{r.label}</th>
             ))}
-            <th className="px-3 py-2.5 text-center font-semibold whitespace-nowrap">Min Shelf Life (Days)</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100">
@@ -57,16 +55,6 @@ export default function ImportRulesTable({ items, rulesMap, onToggleRule, onChan
                     </div>
                   </td>
                 ))}
-                <td className="px-3 py-2.5 text-center">
-                  <input
-                    type="number"
-                    min="0"
-                    className="w-20 h-8 border border-slate-200 rounded-md text-center text-sm mx-auto block"
-                    placeholder="0"
-                    value={rules.min_shelf_life_days || ''}
-                    onChange={e => onChangeShelfLife(idx, e.target.value)}
-                  />
-                </td>
               </tr>
             );
           })}
