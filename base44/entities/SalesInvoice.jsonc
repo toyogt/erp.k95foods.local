@@ -1,0 +1,280 @@
+{
+  "name": "SalesInvoice",
+  "type": "object",
+  "properties": {
+    "sales_order_id": {
+      "type": "string",
+      "title": "Sales Order ID"
+    },
+    "so_number": {
+      "type": "string",
+      "title": "Sales Order Number"
+    },
+    "delivery_note_id": {
+      "type": "string",
+      "title": "Delivery Note ID"
+    },
+    "invoice_number": {
+      "type": "string",
+      "title": "Invoice Number"
+    },
+    "invoice_date": {
+      "type": "string",
+      "title": "Invoice Date"
+    },
+    "customer_name": {
+      "type": "string",
+      "title": "Customer Name"
+    },
+    "customer_gstin": {
+      "type": "string",
+      "title": "Customer GSTIN"
+    },
+    "billing_address": {
+      "type": "string",
+      "title": "Billing Address"
+    },
+    "shipping_address": {
+      "type": "string",
+      "title": "Shipping Address"
+    },
+    "items": {
+      "type": "array",
+      "title": "Invoice Items",
+      "items": {
+        "type": "object",
+        "properties": {
+          "item_name": {
+            "type": "string"
+          },
+          "hsn_code": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "price": {
+            "type": "number"
+          },
+          "taxable_amount": {
+            "type": "number"
+          },
+          "cgst_rate": {
+            "type": "number"
+          },
+          "sgst_rate": {
+            "type": "number"
+          },
+          "igst_rate": {
+            "type": "number"
+          },
+          "cgst_amount": {
+            "type": "number"
+          },
+          "sgst_amount": {
+            "type": "number"
+          },
+          "igst_amount": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "total_taxable_value": {
+      "type": "number",
+      "title": "Total Taxable Value"
+    },
+    "total_tax": {
+      "type": "number",
+      "title": "Total Tax"
+    },
+    "total_invoice_value": {
+      "type": "number",
+      "title": "Total Invoice Value"
+    },
+    "taxable_amount": {
+      "type": "number",
+      "title": "Taxable Amount (Legacy)"
+    },
+    "tax_amount": {
+      "type": "number",
+      "title": "Tax Amount (Legacy)"
+    },
+    "total_amount": {
+      "type": "number",
+      "title": "Total Amount (Legacy)"
+    },
+    "payment_terms": {
+      "type": "string",
+      "title": "Payment Terms"
+    },
+    "due_date": {
+      "type": "string",
+      "title": "Due Date"
+    },
+    "transporter_name": {
+      "type": "string",
+      "title": "Transporter Name"
+    },
+    "transporter_id": {
+      "type": "string",
+      "title": "Transporter GSTIN"
+    },
+    "vehicle_no": {
+      "type": "string",
+      "title": "Vehicle Number"
+    },
+    "distance": {
+      "type": "number",
+      "title": "Distance (km)"
+    },
+    "mode_of_transport": {
+      "type": "string",
+      "enum": [
+        "1",
+        "2",
+        "3",
+        "4"
+      ],
+      "title": "Mode of Transport",
+      "description": "1=Road, 2=Rail, 3=Air, 4=Ship"
+    },
+    "workflow_state": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "waiting_for_e_invoice",
+        "waiting_for_dispatch",
+        "waiting_for_bilty",
+        "wait_to_deliver",
+        "delivered",
+        "return_pending_approval",
+        "return_approved",
+        "return_completed",
+        "cancelled"
+      ],
+      "title": "Workflow State"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "sent",
+        "partially_paid",
+        "paid",
+        "overdue",
+        "cancelled"
+      ],
+      "title": "Status"
+    },
+    "einvoice_status": {
+      "type": "string",
+      "enum": [
+        "not_generated",
+        "generated",
+        "cancelled"
+      ],
+      "title": "E-Invoice Status",
+      "default": "not_generated"
+    },
+    "irn": {
+      "type": "string",
+      "title": "IRN (E-Invoice)"
+    },
+    "ack_number": {
+      "type": "string",
+      "title": "Acknowledgement Number"
+    },
+    "ack_date": {
+      "type": "string",
+      "title": "Acknowledgement Date"
+    },
+    "ewb_status": {
+      "type": "string",
+      "enum": [
+        "not_generated",
+        "generated",
+        "cancelled",
+        "expired"
+      ],
+      "title": "E-Way Bill Status",
+      "default": "not_generated"
+    },
+    "eway_bill": {
+      "type": "string",
+      "title": "E-Way Bill Number"
+    },
+    "eway_bill_date": {
+      "type": "string",
+      "title": "E-Way Bill Date"
+    },
+    "eway_valid_upto": {
+      "type": "string",
+      "title": "E-Way Bill Valid Until"
+    },
+    "eway_extended_times": {
+      "type": "number",
+      "title": "E-Way Bill Extension Count",
+      "default": 0
+    },
+    "lr_number": {
+      "type": "string",
+      "title": "LR / Bilty Number"
+    },
+    "lr_date": {
+      "type": "string",
+      "title": "LR / Bilty Date"
+    },
+    "pod_date": {
+      "type": "string",
+      "title": "POD Received Date"
+    },
+    "posted_to_tally": {
+      "type": "boolean",
+      "title": "Posted to Tally"
+    },
+    "tally_voucher_no": {
+      "type": "string",
+      "title": "Tally Voucher Number"
+    },
+    "tally_posted_date": {
+      "type": "string",
+      "title": "Tally Posted Date"
+    },
+    "tally_posted_by": {
+      "type": "string",
+      "title": "Tally Posted By"
+    },
+    "credit_note_number": {
+      "type": "string",
+      "title": "Credit Note Number"
+    },
+    "credit_note_amount": {
+      "type": "number",
+      "title": "Credit Note Amount"
+    },
+    "debit_note_number": {
+      "type": "string",
+      "title": "Debit Note Number"
+    },
+    "debit_note_amount": {
+      "type": "number",
+      "title": "Debit Note Amount"
+    },
+    "pdf_url": {
+      "type": "string",
+      "title": "Invoice PDF URL"
+    },
+    "notes": {
+      "type": "string",
+      "title": "Notes"
+    }
+  },
+  "required": [
+    "sales_order_id",
+    "invoice_number"
+  ]
+}

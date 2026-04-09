@@ -1,0 +1,86 @@
+{
+  "name": "EWayVehicleUpdate",
+  "type": "object",
+  "title": "E-Way Bill Vehicle Update",
+  "description": "Append-only log of vehicle updates for E-Way Bills",
+  "properties": {
+    "invoice_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Reference to SalesInvoice record ID"
+    },
+    "eway_bill_no": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "vehicle_no": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "from_place": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "from_state": {
+      "type": "string",
+      "maxLength": 10,
+      "description": "State code (e.g. 06 for Haryana)"
+    },
+    "transport_mode": {
+      "type": "string",
+      "enum": [
+        "1",
+        "2",
+        "3",
+        "4"
+      ],
+      "description": "1=Road, 2=Rail, 3=Air, 4=Ship"
+    },
+    "transport_doc_no": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "transport_doc_date": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "reason_code": {
+      "type": "string",
+      "enum": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5"
+      ],
+      "description": "1=Due to Break Down, 2=Due to Trans-shipment, 3=Others, 4=First Time, 5=Within movement"
+    },
+    "reason_remark": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "api_status": {
+      "type": "string",
+      "enum": [
+        "success",
+        "failed"
+      ]
+    },
+    "response_payload": {
+      "type": "object"
+    },
+    "performed_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "performed_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "invoice_id",
+    "eway_bill_no",
+    "vehicle_no"
+  ]
+}

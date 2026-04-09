@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
 import { Search, FileText, Receipt, ChevronRight } from 'lucide-react';
+import { EInvoiceStatusBadge, EWayBillStatusBadge } from '@/components/sales/compliance/ComplianceStatusBadges';
 import { Input } from '@/components/ui/input';
 import usePagination from '@/hooks/usePagination';
 import TablePagination from '@/components/sales/TablePagination';
@@ -126,7 +127,7 @@ export default function SalesInvoices() {
                   <th className="px-4 py-3 text-left">Date</th>
                   <th className="px-4 py-3 text-right">Total (INR)</th>
                   <th className="px-4 py-3 text-left">Workflow</th>
-                  <th className="px-4 py-3 text-left">Status</th>
+                  <th className="px-4 py-3 text-left">Compliance</th>
                   <th className="px-4 py-3 text-left">Action</th>
                 </tr>
               </thead>
@@ -150,7 +151,10 @@ export default function SalesInvoices() {
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${inv.status === 'paid' ? 'bg-green-100 text-green-700' : inv.status === 'overdue' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600'}`}>{inv.status}</span>
+                      <div className="flex flex-wrap gap-1">
+                        <EInvoiceStatusBadge status={inv.einvoice_status} />
+                        <EWayBillStatusBadge status={inv.ewb_status} />
+                      </div>
                     </td>
                     <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                       <Link to={`/SalesInvoiceDetail?id=${inv.id}`} className="text-blue-600 hover:underline text-xs font-medium">Open →</Link>
@@ -181,6 +185,10 @@ export default function SalesInvoices() {
                   <span className={`px-2 py-0.5 rounded-full font-medium ${WORKFLOW_COLORS[inv.workflow_state] || 'bg-slate-100 text-slate-600'}`}>
                     {(inv.workflow_state || 'draft').replace(/_/g, ' ')}
                   </span>
+                </div>
+                <div className="flex flex-wrap gap-1 mt-1.5">
+                  <EInvoiceStatusBadge status={inv.einvoice_status} />
+                  <EWayBillStatusBadge status={inv.ewb_status} />
                 </div>
               </Link>
             ))}

@@ -1,0 +1,78 @@
+{
+  "name": "EInvoiceLog",
+  "type": "object",
+  "title": "E-Invoice Log",
+  "description": "Audit log for all E-Invoice (IRN) operations",
+  "properties": {
+    "invoice_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Reference to SalesInvoice record ID"
+    },
+    "invoice_number": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "action": {
+      "type": "string",
+      "enum": [
+        "generate_irn",
+        "cancel_irn"
+      ],
+      "description": "Action performed"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "success",
+        "failed"
+      ],
+      "description": "Result of the API call"
+    },
+    "irn": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "Invoice Reference Number from IRP"
+    },
+    "ack_no": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Acknowledgement number"
+    },
+    "ack_date": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Acknowledgement date from IRP"
+    },
+    "cancel_reason": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "request_payload": {
+      "type": "object",
+      "description": "Full request sent to IRP"
+    },
+    "response_payload": {
+      "type": "object",
+      "description": "Full response from IRP"
+    },
+    "error_message": {
+      "type": "string",
+      "maxLength": 2000,
+      "description": "Error details if API failed"
+    },
+    "performed_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "performed_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "invoice_id",
+    "action",
+    "status"
+  ]
+}

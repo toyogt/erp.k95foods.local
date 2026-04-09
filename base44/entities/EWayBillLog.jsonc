@@ -1,0 +1,102 @@
+{
+  "name": "EWayBillLog",
+  "type": "object",
+  "title": "E-Way Bill Log",
+  "description": "Audit log for all E-Way Bill operations",
+  "properties": {
+    "invoice_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Reference to SalesInvoice record ID"
+    },
+    "invoice_number": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "action": {
+      "type": "string",
+      "enum": [
+        "generate_ewb",
+        "cancel_ewb",
+        "update_vehicle",
+        "update_transporter",
+        "extend_validity",
+        "fetch_status"
+      ],
+      "description": "Action performed"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "success",
+        "failed"
+      ],
+      "description": "Result of the API call"
+    },
+    "eway_bill_no": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "E-Way Bill number"
+    },
+    "valid_upto": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Validity expiry date-time"
+    },
+    "ewb_status": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Government status of E-Way Bill"
+    },
+    "transporter_id": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "transporter_name": {
+      "type": "string",
+      "maxLength": 300
+    },
+    "vehicle_no": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "distance": {
+      "type": "number",
+      "description": "Distance in kilometres"
+    },
+    "extended_times": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of times validity has been extended"
+    },
+    "cancel_reason": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "request_payload": {
+      "type": "object",
+      "description": "Full request sent to API"
+    },
+    "response_payload": {
+      "type": "object",
+      "description": "Full response from API"
+    },
+    "error_message": {
+      "type": "string",
+      "maxLength": 2000
+    },
+    "performed_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "performed_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "invoice_id",
+    "action",
+    "status"
+  ]
+}
