@@ -244,7 +244,7 @@ export default function SKUSetup() {
     // Build SKU payload
     const skuPayload = { ...skuForm };
     if (bt) skuPayload.bottles_per_box = bt.bottles_per_box;
-    ['ml_per_bottle','bottles_per_box','mrp','mrp_box','shelf_life_days'].forEach(k => {
+    ['ml_per_bottle','bottles_per_box','mrp','mrp_box','shelf_life_days','gross_weight_kg'].forEach(k => {
       if (skuPayload[k] !== '' && skuPayload[k] !== undefined && !isNaN(skuPayload[k])) skuPayload[k] = Number(skuPayload[k]);
       else if (skuPayload[k] === '') delete skuPayload[k];
     });
@@ -568,6 +568,17 @@ export default function SKUSetup() {
                       </div>
                     </div>
                   )}
+
+                  <Field label="Gross Weight per Box (kg)" info="Total weight of a filled box (used for logistics weight calculation)">
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      value={skuForm.gross_weight_kg || ''}
+                      onChange={e => setSkuForm(f => ({ ...f, gross_weight_kg: e.target.value.replace(/[^0-9.]/g, '') }))}
+                      placeholder="e.g. 12.5"
+                      className="h-12 text-base"
+                    />
+                  </Field>
 
                   {!skuForm.is_trial_pack && (
                     <Field label="Shelf Life *">

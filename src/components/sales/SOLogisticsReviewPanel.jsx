@@ -223,33 +223,32 @@ export default function SOLogisticsReviewPanel({ order, onUpdated }) {
       {/* ── Stock Cross-Check ── */}
       <StockCrossCheckPanel order={order} />
 
-      {/* ── Row 1: Transporter + Expected Transportation Cost — side by side ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* LEFT: Transporter Name */}
-        <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3">
-          <h4 className="text-xs font-semibold text-slate-600 uppercase tracking-wide flex items-center gap-1.5">
-            <Truck className="w-3.5 h-3.5" /> Transporter Name *
-          </h4>
-          {transporters.length > 0 ? (
-            <select className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-              value={form.transporter} onChange={e => setForm(f => ({ ...f, transporter: e.target.value }))}>
-              <option value="">Select transporter...</option>
-              {transporters.map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
-          ) : (
-            <Input className="h-9 text-sm" value={form.transporter}
-              onChange={e => setForm(f => ({ ...f, transporter: e.target.value }))}
-              placeholder="Enter transporter name" />
-          )}
-          {form.transporter && matchedCard && (
-            <p className="text-xs text-green-700">
-              Rate card matched: {matchedCard.weight_from_kg}–{matchedCard.weight_to_kg} kg
-              {matchedCard.name ? ` · ${matchedCard.name}` : ''}
-            </p>
-          )}
-        </div>
+      {/* ── Transporter Name ── */}
+      <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3">
+        <h4 className="text-xs font-semibold text-slate-600 uppercase tracking-wide flex items-center gap-1.5">
+          <Truck className="w-3.5 h-3.5" /> Transporter Name *
+        </h4>
+        {transporters.length > 0 ? (
+          <select className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+            value={form.transporter} onChange={e => setForm(f => ({ ...f, transporter: e.target.value }))}>
+            <option value="">Select transporter...</option>
+            {transporters.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+        ) : (
+          <Input className="h-9 text-sm" value={form.transporter}
+            onChange={e => setForm(f => ({ ...f, transporter: e.target.value }))}
+            placeholder="Enter transporter name" />
+        )}
+        {form.transporter && matchedCard && (
+          <p className="text-xs text-green-700">
+            Rate card matched: {matchedCard.weight_from_kg}–{matchedCard.weight_to_kg} kg
+            {matchedCard.name ? ` · ${matchedCard.name}` : ''}
+          </p>
+        )}
+      </div>
 
-        {/* RIGHT: Expected Transportation Cost */}
+      {/* ── Expected Transportation Cost — shown only after transporter is selected ── */}
+      {form.transporter && (
         <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3">
           <h4 className="text-xs font-semibold text-slate-600 uppercase tracking-wide flex items-center gap-1.5">
             <Scale className="w-3.5 h-3.5" /> Expected Transportation Cost
@@ -265,7 +264,7 @@ export default function SOLogisticsReviewPanel({ order, onUpdated }) {
           />
           <SystemEstimateCard costRecord={costRecord} compact />
         </div>
-      </div>
+      )}
 
       {/* ── Row 2: Packaging Type + Dates ── */}
       <div className="bg-white border border-slate-200 rounded-xl p-4">
