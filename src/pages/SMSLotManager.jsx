@@ -152,12 +152,15 @@ export default function SMSLotManager() {
 
   async function load() {
     setLoading(true);
-    const [lotsData, balances, issueLines, gates, locations] = await Promise.all([
+    // Split into 2 groups to avoid rate limits
+    const [lotsData, balances, locations] = await Promise.all([
       base44.entities.StoreLot.list('-created_date', 500),
       base44.entities.StoreStockBalance.list('-created_date', 1000),
+      base44.entities.StoreLocation.list('-created_date', 500),
+    ]);
+    const [issueLines, gates] = await Promise.all([
       base44.entities.StoreIssueLine.list('-created_date', 2000),
       base44.entities.GateEntry.list('-created_date', 500),
-      base44.entities.StoreLocation.list('-created_date', 500),
     ]);
 
     const locMap = {};
