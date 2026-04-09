@@ -1,29 +1,21 @@
 /**
- * Scheduled Tasks section embedded inside FMS Monitor.
- * Shows tasks assigned to coordinator or admin, with complete action.
+ * Scheduled Tasks rows inside FMS Monitor — unified table format matching process instances.
  */
 import { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { CheckCircle2, Loader2, Clock, AlertTriangle } from 'lucide-react';
+import { CheckCircle2, Loader2, Clock, AlertTriangle, UserCheck } from 'lucide-react';
 import moment from 'moment';
 
-const STATUS_STYLES = {
-  PENDING: 'bg-yellow-100 text-yellow-700',
-  COMPLETED: 'bg-green-100 text-green-700',
-  OVERDUE: 'bg-red-100 text-red-700',
-  SKIPPED: 'bg-slate-100 text-slate-500',
-};
-
 const PRIORITY_STYLES = {
-  HIGH: 'bg-red-100 text-red-700',
-  MEDIUM: 'bg-yellow-100 text-yellow-700',
-  LOW: 'bg-slate-100 text-slate-600',
+  HIGH: 'border-l-red-500',
+  MEDIUM: 'border-l-yellow-400',
+  LOW: 'border-l-green-400',
 };
 
-export default function ScheduledTasksMonitorTab({ instances, groups, user, onRefresh }) {
+export default function ScheduledTasksMonitorTab({ instances, groups, user, onRefresh, search }) {
   const [completing, setCompleting] = useState(null);
   const [completeModal, setCompleteModal] = useState(null);
   const [note, setNote] = useState('');
@@ -39,8 +31,19 @@ export default function ScheduledTasksMonitorTab({ instances, groups, user, onRe
     );
   }
 
-  // Only show pending/overdue
+  // Only pending
   visible = visible.filter(i => i.status === 'PENDING');
+
+  // Apply search filter
+  if (search) {
+    const q = search.toLowerCase();
+    visible = visible.filter(i =>
+      i.task_name?.toLowerCase().includes(q) ||
+      i.assignee_name?.toLowerCase().includes(q) ||
+      i.assignee_email?.toLowerCase().includes(q) ||
+      i.group_name?.toLowerCase().includes(q)
+    );
+  }
 
   // Sort: overdue first
   visible.sort((a, b) => {
@@ -66,66 +69,93 @@ export default function ScheduledTasksMonitorTab({ instances, groups, user, onRe
     onRefresh?.();
   };
 
-  const overdueCount = visible.filter(i => i.due_at && new Date(i.due_at) < new Date()).length;
-
   if (visible.length === 0) return null;
 
+  const getDeadlineBadge = (dueAt) => {
+    if (!dueAt) return <span className="text-slate-300 text-xs">—</span>;
+    const now = moment();
+    const due = moment(dueAt);
+    const diff = due.diff(now);
+    const isOverdue = diff < 0;
+
+    if (isOverdue) {
+      const ago = moment.duration(-diff);
+      const label = ago.asDays() >= 1 ? `${Math.floor(ago.asDays())}d overdue` : `${Math.floor(ago.asHours())}h overdue`;
+      return (
+        <span className="inline-flex items-center gap-1 text-xs font-medium text-red-700 bg-red-50 px-2 py-0.5 rounded-full">
+          <AlertTriangle className="w-3 h-3" /> {label}
+        </span>
+      );
+    }
+    const left = moment.duration(diff);
+    const label = left.asDays() >= 1 ? `${Math.floor(left.asDays())}d left` : `${Math.floor(left.asHours())}h left`;
+    return (
+      <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 px-2 py-0.5 rounded-full">
+        <CheckCircle2 className="w-3 h-3" /> {label}
+      </span>
+    );
+  };
+
+  const rowBorder = (task) => {
+    if (task.due_at && new Date(task.due_at) < new Date()) return 'border-l-4 border-l-red-500';
+    return `border-l-4 ${PRIORITY_STYLES[task.priority] || 'border-l-yellow-400'}`;
+  };
+
+  // Find coordinator for a task's group
+  const getCoordinator = (task) => {
+    const group = groups.find(g => g.group_id === task.group_id);
+    return group ? (group.coordinator_name || group.coordinator_email) : null;
+  };
+
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-          <Clock className="w-4 h-4 text-slate-400" />
-          Scheduled Tasks
-          <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-medium">{visible.length} pending</span>
-          {overdueCount > 0 && (
-            <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-medium">{overdueCount} overdue</span>
-          )}
-        </h3>
-      </div>
+    <>
+      <div className="divide-y divide-slate-100">
+        {visible.map(task => {
+          const canComplete = task.assignee_email === user?.email || isAdmin;
+          const coordinator = getCoordinator(task);
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="divide-y divide-slate-100">
-          {visible.map(task => {
-            const isOverdue = task.due_at && new Date(task.due_at) < new Date();
-            const canComplete = task.assignee_email === user?.email || isAdmin;
-            const dueMoment = task.due_at ? moment(task.due_at) : null;
-
-            return (
-              <div key={task.id} className={`px-4 py-3 ${isOverdue ? 'border-l-4 border-l-red-500' : 'border-l-4 border-l-yellow-400'}`}>
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {task.group_name && (
-                        <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-medium">{task.group_name}</span>
-                      )}
-                      <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${PRIORITY_STYLES[task.priority] || PRIORITY_STYLES.MEDIUM}`}>{task.priority}</span>
-                      {isOverdue && (
-                        <span className="text-xs px-1.5 py-0.5 rounded font-medium bg-red-100 text-red-700">OVERDUE</span>
-                      )}
-                    </div>
-                    <p className="text-sm font-semibold text-slate-900 mt-1">{task.task_name}</p>
-                    <div className="flex items-center gap-3 mt-1 flex-wrap text-xs text-slate-400">
-                      <span>Assigned: <strong className="text-slate-600">{task.assignee_name || task.assignee_email}</strong></span>
-                      {dueMoment && (
-                        <span className={isOverdue ? 'text-red-500 font-medium' : ''}>
-                          {isOverdue ? <AlertTriangle className="w-3 h-3 inline mr-0.5" /> : <Clock className="w-3 h-3 inline mr-0.5" />}
-                          Due: {dueMoment.format('DD/MM/YYYY HH:mm')}
-                          {isOverdue && ` (${dueMoment.fromNow()})`}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  {canComplete && (
-                    <Button size="sm" className="h-11 md:h-9 gap-1.5 bg-green-600 hover:bg-green-700 shrink-0"
-                      onClick={() => { setCompleteModal(task); setNote(''); }}>
-                      <CheckCircle2 className="w-4 h-4" /> Complete
-                    </Button>
-                  )}
+          return (
+            <div
+              key={task.id}
+              className={`grid grid-cols-1 sm:grid-cols-[2fr_1.5fr_1.5fr_1fr_1fr_1fr] gap-2 sm:gap-4 px-4 py-3.5 hover:bg-slate-50 transition-colors ${rowBorder(task)}`}
+            >
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <p className="font-semibold text-slate-800 text-sm">{task.task_name}</p>
+                  <span className="text-xs bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded font-medium">Scheduled</span>
                 </div>
+                <p className="text-xs text-slate-400">{task.group_name || 'Ungrouped'} · {task.priority || 'MEDIUM'}</p>
               </div>
-            );
-          })}
-        </div>
+              <div className="flex items-center">
+                <p className="text-sm text-slate-600">{task.description ? task.description.slice(0, 40) : '—'}</p>
+              </div>
+              <div className="flex items-center">
+                <p className="text-sm text-slate-600">{task.assignee_name || task.assignee_email || '—'}</p>
+              </div>
+              <div className="flex items-center">
+                {coordinator ? (
+                  <span className="inline-flex items-center gap-1 text-xs text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded-full">
+                    <UserCheck className="w-3 h-3" /> {coordinator}
+                  </span>
+                ) : (
+                  <span className="text-xs text-slate-300">—</span>
+                )}
+              </div>
+              <div className="flex items-center">
+                {getDeadlineBadge(task.due_at)}
+              </div>
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-slate-400">{task.due_at ? moment(task.due_at).format('DD/MM/YYYY HH:mm') : '—'}</p>
+                {canComplete && (
+                  <Button size="sm" className="h-8 gap-1 bg-green-600 hover:bg-green-700 text-xs ml-2 shrink-0"
+                    onClick={(e) => { e.stopPropagation(); setCompleteModal(task); setNote(''); }}>
+                    <CheckCircle2 className="w-3 h-3" /> Complete
+                  </Button>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       <Dialog open={!!completeModal} onOpenChange={() => setCompleteModal(null)}>
@@ -154,6 +184,6 @@ export default function ScheduledTasksMonitorTab({ instances, groups, user, onRe
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }

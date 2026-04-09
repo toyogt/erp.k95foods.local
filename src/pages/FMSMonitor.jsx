@@ -226,13 +226,7 @@ export default function FMSMonitor() {
           </Select>
         </div>
 
-        {/* Scheduled Tasks Section (for coordinators) */}
-        <ScheduledTasksMonitorTab
-          instances={scheduledTasks}
-          groups={taskGroups}
-          user={user}
-          onRefresh={refetchTasks}
-        />
+        {/* Scheduled Tasks + Process Instances — unified table */}
 
         {/* Process Instances Table */}
         {loading ? (
@@ -256,6 +250,15 @@ export default function FMSMonitor() {
               <span>Started</span>
             </div>
             <div className="divide-y divide-slate-100">
+              {/* Scheduled Tasks — same row format */}
+              <ScheduledTasksMonitorTab
+                instances={scheduledTasks}
+                groups={taskGroups}
+                user={user}
+                onRefresh={refetchTasks}
+                search={search}
+              />
+              {/* Process Instances */}
               {filtered.map(inst => {
                 const step = activeSteps[inst.id];
                 const coordEmail = coordinatorMap[inst.process_id];
