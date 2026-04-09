@@ -3,8 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import TaskGroupManager from '@/components/tasks/TaskGroupManager';
 import TaskTemplateManager from '@/components/tasks/TaskTemplateManager';
-import ScheduledTaskMonitor from '@/components/tasks/ScheduledTaskMonitor';
-import { Loader2, FolderOpen, Clock, BarChart3 } from 'lucide-react';
+import { Loader2, FolderOpen, Clock } from 'lucide-react';
 
 export default function ScheduledTaskManager() {
   const [user, setUser] = useState(null);
@@ -56,7 +55,6 @@ export default function ScheduledTaskManager() {
     );
   }
 
-  const isCoordinator = groups.some(g => g.coordinator_email === user?.email);
   const isAdmin = user?.role === 'admin';
 
   return (
@@ -66,11 +64,8 @@ export default function ScheduledTaskManager() {
         <p className="text-sm text-slate-500">Manage recurring time-based tasks with groups and process coordinators</p>
       </div>
 
-      <Tabs defaultValue="monitor" className="w-full">
+      <Tabs defaultValue="groups" className="w-full">
         <TabsList className="h-11 rounded-xl bg-slate-100 p-1">
-          <TabsTrigger value="monitor" className="rounded-lg text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-4 gap-1.5">
-            <BarChart3 className="w-4 h-4" /> Task Monitor
-          </TabsTrigger>
           {isAdmin && (
             <>
               <TabsTrigger value="groups" className="rounded-lg text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-4 gap-1.5">
@@ -82,15 +77,6 @@ export default function ScheduledTaskManager() {
             </>
           )}
         </TabsList>
-
-        <TabsContent value="monitor" className="mt-4">
-          <ScheduledTaskMonitor
-            instances={instances}
-            groups={groups}
-            user={user}
-            onRefresh={reloadInstances}
-          />
-        </TabsContent>
 
         {isAdmin && (
           <>

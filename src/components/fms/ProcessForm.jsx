@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { base44 } from '@/api/base44Client';
 import { TRIGGER_EVENTS, groupEventsByCategory } from '@/lib/fmsAppEvents';
+import { useQuery } from '@tanstack/react-query';
 
 export default function ProcessForm({ process, onClose, onSaved }) {
   const [form, setForm] = useState({
@@ -16,9 +17,17 @@ export default function ProcessForm({ process, onClose, onSaved }) {
     trigger_type: process?.trigger_type || 'manual',
     trigger_source: process?.trigger_source || '',
     category: process?.category || '',
+    coordinator_email: process?.coordinator_email || '',
+    coordinator_name: process?.coordinator_name || '',
     is_active: process?.is_active !== false,
   });
   const [saving, setSaving] = useState(false);
+
+  const { data: users = [] } = useQuery({
+    queryKey: ['users-for-coordinator'],
+    queryFn: () => base44.entities.User.list(),
+    staleTime: 120000,
+  });
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -88,6 +97,23 @@ export default function ProcessForm({ process, onClose, onSaved }) {
               <p className="text-xs text-slate-500 mt-1">This process will auto-start when this app event fires</p>
             </div>
           )}
+          <div>
+            <Label>Process Coordinator</Label>
+            <Select value={form.coordinator_email} onValueChange={v => {
+              const u = users.find(u => u.email === v);
+              set('coordinator_email', v);
+              set('coordinator_name', u?.full_name || v);
+            }}>
+              <SelectTrigger className="mt-1">
+                <SelectValue placeholder="Select coordinator (optional)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={null}>None</SelectItem>
+                {users.map(u => <SelectItem key={u.id} value={u.email}>{u.full_name || u.email}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-slate-500 mt-1">Coordinator will see all instances in the Process Monitor</p>
+          </div>
           <div className="flex items-center gap-3 pt-1">
             <Switch checked={form.is_active} onCheckedChange={v => set('is_active', v)} />
             <Label>Active (can be triggered)</Label>

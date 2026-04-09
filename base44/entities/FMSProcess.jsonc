@@ -1,0 +1,87 @@
+{
+  "name": "FMSProcess",
+  "type": "object",
+  "title": "FMS Process Template",
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 1000
+    },
+    "trigger_type": {
+      "type": "string",
+      "enum": [
+        "manual",
+        "auto"
+      ],
+      "default": "manual"
+    },
+    "trigger_source": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "e.g. purchase_grn, gate_entry \u2014 only used when trigger_type=auto"
+    },
+    "trigger_fields": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "text",
+              "number",
+              "date",
+              "select"
+            ]
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "coordinator_email": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Process Coordinator email \u2014 monitors all instances of this process"
+    },
+    "coordinator_name": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Display name of the process coordinator"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "category": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "version": {
+      "type": "number",
+      "default": 1
+    }
+  },
+  "required": [
+    "name",
+    "trigger_type"
+  ]
+}
