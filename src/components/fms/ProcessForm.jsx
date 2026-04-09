@@ -109,7 +109,7 @@ export default function ProcessForm({ process, onClose, onSaved }) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value={null}>None</SelectItem>
-                {users.map(u => <SelectItem key={u.id} value={u.email}>{u.full_name || u.email}</SelectItem>)}
+                {users.filter(u => u.is_coordinator).map(u => <SelectItem key={u.id} value={u.email}>{u.full_name || u.email}</SelectItem>)}
               </SelectContent>
             </Select>
             <p className="text-xs text-slate-500 mt-1">Coordinator will see all instances in the Process Monitor</p>
