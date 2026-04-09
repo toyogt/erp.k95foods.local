@@ -3,7 +3,7 @@
  * Single transporter field shared with cost panel.
  * Transporter + Expected Cost side by side, Planned Cost below.
  */
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
-import { CheckCircle2, Loader2, Truck, Package, Calendar, Scale, PackageCheck } from 'lucide-react';
+import { CheckCircle2, Loader2, Truck, Package, Calendar, Scale, PackageCheck, AlertCircle } from 'lucide-react';
 import StockCrossCheckPanel from '@/components/sales/StockCrossCheckPanel';
 import { fireFMSEvent, linkFMSRef, findFMSInstanceByRef } from '@/lib/useFMSAutoComplete';
 import { generateDocNumber } from '@/lib/docNumberHelper';
@@ -55,6 +55,32 @@ export default function SOLogisticsReviewPanel({ order, onUpdated }) {
     queryFn: () => base44.entities.TransportRateCard.filter({ is_active: true }),
     staleTime: 120000,
   });
+
+  // Fetch SO items + products to check for missing details
+  const { data: soItemsForCheck = [] } = useQuery({
+    queryKey: ['so-items-check', order?.id],
+    queryFn: () => base44.entities.SalesOrderItem.filter({ sales_order_id: order.id }),
+    enabled: !!order?.id,
+  });
+  const { data: productsForCheck = [] } = useQuery({
+    queryKey: ['product-master-weights'],
+    queryFn: () => base44.entities.ProductMaster.filter({ is_active: true }),
+    staleTime: 300000,
+  });
+  const productCheckMap = useMemo(() => {
+    const m = {}; productsForCheck.forEach(p => { m[p.item_code] = p; }); return m;
+  }, [productsForCheck]);
+  const missingProductDetails = useMemo(() => {
+    const missing = [];
+    soItemsForCheck.forEach(item => {
+      const sku = item.item_code || item.sku_code || '';
+      const product = productCheckMap[sku];
+      if (!product?.gross_weight_kg) missing.push({ sku, field: 'Weight per Box' });
+      if (!product?.bottles_per_box) missing.push({ sku, field: 'Units per Box' });
+    });
+    return missing;
+  }, [soItemsForCheck, productCheckMap]);
+  const hasIncompleteProductData = missingProductDetails.length > 0;
 
   const orderWeight = costRecord?.order_weight_kg || Number(weightInput) || 0;
   const matchedCard = rateCards.find(rc =>
@@ -108,6 +134,15 @@ export default function SOLogisticsReviewPanel({ order, onUpdated }) {
   };
 
   async function handleApprove() {
+    if (hasIncompleteProductData) {
+      const skuList = [...new Set(missingProductDetails.map(m => m.sku))].join(', ');
+      toast({ title: 'Cannot approve — missing product details', description: `Set weight and units per box for: ${skuList}. Use the "Set Now" buttons in the weight table above.`, variant: 'destructive' });
+      return;
+    }
+    if (!orderWeight && !costRecord?.order_weight_kg) {
+      toast({ title: 'Order weight is required before approval', description: 'Set the total order weight in the weight calculator above.', variant: 'destructive' });
+      return;
+    }
     if (!form.transporter) { toast({ title: 'Transporter Name is required', variant: 'destructive' }); return; }
     if (!form.packaging_type) { toast({ title: 'Packaging Type is required', variant: 'destructive' }); return; }
     setSaving(true);
@@ -312,10 +347,24 @@ export default function SOLogisticsReviewPanel({ order, onUpdated }) {
           </Button>
         )}
         {isInReview && (
-          <Button className="h-11 bg-green-700 hover:bg-green-800 text-white text-sm" onClick={handleApprove} disabled={saving}>
-            {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <CheckCircle2 className="w-4 h-4 mr-1" />}
-            Approve for Picking
-          </Button>
+          <div className="space-y-2">
+            {hasIncompleteProductData && (
+              <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-red-800">Cannot approve — missing product details</p>
+                  <p className="text-xs text-red-600 mt-0.5">
+                    {[...new Set(missingProductDetails.map(m => `${m.sku} (${m.field})`))].join(', ')}.
+                    Use the "Set Now" buttons in the weight breakdown table above.
+                  </p>
+                </div>
+              </div>
+            )}
+            <Button className="h-11 bg-green-700 hover:bg-green-800 text-white text-sm" onClick={handleApprove} disabled={saving || hasIncompleteProductData}>
+              {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <CheckCircle2 className="w-4 h-4 mr-1" />}
+              Approve for Picking
+            </Button>
+          </div>
         )}
       </div>
     </div>
