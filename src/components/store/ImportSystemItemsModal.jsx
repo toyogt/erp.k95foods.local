@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, Search, Download, CheckCircle2, X } from 'lucide-react';
+import ImportRulesTable from '@/components/store/ImportRulesTable';
+import { Loader2, Search, Download, CheckCircle2, X, ArrowLeft, ArrowRight, Settings2 } from 'lucide-react';
 
 const SOURCE_TABS = [
   { key: 'ingredient', label: 'Ingredients' },
@@ -88,6 +89,8 @@ export default function ImportSystemItemsModal({ existingItems, onClose, onImpor
   const [activeTab, setActiveTab] = useState('ingredient');
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState(null);
+  const [step, setStep] = useState('select'); // 'select' | 'rules' | 'done'
+  const [rulesMap, setRulesMap] = useState({}); // idx -> { batch_required, expiry_required, ... }
 
   // Build set of already-imported source IDs
   const existingSourceIds = new Set(
@@ -136,20 +139,49 @@ export default function ImportSystemItemsModal({ existingItems, onClose, onImpor
     });
   };
 
-  async function handleImport() {
+  // Items selected for import (used in rules step)
+  const selectedItems = [...selected].map(idx => systemItems[idx]).filter(Boolean);
+
+  function handleToggleRule(idx, ruleKey, forceOn) {
+    setRulesMap(prev => {
+      const current = prev[idx] || {};
+      return { ...prev, [idx]: { ...current, [ruleKey]: forceOn || !current[ruleKey] } };
+    });
+  }
+
+  function handleChangeShelfLife(idx, val) {
+    setRulesMap(prev => {
+      const current = prev[idx] || {};
+      return { ...prev, [idx]: { ...current, min_shelf_life_days: val ? Number(val) : 0 } };
+    });
+  }
+
+  function handleProceedToRules() {
     if (selected.size === 0) return;
+    // Initialize rulesMap for selected items
+    const initialRules = {};
+    selectedItems.forEach((_, idx) => {
+      if (!rulesMap[idx]) initialRules[idx] = {};
+    });
+    setRulesMap(prev => ({ ...initialRules, ...prev }));
+    setStep('rules');
+  }
+
+  async function handleImport() {
+    if (selectedItems.length === 0) return;
     setImporting(true);
 
-    const toImport = [...selected].map(idx => systemItems[idx]).filter(Boolean);
     let imported = 0;
     let skipped = 0;
 
-    for (const si of toImport) {
+    for (let i = 0; i < selectedItems.length; i++) {
+      const si = selectedItems[i];
       const key = `${si.source_entity}:${si.source_id}`;
       if (existingSourceIds.has(key)) {
         skipped++;
         continue;
       }
+      const rules = rulesMap[i] || {};
       await base44.entities.StoreItemMaster.create({
         item_name: si.item_name,
         item_code: si.item_code || '',
@@ -159,17 +191,23 @@ export default function ImportSystemItemsModal({ existingItems, onClose, onImpor
         uom: si.uom || 'Nos',
         material_photo: si.material_photo || '',
         is_active: true,
+        batch_required: !!rules.batch_required,
+        mfg_date_required: !!rules.mfg_date_required,
+        expiry_required: !!rules.expiry_required,
+        qc_required: !!rules.qc_required,
+        min_shelf_life_days: rules.min_shelf_life_days || 0,
       });
       imported++;
     }
 
     setResult({ imported, skipped });
+    setStep('done');
     setImporting(false);
   }
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-3 md:p-4">
-      <div className="bg-white rounded-2xl w-full max-w-2xl shadow-xl max-h-[90vh] flex flex-col">
+      <div className={`bg-white rounded-2xl w-full shadow-xl max-h-[90vh] flex flex-col ${step === 'rules' ? 'max-w-4xl' : 'max-w-2xl'}`}>
         {/* Header */}
         <div className="p-4 md:p-5 border-b border-slate-200 flex items-center justify-between shrink-0">
           <div>
@@ -181,7 +219,7 @@ export default function ImportSystemItemsModal({ existingItems, onClose, onImpor
           </button>
         </div>
 
-        {result ? (
+        {step === 'done' && result ? (
           <div className="p-8 text-center space-y-4">
             <CheckCircle2 className="w-14 h-14 text-green-500 mx-auto" />
             <h3 className="text-lg font-bold text-slate-900">Import Complete</h3>
@@ -193,6 +231,37 @@ export default function ImportSystemItemsModal({ existingItems, onClose, onImpor
               Done
             </Button>
           </div>
+        ) : step === 'rules' ? (
+          <>
+            {/* Step indicator */}
+            <div className="px-4 pt-3 pb-2 shrink-0">
+              <div className="flex items-center gap-2 text-xs text-slate-500">
+                <span className="bg-teal-100 text-teal-700 px-2 py-0.5 rounded-full font-medium">Step 2 of 2</span>
+                <span>Configure rules for {selectedItems.length} item(s)</span>
+              </div>
+            </div>
+
+            {/* Rules table */}
+            <div className="flex-1 overflow-y-auto px-4 py-3">
+              <ImportRulesTable
+                items={selectedItems}
+                rulesMap={rulesMap}
+                onToggleRule={handleToggleRule}
+                onChangeShelfLife={handleChangeShelfLife}
+              />
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-slate-200 flex items-center justify-between shrink-0">
+              <Button variant="outline" onClick={() => setStep('select')} className="h-11 gap-2 text-sm">
+                <ArrowLeft className="w-4 h-4" /> Back to Selection
+              </Button>
+              <Button onClick={handleImport} disabled={importing} className="h-11 bg-teal-600 hover:bg-teal-700 gap-2 text-sm">
+                {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                {importing ? 'Importing...' : `Import ${selectedItems.length} Item(s)`}
+              </Button>
+            </div>
+          </>
         ) : (
           <>
             {/* Tabs */}
@@ -288,9 +357,9 @@ export default function ImportSystemItemsModal({ existingItems, onClose, onImpor
               <span className="text-sm text-slate-500">{selected.size} item(s) selected</span>
               <div className="flex gap-2">
                 <Button variant="outline" onClick={onClose} className="h-11">Cancel</Button>
-                <Button onClick={handleImport} disabled={importing || selected.size === 0} className="h-11 bg-teal-600 hover:bg-teal-700 gap-2">
-                  {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                  {importing ? 'Importing...' : 'Import Selected'}
+                <Button onClick={handleProceedToRules} disabled={selected.size === 0} className="h-11 bg-teal-600 hover:bg-teal-700 gap-2">
+                  <Settings2 className="w-4 h-4" /> Configure Rules
+                  <ArrowRight className="w-4 h-4" />
                 </Button>
               </div>
             </div>
