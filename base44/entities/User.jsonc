@@ -44,14 +44,6 @@
         "type": "string"
       },
       "description": "Store module page keys this user can access"
-    },
-    "is_coordinator": {
-      "type": "boolean",
-      "default": false,
-      "description": "If true, this user can be assigned as a Process Coordinator in FMS"
     }
-  },
-  "required": [
-    "store_page_access"
-  ]
+  }
 }
