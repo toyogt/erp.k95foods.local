@@ -58,7 +58,7 @@ export default function SMSDashboard() {
     }).finally(() => setLoading(false));
   }, []);
 
-  const pendingQC = lots.filter(l => l.status === 'qc_pending').length;
+  const pendingPutaway = lots.filter(l => l.status === 'approved').length;
   const stockByItem = {};
   stock.forEach(s => { stockByItem[s.item_code] = (stockByItem[s.item_code] || 0) + (s.quantity || 0); });
   const lowStockAlerts = reorderConfigs.filter(r => (stockByItem[r.item_code] || 0) <= r.reorder_level);
@@ -120,7 +120,7 @@ export default function SMSDashboard() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard icon={Building2} label="Active Locations" value={locations.length} color="bg-blue-100 text-blue-600" />
         <StatCard icon={Package} label="Active Lots" value={lots.filter(l => !['consumed'].includes(l.status)).length} color="bg-violet-100 text-violet-600" />
-        <StatCard icon={Clock} label="Pending QC" value={pendingQC} color="bg-yellow-100 text-yellow-600" sub="Awaiting approval" />
+        <StatCard icon={Clock} label="Pending for Putaway" value={pendingPutaway} color="bg-yellow-100 text-yellow-600" sub="Awaiting storage" />
         <StatCard icon={AlertTriangle} label="Low Stock" value={lowStockAlerts.length} color="bg-red-100 text-red-600" sub="Below reorder" />
       </div>
 

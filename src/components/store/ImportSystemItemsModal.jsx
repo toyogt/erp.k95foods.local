@@ -14,8 +14,9 @@ const SOURCE_TABS = [
 ];
 
 async function fetchSystemItems() {
-  const [ingredients, boxes, caps, containers, flavours, artworks] = await Promise.all([
+  const [ingredientItems, ingredientMasters, boxes, caps, containers, flavours, artworks] = await Promise.all([
     base44.entities.IngredientItem.list('brand_name', 500).catch(() => []),
+    base44.entities.IngredientMaster.list('ingredient_name', 500).catch(() => []),
     base44.entities.BoxType.list('box_name', 500).catch(() => []),
     base44.entities.CapType.list('cap_name', 500).catch(() => []),
     base44.entities.ContainerType.list('auto_generated_name', 500).catch(() => []),
@@ -23,12 +24,30 @@ async function fetchSystemItems() {
     base44.entities.LabelArtwork.list('artwork_name', 500).catch(() => []),
   ]);
 
-  return [
-    ...ingredients.filter(i => i.brand_name).map(i => ({
+  // Combine IngredientItem (brand items) and IngredientMaster (specs)
+  const ingredientRows = [];
+
+  // Brand-level items
+  ingredientItems.filter(i => i.brand_name).forEach(i => {
+    ingredientRows.push({
       source_entity: 'IngredientItem', source_id: i.id,
       item_name: `${i.brand_name}${i.ingredient_id ? ' (' + i.ingredient_id + ')' : ''}`,
       item_category: 'ingredient', uom: i.uom || 'Kg', material_photo: '',
-    })),
+    });
+  });
+
+  // Spec-level masters
+  ingredientMasters.filter(m => m.ingredient_name && m.is_active !== false).forEach(m => {
+    ingredientRows.push({
+      source_entity: 'IngredientMaster', source_id: m.id,
+      item_name: `${m.ingredient_name}${m.short_code ? ' (' + m.short_code + ')' : ''}`,
+      item_code: m.ingredient_id || m.short_code || '',
+      item_category: 'ingredient', uom: m.uom_id || 'Kg', material_photo: '',
+    });
+  });
+
+  return [
+    ...ingredientRows,
     ...boxes.map(b => ({
       source_entity: 'BoxType', source_id: b.id,
       item_name: b.box_name,
