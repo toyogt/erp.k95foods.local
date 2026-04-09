@@ -7,14 +7,14 @@ import ScheduledTasksMonitorTab from '@/components/fms/ScheduledTasksMonitorTab'
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Search, Loader2, MonitorDot, AlertCircle, Clock, CheckCircle2, RefreshCw, UserCheck } from 'lucide-react';
+import { Search, Loader2, MonitorDot, AlertCircle, Clock, CheckCircle2, RefreshCw } from 'lucide-react';
 import { getTATStatus, formatDateTime } from '@/lib/fmsHelpers';
 
 export default function FMSMonitor() {
   const [search, setSearch] = useState('');
   const [filterProcess, setFilterProcess] = useState('all');
   const [filterTAT, setFilterTAT] = useState('all');
-  const [filterCoordinator, setFilterCoordinator] = useState('all');
+
   const [detailId, setDetailId] = useState(null);
 
   const { data: user } = useQuery({
@@ -74,15 +74,7 @@ export default function FMSMonitor() {
     if (p.coordinator_email) coordinatorMap[p.id] = p.coordinator_email;
   });
 
-  // Unique coordinators for filter
-  const coordinatorSet = new Set();
-  processes.forEach(p => {
-    if (p.coordinator_email) coordinatorSet.add(p.coordinator_email);
-  });
-  const coordinators = Array.from(coordinatorSet).map(email => {
-    const u = users.find(u => u.email === email);
-    return { email, name: u?.full_name || email };
-  });
+
 
   const isAdmin = user?.role === 'admin';
   const myEmail = user?.email;
@@ -98,10 +90,7 @@ export default function FMSMonitor() {
   const filtered = visibleInstances.filter(inst => {
     const step = activeSteps[inst.id];
     if (filterProcess !== 'all' && inst.process_id !== filterProcess) return false;
-    if (filterCoordinator !== 'all') {
-      const coordEmail = coordinatorMap[inst.process_id];
-      if (coordEmail !== filterCoordinator) return false;
-    }
+
     if (filterTAT !== 'all') {
       if (!step) return filterTAT === 'unknown';
       if (getTATStatus(step.deadline) !== filterTAT) return false;
@@ -202,17 +191,7 @@ export default function FMSMonitor() {
               {processes.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
             </SelectContent>
           </Select>
-          {isAdmin && coordinators.length > 0 && (
-            <Select value={filterCoordinator} onValueChange={setFilterCoordinator}>
-              <SelectTrigger className="w-48 h-11 md:h-9">
-                <SelectValue placeholder="All Coordinators" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Coordinators</SelectItem>
-                {coordinators.map(c => <SelectItem key={c.email} value={c.email}>{c.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          )}
+
           <Select value={filterTAT} onValueChange={setFilterTAT}>
             <SelectTrigger className="w-36 h-11 md:h-9">
               <SelectValue placeholder="All TAT" />
@@ -241,11 +220,10 @@ export default function FMSMonitor() {
         ) : (
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             {/* Table header */}
-            <div className="hidden sm:grid grid-cols-[2fr_1.5fr_1.5fr_1fr_1fr_1fr] gap-4 px-4 py-3 bg-slate-50 border-b border-slate-100 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+            <div className="hidden sm:grid grid-cols-[2fr_1.5fr_1.5fr_1fr_1fr] gap-4 px-4 py-3 bg-slate-50 border-b border-slate-100 text-xs font-semibold text-slate-500 uppercase tracking-wider">
               <span>Instance</span>
               <span>Current Step</span>
               <span>Assignee</span>
-              <span>Coordinator</span>
               <span>Deadline</span>
               <span>Started</span>
             </div>
@@ -261,12 +239,10 @@ export default function FMSMonitor() {
               {/* Process Instances */}
               {filtered.map(inst => {
                 const step = activeSteps[inst.id];
-                const coordEmail = coordinatorMap[inst.process_id];
-                const coordUser = coordEmail ? users.find(u => u.email === coordEmail) : null;
                 return (
                   <div
                     key={inst.id}
-                    className={`grid grid-cols-1 sm:grid-cols-[2fr_1.5fr_1.5fr_1fr_1fr_1fr] gap-2 sm:gap-4 px-4 py-3.5 cursor-pointer hover:bg-slate-50 transition-colors ${rowColor(inst)}`}
+                    className={`grid grid-cols-1 sm:grid-cols-[2fr_1.5fr_1.5fr_1fr_1fr] gap-2 sm:gap-4 px-4 py-3.5 cursor-pointer hover:bg-slate-50 transition-colors ${rowColor(inst)}`}
                     onClick={() => setDetailId(inst.id)}
                   >
                     <div>
@@ -278,16 +254,6 @@ export default function FMSMonitor() {
                     </div>
                     <div className="flex items-center">
                       <p className="text-sm text-slate-600">{step?.assignee_name || step?.assignee_email || '—'}</p>
-                    </div>
-                    <div className="flex items-center">
-                      {coordUser ? (
-                        <span className="inline-flex items-center gap-1 text-xs text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded-full">
-                          <UserCheck className="w-3 h-3" />
-                          {coordUser.full_name || coordEmail}
-                        </span>
-                      ) : (
-                        <span className="text-xs text-slate-300">—</span>
-                      )}
                     </div>
                     <div className="flex items-center">
                       {step ? <TATBadge deadline={step.deadline} /> : <span className="text-slate-300 text-xs">—</span>}

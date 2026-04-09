@@ -6,7 +6,7 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { CheckCircle2, Loader2, Clock, AlertTriangle, UserCheck } from 'lucide-react';
+import { CheckCircle2, Loader2, Clock, AlertTriangle } from 'lucide-react';
 import moment from 'moment';
 
 const PRIORITY_STYLES = {
@@ -117,7 +117,7 @@ export default function ScheduledTasksMonitorTab({ instances, groups, user, onRe
           return (
             <div
               key={task.id}
-              className={`grid grid-cols-1 sm:grid-cols-[2fr_1.5fr_1.5fr_1fr_1fr_1fr] gap-2 sm:gap-4 px-4 py-3.5 hover:bg-slate-50 transition-colors ${rowBorder(task)}`}
+              className={`grid grid-cols-1 sm:grid-cols-[2fr_1.5fr_1.5fr_1fr_1fr] gap-2 sm:gap-4 px-4 py-3.5 hover:bg-slate-50 transition-colors ${rowBorder(task)}`}
             >
               <div>
                 <div className="flex items-center gap-1.5">
@@ -132,15 +132,7 @@ export default function ScheduledTasksMonitorTab({ instances, groups, user, onRe
               <div className="flex items-center">
                 <p className="text-sm text-slate-600">{task.assignee_name || task.assignee_email || '—'}</p>
               </div>
-              <div className="flex items-center">
-                {coordinator ? (
-                  <span className="inline-flex items-center gap-1 text-xs text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded-full">
-                    <UserCheck className="w-3 h-3" /> {coordinator}
-                  </span>
-                ) : (
-                  <span className="text-xs text-slate-300">—</span>
-                )}
-              </div>
+
               <div className="flex items-center">
                 {getDeadlineBadge(task.due_at)}
               </div>
