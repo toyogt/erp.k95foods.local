@@ -1,7 +1,8 @@
 /**
- * Logistics Review Panel — ERPNext-style layout.
- * Single transporter field shared with cost panel.
- * Transporter + Expected Cost side by side, Planned Cost below.
+ * Logistics Review Panel — Unified layout.
+ * Merged order items table (stock + weight + Set Now).
+ * Transporter, packaging, weight are optional at this stage (can be filled at picklist).
+ * Highlighted if missing but not blocking.
  */
 import { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -11,8 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
-import { CheckCircle2, Loader2, Truck, Package, Calendar, Scale, PackageCheck, AlertCircle } from 'lucide-react';
-import StockCrossCheckPanel from '@/components/sales/StockCrossCheckPanel';
+import { CheckCircle2, Loader2, Truck, Package, Calendar, Scale, AlertCircle, Info } from 'lucide-react';
 import { fireFMSEvent, linkFMSRef, findFMSInstanceByRef } from '@/lib/useFMSAutoComplete';
 import { generateDocNumber } from '@/lib/docNumberHelper';
 import SystemEstimateCard from '@/components/sales/logistics/SystemEstimateCard';
@@ -20,7 +20,7 @@ import PlannedCostForm from '@/components/sales/logistics/PlannedCostForm';
 import ExtraChargesSection from '@/components/sales/logistics/ExtraChargesSection';
 import ActualCostForm from '@/components/sales/logistics/ActualCostForm';
 import CostComparisonCard from '@/components/sales/logistics/CostComparisonCard';
-import WeightCalculatorPanel from '@/components/sales/logistics/WeightCalculatorPanel';
+import OrderItemsReviewTable from '@/components/sales/logistics/OrderItemsReviewTable';
 
 export default function SOLogisticsReviewPanel({ order, onUpdated }) {
   const { user } = useAuth();
@@ -43,7 +43,7 @@ export default function SOLogisticsReviewPanel({ order, onUpdated }) {
   const packingTypes = settingsList.find(s => s.setting_key === 'packing_types')?.values || [];
 
   // Logistics cost data
-  const { data: costRecords = [], isLoading: costLoading } = useQuery({
+  const { data: costRecords = [] } = useQuery({
     queryKey: ['order-logistics-cost', order?.id],
     queryFn: () => base44.entities.OrderLogisticsCost.filter({ sales_order_id: order.id }),
     enabled: !!order?.id,
@@ -56,32 +56,6 @@ export default function SOLogisticsReviewPanel({ order, onUpdated }) {
     staleTime: 120000,
   });
 
-  // Fetch SO items + products to check for missing details
-  const { data: soItemsForCheck = [] } = useQuery({
-    queryKey: ['so-items-check', order?.id],
-    queryFn: () => base44.entities.SalesOrderItem.filter({ sales_order_id: order.id }),
-    enabled: !!order?.id,
-  });
-  const { data: productsForCheck = [] } = useQuery({
-    queryKey: ['product-master-weights'],
-    queryFn: () => base44.entities.ProductMaster.filter({ is_active: true }),
-    staleTime: 300000,
-  });
-  const productCheckMap = useMemo(() => {
-    const m = {}; productsForCheck.forEach(p => { m[p.item_code] = p; }); return m;
-  }, [productsForCheck]);
-  const missingProductDetails = useMemo(() => {
-    const missing = [];
-    soItemsForCheck.forEach(item => {
-      const sku = item.item_code || item.sku_code || '';
-      const product = productCheckMap[sku];
-      if (!product?.gross_weight_kg) missing.push({ sku, field: 'Weight per Box' });
-      if (!product?.bottles_per_box) missing.push({ sku, field: 'Units per Box' });
-    });
-    return missing;
-  }, [soItemsForCheck, productCheckMap]);
-  const hasIncompleteProductData = missingProductDetails.length > 0;
-
   const orderWeight = costRecord?.order_weight_kg || Number(weightInput) || 0;
   const matchedCard = rateCards.find(rc =>
     orderWeight >= rc.weight_from_kg && orderWeight <= rc.weight_to_kg &&
@@ -93,6 +67,11 @@ export default function SOLogisticsReviewPanel({ order, onUpdated }) {
   const alreadyApproved = order?.workflow_state === 'ready_to_pick';
   const isInReview = order?.workflow_state === 'under_logistics_review';
   const isDelivered = ['delivered', 'paid', 'closed'].includes(order?.status);
+
+  // Track what's missing (for highlighting, not blocking)
+  const missingFields = [];
+  if (!form.transporter) missingFields.push('Transporter');
+  if (!form.packaging_type) missingFields.push('Packaging Type');
 
   const generateSystemEstimate = () => {
     if (!matchedCard) return {};
@@ -134,15 +113,6 @@ export default function SOLogisticsReviewPanel({ order, onUpdated }) {
   };
 
   async function handleApprove() {
-    if (hasIncompleteProductData) {
-      const skuList = [...new Set(missingProductDetails.map(m => m.sku))].join(', ');
-      toast({ title: 'Cannot approve — missing product details', description: `Set weight and units per box for: ${skuList}. Use the "Set Now" buttons in the weight table above.`, variant: 'destructive' });
-      return;
-    }
-    if (!orderWeight && !costRecord?.order_weight_kg) {
-      toast({ title: 'Order weight is required before approval', description: 'Set the total order weight in the weight calculator above.', variant: 'destructive' });
-      return;
-    }
     if (!form.transporter) { toast({ title: 'Transporter Name is required', variant: 'destructive' }); return; }
     if (!form.packaging_type) { toast({ title: 'Packaging Type is required', variant: 'destructive' }); return; }
     setSaving(true);
@@ -210,7 +180,7 @@ export default function SOLogisticsReviewPanel({ order, onUpdated }) {
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-sm font-semibold text-slate-900">Logistics Review</h3>
-          <p className="text-xs text-slate-500 mt-0.5">Set logistics details, review costs, and approve for picking.</p>
+          <p className="text-xs text-slate-500 mt-0.5">Review items, set logistics details, and approve for picking.</p>
         </div>
         {alreadyApproved && (
           <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 border border-green-200 rounded-lg">
@@ -220,58 +190,52 @@ export default function SOLogisticsReviewPanel({ order, onUpdated }) {
         )}
       </div>
 
-      {/* ── Stock Cross-Check ── */}
-      <StockCrossCheckPanel order={order} />
+      {/* ── Merged Order Items Table (Stock + Weight + Set Now) ── */}
+      <OrderItemsReviewTable order={order} />
 
-      {/* ── Transporter Name ── */}
-      <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3">
-        <h4 className="text-xs font-semibold text-slate-600 uppercase tracking-wide flex items-center gap-1.5">
-          <Truck className="w-3.5 h-3.5" /> Transporter Name *
-        </h4>
-        {transporters.length > 0 ? (
-          <select className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-            value={form.transporter} onChange={e => setForm(f => ({ ...f, transporter: e.target.value }))}>
-            <option value="">Select transporter...</option>
-            {transporters.map(t => <option key={t} value={t}>{t}</option>)}
-          </select>
-        ) : (
-          <Input className="h-9 text-sm" value={form.transporter}
-            onChange={e => setForm(f => ({ ...f, transporter: e.target.value }))}
-            placeholder="Enter transporter name" />
-        )}
-        {form.transporter && matchedCard && (
-          <p className="text-xs text-green-700">
-            Rate card matched: {matchedCard.weight_from_kg}–{matchedCard.weight_to_kg} kg
-            {matchedCard.name ? ` · ${matchedCard.name}` : ''}
-          </p>
-        )}
-      </div>
-
-      {/* ── Expected Transportation Cost — shown only after transporter is selected ── */}
-      {form.transporter && (
-        <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3">
+      {/* ── Logistics Details (optional — highlighted if missing) ── */}
+      <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-4">
+        <div className="flex items-center justify-between">
           <h4 className="text-xs font-semibold text-slate-600 uppercase tracking-wide flex items-center gap-1.5">
-            <Scale className="w-3.5 h-3.5" /> Expected Transportation Cost
+            <Truck className="w-3.5 h-3.5" /> Logistics Details
           </h4>
-          <WeightCalculatorPanel
-            order={order}
-            lockedWeight={costRecord?.order_weight_kg}
-            manualWeight={weightInput}
-            onManualWeightChange={setWeightInput}
-            onUseCalculated={val => setWeightInput(String(val))}
-            onConfirm={handleSetWeight}
-            saving={saving}
-          />
-          <SystemEstimateCard costRecord={costRecord} compact />
+          {missingFields.length > 0 && (
+            <span className="inline-flex items-center gap-1 text-xs text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
+              <Info className="w-3 h-3" /> Optional — can be set at picklist stage
+            </span>
+          )}
         </div>
-      )}
 
-      {/* ── Row 2: Packaging Type + Dates ── */}
-      <div className="bg-white border border-slate-200 rounded-xl p-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Transporter */}
           <div>
             <Label className="text-xs font-medium text-slate-700 flex items-center gap-1">
-              <Package className="w-3 h-3" /> Packaging Type *
+              Transporter Name
+              {!form.transporter && <span className="text-amber-500 text-xs">*</span>}
+            </Label>
+            {transporters.length > 0 ? (
+              <select className="mt-1 h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                value={form.transporter} onChange={e => setForm(f => ({ ...f, transporter: e.target.value }))}>
+                <option value="">Select transporter...</option>
+                {transporters.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            ) : (
+              <Input className="h-9 text-sm mt-1" value={form.transporter}
+                onChange={e => setForm(f => ({ ...f, transporter: e.target.value }))}
+                placeholder="Enter transporter name" />
+            )}
+            {form.transporter && matchedCard && (
+              <p className="text-xs text-green-700 mt-1">
+                Rate card matched: {matchedCard.weight_from_kg}–{matchedCard.weight_to_kg} kg
+              </p>
+            )}
+          </div>
+
+          {/* Packaging Type */}
+          <div>
+            <Label className="text-xs font-medium text-slate-700 flex items-center gap-1">
+              <Package className="w-3 h-3" /> Packaging Type
+              {!form.packaging_type && <span className="text-amber-500 text-xs">*</span>}
             </Label>
             {packingTypes.length > 0 ? (
               <select className="mt-1 h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
@@ -285,6 +249,8 @@ export default function SOLogisticsReviewPanel({ order, onUpdated }) {
                 placeholder="Enter packaging type" />
             )}
           </div>
+
+          {/* Appointment Date */}
           <div>
             <Label className="text-xs font-medium text-slate-700 flex items-center gap-1">
               <Calendar className="w-3 h-3" /> Appointment Date
@@ -292,6 +258,8 @@ export default function SOLogisticsReviewPanel({ order, onUpdated }) {
             <Input type="date" className="h-9 text-sm mt-1" value={form.appointment_date}
               onChange={e => setForm(f => ({ ...f, appointment_date: e.target.value }))} />
           </div>
+
+          {/* Planned Dispatch Date */}
           <div>
             <Label className="text-xs font-medium text-slate-700 flex items-center gap-1">
               <Calendar className="w-3 h-3" /> Planned Dispatch Date
@@ -305,7 +273,30 @@ export default function SOLogisticsReviewPanel({ order, onUpdated }) {
         </div>
       </div>
 
-      {/* ── Row 3: Planned Transportation Cost ── */}
+      {/* ── Weight & Transportation Cost (collapsible, optional) ── */}
+      <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3">
+        <h4 className="text-xs font-semibold text-slate-600 uppercase tracking-wide flex items-center gap-1.5">
+          <Scale className="w-3.5 h-3.5" /> Order Weight & Transportation Estimate
+        </h4>
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="flex-1 min-w-[160px] max-w-xs">
+            <Label className="text-xs font-medium text-slate-700">Order Weight (kg)</Label>
+            <Input className="h-9 text-sm mt-1" type="number"
+              value={costRecord?.order_weight_kg || weightInput}
+              onChange={e => !costRecord?.order_weight_kg && setWeightInput(e.target.value)}
+              placeholder="Enter total order weight"
+              disabled={!!costRecord?.order_weight_kg} />
+          </div>
+          {!costRecord?.order_weight_kg && (
+            <Button className="h-11 text-sm bg-slate-900 hover:bg-slate-800 text-white" onClick={handleSetWeight} disabled={saving}>
+              Calculate Estimate
+            </Button>
+          )}
+        </div>
+        <SystemEstimateCard costRecord={costRecord} compact />
+      </div>
+
+      {/* ── Planned Transportation Cost ── */}
       <PlannedCostForm costRecord={costRecord} onSave={async (data) => {
         await saveCostData({ ...data, status: 'planned', planned_by: user?.email });
       }} saving={saving} />
@@ -347,19 +338,19 @@ export default function SOLogisticsReviewPanel({ order, onUpdated }) {
         )}
         {isInReview && (
           <div className="space-y-2">
-            {hasIncompleteProductData && (
-              <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-                <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
+            {missingFields.length > 0 && (
+              <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <AlertCircle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
                 <div>
-                  <p className="text-sm font-medium text-red-800">Cannot approve — missing product details</p>
-                  <p className="text-xs text-red-600 mt-0.5">
-                    {[...new Set(missingProductDetails.map(m => `${m.sku} (${m.field})`))].join(', ')}.
-                    Use the "Set Now" buttons in the weight breakdown table above.
+                  <p className="text-sm font-medium text-amber-800">Required before approval</p>
+                  <p className="text-xs text-amber-600 mt-0.5">
+                    Please set: {missingFields.join(', ')}
                   </p>
                 </div>
               </div>
             )}
-            <Button className="h-11 bg-green-700 hover:bg-green-800 text-white text-sm" onClick={handleApprove} disabled={saving || hasIncompleteProductData}>
+            <Button className="h-11 bg-green-700 hover:bg-green-800 text-white text-sm"
+              onClick={handleApprove} disabled={saving || missingFields.length > 0}>
               {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <CheckCircle2 className="w-4 h-4 mr-1" />}
               Approve for Picking
             </Button>
