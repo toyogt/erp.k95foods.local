@@ -160,7 +160,6 @@ export default function GRNDetailModal({ grn, gateEntry, onClose }) {
             <DetailField label="Status" badge badgeCls={statusCls} value={grn.status} />
             <DetailField label="Received By" value={grn.received_by} />
             <DetailField label="Received At" value={formatDateTime(grn.received_at)} />
-            <DetailField label="Created" value={formatDateTime(grn.created_date)} />
             {grn.checklist_run_id && <DetailField label="Checklist Run" value={grn.checklist_run_id} />}
           </div>
 
