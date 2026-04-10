@@ -45,6 +45,7 @@ export default function LblPlanCreate() {
   };
 
   const handleSave = async (lockAfterSave = false) => {
+    const fd = moment(planDate).format('DD/MM/YYYY');
     if (!planDate || !shiftType || !lineId) { toast({ title: 'Missing Fields', description: 'Date, shift, and line are required', variant: 'destructive' }); return; }
     if (jobs.length === 0) { toast({ title: 'No Jobs', description: 'Add at least one product job', variant: 'destructive' }); return; }
 
