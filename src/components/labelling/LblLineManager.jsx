@@ -20,7 +20,15 @@ export default function LblLineManager() {
     queryFn: () => base44.entities.Machine.filter({ machine_type: 'LABEL-LINE' }),
   });
 
-  const autoId = (name) => name.trim().toUpperCase().replace(/[^A-Z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const autoId = (name) => {
+    const words = name.trim().split(/\s+/);
+    if (words.length <= 1) return words[0]?.toUpperCase().replace(/[^A-Z0-9]/g, '') || '';
+    // Take first letter of each word + last word if it's a number
+    const lastWord = words[words.length - 1];
+    const isLastNum = /^\d+$/.test(lastWord);
+    const initials = words.slice(0, isLastNum ? words.length - 1 : words.length).map(w => w[0]?.toUpperCase()).join('');
+    return isLastNum ? `${initials}-${lastWord}` : initials;
+  };
   const openNew = () => { setForm({ machine_id: '', display_name: '', default_location: '', is_active: true }); setEditModal('new'); };
   const openEdit = (line) => { setForm({ machine_id: line.machine_id, display_name: line.display_name, default_location: line.default_location || '', is_active: line.is_active !== false }); setEditModal(line.id); };
 
