@@ -44,7 +44,7 @@ export default function LblPlanCreate() {
     const fd = moment(planDate).format('DD/MM/YYYY');
     const plan = { plan_id: pid, plan_date: fd, shift_type: shiftType, line_id: lineId, line_name: selectedMachine?.display_name || lineId, supervisor_email: user?.email, supervisor_name: user?.full_name, status: lockAfterSave ? 'locked' : 'draft', total_jobs: jobs.length, completed_jobs: 0, notes };
     const createdPlan = await base44.entities.LabellingShiftPlan.create(plan);
-    const jobRecords = jobs.map((j, i) => ({ job_id: generateJobId(), plan_id: createdPlan.id, sku_code: j.sku_code, product_name: j.product_name, bottle_type: j.bottle_type, mrp: j.mrp, quantity_bottles_planned: j.quantity_bottles_planned, quantity_cases_planned: j.quantity_cases_planned, priority_order: i + 1, line_id: lineId, line_name: selectedMachine?.display_name || lineId, shift_type: shiftType, plan_date: fd, status: 'pending' }));
+    const jobRecords = jobs.map((j, i) => ({ job_id: generateJobId(), plan_id: createdPlan.id, sku_code: j.sku_code, product_name: j.product_name, bottle_type: j.bottle_type, mrp: String(j.mrp || ''), quantity_bottles_planned: j.quantity_bottles_planned, quantity_cases_planned: j.quantity_cases_planned, priority_order: i + 1, line_id: lineId, line_name: selectedMachine?.display_name || lineId, shift_type: shiftType, plan_date: fd, status: 'pending' }));
     await base44.entities.LabellingJob.bulkCreate(jobRecords);
     await logLabellingEvent({ action_type: lockAfterSave ? 'plan_locked' : 'plan_created', plan_id: createdPlan.id, description: `Plan ${pid} ${lockAfterSave ? 'created and locked' : 'created'}`, user });
     queryClient.invalidateQueries({ queryKey: ['labelling-plans'] });
