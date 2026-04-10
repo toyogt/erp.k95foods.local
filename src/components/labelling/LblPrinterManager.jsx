@@ -9,15 +9,19 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from '@/components/ui/use-toast';
-import { Plus, Pencil, Loader2, Save, Printer } from 'lucide-react';
+import { Plus, Pencil, Loader2, Save, Printer, Trash2 } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
+const EDIT_ROLES = ['admin', 'production_manager', 'labelling_supervisor'];
 const EMPTY_FORM = { printer_id: '', name: '', line_id: '', line_name: '', api_endpoint: '', ip_address: '', port: '', default_template: '', is_active: true, notes: '' };
 
-export default function LblPrinterManager() {
+export default function LblPrinterManager({ userRole = 'user' }) {
   const queryClient = useQueryClient();
   const [editModal, setEditModal] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
+  const canEdit = EDIT_ROLES.includes(userRole);
 
   const { data: printers = [], isLoading } = useQuery({ queryKey: ['lbl-printers-master'], queryFn: () => base44.entities.LblPrinterConfig.list('-created_date', 100) });
   const { data: lines = [] } = useQuery({ queryKey: ['labelling-lines-master'], queryFn: () => base44.entities.Machine.filter({ machine_type: 'LABEL-LINE', is_active: true }) });
@@ -48,11 +52,19 @@ export default function LblPrinterManager() {
     setSaving(false);
   };
 
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    await base44.entities.LblPrinterConfig.delete(deleteTarget);
+    queryClient.invalidateQueries({ queryKey: ['lbl-printers-master'] });
+    toast({ title: 'Printer Deleted' });
+    setDeleteTarget(null);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-slate-900">Printer Configuration ({printers.length})</h2>
-        <Button className="h-11 md:h-9 gap-2" onClick={openNew}><Plus className="w-4 h-4" /> Add Printer</Button>
+        {canEdit && <Button className="h-11 md:h-9 gap-2" onClick={openNew}><Plus className="w-4 h-4" /> Add Printer</Button>}
       </div>
 
       {isLoading ? (
@@ -72,7 +84,10 @@ export default function LblPrinterManager() {
                     <td className="px-4 py-3 text-slate-500">{p.line_name || '—'}</td>
                     <td className="px-4 py-3 text-xs text-slate-500 font-mono truncate max-w-[200px]">{p.api_endpoint || '—'}</td>
                     <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${p.is_active !== false ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>{p.is_active !== false ? 'Active' : 'Inactive'}</span></td>
-                    <td className="px-4 py-3"><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(p)}><Pencil className="w-3.5 h-3.5" /></Button></td>
+                    <td className="px-4 py-3 flex items-center gap-1">
+                      {canEdit && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(p)}><Pencil className="w-3.5 h-3.5" /></Button>}
+                      {canEdit && <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => setDeleteTarget(p.id)}><Trash2 className="w-3.5 h-3.5" /></Button>}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -80,7 +95,7 @@ export default function LblPrinterManager() {
           </div>
           <div className="md:hidden divide-y divide-slate-100">
             {printers.map(p => (
-              <button key={p.id} className="w-full text-left p-4 hover:bg-slate-50" onClick={() => openEdit(p)}>
+              <button key={p.id} className="w-full text-left p-4 hover:bg-slate-50" onClick={() => canEdit && openEdit(p)}>
                 <div className="flex items-center justify-between"><span className="font-mono text-sm font-semibold text-slate-900">{p.printer_id}</span><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${p.is_active !== false ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>{p.is_active !== false ? 'Active' : 'Inactive'}</span></div>
                 <p className="text-sm text-slate-600 mt-0.5">{p.name}</p>
                 <p className="text-xs text-slate-400 mt-0.5">{p.line_name || 'Unassigned'} · {p.api_endpoint || 'No endpoint'}</p>
@@ -122,6 +137,19 @@ export default function LblPrinterManager() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Printer?</AlertDialogTitle>
+            <AlertDialogDescription>This will permanently remove this printer configuration. Any jobs referencing this printer will remain unaffected.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="h-11 md:h-9">Cancel</AlertDialogCancel>
+            <AlertDialogAction className="h-11 md:h-9 bg-red-600 hover:bg-red-700" onClick={handleDelete}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
