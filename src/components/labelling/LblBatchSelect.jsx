@@ -1,96 +1,101 @@
 import { useState, useRef, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
 import { Input } from '@/components/ui/input';
-import { Plus, Loader2, Search } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Plus, X } from 'lucide-react';
 
-/**
- * Smart batch selector — searches BatchRegistry, allows free-text entry.
- * Props: value, onChange(batchNo), skuCode (optional filter)
- */
-export default function LblBatchSelect({ value, onChange, skuCode }) {
-  const [search, setSearch] = useState(value || '');
-  const [open, setOpen] = useState(false);
-  const wrapRef = useRef(null);
+const PRESET_BATCHES = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
 
-  const { data: batches = [], isLoading } = useQuery({
-    queryKey: ['batch-registry-search', skuCode],
-    queryFn: () => {
-      if (skuCode) return base44.entities.BatchRegistry.filter({ product_code: skuCode }, '-created_date', 50);
-      return base44.entities.BatchRegistry.list('-created_date', 50);
-    },
-  });
+export default function LblBatchSelect({ value, onChange }) {
+  const [showCustom, setShowCustom] = useState(false);
+  const [customVal, setCustomVal] = useState('');
+  const inputRef = useRef(null);
 
-  useEffect(() => { setSearch(value || ''); }, [value]);
+  const isPreset = PRESET_BATCHES.includes(value);
+  const isCustom = value && !isPreset;
 
   useEffect(() => {
-    const handler = (e) => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false); };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
+    if (showCustom && inputRef.current) inputRef.current.focus();
+  }, [showCustom]);
 
-  const filtered = batches.filter(b =>
-    b.batch_id?.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const exactMatch = batches.some(b => b.batch_id?.toLowerCase() === search.trim().toLowerCase());
-
-  const handleSelect = (batchId) => {
-    onChange(batchId);
-    setSearch(batchId);
-    setOpen(false);
+  const handlePresetClick = (num) => {
+    onChange(num);
+    setShowCustom(false);
+    setCustomVal('');
   };
 
-  const handleAddNew = () => {
-    const trimmed = search.trim();
+  const handleCustomSubmit = () => {
+    const trimmed = customVal.trim();
     if (trimmed) {
       onChange(trimmed);
-      setOpen(false);
+      setShowCustom(false);
     }
   };
 
+  const handleClear = () => {
+    onChange('');
+    setCustomVal('');
+    setShowCustom(false);
+  };
+
   return (
-    <div ref={wrapRef} className="relative">
-      <div className="relative">
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-        <Input
-          value={search}
-          onChange={(e) => { setSearch(e.target.value); onChange(e.target.value); setOpen(true); }}
-          onFocus={() => setOpen(true)}
-          placeholder="Type to search or add new batch"
-          className="h-11 md:h-9 pl-8"
-        />
+    <div className="space-y-2">
+      {/* Preset batch number grid */}
+      <div className="flex flex-wrap gap-1.5">
+        {PRESET_BATCHES.map(num => (
+          <button
+            key={num}
+            type="button"
+            onClick={() => handlePresetClick(num)}
+            className={`h-9 w-9 rounded-md text-sm font-medium border transition-colors ${
+              value === num
+                ? 'bg-slate-900 text-white border-slate-900'
+                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:border-slate-300'
+            }`}
+          >
+            {num}
+          </button>
+        ))}
+        <button
+          type="button"
+          onClick={() => setShowCustom(true)}
+          className={`h-9 px-3 rounded-md text-sm font-medium border transition-colors flex items-center gap-1.5 ${
+            isCustom
+              ? 'bg-slate-900 text-white border-slate-900'
+              : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:border-slate-300'
+          }`}
+        >
+          <Plus className="w-3.5 h-3.5" />
+          {isCustom ? value : 'Custom'}
+        </button>
+        {value && (
+          <button
+            type="button"
+            onClick={handleClear}
+            className="h-9 w-9 rounded-md text-sm border border-slate-200 bg-white text-slate-400 hover:text-red-500 hover:border-red-200 transition-colors flex items-center justify-center"
+            title="Clear batch"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
-      {open && (
-        <div className="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-          {isLoading && (
-            <div className="flex items-center gap-2 px-3 py-2 text-sm text-slate-500">
-              <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading batches...
-            </div>
-          )}
-          {!isLoading && filtered.length === 0 && !search.trim() && (
-            <div className="px-3 py-2 text-sm text-slate-400">No batches found</div>
-          )}
-          {filtered.map(b => (
-            <button
-              key={b.id}
-              type="button"
-              className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 flex items-center justify-between"
-              onClick={() => handleSelect(b.batch_id)}
-            >
-              <span className="font-medium text-slate-900">{b.batch_id}</span>
-              {b.product_name && <span className="text-xs text-slate-400 truncate ml-2">{b.product_name}</span>}
-            </button>
-          ))}
-          {search.trim() && !exactMatch && (
-            <button
-              type="button"
-              className="w-full text-left px-3 py-2 text-sm text-blue-700 bg-blue-50 hover:bg-blue-100 flex items-center gap-2 font-medium"
-              onClick={handleAddNew}
-            >
-              <Plus className="w-3.5 h-3.5" /> Use "{search.trim()}"
-            </button>
-          )}
+
+      {/* Custom input */}
+      {showCustom && !isCustom && (
+        <div className="flex gap-2 items-center">
+          <Input
+            ref={inputRef}
+            value={customVal}
+            onChange={e => setCustomVal(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleCustomSubmit(); } }}
+            placeholder="Enter custom batch number"
+            className="h-11 md:h-9 flex-1"
+          />
+          <Button type="button" size="sm" className="h-11 md:h-9 px-4" onClick={handleCustomSubmit} disabled={!customVal.trim()}>
+            Add
+          </Button>
+          <Button type="button" variant="ghost" size="sm" className="h-11 md:h-9" onClick={() => setShowCustom(false)}>
+            Cancel
+          </Button>
         </div>
       )}
     </div>
