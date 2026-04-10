@@ -30,7 +30,7 @@ export default function LblJobCard({ job, isFirst, planLocked }) {
             <span>Planned: {job.quantity_bottles_planned?.toLocaleString()} bottles</span>
             {job.quantity_cases_planned > 0 && <span>{job.quantity_cases_planned} cases</span>}
             {job.manufacturing_date && <span>Manufacturing Date: {job.manufacturing_date}</span>}
-            {job.batch_no && <span>Batch: {job.batch_no}</span>}
+            {job.batch_no && <span>Batch {job.batch_no}</span>}
           </div>
           {(job.status === 'bulk_printing' || job.status === 'paused' || isCompleted) && (
             <div className="mt-2">

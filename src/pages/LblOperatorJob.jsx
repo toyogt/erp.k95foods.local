@@ -51,7 +51,7 @@ export default function LblOperatorJob() {
           {(job.manufacturing_date || job.batch_no) && (
             <div className="flex gap-3 mt-1 text-xs text-slate-500">
               {job.manufacturing_date && <span>Manufacturing Date: {job.manufacturing_date}</span>}
-              {job.batch_no && <span className="font-medium text-slate-700">Batch: {job.batch_no}</span>}
+              {job.batch_no && <span className="font-medium text-slate-700">Batch {job.batch_no}</span>}
             </div>
           )}
         </div>

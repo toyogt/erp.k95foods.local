@@ -103,13 +103,12 @@ export default function LblJobRowEditor({ index, job, products, planDate, onUpda
           <p className="text-xs text-slate-500">Defaults to plan date</p>
         </div>
         <div className="space-y-1">
-          <Label className="text-xs font-medium text-slate-700">Batch Number</Label>
+          <Label className="text-xs font-medium text-slate-700">Batch</Label>
           <LblBatchSelect
             value={job.batch_no || ''}
             onChange={(val) => onUpdate(index, 'batch_no', val)}
             skuCode={job.sku_code}
           />
-          <p className="text-xs text-slate-500">Type to search or add new batch</p>
         </div>
       </div>
 
