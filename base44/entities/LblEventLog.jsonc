@@ -1,0 +1,66 @@
+{
+  "name": "LblEventLog",
+  "type": "object",
+  "title": "Labelling Event Log",
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "job_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "plan_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "action_type": {
+      "type": "string",
+      "enum": [
+        "plan_created",
+        "plan_locked",
+        "plan_completed",
+        "plan_cancelled",
+        "job_started",
+        "stock_transferred",
+        "demo_print_sent",
+        "checklist_submitted",
+        "demo_approved",
+        "demo_rejected",
+        "bulk_print_started",
+        "bulk_print_stopped",
+        "bulk_print_resumed",
+        "job_completed",
+        "job_cancelled",
+        "priority_overridden",
+        "printer_error",
+        "downtime_logged"
+      ]
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "details_json": {
+      "type": "object"
+    },
+    "performed_by_email": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "performed_by_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "event_id",
+    "action_type"
+  ]
+}

@@ -1,0 +1,95 @@
+{
+  "name": "LblChecklistSubmission",
+  "type": "object",
+  "title": "Labelling Checklist Submission",
+  "properties": {
+    "submission_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "job_id": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Reference to LabellingJob"
+    },
+    "template_id": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Reference to LblChecklistTemplate"
+    },
+    "template_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "answers_json": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "question": {
+            "type": "string"
+          },
+          "answer": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "image_urls": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending_approval",
+        "approved",
+        "rejected"
+      ],
+      "default": "pending_approval"
+    },
+    "submitted_by_email": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "submitted_by_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "submitted_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "reviewed_by_email": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "reviewed_by_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "reviewed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "rejection_reason": {
+      "type": "string",
+      "maxLength": 1000
+    },
+    "review_remarks": {
+      "type": "string",
+      "maxLength": 1000
+    }
+  },
+  "required": [
+    "submission_id",
+    "job_id",
+    "template_id"
+  ]
+}

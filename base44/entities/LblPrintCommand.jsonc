@@ -1,0 +1,66 @@
+{
+  "name": "LblPrintCommand",
+  "type": "object",
+  "title": "Labelling Print Command",
+  "properties": {
+    "command_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "job_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "printer_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "command_type": {
+      "type": "string",
+      "enum": [
+        "demo",
+        "bulk_start",
+        "bulk_stop",
+        "bulk_resume"
+      ],
+      "description": "Type of print command"
+    },
+    "quantity": {
+      "type": "number",
+      "minimum": 0
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "queued",
+        "sent",
+        "acknowledged",
+        "completed",
+        "failed"
+      ],
+      "default": "queued"
+    },
+    "response_payload": {
+      "type": "object",
+      "description": "Response from printer API"
+    },
+    "error_message": {
+      "type": "string",
+      "maxLength": 1000
+    },
+    "sent_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "sent_by": {
+      "type": "string",
+      "maxLength": 200
+    }
+  },
+  "required": [
+    "command_id",
+    "job_id",
+    "command_type"
+  ]
+}

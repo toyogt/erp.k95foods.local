@@ -1,0 +1,176 @@
+{
+  "name": "LabellingJob",
+  "type": "object",
+  "title": "Labelling Job",
+  "properties": {
+    "job_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "plan_id": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Reference to LabellingShiftPlan"
+    },
+    "sku_code": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Product/SKU code from ProductMaster"
+    },
+    "product_name": {
+      "type": "string",
+      "maxLength": 300
+    },
+    "bottle_type": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "mrp": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "quantity_bottles_planned": {
+      "type": "number",
+      "minimum": 0
+    },
+    "quantity_cases_planned": {
+      "type": "number",
+      "minimum": 0
+    },
+    "priority_order": {
+      "type": "number",
+      "minimum": 1,
+      "description": "Execution order on line \u2014 lower = higher priority"
+    },
+    "line_id": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "line_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "shift_type": {
+      "type": "string",
+      "enum": [
+        "day",
+        "night"
+      ]
+    },
+    "plan_date": {
+      "type": "string",
+      "maxLength": 20
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "active",
+        "stock_transferred",
+        "demo_print_sent",
+        "checklist_submitted",
+        "demo_pending_approval",
+        "demo_approved",
+        "demo_rejected",
+        "bulk_printing",
+        "paused",
+        "completed",
+        "cancelled"
+      ],
+      "default": "pending"
+    },
+    "stock_transfer_qty": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0
+    },
+    "stock_transfer_batch": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "stock_transfer_remarks": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "demo_print_qty": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0
+    },
+    "demo_image_url": {
+      "type": "string",
+      "maxLength": 1000
+    },
+    "current_printed_qty": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0
+    },
+    "accepted_qty": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0
+    },
+    "rejected_qty": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0
+    },
+    "wastage_qty": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0
+    },
+    "completion_remarks": {
+      "type": "string",
+      "maxLength": 1000
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "started_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "completed_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "approval_status": {
+      "type": "string",
+      "enum": [
+        "not_required",
+        "pending",
+        "approved",
+        "rejected"
+      ],
+      "default": "not_required"
+    },
+    "approved_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "approved_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "rejection_reason": {
+      "type": "string",
+      "maxLength": 1000
+    }
+  },
+  "required": [
+    "job_id",
+    "plan_id",
+    "sku_code",
+    "product_name",
+    "quantity_bottles_planned",
+    "priority_order"
+  ]
+}

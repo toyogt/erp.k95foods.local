@@ -18,6 +18,8 @@ const ROLE_LAYOUT_MAP = {
   'recipe_operator': 'OPERATOR',
   'qc_inspector': 'OPERATOR',
   'label_operator': 'OPERATOR',
+  'lbl_operator': 'OPERATOR',
+  'lbl_helper': 'OPERATOR',
 
   // MANAGERS — Sidebar layout (multi-page, approval workflows)
   'admin': 'MANAGER',
@@ -27,6 +29,7 @@ const ROLE_LAYOUT_MAP = {
   'process_controller': 'MANAGER',
   'process_designer': 'MANAGER',
   'label_supervisor': 'MANAGER',
+  'lbl_supervisor': 'MANAGER',
 
   // VIEWERS — Use assigned role's layout
   'user': 'VIEWER',

@@ -18,7 +18,7 @@ import {
   Archive, FileText, ClipboardList, Shield, Zap as ZapIcon,
   Activity, BarChart4, AlertCircle, AlertTriangle,
   Store, MapPin, QrCode, ArrowLeftRight, TrendingDown,
-  RotateCcw, SlidersHorizontal,
+  RotateCcw, SlidersHorizontal, CalendarDays, Eye,
 } from 'lucide-react';
 
 /**
@@ -47,13 +47,21 @@ export const pageRegistry = [
   { pageKey: 'ShiftKPIDashboard', title: 'Shift KPIs', moduleKey: 'PRODUCTION', icon: BarChart3, roles: ['admin', 'production_manager', 'user'] },
   { pageKey: 'PullLists', title: 'Pull Lists', moduleKey: 'PRODUCTION', icon: ListChecks, roles: ['admin', 'production_manager', 'chamber_operator', 'labelling_receiver', 'labelling_supervisor', 'user'] },
 
-  // ─── LABELLING & PACKING ───
+  // ─── LABELLING & PACKING (Legacy) ───
   { pageKey: 'LabellingLine', title: 'Labelling Line', moduleKey: 'LABELLING', icon: Tag, roles: ['admin', 'line_operator', 'labelling_supervisor', 'production_manager', 'user'], mobileVisible: true },
   { pageKey: 'LabelRollManager', title: 'Label Roll Manager', moduleKey: 'LABELLING', icon: Printer, roles: ['admin', 'labelling_supervisor', 'production_manager', 'user'] },
   { pageKey: 'BoxLabelPrint', title: 'Box Label Print', moduleKey: 'LABELLING', icon: Printer, roles: ['admin', 'label_operator', 'label_supervisor', 'user'] },
   { pageKey: 'BoxLabelApprovals', title: 'Label Approvals', moduleKey: 'LABELLING', icon: ClipboardCheck, roles: ['admin', 'label_supervisor', 'production_manager', 'user'] },
   { pageKey: 'BoxPalletBuild', title: 'Pallet Build', moduleKey: 'LABELLING', icon: Layers, roles: ['admin', 'pallet_builder', 'label_operator', 'user'] },
   { pageKey: 'FeederKiosk', title: 'Feeder Kiosk', moduleKey: 'LABELLING', icon: Tag, roles: ['admin', 'line_operator', 'labelling_supervisor', 'production_manager', 'user'], mobileVisible: true },
+
+  // ─── LABELLING DEPARTMENT (New Module) ───
+  { pageKey: 'LblPlanningDashboard', title: 'Shift Planning', moduleKey: 'LBL_DEPT', icon: CalendarDays, roles: ['admin', 'lbl_supervisor', 'production_manager', 'user'], sortOrder: 1 },
+  { pageKey: 'LblOperatorQueue', title: 'Operator Queue', moduleKey: 'LBL_DEPT', icon: ListChecks, roles: ['admin', 'lbl_supervisor', 'lbl_operator', 'lbl_helper', 'production_manager', 'user'], sortOrder: 2, mobileVisible: true },
+  { pageKey: 'LblSupervisorApprovals', title: 'Demo Approvals', moduleKey: 'LBL_DEPT', icon: ClipboardCheck, roles: ['admin', 'lbl_supervisor', 'production_manager', 'user'], sortOrder: 3 },
+  { pageKey: 'LblMonitorDashboard', title: 'Live Monitor', moduleKey: 'LBL_DEPT', icon: Eye, roles: ['admin', 'lbl_supervisor', 'production_manager', 'user'], sortOrder: 4 },
+  { pageKey: 'LblChecklistBuilder', title: 'Checklist Builder', moduleKey: 'LBL_DEPT', icon: ClipboardList, roles: ['admin'], adminOnly: true, sortOrder: 10 },
+  { pageKey: 'LblEventLogPage', title: 'Event Log', moduleKey: 'LBL_DEPT', icon: ScrollText, roles: ['admin', 'lbl_supervisor', 'production_manager'], sortOrder: 11 },
 
   // ─── WAREHOUSE & FG ───
   { pageKey: 'TransferReceiving', title: 'Transfer / Receiving', moduleKey: 'WAREHOUSE', icon: Truck, roles: ['admin', 'labelling_receiver', 'labelling_supervisor', 'warehouse_ops', 'user'] },
@@ -182,6 +190,15 @@ export const moduleRegistry = [
     bgColor: 'bg-pink-50',
     adminOnly: false,
     sortOrder: 3,
+  },
+  {
+    moduleKey: 'LBL_DEPT',
+    label: 'Labelling Department',
+    icon: Printer,
+    color: 'text-fuchsia-600',
+    bgColor: 'bg-fuchsia-50',
+    adminOnly: false,
+    sortOrder: 3.5,
   },
   {
     moduleKey: 'WAREHOUSE',

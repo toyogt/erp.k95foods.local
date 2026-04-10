@@ -1,0 +1,72 @@
+{
+  "name": "LblChecklistTemplate",
+  "type": "object",
+  "title": "Labelling Checklist Template",
+  "properties": {
+    "template_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "purpose": {
+      "type": "string",
+      "enum": [
+        "demo_print_approval",
+        "line_start",
+        "line_end",
+        "shift_handover",
+        "quality_check"
+      ],
+      "default": "demo_print_approval"
+    },
+    "items_json": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "question": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "yes_no",
+              "text",
+              "number",
+              "dropdown",
+              "image"
+            ]
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "description": "Array of checklist items"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "template_id",
+    "name",
+    "purpose"
+  ]
+}

@@ -1,0 +1,72 @@
+{
+  "name": "LabellingShiftPlan",
+  "type": "object",
+  "title": "Labelling Shift Plan",
+  "properties": {
+    "plan_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50,
+      "description": "Unique plan identifier"
+    },
+    "plan_date": {
+      "type": "string",
+      "maxLength": 20,
+      "description": "Plan date DD/MM/YYYY"
+    },
+    "shift_type": {
+      "type": "string",
+      "enum": [
+        "day",
+        "night"
+      ]
+    },
+    "line_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Machine/Line ID reference"
+    },
+    "line_name": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Display name of the labelling line"
+    },
+    "supervisor_email": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "supervisor_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "locked",
+        "in_progress",
+        "completed",
+        "cancelled"
+      ],
+      "default": "draft"
+    },
+    "total_jobs": {
+      "type": "number",
+      "default": 0
+    },
+    "completed_jobs": {
+      "type": "number",
+      "default": 0
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 2000
+    }
+  },
+  "required": [
+    "plan_id",
+    "plan_date",
+    "shift_type",
+    "line_id"
+  ]
+}

@@ -113,6 +113,15 @@ import SMSReports from './pages/SMSReports';
 import SMSItemMaster from './pages/SMSItemMaster';
 import SKUBOMConfig from './pages/SKUBOMConfig';
 import ScheduledTaskManager from './pages/ScheduledTaskManager';
+import LblPlanningDashboard from './pages/LblPlanningDashboard';
+import LblPlanCreate from './pages/LblPlanCreate';
+import LblPlanDetail from './pages/LblPlanDetail';
+import LblOperatorQueue from './pages/LblOperatorQueue';
+import LblOperatorJob from './pages/LblOperatorJob';
+import LblSupervisorApprovals from './pages/LblSupervisorApprovals';
+import LblMonitorDashboard from './pages/LblMonitorDashboard';
+import LblChecklistBuilder from './pages/LblChecklistBuilder';
+import LblEventLogPage from './pages/LblEventLogPage';
 
 // Page component lookup table
 const PAGE_COMPONENTS = {
@@ -135,6 +144,8 @@ const PAGE_COMPONENTS = {
   SMSDashboard, SMSLocationManager, SMSLotManager, SMSPutaway, SMSStockOut,
       SMSTransfer, SMSReorderConfig, SMSCycleCount, SMSAdjustments, SMSReports, SMSItemMaster,
   SKUBOMConfig, ScheduledTaskManager,
+  LblPlanningDashboard, LblPlanCreate, LblPlanDetail, LblOperatorQueue, LblOperatorJob,
+  LblSupervisorApprovals, LblMonitorDashboard, LblChecklistBuilder, LblEventLogPage,
 };
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -292,6 +303,17 @@ const AuthenticatedApp = () => {
         path="/ScheduledTaskManager"
         element={<LayoutWrapper currentPageName="ScheduledTaskManager"><ScheduledTaskManager /></LayoutWrapper>}
       />
+
+      {/* Labelling Department Module */}
+      <Route path="/LblPlanningDashboard" element={<LayoutWrapper currentPageName="LblPlanningDashboard"><LblPlanningDashboard /></LayoutWrapper>} />
+      <Route path="/LblPlanCreate" element={<LayoutWrapper currentPageName="LblPlanCreate"><LblPlanCreate /></LayoutWrapper>} />
+      <Route path="/LblPlanDetail" element={<LayoutWrapper currentPageName="LblPlanDetail"><LblPlanDetail /></LayoutWrapper>} />
+      <Route path="/LblOperatorQueue" element={<LayoutWrapper currentPageName="LblOperatorQueue"><LblOperatorQueue /></LayoutWrapper>} />
+      <Route path="/LblOperatorJob" element={<LayoutWrapper currentPageName="LblOperatorJob"><LblOperatorJob /></LayoutWrapper>} />
+      <Route path="/LblSupervisorApprovals" element={<LayoutWrapper currentPageName="LblSupervisorApprovals"><LblSupervisorApprovals /></LayoutWrapper>} />
+      <Route path="/LblMonitorDashboard" element={<LayoutWrapper currentPageName="LblMonitorDashboard"><LblMonitorDashboard /></LayoutWrapper>} />
+      <Route path="/LblChecklistBuilder" element={<LayoutWrapper currentPageName="LblChecklistBuilder"><LblChecklistBuilder /></LayoutWrapper>} />
+      <Route path="/LblEventLogPage" element={<LayoutWrapper currentPageName="LblEventLogPage"><LblEventLogPage /></LayoutWrapper>} />
 
       {/* Store Management System Routes */}
       {[
