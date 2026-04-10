@@ -32,7 +32,7 @@ export default function LblPlanCreate() {
 
   const selectedMachine = machines.find(m => m.id === lineId);
 
-  const addJob = () => setJobs(prev => [...prev, { _key: Date.now(), sku_code: '', product_name: '', bottle_type: '', mrp: '', quantity_bottles_planned: 0, quantity_cases_planned: 0, priority_order: prev.length + 1 }]);
+  const addJob = () => setJobs(prev => [...prev, { _key: Date.now(), sku_code: '', product_name: '', bottle_type: '', mrp: '', manufacturing_date: '', batch_no: '', quantity_bottles_planned: 0, quantity_cases_planned: 0, priority_order: prev.length + 1 }]);
   const updateJob = (idx, field, value) => setJobs(prev => prev.map((j, i) => i === idx ? { ...j, [field]: value } : j));
   const removeJob = (idx) => setJobs(prev => prev.filter((_, i) => i !== idx).map((j, i) => ({ ...j, priority_order: i + 1 })));
 
@@ -44,7 +44,11 @@ export default function LblPlanCreate() {
     const fd = moment(planDate).format('DD/MM/YYYY');
     const plan = { plan_id: pid, plan_date: fd, shift_type: shiftType, line_id: lineId, line_name: selectedMachine?.display_name || lineId, supervisor_email: user?.email, supervisor_name: user?.full_name, status: lockAfterSave ? 'locked' : 'draft', total_jobs: jobs.length, completed_jobs: 0, notes };
     const createdPlan = await base44.entities.LabellingShiftPlan.create(plan);
-    const jobRecords = jobs.map((j, i) => ({ job_id: generateJobId(), plan_id: createdPlan.id, sku_code: j.sku_code, product_name: j.product_name, bottle_type: j.bottle_type, mrp: String(j.mrp || ''), quantity_bottles_planned: j.quantity_bottles_planned, quantity_cases_planned: j.quantity_cases_planned, priority_order: i + 1, line_id: lineId, line_name: selectedMachine?.display_name || lineId, shift_type: shiftType, plan_date: fd, status: 'pending' }));
+    const jobRecords = jobs.map((j, i) => {
+      const mfgRaw = j.manufacturing_date || planDate;
+      const mfgFormatted = mfgRaw ? moment(mfgRaw).format('DD/MM/YYYY') : fd;
+      return { job_id: generateJobId(), plan_id: createdPlan.id, sku_code: j.sku_code, product_name: j.product_name, bottle_type: j.bottle_type, mrp: String(j.mrp || ''), manufacturing_date: mfgFormatted, batch_no: j.batch_no || '', quantity_bottles_planned: j.quantity_bottles_planned, quantity_cases_planned: j.quantity_cases_planned, priority_order: i + 1, line_id: lineId, line_name: selectedMachine?.display_name || lineId, shift_type: shiftType, plan_date: fd, status: 'pending' };
+    });
     await base44.entities.LabellingJob.bulkCreate(jobRecords);
     await logLabellingEvent({ action_type: lockAfterSave ? 'plan_locked' : 'plan_created', plan_id: createdPlan.id, description: `Plan ${pid} ${lockAfterSave ? 'created and locked' : 'created'}`, user });
     queryClient.invalidateQueries({ queryKey: ['labelling-plans'] });
@@ -68,7 +72,7 @@ export default function LblPlanCreate() {
       <div className="bg-white border border-slate-200 rounded-lg p-4 space-y-3">
         <div className="flex items-center justify-between"><h2 className="text-sm font-semibold text-slate-900">Product Jobs ({jobs.length})</h2><Button variant="outline" size="sm" className="h-9 gap-1" onClick={addJob}><Plus className="w-3.5 h-3.5" /> Add Product</Button></div>
         {jobs.length === 0 ? <div className="text-center py-8 text-slate-400 text-sm">No products added yet</div> : (
-          <div className="space-y-3">{jobs.map((job, idx) => <LblJobRowEditor key={job._key} index={idx} job={job} products={products} onUpdate={updateJob} onRemove={removeJob} />)}</div>
+          <div className="space-y-3">{jobs.map((job, idx) => <LblJobRowEditor key={job._key} index={idx} job={job} products={products} planDate={planDate} onUpdate={updateJob} onRemove={removeJob} />)}</div>
         )}
       </div>
       <div className="flex flex-col md:flex-row gap-3">

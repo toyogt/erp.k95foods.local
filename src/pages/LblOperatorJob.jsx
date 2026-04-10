@@ -48,6 +48,12 @@ export default function LblOperatorJob() {
         <div className="flex-1">
           <div className="flex items-center gap-2 flex-wrap"><h1 className="text-lg font-bold text-slate-900">{job.product_name}</h1><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${st.color}`}>{st.label}</span></div>
           <p className="text-sm text-slate-500">Job: {job.job_id} · Priority #{job.priority_order} · {job.quantity_bottles_planned?.toLocaleString()} bottles</p>
+          {(job.manufacturing_date || job.batch_no) && (
+            <div className="flex gap-3 mt-1 text-xs text-slate-500">
+              {job.manufacturing_date && <span>Manufacturing Date: {job.manufacturing_date}</span>}
+              {job.batch_no && <span className="font-medium text-slate-700">Batch: {job.batch_no}</span>}
+            </div>
+          )}
         </div>
       </div>
       <div className="bg-white border border-slate-200 rounded-lg p-3">
