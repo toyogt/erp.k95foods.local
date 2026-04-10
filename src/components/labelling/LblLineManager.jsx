@@ -20,6 +20,7 @@ export default function LblLineManager() {
     queryFn: () => base44.entities.Machine.filter({ machine_type: 'LABEL-LINE' }),
   });
 
+  const autoId = (name) => name.trim().toUpperCase().replace(/[^A-Z0-9]+/g, '-').replace(/^-|-$/g, '');
   const openNew = () => { setForm({ machine_id: '', display_name: '', default_location: '', is_active: true }); setEditModal('new'); };
   const openEdit = (line) => { setForm({ machine_id: line.machine_id, display_name: line.display_name, default_location: line.default_location || '', is_active: line.is_active !== false }); setEditModal(line.id); };
 
@@ -86,8 +87,8 @@ export default function LblLineManager() {
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>{editModal === 'new' ? 'Add Labelling Line' : 'Edit Labelling Line'}</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div className="space-y-1"><Label className="text-xs font-medium text-slate-700">Machine ID</Label><Input value={form.machine_id} onChange={e => setForm(f => ({ ...f, machine_id: e.target.value }))} placeholder="e.g. LBL-01" className="h-11 md:h-9" disabled={editModal !== 'new'} /></div>
-            <div className="space-y-1"><Label className="text-xs font-medium text-slate-700">Display Name</Label><Input value={form.display_name} onChange={e => setForm(f => ({ ...f, display_name: e.target.value }))} placeholder="e.g. Labelling Line 1" className="h-11 md:h-9" /></div>
+            <div className="space-y-1"><Label className="text-xs font-medium text-slate-700">Display Name</Label><Input value={form.display_name} onChange={e => { const name = e.target.value; setForm(f => ({ ...f, display_name: name, ...(editModal === 'new' ? { machine_id: autoId(name) } : {}) })); }} placeholder="e.g. Labelling Line 1" className="h-11 md:h-9" /></div>
+            <div className="space-y-1"><Label className="text-xs font-medium text-slate-700">Machine ID</Label><Input value={form.machine_id} className="h-11 md:h-9 bg-slate-50 text-slate-500" disabled /><p className="text-xs text-slate-500">Auto-generated from display name</p></div>
             <div className="space-y-1"><Label className="text-xs font-medium text-slate-700">Location (Optional)</Label><Input value={form.default_location} onChange={e => setForm(f => ({ ...f, default_location: e.target.value }))} placeholder="e.g. Block A" className="h-11 md:h-9" /></div>
             <div className="flex items-center justify-between"><Label className="text-xs font-medium text-slate-700">Active</Label><Switch checked={form.is_active} onCheckedChange={v => setForm(f => ({ ...f, is_active: v }))} /></div>
             <Button className="h-11 w-full gap-2" onClick={handleSave} disabled={saving}>{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}Save</Button>
