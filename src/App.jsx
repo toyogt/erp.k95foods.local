@@ -123,6 +123,7 @@ import LblMonitorDashboard from './pages/LblMonitorDashboard';
 import LblChecklistBuilder from './pages/LblChecklistBuilder';
 import LblEventLogPage from './pages/LblEventLogPage';
 import LblMasterData from './pages/LblMasterData';
+import LblDocTypePermissions from './pages/LblDocTypePermissions';
 
 // Page component lookup table
 const PAGE_COMPONENTS = {
@@ -148,6 +149,7 @@ const PAGE_COMPONENTS = {
   LblPlanningDashboard, LblPlanCreate, LblPlanDetail, LblOperatorQueue, LblOperatorJob,
   LblSupervisorApprovals, LblMonitorDashboard, LblChecklistBuilder, LblEventLogPage,
   LblMasterData,
+  LblDocTypePermissions,
 };
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -317,6 +319,7 @@ const AuthenticatedApp = () => {
       <Route path="/LblChecklistBuilder" element={<LayoutWrapper currentPageName="LblChecklistBuilder"><LblChecklistBuilder /></LayoutWrapper>} />
       <Route path="/LblEventLogPage" element={<LayoutWrapper currentPageName="LblEventLogPage"><LblEventLogPage /></LayoutWrapper>} />
       <Route path="/LblMasterData" element={<LayoutWrapper currentPageName="LblMasterData"><LblMasterData /></LayoutWrapper>} />
+      <Route path="/LblDocTypePermissions" element={<LayoutWrapper currentPageName="LblDocTypePermissions"><LblDocTypePermissions /></LayoutWrapper>} />
 
       {/* Store Management System Routes */}
       {[

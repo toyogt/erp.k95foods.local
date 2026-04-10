@@ -1,0 +1,44 @@
+{
+  "name": "DocTypePermission",
+  "type": "object",
+  "title": "Document Type Permission",
+  "description": "Configures which actions each role can perform on a document type",
+  "properties": {
+    "doc_type": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Document type key (e.g. LabellingShiftPlan, LabellingJob)"
+    },
+    "doc_type_label": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Human-readable label"
+    },
+    "role_key": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Role key (e.g. admin, lbl_supervisor)"
+    },
+    "role_label": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Human-readable role name"
+    },
+    "allowed_actions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of allowed actions: create, read, edit, delete, print, export, import, share, email, submit, approve"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "doc_type",
+    "role_key",
+    "allowed_actions"
+  ]
+}

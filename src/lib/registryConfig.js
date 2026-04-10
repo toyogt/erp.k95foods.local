@@ -63,6 +63,7 @@ export const pageRegistry = [
   { pageKey: 'LblChecklistBuilder', title: 'Checklist Builder', moduleKey: 'LBL_DEPT', icon: ClipboardList, roles: ['admin'], adminOnly: true, sortOrder: 10 },
   { pageKey: 'LblEventLogPage', title: 'Event Log', moduleKey: 'LBL_DEPT', icon: ScrollText, roles: ['admin', 'lbl_supervisor', 'production_manager'], sortOrder: 11 },
   { pageKey: 'LblMasterData', title: 'Lines & Printers', moduleKey: 'LBL_DEPT', icon: Settings, roles: ['admin', 'lbl_supervisor', 'production_manager'], sortOrder: 12 },
+  { pageKey: 'LblDocTypePermissions', title: 'Document Permissions', moduleKey: 'LBL_DEPT', icon: ShieldCheck, roles: ['admin'], adminOnly: true, sortOrder: 13 },
 
   // ─── WAREHOUSE & FG ───
   { pageKey: 'TransferReceiving', title: 'Transfer / Receiving', moduleKey: 'WAREHOUSE', icon: Truck, roles: ['admin', 'labelling_receiver', 'labelling_supervisor', 'warehouse_ops', 'user'] },
