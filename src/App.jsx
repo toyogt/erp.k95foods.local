@@ -122,6 +122,7 @@ import LblSupervisorApprovals from './pages/LblSupervisorApprovals';
 import LblMonitorDashboard from './pages/LblMonitorDashboard';
 import LblChecklistBuilder from './pages/LblChecklistBuilder';
 import LblEventLogPage from './pages/LblEventLogPage';
+import LblMasterData from './pages/LblMasterData';
 
 // Page component lookup table
 const PAGE_COMPONENTS = {
@@ -146,6 +147,7 @@ const PAGE_COMPONENTS = {
   SKUBOMConfig, ScheduledTaskManager,
   LblPlanningDashboard, LblPlanCreate, LblPlanDetail, LblOperatorQueue, LblOperatorJob,
   LblSupervisorApprovals, LblMonitorDashboard, LblChecklistBuilder, LblEventLogPage,
+  LblMasterData,
 };
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -314,6 +316,7 @@ const AuthenticatedApp = () => {
       <Route path="/LblMonitorDashboard" element={<LayoutWrapper currentPageName="LblMonitorDashboard"><LblMonitorDashboard /></LayoutWrapper>} />
       <Route path="/LblChecklistBuilder" element={<LayoutWrapper currentPageName="LblChecklistBuilder"><LblChecklistBuilder /></LayoutWrapper>} />
       <Route path="/LblEventLogPage" element={<LayoutWrapper currentPageName="LblEventLogPage"><LblEventLogPage /></LayoutWrapper>} />
+      <Route path="/LblMasterData" element={<LayoutWrapper currentPageName="LblMasterData"><LblMasterData /></LayoutWrapper>} />
 
       {/* Store Management System Routes */}
       {[
