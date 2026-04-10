@@ -7,7 +7,8 @@ import { PLAN_STATUSES, canManagePlans } from '@/lib/labellingHelpers';
 import { logLabellingEvent } from '@/lib/labellingEventLogger';
 import { toast } from '@/components/ui/use-toast';
 import LblJobCard from '@/components/labelling/LblJobCard';
-import { ArrowLeft, Lock, Loader2 } from 'lucide-react';
+import LblDraggableJobCards from '@/components/labelling/LblDraggableJobCards';
+import { ArrowLeft, Lock, Loader2, Save } from 'lucide-react';
 
 export default function LblPlanDetail() {
   const navigate = useNavigate();
@@ -21,8 +22,35 @@ export default function LblPlanDetail() {
   const { data: plan, isLoading: planLoading } = useQuery({ queryKey: ['labelling-plan', planId], queryFn: async () => { const p = await base44.entities.LabellingShiftPlan.filter({ id: planId }); return p[0] || null; }, enabled: !!planId });
   const { data: jobs = [], isLoading: jobsLoading } = useQuery({ queryKey: ['labelling-jobs', planId], queryFn: () => base44.entities.LabellingJob.filter({ plan_id: planId }), enabled: !!planId });
 
-  const sortedJobs = [...jobs].sort((a, b) => a.priority_order - b.priority_order);
+  const [reorderedJobs, setReorderedJobs] = useState(null);
+  const [savingOrder, setSavingOrder] = useState(false);
+  const sortedJobs = reorderedJobs || [...jobs].sort((a, b) => a.priority_order - b.priority_order);
   const isManager = canManagePlans(user?.role);
+  const isDraft = plan?.status === 'draft';
+  const canReorder = isManager && isDraft;
+  const hasOrderChanged = reorderedJobs !== null;
+
+  // Reset reordered state when jobs data changes from server
+  useEffect(() => { setReorderedJobs(null); }, [jobs]);
+
+  const handleReorder = (fromIdx, toIdx) => {
+    const current = [...sortedJobs];
+    const [moved] = current.splice(fromIdx, 1);
+    current.splice(toIdx, 0, moved);
+    setReorderedJobs(current.map((j, i) => ({ ...j, priority_order: i + 1 })));
+  };
+
+  const handleSaveOrder = async () => {
+    if (!reorderedJobs) return;
+    setSavingOrder(true);
+    for (const j of reorderedJobs) {
+      await base44.entities.LabellingJob.update(j.id, { priority_order: j.priority_order });
+    }
+    queryClient.invalidateQueries({ queryKey: ['labelling-jobs', planId] });
+    setReorderedJobs(null);
+    toast({ title: 'Priority Updated', description: 'Job execution order has been saved' });
+    setSavingOrder(false);
+  };
 
   const handleLockPlan = async () => {
     if (!plan) return;
@@ -52,10 +80,25 @@ export default function LblPlanDetail() {
       </div>
       {plan.notes && <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">{plan.notes}</div>}
       <div className="space-y-3">
-        <h2 className="text-sm font-semibold text-slate-900">Jobs ({sortedJobs.length})</h2>
-        {sortedJobs.length === 0 ? <div className="text-center py-8 text-slate-400">No jobs</div> : sortedJobs.map((job, idx) => (
-          <LblJobCard key={job.id} job={job} isFirst={idx === sortedJobs.findIndex(j => j.status === 'pending')} planLocked={plan.status !== 'draft'} />
-        ))}
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-slate-900">Jobs ({sortedJobs.length})</h2>
+          {canReorder && hasOrderChanged && (
+            <Button size="sm" className="h-9 gap-2" onClick={handleSaveOrder} disabled={savingOrder}>
+              {savingOrder ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              Save Priority Order
+            </Button>
+          )}
+        </div>
+        {canReorder && <p className="text-xs text-slate-500">Drag jobs to change execution priority. Save after reordering.</p>}
+        {sortedJobs.length === 0 ? <div className="text-center py-8 text-slate-400">No jobs</div> : (
+          canReorder ? (
+            <LblDraggableJobCards jobs={sortedJobs} planLocked={plan.status !== 'draft'} onReorder={handleReorder} />
+          ) : (
+            sortedJobs.map((job, idx) => (
+              <LblJobCard key={job.id} job={job} isFirst={idx === sortedJobs.findIndex(j => j.status === 'pending')} planLocked={plan.status !== 'draft'} />
+            ))
+          )
+        )}
       </div>
     </div>
   );

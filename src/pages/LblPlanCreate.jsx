@@ -9,7 +9,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { SHIFT_TYPES, generatePlanId, generateJobId } from '@/lib/labellingHelpers';
 import { logLabellingEvent } from '@/lib/labellingEventLogger';
-import LblJobRowEditor from '@/components/labelling/LblJobRowEditor';
+import LblDraggableJobList from '@/components/labelling/LblDraggableJobList';
 import { toast } from '@/components/ui/use-toast';
 import { ArrowLeft, Save, Lock, Plus, Loader2 } from 'lucide-react';
 import moment from 'moment';
@@ -35,13 +35,28 @@ export default function LblPlanCreate() {
   const addJob = () => setJobs(prev => [...prev, { _key: Date.now(), sku_code: '', product_name: '', bottle_type: '', mrp: '', manufacturing_date: '', batch_no: '', quantity_bottles_planned: 0, quantity_cases_planned: 0, priority_order: prev.length + 1 }]);
   const updateJob = (idx, field, value) => setJobs(prev => prev.map((j, i) => i === idx ? { ...j, [field]: value } : j));
   const removeJob = (idx) => setJobs(prev => prev.filter((_, i) => i !== idx).map((j, i) => ({ ...j, priority_order: i + 1 })));
+  const reorderJobs = (fromIdx, toIdx) => {
+    setJobs(prev => {
+      const updated = [...prev];
+      const [moved] = updated.splice(fromIdx, 1);
+      updated.splice(toIdx, 0, moved);
+      return updated.map((j, i) => ({ ...j, priority_order: i + 1 }));
+    });
+  };
 
   const handleSave = async (lockAfterSave = false) => {
     if (!planDate || !shiftType || !lineId) { toast({ title: 'Missing Fields', description: 'Date, shift, and line are required', variant: 'destructive' }); return; }
     if (jobs.length === 0) { toast({ title: 'No Jobs', description: 'Add at least one product job', variant: 'destructive' }); return; }
+    // Check for duplicate plan (same date + shift + line)
+    const fd = moment(planDate).format('DD/MM/YYYY');
+    const existingPlans = await base44.entities.LabellingShiftPlan.filter({ plan_date: fd, shift_type: shiftType, line_id: lineId });
+    const activePlans = existingPlans.filter(p => p.status !== 'cancelled');
+    if (activePlans.length > 0) {
+      toast({ title: 'Duplicate Plan', description: `A plan already exists for ${fd} ${shiftType} shift on this line (${activePlans[0].plan_id}). Cancel the existing plan first or choose a different date/shift/line.`, variant: 'destructive' });
+      return;
+    }
     setSaving(true);
     const pid = generatePlanId();
-    const fd = moment(planDate).format('DD/MM/YYYY');
     const plan = { plan_id: pid, plan_date: fd, shift_type: shiftType, line_id: lineId, line_name: selectedMachine?.display_name || lineId, supervisor_email: user?.email, supervisor_name: user?.full_name, status: lockAfterSave ? 'locked' : 'draft', total_jobs: jobs.length, completed_jobs: 0, notes };
     const createdPlan = await base44.entities.LabellingShiftPlan.create(plan);
     const jobRecords = jobs.map((j, i) => {
@@ -71,8 +86,8 @@ export default function LblPlanCreate() {
       </div>
       <div className="bg-white border border-slate-200 rounded-lg p-4 space-y-3">
         <div className="flex items-center justify-between"><h2 className="text-sm font-semibold text-slate-900">Product Jobs ({jobs.length})</h2><Button variant="outline" size="sm" className="h-9 gap-1" onClick={addJob}><Plus className="w-3.5 h-3.5" /> Add Product</Button></div>
-        {jobs.length === 0 ? <div className="text-center py-8 text-slate-400 text-sm">No products added yet</div> : (
-          <div className="space-y-3">{jobs.map((job, idx) => <LblJobRowEditor key={job._key} index={idx} job={job} products={products} planDate={planDate} onUpdate={updateJob} onRemove={removeJob} />)}</div>
+        {jobs.length === 0 ? <div className="text-center py-8 text-slate-400 text-sm">No products added yet. Click "Add Product" to begin.</div> : (
+          <LblDraggableJobList jobs={jobs} products={products} planDate={planDate} onUpdate={updateJob} onRemove={removeJob} onReorder={reorderJobs} />
         )}
       </div>
       <div className="flex flex-col md:flex-row gap-3">

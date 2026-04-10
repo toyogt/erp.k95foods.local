@@ -9,7 +9,7 @@ import moment from 'moment';
 
 const BOTTLES_PER_CASE = 12;
 
-export default function LblJobRowEditor({ index, job, products, planDate, onUpdate, onRemove }) {
+export default function LblJobRowEditor({ index, job, products, planDate, onUpdate, onRemove, dragHandleProps }) {
   const [casesManuallyEdited, setCasesManuallyEdited] = useState(false);
 
   const handleProductChange = (productId) => {
@@ -53,7 +53,9 @@ export default function LblJobRowEditor({ index, job, products, planDate, onUpda
     <div className="border border-slate-200 rounded-lg p-3 space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <GripVertical className="w-4 h-4 text-slate-300" />
+          <div {...dragHandleProps} className="cursor-grab active:cursor-grabbing touch-none p-1 -m-1 rounded hover:bg-slate-100">
+            <GripVertical className="w-4 h-4 text-slate-400" />
+          </div>
           <span className="text-xs font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded">Priority #{job.priority_order}</span>
         </div>
         <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-700" onClick={() => onRemove(index)}>
