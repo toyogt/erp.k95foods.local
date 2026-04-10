@@ -8,7 +8,12 @@ import { logLabellingEvent } from '@/lib/labellingEventLogger';
 import { toast } from '@/components/ui/use-toast';
 import LblJobCard from '@/components/labelling/LblJobCard';
 import LblDraggableJobCards from '@/components/labelling/LblDraggableJobCards';
-import { ArrowLeft, Lock, Loader2, Save } from 'lucide-react';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { ArrowLeft, Lock, Loader2, Save, Trash2 } from 'lucide-react';
 
 export default function LblPlanDetail() {
   const navigate = useNavigate();
@@ -24,6 +29,7 @@ export default function LblPlanDetail() {
 
   const [reorderedJobs, setReorderedJobs] = useState(null);
   const [savingOrder, setSavingOrder] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const sortedJobs = reorderedJobs || [...jobs].sort((a, b) => a.priority_order - b.priority_order);
   const isManager = canManagePlans(user?.role);
   const isDraft = plan?.status === 'draft';
@@ -50,6 +56,20 @@ export default function LblPlanDetail() {
     setReorderedJobs(null);
     toast({ title: 'Priority Updated', description: 'Job execution order has been saved' });
     setSavingOrder(false);
+  };
+
+  const handleDeletePlan = async () => {
+    if (!plan) return;
+    setDeleting(true);
+    // Delete all associated jobs first
+    for (const j of jobs) {
+      await base44.entities.LabellingJob.delete(j.id);
+    }
+    await base44.entities.LabellingShiftPlan.delete(plan.id);
+    await logLabellingEvent({ action_type: 'plan_cancelled', plan_id: plan.id, description: `Plan ${plan.plan_id} deleted`, user });
+    queryClient.invalidateQueries({ queryKey: ['labelling-plans'] });
+    toast({ title: 'Plan Deleted', description: `${plan.plan_id} and its ${jobs.length} job(s) have been deleted` });
+    navigate('/LblPlanningDashboard');
   };
 
   const handleLockPlan = async () => {
@@ -102,7 +122,34 @@ export default function LblPlanDetail() {
           <p className="text-sm text-slate-500">{plan.plan_date} · {plan.shift_type} Shift · {plan.line_name || plan.line_id}</p>
           {plan.supervisor_name && <p className="text-xs text-slate-400">Supervisor: {plan.supervisor_name}</p>}
         </div>
-        {isManager && plan.status === 'draft' && <Button className="h-11 md:h-9 gap-2" onClick={handleLockPlan} disabled={acting}>{acting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}Lock Plan</Button>}
+        {isManager && plan.status === 'draft' && (
+          <div className="flex items-center gap-2">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" className="h-11 md:h-9 gap-2 text-red-600 border-red-200 hover:bg-red-50" disabled={deleting}>
+                  {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                  Delete
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Plan {plan.plan_id}?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently delete this plan and all {jobs.length} associated job(s). This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel className="h-11 md:h-9">Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDeletePlan} className="h-11 md:h-9 bg-red-600 hover:bg-red-700">Delete Plan</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+            <Button className="h-11 md:h-9 gap-2" onClick={handleLockPlan} disabled={acting}>
+              {acting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
+              Lock Plan
+            </Button>
+          </div>
+        )}
       </div>
       {plan.notes && <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">{plan.notes}</div>}
       <div className="space-y-3">
