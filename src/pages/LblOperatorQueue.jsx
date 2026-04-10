@@ -16,9 +16,27 @@ export default function LblOperatorQueue() {
   const { data: machines = [] } = useQuery({ queryKey: ['labelling-machines'], queryFn: () => base44.entities.Machine.filter({ machine_type: 'LABEL-LINE', is_active: true }) });
 
   const filtered = lineFilter === 'all' ? jobs : jobs.filter(j => j.line_id === lineFilter);
+  // Group by line, then sub-group by plan_id within each line
   const byLine = {};
   filtered.forEach(j => { const key = j.line_name || j.line_id || 'Unassigned'; if (!byLine[key]) byLine[key] = []; byLine[key].push(j); });
-  Object.values(byLine).forEach(lj => lj.sort((a, b) => a.priority_order - b.priority_order));
+  // Sort within each line: first by plan_id (earlier plan first), then by priority_order
+  Object.values(byLine).forEach(lj => lj.sort((a, b) => {
+    if (a.plan_id !== b.plan_id) return (a.plan_id || '').localeCompare(b.plan_id || '');
+    return a.priority_order - b.priority_order;
+  }));
+  // Build plan groups within each line for display
+  const getPlanGroups = (lineJobs) => {
+    const groups = [];
+    let currentPlan = null;
+    for (const j of lineJobs) {
+      if (j.plan_id !== currentPlan) {
+        currentPlan = j.plan_id;
+        groups.push({ planId: j.plan_id, jobs: [] });
+      }
+      groups[groups.length - 1].jobs.push(j);
+    }
+    return groups;
+  };
 
   if (isLoading) return <div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>;
 
@@ -31,11 +49,20 @@ export default function LblOperatorQueue() {
       {Object.keys(byLine).length === 0 ? (
         <div className="text-center py-12 bg-white border border-slate-200 rounded-lg"><Tag className="w-8 h-8 text-slate-300 mx-auto mb-2" /><p className="text-slate-500">No jobs for today</p></div>
       ) : Object.entries(byLine).map(([lineName, lineJobs]) => {
-        const firstPendingIdx = lineJobs.findIndex(j => j.status === 'pending');
+        const planGroups = getPlanGroups(lineJobs);
+        const firstPendingId = lineJobs.find(j => j.status === 'pending')?.id;
         return (
-          <div key={lineName} className="space-y-3">
+          <div key={lineName} className="space-y-4">
             <h2 className="text-sm font-semibold text-slate-900 flex items-center gap-2"><Tag className="w-4 h-4 text-pink-600" />{lineName}<span className="text-xs text-slate-400 font-normal">{lineJobs.filter(j => j.status === 'completed').length}/{lineJobs.length} completed</span></h2>
-            {lineJobs.map((job, idx) => <LblJobCard key={job.id} job={job} isFirst={idx === firstPendingIdx} planLocked={true} />)}
+            {planGroups.map((group) => (
+              <div key={group.planId} className="space-y-2">
+                <div className="flex items-center gap-2 px-1">
+                  <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">Plan: {group.planId}</span>
+                  <span className="text-xs text-slate-400">{group.jobs.filter(j => j.status === 'completed').length}/{group.jobs.length} done</span>
+                </div>
+                {group.jobs.map((job) => <LblJobCard key={job.id} job={job} isFirst={job.id === firstPendingId} planLocked={true} />)}
+              </div>
+            ))}
           </div>
         );
       })}

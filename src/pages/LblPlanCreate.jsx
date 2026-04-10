@@ -55,6 +55,21 @@ export default function LblPlanCreate() {
       toast({ title: 'Duplicate Plan', description: `A plan already exists for ${fd} ${shiftType} shift on this line (${activePlans[0].plan_id}). Cancel the existing plan first or choose a different date/shift/line.`, variant: 'destructive' });
       return;
     }
+    // Check for duplicate product + batch across all plans for same day
+    const jobsWithBatch = jobs.filter(j => j.sku_code && j.batch_no);
+    if (jobsWithBatch.length > 0) {
+      const allDayJobs = await base44.entities.LabellingJob.filter({ plan_date: fd });
+      const activeJobs = allDayJobs.filter(j => j.status !== 'cancelled');
+      const duplicates = [];
+      for (const j of jobsWithBatch) {
+        const match = activeJobs.find(ej => ej.sku_code === j.sku_code && ej.batch_no === j.batch_no);
+        if (match) duplicates.push(`${j.product_name || j.sku_code} / Batch ${j.batch_no} (already in job ${match.job_id})`);
+      }
+      if (duplicates.length > 0) {
+        toast({ title: 'Duplicate Product + Batch', description: `These product-batch combinations already exist today: ${duplicates.join('; ')}`, variant: 'destructive' });
+        return;
+      }
+    }
     setSaving(true);
     const pid = generatePlanId();
     const plan = { plan_id: pid, plan_date: fd, shift_type: shiftType, line_id: lineId, line_name: selectedMachine?.display_name || lineId, supervisor_email: user?.email, supervisor_name: user?.full_name, status: lockAfterSave ? 'locked' : 'draft', total_jobs: jobs.length, completed_jobs: 0, notes };
