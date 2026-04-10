@@ -47,15 +47,49 @@ export default function LblPlanCreate() {
   const handleSave = async (lockAfterSave = false) => {
     if (!planDate || !shiftType || !lineId) { toast({ title: 'Missing Fields', description: 'Date, shift, and line are required', variant: 'destructive' }); return; }
     if (jobs.length === 0) { toast({ title: 'No Jobs', description: 'Add at least one product job', variant: 'destructive' }); return; }
-    // Check for duplicate plan (same date + shift + line)
-    const fd = moment(planDate).format('DD/MM/YYYY');
-    const existingPlans = await base44.entities.LabellingShiftPlan.filter({ plan_date: fd, shift_type: shiftType, line_id: lineId });
-    const activePlans = existingPlans.filter(p => p.status !== 'cancelled');
-    if (activePlans.length > 0) {
-      toast({ title: 'Duplicate Plan', description: `A plan already exists for ${fd} ${shiftType} shift on this line (${activePlans[0].plan_id}). Cancel the existing plan first or choose a different date/shift/line.`, variant: 'destructive' });
+
+    // Validate all jobs have a product selected
+    const incompleteJobs = jobs.filter(j => !j.sku_code);
+    if (incompleteJobs.length > 0) {
+      toast({ title: 'Incomplete Jobs', description: `${incompleteJobs.length} job(s) have no product selected. Remove empty rows or select a product.`, variant: 'destructive' });
       return;
     }
-    // Check for duplicate product + batch across all plans for same day
+
+    // Validate all jobs have planned bottle quantity > 0
+    const zeroQtyJobs = jobs.filter(j => !j.quantity_bottles_planned || j.quantity_bottles_planned <= 0);
+    if (zeroQtyJobs.length > 0) {
+      toast({ title: 'Missing Quantities', description: `${zeroQtyJobs.length} job(s) have zero planned bottles. Enter a quantity for each product.`, variant: 'destructive' });
+      return;
+    }
+
+    // Validate priority sequence is continuous (no gaps, no duplicates)
+    const priorities = jobs.map(j => j.priority_order);
+    const uniquePriorities = new Set(priorities);
+    if (uniquePriorities.size !== jobs.length) {
+      toast({ title: 'Priority Conflict', description: 'Two or more jobs share the same priority number. Drag to reorder and fix.', variant: 'destructive' });
+      return;
+    }
+    const sorted = [...priorities].sort((a, b) => a - b);
+    const isSequential = sorted.every((p, i) => p === i + 1);
+    if (!isSequential) {
+      toast({ title: 'Priority Gap', description: 'Priority numbers must be sequential starting from 1. Drag to reorder.', variant: 'destructive' });
+      return;
+    }
+
+    // Validate no duplicate product + batch within the same plan
+    const combos = jobs.filter(j => j.batch_no).map(j => `${j.sku_code}::${j.batch_no}`);
+    const seen = new Set();
+    const internalDupes = [];
+    for (const c of combos) {
+      if (seen.has(c)) internalDupes.push(c.replace('::', ' / Batch '));
+      seen.add(c);
+    }
+    if (internalDupes.length > 0) {
+      toast({ title: 'Duplicate Within Plan', description: `Same product + batch appears more than once in this plan: ${internalDupes.join('; ')}`, variant: 'destructive' });
+      return;
+    }
+
+    // Check for duplicate plan (same date + shift + line)
     const jobsWithBatch = jobs.filter(j => j.sku_code && j.batch_no);
     if (jobsWithBatch.length > 0) {
       const allDayJobs = await base44.entities.LabellingJob.filter({ plan_date: fd });

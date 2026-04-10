@@ -54,6 +54,32 @@ export default function LblPlanDetail() {
 
   const handleLockPlan = async () => {
     if (!plan) return;
+
+    // Validate priority sequence before locking
+    const priorities = sortedJobs.map(j => j.priority_order);
+    const uniquePriorities = new Set(priorities);
+    if (uniquePriorities.size !== sortedJobs.length) {
+      toast({ title: 'Priority Conflict', description: 'Two or more jobs share the same priority number. Fix before locking.', variant: 'destructive' });
+      return;
+    }
+    const sorted = [...priorities].sort((a, b) => a - b);
+    const isSequential = sorted.every((p, i) => p === i + 1);
+    if (!isSequential) {
+      toast({ title: 'Priority Gap', description: 'Priority numbers must be sequential starting from 1. Save the correct order first.', variant: 'destructive' });
+      return;
+    }
+
+    // Do not lock if there are unsaved reorder changes
+    if (hasOrderChanged) {
+      toast({ title: 'Unsaved Changes', description: 'Save the priority order before locking the plan.', variant: 'destructive' });
+      return;
+    }
+
+    if (sortedJobs.length === 0) {
+      toast({ title: 'No Jobs', description: 'Cannot lock a plan with no jobs.', variant: 'destructive' });
+      return;
+    }
+
     setActing(true);
     await base44.entities.LabellingShiftPlan.update(plan.id, { status: 'locked' });
     await logLabellingEvent({ action_type: 'plan_locked', plan_id: plan.id, description: `Plan ${plan.plan_id} locked`, user });
