@@ -1,10 +1,15 @@
+import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { GripVertical, Trash2 } from 'lucide-react';
+import { GripVertical, Trash2, Lock, Unlock } from 'lucide-react';
+
+const BOTTLES_PER_CASE = 12;
 
 export default function LblJobRowEditor({ index, job, products, onUpdate, onRemove }) {
+  const [casesManuallyEdited, setCasesManuallyEdited] = useState(false);
+
   const handleProductChange = (productId) => {
     const prod = products.find(p => p.id === productId);
     if (prod) {
@@ -12,6 +17,31 @@ export default function LblJobRowEditor({ index, job, products, onUpdate, onRemo
       onUpdate(index, 'product_name', prod.product_name || prod.item_name || '');
       onUpdate(index, 'bottle_type', prod.bottle_type || prod.container_type || '');
       onUpdate(index, 'mrp', prod.mrp || '');
+    }
+  };
+
+  const handleBottlesChange = (value) => {
+    const bottles = Number(value) || 0;
+    onUpdate(index, 'quantity_bottles_planned', bottles);
+    if (!casesManuallyEdited && bottles > 0) {
+      onUpdate(index, 'quantity_cases_planned', Math.ceil(bottles / BOTTLES_PER_CASE));
+    }
+  };
+
+  const handleCasesChange = (value) => {
+    setCasesManuallyEdited(true);
+    onUpdate(index, 'quantity_cases_planned', Number(value) || 0);
+  };
+
+  const toggleCasesLock = () => {
+    if (casesManuallyEdited) {
+      setCasesManuallyEdited(false);
+      const bottles = job.quantity_bottles_planned || 0;
+      if (bottles > 0) {
+        onUpdate(index, 'quantity_cases_planned', Math.ceil(bottles / BOTTLES_PER_CASE));
+      }
+    } else {
+      setCasesManuallyEdited(true);
     }
   };
 
@@ -40,11 +70,17 @@ export default function LblJobRowEditor({ index, job, products, onUpdate, onRemo
         </div>
         <div className="space-y-1">
           <Label className="text-xs font-medium text-slate-700">Planned Bottles</Label>
-          <Input type="number" value={job.quantity_bottles_planned || ''} onChange={e => onUpdate(index, 'quantity_bottles_planned', Number(e.target.value))} placeholder="0" className="h-11 md:h-9" />
+          <Input type="number" value={job.quantity_bottles_planned || ''} onChange={e => handleBottlesChange(e.target.value)} placeholder="0" className="h-11 md:h-9" />
         </div>
         <div className="space-y-1">
           <Label className="text-xs font-medium text-slate-700">Planned Cases</Label>
-          <Input type="number" value={job.quantity_cases_planned || ''} onChange={e => onUpdate(index, 'quantity_cases_planned', Number(e.target.value))} placeholder="0" className="h-11 md:h-9" />
+          <div className="flex gap-1.5 items-center">
+            <Input type="number" value={job.quantity_cases_planned || ''} onChange={e => handleCasesChange(e.target.value)} placeholder="0" className={`h-11 md:h-9 flex-1 ${!casesManuallyEdited ? 'bg-slate-50' : ''}`} />
+            <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={toggleCasesLock} title={casesManuallyEdited ? 'Switch to auto-calculate' : 'Edit manually'}>
+              {casesManuallyEdited ? <Unlock className="w-3.5 h-3.5 text-amber-600" /> : <Lock className="w-3.5 h-3.5 text-slate-400" />}
+            </Button>
+          </div>
+          <p className="text-xs text-slate-500">{casesManuallyEdited ? 'Manual entry' : `Auto: ${BOTTLES_PER_CASE} bottles per case`}</p>
         </div>
       </div>
       {job.product_name && (
