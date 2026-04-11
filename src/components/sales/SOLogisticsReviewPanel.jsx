@@ -67,7 +67,27 @@ export default function SOLogisticsReviewPanel({ order, onUpdated }) {
     staleTime: 300000,
   });
   const customer = customerList[0];
-  const customerRegion = customer?.region || '';
+
+  // Parse region from shipping address if customer region is not set
+  const parseRegionFromAddress = (address) => {
+    if (!address) return '';
+    const KNOWN_CITIES = [
+      'Mumbai', 'Delhi', 'Bangalore', 'Bengaluru', 'Chennai', 'Kolkata', 'Hyderabad', 'Pune',
+      'Ahmedabad', 'Jaipur', 'Lucknow', 'Chandigarh', 'Indore', 'Nagpur', 'Bhopal',
+      'Kochi', 'Coimbatore', 'Visakhapatnam', 'Surat', 'Vadodara', 'Noida', 'Gurgaon',
+      'Gurugram', 'Thane', 'Navi Mumbai', 'Patna', 'Ranchi', 'Bhubaneswar', 'Guwahati',
+      'Dehradun', 'Raipur', 'Thiruvananthapuram', 'Mangalore', 'Mysore', 'Mysuru',
+      'Jodhpur', 'Udaipur', 'Agra', 'Varanasi', 'Ludhiana', 'Amritsar', 'Madurai',
+      'Vijayawada', 'Rajkot', 'Panaji', 'Goa', 'Shimla', 'Jammu', 'Srinagar',
+    ];
+    const upper = address;
+    for (const city of KNOWN_CITIES) {
+      if (upper.toLowerCase().includes(city.toLowerCase())) return city;
+    }
+    return '';
+  };
+
+  const customerRegion = customer?.region || parseRegionFromAddress(order?.shipping_address) || '';
 
   const orderWeight = costRecord?.order_weight_kg || Number(weightInput) || 0;
   // Region-based + weight-based transporter matching
@@ -216,8 +236,26 @@ export default function SOLogisticsReviewPanel({ order, onUpdated }) {
       {/* ── Merged Order Items Table (Stock + Weight + Set Now) ── */}
       <OrderItemsReviewTable order={order} />
 
+      {/* ── Region Badge ── */}
+      {customerRegion && (
+        <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-[20px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] p-4 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-[12px] bg-indigo-100 text-indigo-600 flex items-center justify-center">
+            <Truck className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-xs text-slate-500 font-medium">Shipping Region (auto-detected)</p>
+            <p className="text-sm font-bold text-slate-900">{customerRegion}</p>
+          </div>
+          {order?.shipping_address && (
+            <p className="text-xs text-slate-500 ml-auto max-w-xs truncate hidden md:block" title={order.shipping_address}>
+              {order.shipping_address}
+            </p>
+          )}
+        </div>
+      )}
+
       {/* ── Logistics Details (optional — highlighted if missing) ── */}
-      <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-4">
+      <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-[20px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] p-4 space-y-4">
         <div className="flex items-center justify-between">
           <h4 className="text-xs font-semibold text-slate-600 uppercase tracking-wide flex items-center gap-1.5">
             <Truck className="w-3.5 h-3.5" /> Logistics Details
@@ -329,7 +367,7 @@ export default function SOLogisticsReviewPanel({ order, onUpdated }) {
       }} />
 
       {/* ── Weight & Transportation Cost ── */}
-      <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3">
+      <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-[20px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] p-4 space-y-3">
         <h4 className="text-xs font-semibold text-slate-600 uppercase tracking-wide flex items-center gap-1.5">
           <Scale className="w-3.5 h-3.5" /> Order Weight & Transportation Estimate
         </h4>

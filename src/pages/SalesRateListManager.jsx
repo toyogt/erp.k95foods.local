@@ -2,6 +2,7 @@ import { useState, useRef, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
+import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -134,7 +135,7 @@ export default function SalesRateListManager() {
   }
 
   return (
-    <div className="p-3 md:p-6 max-w-6xl mx-auto space-y-4">
+    <motion.div className="p-3 md:p-6 mx-auto space-y-5" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-slate-900">Rate List Manager</h1>
@@ -163,7 +164,7 @@ export default function SalesRateListManager() {
         </div>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+      <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] overflow-hidden">
         <div className="p-3 border-b border-slate-100">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -297,6 +298,6 @@ export default function SalesRateListManager() {
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

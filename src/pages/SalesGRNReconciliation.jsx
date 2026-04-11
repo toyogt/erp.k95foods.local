@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -128,7 +129,7 @@ export default function SalesGRNReconciliation() {
   }).length + debitNotes.filter(d => ['under_review', 'disputed'].includes(d.status)).length;
 
   return (
-    <div className="space-y-4 p-3 md:p-4 lg:p-6">
+    <motion.div className="space-y-5 p-3 md:p-4 lg:p-6" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div>
@@ -145,18 +146,21 @@ export default function SalesGRNReconciliation() {
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { label: 'Total GRNs', value: stats.total, icon: FileText, color: 'text-slate-700' },
-          { label: 'Pending Match', value: stats.pending, icon: Clock, color: 'text-yellow-600' },
-          { label: 'Discrepancies', value: stats.discrepancy, icon: AlertTriangle, color: 'text-red-600' },
-          { label: 'Credit Notes Issued', value: stats.creditIssued, icon: CheckCircle, color: 'text-blue-600' },
-        ].map(s => (
-          <div key={s.label} className="bg-white border border-slate-200 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-1">
-              <s.icon className={`w-4 h-4 ${s.color}`} />
-              <span className="text-xs text-slate-500">{s.label}</span>
+          { label: 'Total GRNs', value: stats.total, icon: FileText, color: 'text-slate-700', bg: 'bg-slate-100 text-slate-600' },
+          { label: 'Pending Match', value: stats.pending, icon: Clock, color: 'text-yellow-600', bg: 'bg-yellow-100 text-yellow-600' },
+          { label: 'Discrepancies', value: stats.discrepancy, icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-100 text-red-600' },
+          { label: 'Credit Notes Issued', value: stats.creditIssued, icon: CheckCircle, color: 'text-blue-600', bg: 'bg-blue-100 text-blue-600' },
+        ].map((s, i) => (
+          <motion.div key={s.label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: i * 0.06 }}
+            className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-[20px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] p-4 hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-3">
+              <div className={`w-11 h-11 rounded-[14px] flex items-center justify-center ${s.bg}`}><s.icon className="w-5 h-5" /></div>
+              <div>
+                <p className="text-xs text-slate-500 font-medium">{s.label}</p>
+                <p className={`text-xl font-bold ${s.color}`}>{s.value}</p>
+              </div>
             </div>
-            <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
-          </div>
+          </motion.div>
         ))}
       </div>
 
@@ -398,6 +402,6 @@ export default function SalesGRNReconciliation() {
       />
       <DebitNoteEntryModal open={showDNModal} onClose={() => setShowDNModal(false)} onSaved={refresh} grns={grns} invoices={invoices} />
       <GRNReconciliationPanel grn={selectedGRN} open={!!selectedGRN} onClose={() => setSelectedGRN(null)} onUpdated={() => { refresh(); setSelectedGRN(null); }} />
-    </div>
+    </motion.div>
   );
 }

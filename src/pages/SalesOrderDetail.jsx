@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
+import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { formatDateTime, formatDate } from '@/lib/dateFormatter';
 import {
@@ -46,9 +47,9 @@ const PANELS = [
 function Section({ title, children, defaultOpen = true }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="border border-slate-200 rounded-md bg-white mb-3">
+    <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-[20px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] mb-3 hover:shadow-md transition-shadow">
       <button
-        className="w-full flex items-center justify-between px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+        className="w-full flex items-center justify-between px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50/50 rounded-t-[20px]"
         onClick={() => setOpen(o => !o)}
       >
         <span>{title}</span>
@@ -116,7 +117,7 @@ export default function SalesOrderDetail() {
   const { data: auditLogs = [] } = useQuery({
     queryKey: ['so_audit', soId],
     queryFn: () => base44.entities.SalesAuditLog.filter({ entity_id: soId }, '-created_date', 50),
-    enabled: !!soId && (activePanel === 'items' || activePanel === 'history'),
+    enabled: !!soId && activePanel === 'history',
     staleTime: 30000,
   });
 
@@ -271,7 +272,7 @@ export default function SalesOrderDetail() {
       </div>
 
       {/* Page content */}
-      <div className="max-w-4xl mx-auto px-4 py-4 space-y-0">
+      <motion.div className="mx-auto px-4 py-4 space-y-0" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
 
         {/* ── Details (Items) ─────────────────────────────────────────── */}
         {activePanel === 'items' && (
@@ -440,15 +441,7 @@ export default function SalesOrderDetail() {
           </Section>
         )}
 
-        {/* ── Activity — always visible below tab content (like ERPNext) ──── */}
-        {activePanel !== 'history' && (
-          <div className="mt-6 border-t border-slate-200 pt-4">
-            <h3 className="text-sm font-bold text-slate-900 mb-3">Activity</h3>
-            <SOActivityTimeline auditLogs={auditLogs} />
-          </div>
-        )}
-
-      </div>
+      </motion.div>
 
       <DeleteWithRemarks
         open={showDelete}
