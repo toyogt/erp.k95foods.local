@@ -22,11 +22,18 @@ export default function OrderItemsReviewTable({ order, onPicklistQtyChange }) {
     staleTime: 30000,
   });
 
-  // Stock is tracked on ProductMaster.current_stock — no separate warehouse lot query needed
+  // Extract item codes from order items for targeted lookup
+  const itemCodes = useMemo(() => soItems.map(i => i.item_code).filter(Boolean), [soItems]);
 
   const { data: products = [], isLoading: stockLoading } = useQuery({
-    queryKey: ['product-master-all'],
-    queryFn: () => base44.entities.ProductMaster.list(),
+    queryKey: ['product-master-for-order', order?.id, itemCodes.join(',')],
+    queryFn: async () => {
+      if (itemCodes.length === 0) return [];
+      // Fetch all products and filter client-side (entity filter doesn't support $in)
+      const all = await base44.entities.ProductMaster.list('-created_date', 500);
+      return all;
+    },
+    enabled: !!order?.id && itemCodes.length > 0,
     staleTime: 60000,
   });
 
