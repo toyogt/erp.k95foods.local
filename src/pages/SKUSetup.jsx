@@ -110,7 +110,11 @@ export default function SKUSetup() {
   // Load a SKU into the editor
   const openSku = useCallback((sku) => {
     setSelected(sku);
-    setSkuForm({ ...EMPTY_SKU, ...sku });
+    // Sanitize null values → empty string so controlled inputs don't break
+    const sanitized = Object.fromEntries(
+      Object.entries(sku).map(([k, v]) => [k, v === null || v === undefined ? '' : v])
+    );
+    setSkuForm({ ...EMPTY_SKU, ...sanitized });
     const mapping = mappings.find(m => (m.sku_code || m.product_code) === sku.item_code);
     if (mapping) {
       setMappingForm({ ...EMPTY_MAPPING, ...mapping });
