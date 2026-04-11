@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Save, CheckCircle2, AlertTriangle, Plus, Pencil, Copy, X, ExternalLink, Info } from 'lucide-react';
+import { Loader2, Save, CheckCircle2, AlertTriangle, Plus, Pencil, Copy, X, ExternalLink, Info, ArrowLeft } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import SKUList from '@/components/sku/SKUList';
@@ -67,6 +67,7 @@ export default function SKUSetup() {
   // Bulk edit
   const [bulkEditOpen, setBulkEditOpen] = useState(false);
   const [bulkEditSkus, setBulkEditSkus] = useState([]);
+  const [mobileView, setMobileView] = useState('list'); // 'list' | 'editor'
 
   const isAdmin = user?.role === 'admin';
 
@@ -110,7 +111,7 @@ export default function SKUSetup() {
   // Load a SKU into the editor
   const openSku = useCallback((sku) => {
     setSelected(sku);
-    // Sanitize null values → empty string so controlled inputs don't break
+    // Sanitize null values
     const sanitized = Object.fromEntries(
       Object.entries(sku).map(([k, v]) => [k, v === null || v === undefined ? '' : v])
     );
@@ -126,6 +127,7 @@ export default function SKUSetup() {
       setMappingForm(EMPTY_MAPPING);
       setPayloadRows([]);
     }
+    setMobileView('editor');
   }, [mappings]);
 
   const openNew = () => {
@@ -133,6 +135,7 @@ export default function SKUSetup() {
     setSkuForm(EMPTY_SKU);
     setMappingForm(EMPTY_MAPPING);
     setPayloadRows([]);
+    setMobileView('editor');
   };
 
   // Re-open when mappings change (after save)
@@ -307,8 +310,10 @@ export default function SKUSetup() {
 
   return (
     <div className="h-[calc(100vh-80px)] flex flex-col lg:flex-row gap-0 overflow-hidden rounded-xl border border-slate-200 bg-white">
-      {/* Left: SKU List */}
-      <div className="lg:w-72 xl:w-80 border-b lg:border-b-0 lg:border-r border-slate-200 flex flex-col overflow-hidden">
+      {/* Left: SKU List — hidden on mobile when editor is open */}
+      <div className={`lg:w-72 xl:w-80 border-b lg:border-b-0 lg:border-r border-slate-200 flex flex-col overflow-hidden ${
+        mobileView === 'editor' ? 'hidden lg:flex' : 'flex'
+      }`}>
         <div className="px-4 py-3 border-b border-slate-200 space-y-3">
           <div>
             <h1 className="text-base font-bold text-slate-900">SKU Setup</h1>
@@ -326,15 +331,26 @@ export default function SKUSetup() {
         />
       </div>
 
-      {/* Right: Editor */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      {/* Right: Editor — hidden on mobile when list is shown */}
+      <div className={`flex-1 flex flex-col overflow-hidden ${
+        mobileView === 'list' ? 'hidden lg:flex' : 'flex'
+      }`}>
         {/* Editor header */}
-        <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-slate-200 bg-slate-50">
-          <div className="min-w-0">
-            <p className="text-sm font-bold text-slate-900 truncate">
-              {skuForm.item_code || <span className="text-slate-400 font-normal">New SKU</span>}
-              {skuForm.product_name && <span className="font-normal text-slate-500 ml-2">— {skuForm.product_name}</span>}
-            </p>
+        <div className="flex items-center justify-between gap-3 px-3 md:px-5 py-3 border-b border-slate-200 bg-slate-50">
+          <div className="flex items-center gap-2 min-w-0">
+            {/* Back button — mobile only */}
+            <button
+              onClick={() => setMobileView('list')}
+              className="lg:hidden h-9 w-9 flex items-center justify-center rounded-lg border border-slate-200 hover:bg-slate-100 shrink-0"
+            >
+              <ArrowLeft className="w-4 h-4 text-slate-700" />
+            </button>
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-slate-900 truncate">
+                {skuForm.item_code || <span className="text-slate-400 font-normal">New Product Code</span>}
+                {skuForm.product_name && <span className="font-normal text-slate-500 ml-2 hidden md:inline">— {skuForm.product_name}</span>}
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {savedMsg && <span className="text-xs text-green-600 font-semibold flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" />{savedMsg}</span>}
