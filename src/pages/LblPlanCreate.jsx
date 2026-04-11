@@ -121,6 +121,16 @@ export default function LblPlanCreate() {
 
     setSaving(true);
     const pid = generatePlanId();
+    const plan = {
+      plan_id: pid,
+      plan_date: fd,
+      shift_type: shiftType,
+      line_id: lineId,
+      line_name: selectedMachine?.display_name || lineId,
+      notes,
+      status: lockAfterSave ? 'locked' : 'draft',
+      total_jobs: jobs.length,
+    };
     const createdPlan = await base44.entities.LabellingShiftPlan.create(plan);
     const jobRecords = jobs.map((j, i) => {
       const mfgRaw = j.manufacturing_date || planDate;
