@@ -113,6 +113,9 @@ export default function SOLogisticsReviewPanel({ order, onUpdated }) {
   const isInReview = order?.workflow_state === 'under_logistics_review';
   const isDelivered = ['delivered', 'paid', 'closed'].includes(order?.status);
 
+  // Locked = order has moved past logistics stage (picking started, invoiced, dispatched, etc.)
+  const isLocked = !['draft', 'under_logistics_review'].includes(order?.workflow_state);
+
   // Track what's missing (for highlighting, not blocking)
   const missingFields = [];
   if (!form.transporter) missingFields.push('Transporter');
@@ -279,7 +282,9 @@ export default function SOLogisticsReviewPanel({ order, onUpdated }) {
               Transporter Name
               {!form.transporter && <span className="text-amber-500 text-xs">*</span>}
             </Label>
-            {transporters.length > 0 ? (
+            {isLocked ? (
+              <p className="mt-1 h-9 flex items-center text-sm text-slate-900 font-medium">{form.transporter || '—'}</p>
+            ) : transporters.length > 0 ? (
               <select className="mt-1 h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
                 value={form.transporter} onChange={e => setForm(f => ({ ...f, transporter: e.target.value }))}>
                 <option value="">Select transporter...</option>
@@ -290,7 +295,7 @@ export default function SOLogisticsReviewPanel({ order, onUpdated }) {
                 onChange={e => setForm(f => ({ ...f, transporter: e.target.value }))}
                 placeholder="Enter transporter name" />
             )}
-                    {suggestedTransporter && (
+            {!isLocked && suggestedTransporter && (
               <button
                 className="mt-1 inline-flex items-center gap-1 px-2 py-1 bg-blue-50 border border-blue-200 rounded-md text-xs font-medium text-blue-700 hover:bg-blue-100 transition-colors"
                 onClick={() => {
@@ -302,13 +307,13 @@ export default function SOLogisticsReviewPanel({ order, onUpdated }) {
                 {customerRegion && <span className="text-blue-500">({customerRegion})</span>}
               </button>
             )}
-            {form.transporter && matchedCard && (
+            {!isLocked && form.transporter && matchedCard && (
               <p className="text-xs text-green-700 mt-1">
                 Rate card matched: {matchedCard.weight_from_kg}–{matchedCard.weight_to_kg} kg
                 {matchedCard.destination_region && ` · Region: ${matchedCard.destination_region}`}
               </p>
             )}
-            {!suggestedTransporter && orderWeight > 0 && (
+            {!isLocked && !suggestedTransporter && orderWeight > 0 && (
               <div className="mt-1.5 p-2 bg-amber-50 border border-amber-200 rounded-lg">
                 <p className="text-xs text-amber-800">
                   No rate card matches this order (Weight: {orderWeight} kg{customerRegion ? `, Region: ${customerRegion}` : ''}).
@@ -327,9 +332,11 @@ export default function SOLogisticsReviewPanel({ order, onUpdated }) {
           <div>
             <Label className="text-xs font-medium text-slate-700 flex items-center gap-1">
               <Package className="w-3 h-3" /> Packaging Type
-              {!form.packaging_type && <span className="text-amber-500 text-xs">*</span>}
+              {!isLocked && !form.packaging_type && <span className="text-amber-500 text-xs">*</span>}
             </Label>
-            {packingTypes.length > 0 ? (
+            {isLocked ? (
+              <p className="mt-1 h-9 flex items-center text-sm text-slate-900 font-medium">{form.packaging_type || '—'}</p>
+            ) : packingTypes.length > 0 ? (
               <select className="mt-1 h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
                 value={form.packaging_type} onChange={e => setForm(f => ({ ...f, packaging_type: e.target.value }))}>
                 <option value="">Select packaging type...</option>
@@ -347,8 +354,12 @@ export default function SOLogisticsReviewPanel({ order, onUpdated }) {
             <Label className="text-xs font-medium text-slate-700 flex items-center gap-1">
               <Calendar className="w-3 h-3" /> Appointment Date
             </Label>
-            <Input type="date" className="h-9 text-sm mt-1" value={form.appointment_date}
-              onChange={e => setForm(f => ({ ...f, appointment_date: e.target.value }))} />
+            {isLocked ? (
+              <p className="mt-1 h-9 flex items-center text-sm text-slate-900 font-medium">{form.appointment_date || '—'}</p>
+            ) : (
+              <Input type="date" className="h-9 text-sm mt-1" value={form.appointment_date}
+                onChange={e => setForm(f => ({ ...f, appointment_date: e.target.value }))} />
+            )}
           </div>
 
           {/* Planned Dispatch Date */}
@@ -356,9 +367,13 @@ export default function SOLogisticsReviewPanel({ order, onUpdated }) {
             <Label className="text-xs font-medium text-slate-700 flex items-center gap-1">
               <Calendar className="w-3 h-3" /> Planned Dispatch Date
             </Label>
-            <Input type="date" className="h-9 text-sm mt-1" value={form.dispatch_date}
-              onChange={e => setForm(f => ({ ...f, dispatch_date: e.target.value }))} />
-            {order.po_delivery_date && (
+            {isLocked ? (
+              <p className="mt-1 h-9 flex items-center text-sm text-slate-900 font-medium">{form.dispatch_date || '—'}</p>
+            ) : (
+              <Input type="date" className="h-9 text-sm mt-1" value={form.dispatch_date}
+                onChange={e => setForm(f => ({ ...f, dispatch_date: e.target.value }))} />
+            )}
+            {!isLocked && order.po_delivery_date && (
               <p className="text-xs text-slate-500 mt-1">Purchase Order Delivery: {order.po_delivery_date}</p>
             )}
           </div>
@@ -443,34 +458,36 @@ export default function SOLogisticsReviewPanel({ order, onUpdated }) {
       <PicklistSummaryInLogistics order={order} onUpdated={onUpdated} />
 
       {/* ── Action Buttons ── */}
-      <div className="flex flex-wrap gap-3 pt-2 border-t border-slate-200">
-        {order.workflow_state === 'draft' && (
-          <Button className="h-11 bg-slate-900 text-white text-sm" onClick={handleSendForReview} disabled={saving}>
-            {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
-            Send for Logistics Review
-          </Button>
-        )}
-        {isInReview && (
-          <div className="space-y-2">
-            {missingFields.length > 0 && (
-              <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                <AlertCircle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-sm font-medium text-amber-800">Required before approval</p>
-                  <p className="text-xs text-amber-600 mt-0.5">
-                    Please set: {missingFields.join(', ')}
-                  </p>
-                </div>
-              </div>
-            )}
-            <Button className="h-11 bg-green-700 hover:bg-green-800 text-white text-sm"
-              onClick={handleApprove} disabled={saving || missingFields.length > 0}>
-              {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <CheckCircle2 className="w-4 h-4 mr-1" />}
-              Approve for Picking
+      {!isLocked && (
+        <div className="flex flex-wrap gap-3 pt-2 border-t border-slate-200">
+          {order.workflow_state === 'draft' && (
+            <Button className="h-11 bg-slate-900 text-white text-sm" onClick={handleSendForReview} disabled={saving}>
+              {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
+              Send for Logistics Review
             </Button>
-          </div>
-        )}
-      </div>
+          )}
+          {isInReview && (
+            <div className="space-y-2">
+              {missingFields.length > 0 && (
+                <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                  <AlertCircle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-amber-800">Required before approval</p>
+                    <p className="text-xs text-amber-600 mt-0.5">
+                      Please set: {missingFields.join(', ')}
+                    </p>
+                  </div>
+                </div>
+              )}
+              <Button className="h-11 bg-green-700 hover:bg-green-800 text-white text-sm"
+                onClick={handleApprove} disabled={saving || missingFields.length > 0}>
+                {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <CheckCircle2 className="w-4 h-4 mr-1" />}
+                Approve for Picking
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
