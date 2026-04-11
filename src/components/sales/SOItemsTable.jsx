@@ -1,5 +1,5 @@
 export default function SOItemsTable({ items, order }) {
-  if (!items.length) return (
+  if (!items || !items.length) return (
     <div className="text-center py-8 text-slate-400 text-sm">No items added to this order.</div>
   );
 
@@ -41,7 +41,7 @@ export default function SOItemsTable({ items, order }) {
       </table>
       <div className="mt-3 flex justify-end">
         <div className="text-sm font-semibold text-slate-900">
-          Grand Total: ₹{order.total_amount?.toLocaleString('en-IN') || items.reduce((s, i) => s + (i.total_amount || 0), 0).toLocaleString('en-IN')}
+          Grand Total: ₹{order?.total_amount?.toLocaleString('en-IN') || items.reduce((s, i) => s + (i.total_amount || 0), 0).toLocaleString('en-IN')}
         </div>
       </div>
     </div>
