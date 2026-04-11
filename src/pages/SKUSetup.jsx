@@ -117,7 +117,10 @@ export default function SKUSetup() {
     setSkuForm({ ...EMPTY_SKU, ...sanitized });
     const mapping = mappings.find(m => (m.sku_code || m.product_code) === sku.item_code);
     if (mapping) {
-      setMappingForm({ ...EMPTY_MAPPING, ...mapping });
+      const sanitizedMapping = Object.fromEntries(
+        Object.entries(mapping).map(([k, v]) => [k, v === null || v === undefined ? '' : v])
+      );
+      setMappingForm({ ...EMPTY_MAPPING, ...sanitizedMapping });
       setPayloadRows(mapping.payload_map_json ? JSON.parse(mapping.payload_map_json) : []);
     } else {
       setMappingForm(EMPTY_MAPPING);
