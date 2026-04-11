@@ -5,6 +5,7 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { Search, FileText, Receipt, ChevronRight } from 'lucide-react';
 import { EInvoiceStatusBadge, EWayBillStatusBadge } from '@/components/sales/compliance/ComplianceStatusBadges';
 import { Input } from '@/components/ui/input';
@@ -65,7 +66,7 @@ export default function SalesInvoices() {
   const paidCount = invoices.filter(i => i.status === 'paid').length;
 
   return (
-    <div className="p-3 md:p-6 space-y-4 max-w-7xl mx-auto">
+    <motion.div className="p-3 md:p-6 space-y-5 mx-auto" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
       <div>
         <h1 className="text-xl font-bold text-slate-900">Sales Invoices</h1>
         <p className="text-sm text-slate-500">All invoices across sales orders</p>
@@ -78,15 +79,16 @@ export default function SalesInvoices() {
           { label: 'Paid', count: paidCount, color: 'text-green-600' },
           { label: 'Pending', count: invoices.filter(i => !['paid', 'cancelled'].includes(i.status)).length, color: 'text-amber-600' },
           { label: 'Total Value', count: `₹${(totalValue / 1000).toFixed(1)}K`, color: 'text-blue-600' },
-        ].map(k => (
-          <div key={k.label} className="bg-white border border-slate-200 rounded-xl p-4">
+        ].map((k, i) => (
+          <motion.div key={k.label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: i * 0.06 }}
+            className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-[20px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] p-4 hover:shadow-md transition-shadow">
             <span className="text-xs text-slate-500 font-medium">{k.label}</span>
             <p className={`text-2xl font-bold ${k.color}`}>{k.count}</p>
-          </div>
+          </motion.div>
         ))}
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+      <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] overflow-hidden">
         <div className="flex gap-1 p-2 border-b border-slate-100 overflow-x-auto">
           {STATUS_TABS.map(t => (
             <button key={t.key} onClick={() => setActiveTab(t.key)}
@@ -198,6 +200,6 @@ export default function SalesInvoices() {
           </>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }

@@ -5,6 +5,7 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { Search, ClipboardList, Package, ChevronRight } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import SalesOrderStatusBadge from '@/components/sales/SalesOrderStatusBadge';
@@ -57,7 +58,7 @@ export default function SalesPicklists() {
   };
 
   return (
-    <div className="p-3 md:p-6 space-y-4 max-w-7xl mx-auto">
+    <motion.div className="p-3 md:p-6 space-y-5 mx-auto" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-slate-900">Picklists</h1>
@@ -72,15 +73,16 @@ export default function SalesPicklists() {
           { label: 'Draft', count: picklists.filter(p => p.status === 'draft').length, color: 'text-amber-600' },
           { label: 'Dispatch Scheduled', count: picklists.filter(p => p.status === 'dispatch_scheduled').length, color: 'text-blue-600' },
           { label: 'Pick & Packed', count: picklists.filter(p => p.status === 'pick_packed').length, color: 'text-green-600' },
-        ].map(k => (
-          <div key={k.label} className="bg-white border border-slate-200 rounded-xl p-4">
+        ].map((k, i) => (
+          <motion.div key={k.label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: i * 0.06 }}
+            className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-[20px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] p-4 hover:shadow-md transition-shadow">
             <span className="text-xs text-slate-500 font-medium">{k.label}</span>
             <p className={`text-2xl font-bold ${k.color}`}>{k.count}</p>
-          </div>
+          </motion.div>
         ))}
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+      <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] overflow-hidden">
         {/* Tabs */}
         <div className="flex gap-1 p-2 border-b border-slate-100 overflow-x-auto">
           {STATUS_TABS.map(t => (
@@ -178,6 +180,6 @@ export default function SalesPicklists() {
           </>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }

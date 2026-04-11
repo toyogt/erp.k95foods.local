@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
+import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -83,8 +84,8 @@ export default function SalesDistributors() {
   }
 
   return (
-    <div className="p-3 md:p-6 max-w-5xl mx-auto space-y-4">
-      <div className="flex items-center justify-between">
+    <motion.div className="p-3 md:p-6 mx-auto space-y-5" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h1 className="text-xl font-bold text-slate-900">Distributors</h1>
           <p className="text-sm text-slate-500">Manage distributor accounts and credit limits</p>
@@ -98,37 +99,24 @@ export default function SalesDistributors() {
       </div>
 
       {/* Summary */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <div className="bg-white border border-slate-200 rounded-xl p-4">
-          <p className="text-xs text-slate-500 mb-1">Total Distributors</p>
-          <p className="text-2xl font-bold text-slate-900">{distributors.length}</p>
-        </div>
-        <div className="bg-white border border-slate-200 rounded-xl p-4">
-          <p className="text-xs text-slate-500 mb-1">Active</p>
-          <p className="text-2xl font-bold text-green-600">{distributors.filter(d => d.status === 'active').length}</p>
-        </div>
-        <div className="bg-white border border-slate-200 rounded-xl p-4">
-          <p className="text-xs text-slate-500 mb-1">Total Credit Limit</p>
-          <p className="text-xl font-bold text-slate-900">
-            ₹{(distributors.reduce((s, d) => s + (d.credit_limit || 0), 0) / 100000).toFixed(1)}L
-          </p>
-        </div>
-        <div className="bg-white border border-slate-200 rounded-xl p-4">
-          <p className="text-xs text-slate-500 mb-1">Total Utilized</p>
-          <p className="text-xl font-bold text-amber-600">
-            ₹{(distributors.reduce((s, d) => s + (d.utilized_limit || 0), 0) / 100000).toFixed(1)}L
-          </p>
-        </div>
-        <div className="bg-white border border-slate-200 rounded-xl p-4">
-          <p className="text-xs text-slate-500 mb-1">Total Available</p>
-          <p className="text-xl font-bold text-green-600">
-            ₹{(distributors.reduce((s, d) => s + ((d.credit_limit || 0) - (d.utilized_limit || 0)), 0) / 100000).toFixed(1)}L
-          </p>
-        </div>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+        {[
+          { label: 'Total Distributors', value: distributors.length, color: 'text-slate-900' },
+          { label: 'Active', value: distributors.filter(d => d.status === 'active').length, color: 'text-green-600' },
+          { label: 'Total Credit Limit', value: `₹${(distributors.reduce((s, d) => s + (d.credit_limit || 0), 0) / 100000).toFixed(1)}L`, color: 'text-slate-900' },
+          { label: 'Total Utilized', value: `₹${(distributors.reduce((s, d) => s + (d.utilized_limit || 0), 0) / 100000).toFixed(1)}L`, color: 'text-amber-600' },
+          { label: 'Total Available', value: `₹${(distributors.reduce((s, d) => s + ((d.credit_limit || 0) - (d.utilized_limit || 0)), 0) / 100000).toFixed(1)}L`, color: 'text-green-600' },
+        ].map((k, i) => (
+          <motion.div key={k.label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: i * 0.06 }}
+            className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-[20px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] p-4 hover:shadow-md transition-shadow">
+            <p className="text-xs text-slate-500 font-medium mb-1">{k.label}</p>
+            <p className={`text-xl font-bold ${k.color}`}>{k.value}</p>
+          </motion.div>
+        ))}
       </div>
 
       {/* Table */}
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+      <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] overflow-hidden">
         {isLoading ? (
           <div className="p-8 text-center text-slate-400 text-sm">Loading...</div>
         ) : distributors.length === 0 ? (
@@ -281,6 +269,6 @@ export default function SalesDistributors() {
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

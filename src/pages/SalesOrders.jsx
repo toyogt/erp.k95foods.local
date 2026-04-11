@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { Plus, Upload, Package, TrendingUp, Clock, AlertTriangle, Search, Inbox, Download, ChevronRight } from 'lucide-react';
 import { formatDate } from '@/lib/dateFormatter';
 
@@ -102,7 +103,7 @@ export default function SalesOrders() {
   }, [orders]);
 
   return (
-    <div className="p-3 md:p-6 space-y-4 max-w-7xl mx-auto pb-32">
+    <motion.div className="p-3 md:p-6 space-y-5 mx-auto pb-32" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
@@ -131,38 +132,27 @@ export default function SalesOrders() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div className="bg-white border border-slate-200 rounded-xl p-4">
-          <div className="flex items-center gap-2 mb-1">
-            <Clock className="w-4 h-4 text-amber-500" />
-            <span className="text-xs text-slate-500 font-medium">In Progress</span>
-          </div>
-          <p className="text-2xl font-bold text-slate-900">{pending}</p>
-        </div>
-        <div className="bg-white border border-slate-200 rounded-xl p-4">
-          <div className="flex items-center gap-2 mb-1">
-            <Package className="w-4 h-4 text-blue-500" />
-            <span className="text-xs text-slate-500 font-medium">Dispatched</span>
-          </div>
-          <p className="text-2xl font-bold text-slate-900">{dispatched}</p>
-        </div>
-        <div className="bg-white border border-slate-200 rounded-xl p-4">
-          <div className="flex items-center gap-2 mb-1">
-            <AlertTriangle className="w-4 h-4 text-red-500" />
-            <span className="text-xs text-slate-500 font-medium">Expiry Alerts</span>
-          </div>
-          <p className="text-2xl font-bold text-red-600">{overdue}</p>
-        </div>
-        <div className="bg-white border border-slate-200 rounded-xl p-4">
-          <div className="flex items-center gap-2 mb-1">
-            <TrendingUp className="w-4 h-4 text-green-500" />
-            <span className="text-xs text-slate-500 font-medium">Total Value</span>
-          </div>
-          <p className="text-xl font-bold text-slate-900">₹{(totalValue / 1000).toFixed(1)}K</p>
-        </div>
+        {[
+          { icon: Clock, label: 'In Progress', value: pending, color: 'bg-amber-100 text-amber-600', vColor: 'text-slate-900' },
+          { icon: Package, label: 'Dispatched', value: dispatched, color: 'bg-blue-100 text-blue-600', vColor: 'text-slate-900' },
+          { icon: AlertTriangle, label: 'Expiry Alerts', value: overdue, color: 'bg-red-100 text-red-600', vColor: 'text-red-600' },
+          { icon: TrendingUp, label: 'Total Value', value: `₹${(totalValue / 1000).toFixed(1)}K`, color: 'bg-green-100 text-green-600', vColor: 'text-slate-900' },
+        ].map((k, i) => (
+          <motion.div key={k.label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: i * 0.06 }}
+            className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-[20px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] p-4 hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-3">
+              <div className={`w-11 h-11 rounded-[14px] flex items-center justify-center ${k.color}`}><k.icon className="w-5 h-5" /></div>
+              <div>
+                <p className="text-xs text-slate-500 font-medium">{k.label}</p>
+                <p className={`text-xl font-bold ${k.vColor}`}>{k.value}</p>
+              </div>
+            </div>
+          </motion.div>
+        ))}
       </div>
 
       {/* Tabs + Search */}
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+      <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] overflow-hidden">
         <div className="flex gap-1 p-2 border-b border-slate-100 overflow-x-auto">
           {STATUS_TABS.map(t => (
             <button
@@ -345,6 +335,6 @@ export default function SalesOrders() {
           onCreated={() => { setShowCreateModal(false); refetch(); }}
         />
       )}
-    </div>
+    </motion.div>
   );
 }
