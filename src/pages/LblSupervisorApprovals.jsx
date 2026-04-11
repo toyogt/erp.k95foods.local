@@ -55,7 +55,22 @@ export default function LblSupervisorApprovals() {
                 <div className="space-y-2"><h3 className="text-sm font-medium text-slate-900 flex items-center gap-1"><ClipboardCheck className="w-4 h-4" /> Checklist</h3>
                   {(sub.answers_json || []).map((a, i) => <div key={i} className="flex justify-between bg-slate-50 rounded p-2 text-sm"><span className="text-slate-600">{a.question}</span><span className="font-medium text-slate-900">{a.answer}</span></div>)}
                 </div>
-                {sub.image_urls?.length > 0 && <div className="space-y-2"><h3 className="text-sm font-medium text-slate-900">Demo Image</h3><div className="flex gap-2 flex-wrap">{sub.image_urls.map((url, i) => <img key={i} src={url} alt="Demo" className="max-h-48 rounded-lg border border-slate-200" />)}</div></div>}
+                {sub.image_urls?.length > 0 && (
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-medium text-slate-900">Demo Bottle Images ({sub.image_urls.length})</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {sub.image_urls.map((url, i) => (
+                        <div key={i} className="space-y-1">
+                          <p className="text-xs text-slate-500 font-medium">Image {i + 1} of {sub.image_urls.length}</p>
+                          <a href={url} target="_blank" rel="noopener noreferrer">
+                            <img src={url} alt={`Demo ${i + 1}`} className="w-full rounded-lg border border-slate-200 object-contain bg-slate-50 max-h-72 hover:opacity-90 transition-opacity cursor-zoom-in" />
+                          </a>
+                          <p className="text-xs text-slate-400 text-center">Click to open full size</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <div className="space-y-3">
                   <div className="space-y-1"><Label className="text-xs font-medium text-slate-700">Remarks (Optional)</Label><Textarea value={remarks} onChange={e => setRemarks(e.target.value)} placeholder="Comments..." className="min-h-[50px]" /></div>
                   <div className="space-y-1"><Label className="text-xs font-medium text-slate-700">Rejection Reason (Required if rejecting)</Label><Textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)} placeholder="Reason..." className="min-h-[50px]" /></div>
