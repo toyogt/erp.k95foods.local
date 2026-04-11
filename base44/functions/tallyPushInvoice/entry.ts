@@ -2,20 +2,28 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function convertDateToYYYYMMDD(dateVal) {
+function formatTallyDate(dateVal) {
   if (!dateVal) return '';
-  try {
-    return String(dateVal).replace(/-/g, '').substring(0, 8);
-  } catch {
-    return '';
+  // Accepts YYYY-MM-DD or DD/MM/YYYY → outputs YYYYMMDD
+  const str = String(dateVal).trim();
+  if (str.includes('/')) {
+    const [d, m, y] = str.split('/');
+    return `${y}${m.padStart(2, '0')}${d.padStart(2, '0')}`;
   }
+  return str.replace(/-/g, '');
 }
 
-function qtyDisplay(qty, uom, perBox = 12) {
-  const base = Math.floor(Math.abs(qty));
-  const boxes = Math.floor(Math.abs(qty) / perBox);
-  if (uom) return ` ${base} ${uom} =  ${boxes} Box`;
-  return ` ${base} = ${boxes} Box`;
+function formatDisplayDate(dateVal) {
+  if (!dateVal) return '';
+  const str = String(dateVal).trim();
+  let y, m, d;
+  if (str.includes('/')) {
+    [d, m, y] = str.split('/');
+  } else if (str.includes('-')) {
+    [y, m, d] = str.split('-');
+  } else return '';
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${parseInt(d)}-${months[parseInt(m)-1]}-${y}`;
 }
 
 function escapeXml(str) {
@@ -28,118 +36,105 @@ function escapeXml(str) {
     .replace(/'/g, '&apos;');
 }
 
-// ─── XML Builder ──────────────────────────────────────────────────────────────
+function qtyDisplay(qty, uom, perBox) {
+  const base = Math.floor(Math.abs(qty));
+  const boxes = Math.floor(Math.abs(qty) / perBox);
+  return ` ${base} ${uom || 'Pcs'} = ${boxes} Box`;
+}
 
-function buildItemsXml(items) {
-  let xml = '';
-  for (const item of items) {
-    const perBox = item.packing_unit || 12;
-    let qty = Math.floor(item.quantity || 0);
-    if (qty > perBox) qty = Math.floor(qty / perBox) * perBox;
+function extractPincode(address) {
+  if (!address) return '';
+  const match = String(address).match(/\b(\d{6})\b/);
+  return match ? match[1] : '';
+}
 
-    const uom = item.uom || 'Pcs';
-    const qtyStr = qtyDisplay(qty, uom, perBox);
+function extractStateName(placeOfSupply) {
+  if (!placeOfSupply) return '';
+  // Format: "06-Haryana" → "Haryana"  or just "Haryana"
+  if (placeOfSupply.includes('-')) {
+    return placeOfSupply.split('-').slice(1).join('-').trim();
+  }
+  return placeOfSupply.trim();
+}
 
-    const cgstRate = Math.round(item.cgst_rate || 0);
-    const sgstRate = Math.round(item.sgst_rate || 0);
-    const igstRate = Math.round(item.igst_rate || 0);
+function buildAddressLines(addressStr, tag) {
+  if (!addressStr) return '';
+  // Split by newline first, then by comma groups to get 2-line format
+  let lines = addressStr.split(/\n/).map(l => l.trim()).filter(Boolean);
+  if (lines.length === 1) {
+    // Try splitting long single-line addresses into 2 lines at comma boundaries
+    const parts = lines[0].split(',').map(p => p.trim()).filter(Boolean);
+    if (parts.length > 3) {
+      const mid = Math.ceil(parts.length / 2);
+      lines = [parts.slice(0, mid).join(', '), parts.slice(mid).join(', ')];
+    }
+  }
+  return lines.map(l => `       <${tag}>${escapeXml(l)}</${tag}>`).join('\n');
+}
 
-    const itemName = escapeXml(item.description || item.item_code || '');
-    const hsnCode = item.hsn_code || '22029990';
-    const rate = item.unit_base_cost || item.rate_snapshot || 0;
-    const amount = item.taxable_value || (rate * qty);
+// ─── Determine GST nature ────────────────────────────────────────────────────
 
-    xml += `
+function getGstNature(isInterstate) {
+  return isInterstate ? 'Interstate Sales - Taxable' : 'Local Sales - Taxable';
+}
+
+// ─── Build single item XML (ERPNext format) ──────────────────────────────────
+
+function buildItemXml(item, isInterstate, perBox) {
+  const qty = Math.floor(item.quantity || 0);
+  const uom = 'Pcs';
+  const qtyStr = qtyDisplay(qty, uom, perBox);
+  const rate = item.unit_base_cost || item.rate_snapshot || 0;
+  const amount = item.taxable_value || (rate * qty);
+  const hsnCode = item.hsn_code || '22029990';
+  const itemName = escapeXml(item.description || item.item_code || '');
+  const nature = getGstNature(isInterstate);
+
+  // Determine classification from HSN code
+  let classification = 'Kombucha';
+  if (hsnCode === '22021090') classification = 'Soda';
+  else if (hsnCode === '19059010') classification = 'Iced Tea';
+
+  const cgstRate = isInterstate ? 0 : Math.round(item.cgst_rate || 0);
+  const sgstRate = isInterstate ? 0 : Math.round(item.sgst_rate || 0);
+  const igstRate = isInterstate ? Math.round(item.igst_rate || 0) : 0;
+
+  return `
       <ALLINVENTORYENTRIES.LIST>
+       <GSTHSNNAME>${escapeXml(hsnCode)}</GSTHSNNAME>
        <STOCKITEMNAME>${itemName}</STOCKITEMNAME>
-       <GSTOVRDNINELIGIBLEITC>&#4; Not Applicable</GSTOVRDNINELIGIBLEITC>
-       <GSTOVRDNISREVCHARGEAPPL>&#4; Not Applicable</GSTOVRDNISREVCHARGEAPPL>
+       <GSTOVRDNCLASSIFICATION>${escapeXml(classification)}</GSTOVRDNCLASSIFICATION>
+       <GSTOVRDNINELIGIBLEITC>4 Applicable</GSTOVRDNINELIGIBLEITC>
+       <GSTOVRDNISREVCHARGEAPPL>4 Not Applicable</GSTOVRDNISREVCHARGEAPPL>
        <GSTOVRDNTAXABILITY>Taxable</GSTOVRDNTAXABILITY>
-       <GSTSOURCETYPE>Stock Item</GSTSOURCETYPE>
-       <GSTITEMSOURCE>${itemName}</GSTITEMSOURCE>
-       <HSNSOURCETYPE>Stock Item</HSNSOURCETYPE>
-       <HSNITEMSOURCE>${itemName}</HSNITEMSOURCE>
-       <GSTOVRDNSTOREDNATURE/>
+       <GSTOVRDNSTOREDNATURE>${escapeXml(nature)}</GSTOVRDNSTOREDNATURE>
+       <GSTSOURCETYPE>Stock Group</GSTSOURCETYPE>
+       <HSNSOURCETYPE>Stock Group</HSNSOURCETYPE>
        <GSTOVRDNTYPEOFSUPPLY>Goods</GSTOVRDNTYPEOFSUPPLY>
        <GSTRATEINFERAPPLICABILITY>As per Masters/Company</GSTRATEINFERAPPLICABILITY>
-       <GSTHSNNAME>${escapeXml(hsnCode)}</GSTHSNNAME>
        <GSTHSNINFERAPPLICABILITY>As per Masters/Company</GSTHSNINFERAPPLICABILITY>
+       <HSNOVRDNCLASSIFICATION>${escapeXml(classification)}</HSNOVRDNCLASSIFICATION>
        <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
        <ISGSTASSESSABLEVALUEOVERRIDDEN>No</ISGSTASSESSABLEVALUEOVERRIDDEN>
-       <STRDISGSTAPPLICABLE>No</STRDISGSTAPPLICABLE>
-       <CONTENTNEGISPOS>No</CONTENTNEGISPOS>
-       <ISLASTDEEMEDPOSITIVE>No</ISLASTDEEMEDPOSITIVE>
-       <ISAUTONEGATE>No</ISAUTONEGATE>
-       <ISCUSTOMSCLEARANCE>No</ISCUSTOMSCLEARANCE>
-       <ISTRACKCOMPONENT>No</ISTRACKCOMPONENT>
-       <ISTRACKPRODUCTION>No</ISTRACKPRODUCTION>
-       <ISPRIMARYITEM>No</ISPRIMARYITEM>
-       <ISSCRAP>No</ISSCRAP>
        <RATE>${rate}/${uom}</RATE>
        <AMOUNT>${amount.toFixed(2)}</AMOUNT>
        <ACTUALQTY>${qtyStr}</ACTUALQTY>
        <BILLEDQTY>${qtyStr}</BILLEDQTY>
-       
        <BATCHALLOCATIONS.LIST>
         <GODOWNNAME>Main Location</GODOWNNAME>
         <BATCHNAME>Primary Batch</BATCHNAME>
-        <INDENTNO>&#4; Not Applicable</INDENTNO>
-        <ORDERNO>&#4; Not Applicable</ORDERNO>
-        <TRACKINGNUMBER>&#4; Not Applicable</TRACKINGNUMBER>
-        <DYNAMICCSTISCLEARED>No</DYNAMICCSTISCLEARED>
         <AMOUNT>${amount.toFixed(2)}</AMOUNT>
         <ACTUALQTY>${qtyStr}</ACTUALQTY>
         <BILLEDQTY>${qtyStr}</BILLEDQTY>
-        <ADDITIONALDETAILS.LIST>        </ADDITIONALDETAILS.LIST>
-        <VOUCHERCOMPONENTLIST.LIST>        </VOUCHERCOMPONENTLIST.LIST>
        </BATCHALLOCATIONS.LIST>
        <ACCOUNTINGALLOCATIONS.LIST>
-        <OLDAUDITENTRYIDS.LIST TYPE="Number">
-         <OLDAUDITENTRYIDS>-1</OLDAUDITENTRYIDS>
-        </OLDAUDITENTRYIDS.LIST>
         <LEDGERNAME>SALES A/C</LEDGERNAME>
-        <GSTCLASS>&#4; Not Applicable</GSTCLASS>
         <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
         <LEDGERFROMITEM>No</LEDGERFROMITEM>
-        <REMOVEZEROENTRIES>No</REMOVEZEROENTRIES>
         <ISPARTYLEDGER>No</ISPARTYLEDGER>
-        <GSTOVERRIDDEN>No</GSTOVERRIDDEN>
-        <ISGSTASSESSABLEVALUEOVERRIDDEN>No</ISGSTASSESSABLEVALUEOVERRIDDEN>
-        <STRDISGSTAPPLICABLE>No</STRDISGSTAPPLICABLE>
-        <STRDGSTISPARTYLEDGER>No</STRDGSTISPARTYLEDGER>
-        <STRDGSTISDUTYLEDGER>No</STRDGSTISDUTYLEDGER>
-        <CONTENTNEGISPOS>No</CONTENTNEGISPOS>
-        <ISLASTDEEMEDPOSITIVE>No</ISLASTDEEMEDPOSITIVE>
-        <ISCAPVATTAXALTERED>No</ISCAPVATTAXALTERED>
-        <ISCAPVATNOTCLAIMED>No</ISCAPVATNOTCLAIMED>
         <AMOUNT>${amount.toFixed(2)}</AMOUNT>
-        <SERVICETAXDETAILS.LIST>        </SERVICETAXDETAILS.LIST>
-        <BANKALLOCATIONS.LIST>        </BANKALLOCATIONS.LIST>
-        <BILLALLOCATIONS.LIST>        </BILLALLOCATIONS.LIST>
-        <INTERESTCOLLECTION.LIST>        </INTERESTCOLLECTION.LIST>
-        <OLDAUDITENTRIES.LIST>        </OLDAUDITENTRIES.LIST>
-        <ACCOUNTAUDITENTRIES.LIST>        </ACCOUNTAUDITENTRIES.LIST>
-        <AUDITENTRIES.LIST>        </AUDITENTRIES.LIST>
-        <INPUTCRALLOCS.LIST>        </INPUTCRALLOCS.LIST>
-        <DUTYHEADDETAILS.LIST>        </DUTYHEADDETAILS.LIST>
-        <EXCISEDUTYHEADDETAILS.LIST>        </EXCISEDUTYHEADDETAILS.LIST>
-        <RATEDETAILS.LIST>        </RATEDETAILS.LIST>
-        <SUMMARYALLOCS.LIST>        </SUMMARYALLOCS.LIST>
-        <CENVATDUTYALLOCATIONS.LIST>        </CENVATDUTYALLOCATIONS.LIST>
-        <STPYMTDETAILS.LIST>        </STPYMTDETAILS.LIST>
-        <EXCISEPAYMENTALLOCATIONS.LIST>        </EXCISEPAYMENTALLOCATIONS.LIST>
-        <TAXBILLALLOCATIONS.LIST>        </TAXBILLALLOCATIONS.LIST>
-        <TAXOBJECTALLOCATIONS.LIST>        </TAXOBJECTALLOCATIONS.LIST>
-        <TDSEXPENSEALLOCATIONS.LIST>        </TDSEXPENSEALLOCATIONS.LIST>
-        <VATSTATUTORYDETAILS.LIST>        </VATSTATUTORYDETAILS.LIST>
-        <COSTTRACKALLOCATIONS.LIST>        </COSTTRACKALLOCATIONS.LIST>
-        <REFVOUCHERDETAILS.LIST>        </REFVOUCHERDETAILS.LIST>
-        <INVOICEWISEDETAILS.LIST>        </INVOICEWISEDETAILS.LIST>
-        <VATITCDETAILS.LIST>        </VATITCDETAILS.LIST>
-        <ADVANCETAXDETAILS.LIST>        </ADVANCETAXDETAILS.LIST>
-        <TAXTYPEALLOCATIONS.LIST>        </TAXTYPEALLOCATIONS.LIST>
        </ACCOUNTINGALLOCATIONS.LIST>
-       <DUTYHEADDETAILS.LIST>       </DUTYHEADDETAILS.LIST>
+       
        <RATEDETAILS.LIST>
         <GSTRATEDUTYHEAD>CGST</GSTRATEDUTYHEAD>
         <GSTRATEVALUATIONTYPE>Based on Value</GSTRATEVALUATIONTYPE>
@@ -159,53 +154,45 @@ function buildItemsXml(items) {
         <GSTRATEDUTYHEAD>Cess</GSTRATEDUTYHEAD>
         <GSTRATEVALUATIONTYPE>&#4; Not Applicable</GSTRATEVALUATIONTYPE>
        </RATEDETAILS.LIST>
-       <RATEDETAILS.LIST>
-        <GSTRATEDUTYHEAD>State Cess</GSTRATEDUTYHEAD>
-        <GSTRATEVALUATIONTYPE>Based on Value</GSTRATEVALUATIONTYPE>
-       </RATEDETAILS.LIST>
-       <SUPPLEMENTARYDUTYHEADDETAILS.LIST>       </SUPPLEMENTARYDUTYHEADDETAILS.LIST>
-       <TAXOBJECTALLOCATIONS.LIST>       </TAXOBJECTALLOCATIONS.LIST>
-       <REFVOUCHERDETAILS.LIST>       </REFVOUCHERDETAILS.LIST>
-       <EXCISEALLOCATIONS.LIST>       </EXCISEALLOCATIONS.LIST>
-       <EXPENSEALLOCATIONS.LIST>       </EXPENSEALLOCATIONS.LIST>
       </ALLINVENTORYENTRIES.LIST>`;
-  }
-  return xml;
 }
 
-function buildAddressLines(addressStr, customerName) {
-  // Address stored as single string in our DB — split by comma/newline
-  let addrLines = '';
-  if (!addressStr) return addrLines;
-  const parts = addressStr.split(/[,\n]/).map(p => p.trim()).filter(Boolean);
-  for (const part of parts) {
-    addrLines += `\n       <ADDRESS>${escapeXml(part)}</ADDRESS>`;
-  }
-  return addrLines;
-}
+// ─── Build full Tally XML (ERPNext-compatible format) ─────────────────────────
 
 function buildTallyXml(inv, items, order, customer) {
-  const EXPECTED_COMPANY = Deno.env.get('TALLY_COMPANY_NAME') || '';
+  const COMPANY = Deno.env.get('TALLY_COMPANY_NAME') || '';
+  const SELLER_GSTIN = Deno.env.get('ADAEQUARE_GSTIN') || '';
 
   // Dates
-  const now = new Date();
-  const narration = `${now.getDate()}-${now.toLocaleString('en-IN',{month:'short'})}-${now.getFullYear()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-  const dateStr = convertDateToYYYYMMDD(inv.invoice_date);
-  const poDateStr = convertDateToYYYYMMDD(order?.po_date || '');
-  const lrDateStr = convertDateToYYYYMMDD(inv.lr_date || '');
+  const dateStr = formatTallyDate(inv.invoice_date);
+  const poDateStr = order?.po_date ? formatDisplayDate(order.po_date) : '';
+  const referenceDateStr = order?.po_date ? formatTallyDate(order.po_date) : '';
 
+  // Customer details
+  const customerName = escapeXml(inv.customer_name || '');
+  const buyerGstin = escapeXml(inv.customer_gstin || customer?.gstin || '');
+  const invoiceNum = escapeXml(inv.invoice_number || '');
+  const poNumber = order?.po_number || '';
+  const paymentTerms = inv.payment_terms || order?.payment_terms || '30 Days';
   const transporter = order?.transporter || '';
-  const paymentTerms = inv.payment_terms || '30 Days';
+  const expiryRef = order?.po_expiry_date ? `Expiry Date ${order.po_expiry_date}` : '';
 
-  // Place of supply / state
+  // State / Place of supply
   const placeOfSupply = customer?.place_of_supply || '';
-  const stateName = placeOfSupply.includes('-')
-    ? placeOfSupply.split('-').slice(1).join('-').trim()
-    : placeOfSupply || 'India';
-  const destination = stateName || 'India';
+  const stateName = extractStateName(placeOfSupply) || 'India';
 
-  // Tax totals from invoice
-  const totalIgst = Math.round((inv.tax_amount || 0) * 100) / 100; // We'll derive below
+  // Interstate detection
+  const buyerGstinRaw = inv.customer_gstin || customer?.gstin || '';
+  const isInterstate = buyerGstinRaw && SELLER_GSTIN
+    ? buyerGstinRaw.substring(0, 2) !== SELLER_GSTIN.substring(0, 2)
+    : false;
+
+  // Address
+  const billingAddr = inv.billing_address || customer?.billing_address || '';
+  const shippingAddr = inv.shipping_address || customer?.shipping_address || billingAddr;
+  const pincode = extractPincode(shippingAddr) || extractPincode(billingAddr);
+
+  // Tax totals
   let igst = 0, cgst = 0, sgst = 0;
   for (const item of items) {
     igst += item.igst_amount || 0;
@@ -219,45 +206,25 @@ function buildTallyXml(inv, items, order, customer) {
   const grandTotal = Math.round((inv.total_amount || 0) * 100) / 100;
   const taxableTotal = Math.round((inv.taxable_amount || 0) * 100) / 100;
   const roundoff = Math.round((grandTotal - taxableTotal - igst - cgst - sgst) * 100) / 100;
-
-  // Interstate detection: compare first 2 chars of seller vs buyer GSTIN
-  const sellerGstin = Deno.env.get('ADAEQUARE_GSTIN') || '';
-  const buyerGstin = inv.customer_gstin || customer?.gstin || '';
-  const interstate = buyerGstin && sellerGstin
-    ? buyerGstin.substring(0, 2) !== sellerGstin.substring(0, 2)
-    : false;
-
-  // Party amount is always negative
   const partyAmount = -1 * grandTotal;
 
-  // Address
-  const addrStr = inv.billing_address || customer?.billing_address || '';
-  const addrLines = buildAddressLines(addrStr, inv.customer_name);
-
-  const customerName = escapeXml(inv.customer_name || '');
-  const invoiceNum = escapeXml(inv.invoice_number || '');
-  const customerGstin = escapeXml(buyerGstin);
-  const sellerGstinVal = escapeXml(sellerGstin);
-  const poNumber = order?.po_number || '';
-  const paymentTermsDays = paymentTerms || '30 Days';
-  const expiryDateStr = order?.po_expiry_date ? `Expiry Date ${order.po_expiry_date}` : '';
-
-  const itemsXml = buildItemsXml(items);
+  // Build items XML
+  let itemsXml = '';
+  for (const item of items) {
+    const perBox = item.packing_unit || 12;
+    itemsXml += buildItemXml(item, isInterstate, perBox);
+  }
 
   // Tax ledger entries
   let taxLedgers = '';
-  if (!interstate) {
+  if (!isInterstate) {
     if (cgst > 0) {
       taxLedgers += `
       <LEDGERENTRIES.LIST>
-       <OLDAUDITENTRYIDS.LIST TYPE="Number">
-        <OLDAUDITENTRYIDS>-1</OLDAUDITENTRYIDS>
-       </OLDAUDITENTRYIDS.LIST>
        <LEDGERNAME>CGST</LEDGERNAME>
        <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
        <LEDGERFROMITEM>No</LEDGERFROMITEM>
        <ISPARTYLEDGER>No</ISPARTYLEDGER>
-       <ISLASTDEEMEDPOSITIVE>No</ISLASTDEEMEDPOSITIVE>
        <AMOUNT>${cgst.toFixed(2)}</AMOUNT>
        <VATEXPAMOUNT>${cgst.toFixed(2)}</VATEXPAMOUNT>
       </LEDGERENTRIES.LIST>`;
@@ -265,14 +232,10 @@ function buildTallyXml(inv, items, order, customer) {
     if (sgst > 0) {
       taxLedgers += `
       <LEDGERENTRIES.LIST>
-       <OLDAUDITENTRYIDS.LIST TYPE="Number">
-        <OLDAUDITENTRYIDS>-1</OLDAUDITENTRYIDS>
-       </OLDAUDITENTRYIDS.LIST>
        <LEDGERNAME>SGST</LEDGERNAME>
        <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
        <LEDGERFROMITEM>No</LEDGERFROMITEM>
        <ISPARTYLEDGER>No</ISPARTYLEDGER>
-       <ISLASTDEEMEDPOSITIVE>No</ISLASTDEEMEDPOSITIVE>
        <AMOUNT>${sgst.toFixed(2)}</AMOUNT>
        <VATEXPAMOUNT>${sgst.toFixed(2)}</VATEXPAMOUNT>
       </LEDGERENTRIES.LIST>`;
@@ -281,17 +244,10 @@ function buildTallyXml(inv, items, order, customer) {
     if (igst > 0) {
       taxLedgers += `
       <LEDGERENTRIES.LIST>
-       <OLDAUDITENTRYIDS.LIST TYPE="Number">
-        <OLDAUDITENTRYIDS>-1</OLDAUDITENTRYIDS>
-       </OLDAUDITENTRYIDS.LIST>
-       <APPROPRIATEFOR>&#4; Not Applicable</APPROPRIATEFOR>
-       <ROUNDTYPE>&#4; Not Applicable</ROUNDTYPE>
        <LEDGERNAME>IGST</LEDGERNAME>
-       <GSTCLASS>&#4; Not Applicable</GSTCLASS>
        <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
        <LEDGERFROMITEM>No</LEDGERFROMITEM>
        <ISPARTYLEDGER>No</ISPARTYLEDGER>
-       <ISLASTDEEMEDPOSITIVE>No</ISLASTDEEMEDPOSITIVE>
        <AMOUNT>${igst.toFixed(2)}</AMOUNT>
        <VATEXPAMOUNT>${igst.toFixed(2)}</VATEXPAMOUNT>
       </LEDGERENTRIES.LIST>`;
@@ -301,24 +257,36 @@ function buildTallyXml(inv, items, order, customer) {
   // Round-off ledger
   let roundoffXml = '';
   if (Math.abs(roundoff) >= 0.01) {
-    const roundoffSign = roundoff > 0 ? 'No' : 'Yes';
+    const sign = roundoff > 0 ? 'No' : 'Yes'; // positive roundoff = debit = not deemed positive in Tally convention
+    // But for negative roundoff (credit), Tally wants ISDEEMEDPOSITIVE=No and negative amount
     roundoffXml = `
-              <LEDGERENTRIES.LIST>
-               <OLDAUDITENTRYIDS.LIST TYPE="Number">
-                <OLDAUDITENTRYIDS>-1</OLDAUDITENTRYIDS>
-               </OLDAUDITENTRYIDS.LIST>
-               <ROUNDTYPE>Normal Rounding</ROUNDTYPE>
-               <LEDGERNAME>Round Off</LEDGERNAME>
-               <GSTCLASS>Not Applicable</GSTCLASS>
-               <ISDEEMEDPOSITIVE>${roundoffSign}</ISDEEMEDPOSITIVE>
-               <LEDGERFROMITEM>No</LEDGERFROMITEM>
-               <ISPARTYLEDGER>No</ISPARTYLEDGER>
-               <ISLASTDEEMEDPOSITIVE>${roundoffSign}</ISLASTDEEMEDPOSITIVE>
-               <ROUNDLIMIT> 1</ROUNDLIMIT>
-               <AMOUNT>${roundoff.toFixed(2)}</AMOUNT>
-               <VATEXPAMOUNT>${roundoff.toFixed(2)}</VATEXPAMOUNT>
-              </LEDGERENTRIES.LIST>`;
+      <LEDGERENTRIES.LIST>
+       <ROUNDTYPE>Normal Rounding</ROUNDTYPE>
+       <LEDGERNAME>Round Off</LEDGERNAME>
+       <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
+       <ISPARTYLEDGER>No</ISPARTYLEDGER>
+       <ISLASTDEEMEDPOSITIVE>No</ISLASTDEEMEDPOSITIVE>
+       <ROUNDLIMIT> 1</ROUNDLIMIT>
+       <AMOUNT>${roundoff.toFixed(2)}</AMOUNT>
+       <VATEXPAMOUNT>${roundoff.toFixed(2)}</VATEXPAMOUNT>
+      </LEDGERENTRIES.LIST>`;
   }
+
+  // Extract city/place from address for E-Way Bill
+  const addrParts = (shippingAddr || billingAddr).split(',').map(p => p.trim()).filter(Boolean);
+  // Try to find city-like part (before state, after street)
+  let consigneePlace = '';
+  if (addrParts.length >= 3) {
+    // Usually: street, city, state, pincode pattern
+    consigneePlace = addrParts[Math.max(0, addrParts.length - 3)] || '';
+  }
+
+  // Build address lines
+  const addressLines = buildAddressLines(shippingAddr || billingAddr, 'ADDRESS');
+  const buyerAddressLines = buildAddressLines(billingAddr || shippingAddr, 'BASICBUYERADDRESS');
+  const gstBuyerLines = buildAddressLines(billingAddr || shippingAddr, 'GSTBUYERADDRESS');
+  const gstConsigneeLines = buildAddressLines(shippingAddr || billingAddr, 'GSTCONSIGNEEADDRESS');
+  const ewbConsigneeLines = buildAddressLines(shippingAddr || billingAddr, 'CONSIGNEEADDRESS');
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <ENVELOPE>
@@ -330,165 +298,86 @@ function buildTallyXml(inv, items, order, customer) {
    <REQUESTDESC>
     <REPORTNAME>Vouchers</REPORTNAME>
     <STATICVARIABLES>
-     <SVCURRENTCOMPANY>${escapeXml(EXPECTED_COMPANY)}</SVCURRENTCOMPANY>
+     <SVCURRENTCOMPANY>${escapeXml(COMPANY)}</SVCURRENTCOMPANY>
     </STATICVARIABLES>
    </REQUESTDESC>
    <REQUESTDATA>
     <TALLYMESSAGE xmlns:UDF="TallyUDF">
-     <VOUCHER REMOTEID="" VCHKEY="" VCHTYPE="Sales" ACTION="Create" OBJVIEW="Invoice Voucher View">
+     <VOUCHER VCHTYPE="Sales" ACTION="Create" OBJVIEW="Invoice Voucher View">
       <ADDRESS.LIST TYPE="String">
-       <ADDRESS>${customerName}</ADDRESS>${addrLines}
+${addressLines}
       </ADDRESS.LIST>
       <BASICBUYERADDRESS.LIST TYPE="String">
-       <BASICBUYERADDRESS>${customerName}</BASICBUYERADDRESS>${addrLines}
+${buyerAddressLines}
       </BASICBUYERADDRESS.LIST>
-      <OLDAUDITENTRYIDS.LIST TYPE="Number">
-       <OLDAUDITENTRYIDS>-1</OLDAUDITENTRYIDS>
-      </OLDAUDITENTRYIDS.LIST>
-      <BASICFINALDESTINATION>${escapeXml(destination)}</BASICFINALDESTINATION>
-         <BASICORDERREF>${escapeXml(expiryDateStr)}</BASICORDERREF>
-         <BASICDUEDATEOFPYMT>${escapeXml(paymentTermsDays)}</BASICDUEDATEOFPYMT>
-         <BASICSHIPPEDBY>${escapeXml(transporter)}</BASICSHIPPEDBY>
-
       <DATE>${dateStr}</DATE>
-       <REFERENCEDATE>${dateStr}</REFERENCEDATE>
-       <ISINVOICE>Yes</ISINVOICE>
-       <NARRATION>${escapeXml(narration)}</NARRATION>
-       <STATENAME>${escapeXml(stateName)}</STATENAME>
-       <REFERENCE>${escapeXml(poNumber)}</REFERENCE>
-       <COUNTRYOFRESIDENCE>India</COUNTRYOFRESIDENCE>
-       <PARTYGSTIN>${customerGstin}</PARTYGSTIN>
-       <PLACEOFSUPPLY>${escapeXml(stateName)}</PLACEOFSUPPLY>
-       <VOUCHERTYPENAME>Sales</VOUCHERTYPENAME>
-       <PARTYNAME>${customerName}</PARTYNAME>
-       <CMPGSTIN>${sellerGstinVal}</CMPGSTIN>
-       <PARTYLEDGERNAME>${customerName}</PARTYLEDGERNAME>
-       <VOUCHERNUMBER>${invoiceNum}</VOUCHERNUMBER>
-       <BASICBUYERNAME>${customerName}</BASICBUYERNAME>
-       <PARTYMAILINGNAME>${customerName}</PARTYMAILINGNAME>
-       <CONSIGNEEMAILINGNAME>${customerName}</CONSIGNEEMAILINGNAME>
-       <CONSIGNEEGSTIN>${customerGstin}</CONSIGNEEGSTIN>
-       <CONSIGNEESTATENAME>${escapeXml(stateName)}</CONSIGNEESTATENAME>
-      <CSTFORMISSUETYPE>&#4; Not Applicable</CSTFORMISSUETYPE>
-      <CSTFORMRECVTYPE>&#4; Not Applicable</CSTFORMRECVTYPE>
-      <FBTPAYMENTTYPE>Default</FBTPAYMENTTYPE>
-      <PERSISTEDVIEW>Invoice Voucher View</PERSISTEDVIEW>
-      <VCHGSTCLASS>&#4; Not Applicable</VCHGSTCLASS>
-      <DIFFACTUALQTY>No</DIFFACTUALQTY>
-      <ISMSTFROMSYNC>No</ISMSTFROMSYNC>
-      <ASORIGINAL>No</ASORIGINAL>
-      <AUDITED>No</AUDITED>
-      <FORJOBCOSTING>No</FORJOBCOSTING>
-      <ISOPTIONAL>No</ISOPTIONAL>
-      <EFFECTIVEDATE>${dateStr}</EFFECTIVEDATE>
-      <USEFOREXCISE>No</USEFOREXCISE>
-      <ISFORJOBWORKIN>No</ISFORJOBWORKIN>
-      <ALLOWCONSUMPTION>No</ALLOWCONSUMPTION>
-      <USEFORINTEREST>No</USEFORINTEREST>
-      <USEFORGAINLOSS>No</USEFORGAINLOSS>
-      <USEFORGODOWNTRANSFER>No</USEFORGODOWNTRANSFER>
-      <USEFORCOMPOUND>No</USEFORCOMPOUND>
-      <ALTERID> </ALTERID>
-      <EXCISEOPENING>No</EXCISEOPENING>
-      <USEFORFINALPRODUCTION>No</USEFORFINALPRODUCTION>
-      <ISTDSOVERRIDDEN>No</ISTDSOVERRIDDEN>
-      <ISTCSOVERRIDDEN>No</ISTCSOVERRIDDEN>
-      <ISTDSTCSCASHVCH>No</ISTDSTCSCASHVCH>
-      <INCLUDEADVPYMTVCH>No</INCLUDEADVPYMTVCH>
-      <ISSUBWORKSCONTRACT>No</ISSUBWORKSCONTRACT>
-      <ISVATOVERRIDDEN>No</ISVATOVERRIDDEN>
-      <IGNOREORIGVCHDATE>No</IGNOREORIGVCHDATE>
-      <ISSERVICETAXOVERRIDDEN>No</ISSERVICETAXOVERRIDDEN>
-      <ISISDVOUCHER>No</ISISDVOUCHER>
-      <ISEXCISEOVERRIDDEN>No</ISEXCISEOVERRIDDEN>
-      <ISEXCISESUPPLYVCH>No</ISEXCISESUPPLYVCH>
-      <GSTNOTEXPORTED>No</GSTNOTEXPORTED>
-      <IGNOREGSTINVALIDATION>No</IGNOREGSTINVALIDATION>
-      <ISGSTREFUND>No</ISGSTREFUND>
-      <ISGSTSECSEVENAPPLICABLE>No</ISGSTSECSEVENAPPLICABLE>
-      <ISVATPRINCIPALACCOUNT>No</ISVATPRINCIPALACCOUNT>
-      <VCHSTATUSISVCHNUMUSED>No</VCHSTATUSISVCHNUMUSED>
-      <VCHGSTSTATUSISAPPLICABLE>Yes</VCHGSTSTATUSISAPPLICABLE>
-      <VCHGSTSTATUSISUNCERTAIN>Yes</VCHGSTSTATUSISUNCERTAIN>
-      <EWAYBILLDETAILS.LIST>      </EWAYBILLDETAILS.LIST>
-      <EXCLUDEDTAXATIONS.LIST>      </EXCLUDEDTAXATIONS.LIST>
-      <OLDAUDITENTRIES.LIST>      </OLDAUDITENTRIES.LIST>
-      <ACCOUNTAUDITENTRIES.LIST>      </ACCOUNTAUDITENTRIES.LIST>
-      <AUDITENTRIES.LIST>      </AUDITENTRIES.LIST>
-      <DUTYHEADDETAILS.LIST>      </DUTYHEADDETAILS.LIST>
-      <GSTADVADJDETAILS.LIST>      </GSTADVADJDETAILS.LIST>
-      ${itemsXml}
-      <CONTRITRANS.LIST>      </CONTRITRANS.LIST>
-      <EWAYBILLERRORLIST.LIST>      </EWAYBILLERRORLIST.LIST>
-      <IRNERRORLIST.LIST>      </IRNERRORLIST.LIST>
-      <HARYANAVAT.LIST>      </HARYANAVAT.LIST>
-      <SUPPLEMENTARYDUTYHEADDETAILS.LIST>      </SUPPLEMENTARYDUTYHEADDETAILS.LIST>
-      <INVOICEDELNOTES.LIST>      </INVOICEDELNOTES.LIST>
+      <VCHSTATUSDATE>${dateStr}</VCHSTATUSDATE>
+      <REFERENCEDATE>${referenceDateStr}</REFERENCEDATE>
+      <STATENAME>${escapeXml(stateName)}</STATENAME>
+      <COUNTRYOFRESIDENCE>India</COUNTRYOFRESIDENCE>
+      <PARTYGSTIN>${buyerGstin}</PARTYGSTIN>
+      <PLACEOFSUPPLY>${escapeXml(stateName)}</PLACEOFSUPPLY>
+      <PARTYNAME>${customerName}</PARTYNAME>
+      <PARTYMAILINGNAME>${customerName}</PARTYMAILINGNAME>
+      <BASICBUYERNAME>${customerName}</BASICBUYERNAME>
+      <PARTYPINCODE>${escapeXml(pincode)}</PARTYPINCODE>      <CONSIGNEEMAILINGNAME>${customerName}</CONSIGNEEMAILINGNAME>
+      <CONSIGNEEGSTIN>${buyerGstin}</CONSIGNEEGSTIN>
+      <CONSIGNEESTATENAME>${escapeXml(stateName)}</CONSIGNEESTATENAME>
+      <CONSIGNEECOUNTRYNAME>India</CONSIGNEECOUNTRYNAME>
+      <CONSIGNEEPINCODE>${escapeXml(pincode)}</CONSIGNEEPINCODE>
+      <CMPGSTIN>${escapeXml(SELLER_GSTIN)}</CMPGSTIN>
+      <VOUCHERTYPENAME>Sales</VOUCHERTYPENAME>
+      <PARTYLEDGERNAME>${customerName}</PARTYLEDGERNAME>
+      <VOUCHERNUMBER>${invoiceNum}</VOUCHERNUMBER>
+      <REFERENCE>${escapeXml(poNumber)}</REFERENCE>
       <INVOICEORDERLIST.LIST>
-       <BASICORDERDATE>${poDateStr}</BASICORDERDATE>
        <BASICPURCHASEORDERNO>${escapeXml(poNumber)}</BASICPURCHASEORDERNO>
+       <BASICORDERDATE>${escapeXml(poDateStr)}</BASICORDERDATE>
+       <BASICOTHERREFERENCES>${escapeXml(expiryRef)}</BASICOTHERREFERENCES>
       </INVOICEORDERLIST.LIST>
-      <INVOICEINDENTLIST.LIST>      </INVOICEINDENTLIST.LIST>
-      <ATTENDANCEENTRIES.LIST>      </ATTENDANCEENTRIES.LIST>
-      <ORIGINVOICEDETAILS.LIST>      </ORIGINVOICEDETAILS.LIST>
-      <INVOICEEXPORTLIST.LIST>      </INVOICEEXPORTLIST.LIST>
+      <CMPGSTREGISTRATIONTYPE>Regular</CMPGSTREGISTRATIONTYPE>
+      <CMPGSTSTATE>Haryana</CMPGSTSTATE>
+      <PERSISTEDVIEW>Invoice Voucher View</PERSISTEDVIEW>
+      <BASICORDERREF>${escapeXml(expiryRef)}</BASICORDERREF>
+      <BASICDUEDATEOFPYMT>${escapeXml(paymentTerms)}</BASICDUEDATEOFPYMT>
+      <BASICSHIPPEDBY>${escapeXml(transporter)}</BASICSHIPPEDBY>
+      <EFFECTIVEDATE>${dateStr}</EFFECTIVEDATE>
+      <ISINVOICE>Yes</ISINVOICE>
+
+${itemsXml}
+
+      <!-- Party ledger -->
       <LEDGERENTRIES.LIST>
-       <OLDAUDITENTRYIDS.LIST TYPE="Number">
-        <OLDAUDITENTRYIDS>-1</OLDAUDITENTRYIDS>
-       </OLDAUDITENTRYIDS.LIST>
        <LEDGERNAME>${customerName}</LEDGERNAME>
-       <GSTCLASS>&#4; Not Applicable</GSTCLASS>
        <ISDEEMEDPOSITIVE>Yes</ISDEEMEDPOSITIVE>
        <LEDGERFROMITEM>No</LEDGERFROMITEM>
-       <REMOVEZEROENTRIES>No</REMOVEZEROENTRIES>
        <ISPARTYLEDGER>Yes</ISPARTYLEDGER>
-       <ISLASTDEEMEDPOSITIVE>Yes</ISLASTDEEMEDPOSITIVE>
        <AMOUNT>${partyAmount.toFixed(2)}</AMOUNT>
-        <SERVICETAXDETAILS.LIST>       </SERVICETAXDETAILS.LIST>
-        <BANKALLOCATIONS.LIST>       </BANKALLOCATIONS.LIST>
-        <BILLALLOCATIONS.LIST>
-         <NAME>${invoiceNum}</NAME>
-         <BILLCREDITPERIOD>${escapeXml(paymentTermsDays)}</BILLCREDITPERIOD>
-         <BILLTYPE>New Ref</BILLTYPE>
-         <TDSDEDUCTEEISSPECIALRATE>No</TDSDEDUCTEEISSPECIALRATE>
-         <AMOUNT>${partyAmount.toFixed(2)}</AMOUNT>
-         <INTERESTCOLLECTION.LIST>        </INTERESTCOLLECTION.LIST>
-         <STBILLCATEGORIES.LIST>        </STBILLCATEGORIES.LIST>
-        </BILLALLOCATIONS.LIST>
-       <INTERESTCOLLECTION.LIST>       </INTERESTCOLLECTION.LIST>
-       <OLDAUDITENTRIES.LIST>       </OLDAUDITENTRIES.LIST>
-       <ACCOUNTAUDITENTRIES.LIST>       </ACCOUNTAUDITENTRIES.LIST>
-       <AUDITENTRIES.LIST>       </AUDITENTRIES.LIST>
-       <INPUTCRALLOCS.LIST>       </INPUTCRALLOCS.LIST>
-       <DUTYHEADDETAILS.LIST>       </DUTYHEADDETAILS.LIST>
-       <EXCISEDUTYHEADDETAILS.LIST>       </EXCISEDUTYHEADDETAILS.LIST>
-       <RATEDETAILS.LIST>       </RATEDETAILS.LIST>
-       <SUMMARYALLOCS.LIST>       </SUMMARYALLOCS.LIST>
-       <CENVATDUTYALLOCATIONS.LIST>       </CENVATDUTYALLOCATIONS.LIST>
-       <STPYMTDETAILS.LIST>       </STPYMTDETAILS.LIST>
-       <EXCISEPAYMENTALLOCATIONS.LIST>       </EXCISEPAYMENTALLOCATIONS.LIST>
-       <TAXBILLALLOCATIONS.LIST>       </TAXBILLALLOCATIONS.LIST>
-       <TAXOBJECTALLOCATIONS.LIST>       </TAXOBJECTALLOCATIONS.LIST>
-       <TDSEXPENSEALLOCATIONS.LIST>       </TDSEXPENSEALLOCATIONS.LIST>
-       <VATSTATUTORYDETAILS.LIST>       </VATSTATUTORYDETAILS.LIST>
-       <COSTTRACKALLOCATIONS.LIST>       </COSTTRACKALLOCATIONS.LIST>
-       <REFVOUCHERDETAILS.LIST>       </REFVOUCHERDETAILS.LIST>
-       <INVOICEWISEDETAILS.LIST>       </INVOICEWISEDETAILS.LIST>
-       <VATITCDETAILS.LIST>       </VATITCDETAILS.LIST>
-       <ADVANCETAXDETAILS.LIST>       </ADVANCETAXDETAILS.LIST>
-       <TAXTYPEALLOCATIONS.LIST>       </TAXTYPEALLOCATIONS.LIST>
       </LEDGERENTRIES.LIST>
       ${taxLedgers}
       ${roundoffXml}
-      <STKJRNLADDLCOSTDETAILS.LIST>      </STKJRNLADDLCOSTDETAILS.LIST>
-      <PAYROLLMODEOFPAYMENT.LIST>      </PAYROLLMODEOFPAYMENT.LIST>
-      <ATTDRECORDS.LIST>      </ATTDRECORDS.LIST>
-      <GSTEWAYCONSIGNORADDRESS.LIST>      </GSTEWAYCONSIGNORADDRESS.LIST>
-      <GSTEWAYCONSIGNEEADDRESS.LIST>      </GSTEWAYCONSIGNEEADDRESS.LIST>
-      <TEMPGSTRATEDETAILS.LIST>      </TEMPGSTRATEDETAILS.LIST>
-      <TEMPGSTADVADJUSTED.LIST>      </TEMPGSTADVADJUSTED.LIST>
-      <GSTBUYERADDRESS.LIST>      </GSTBUYERADDRESS.LIST>
-      <GSTCONSIGNEEADDRESS.LIST>      </GSTCONSIGNEEADDRESS.LIST>
+      <EWAYBILLDETAILS.LIST>
+       <CONSIGNORADDRESS.LIST TYPE="String">
+        <CONSIGNORADDRESS>${escapeXml(COMPANY)}</CONSIGNORADDRESS>
+       </CONSIGNORADDRESS.LIST>
+       <CONSIGNEEADDRESS.LIST TYPE="String">
+${ewbConsigneeLines}
+       </CONSIGNEEADDRESS.LIST>
+       <DOCUMENTTYPE>Others</DOCUMENTTYPE>
+       <CONSIGNEEPINCODE>${escapeXml(pincode)}</CONSIGNEEPINCODE>
+       <SUBTYPE>Supply</SUBTYPE>
+       <CONSIGNORPLACE>${escapeXml(consigneePlace)}</CONSIGNORPLACE>
+       <CONSIGNORPINCODE>${escapeXml(pincode)}</CONSIGNORPINCODE>
+       <CONSIGNEEPLACE>${escapeXml(consigneePlace)}</CONSIGNEEPLACE>
+       <SHIPPEDFROMSTATE>Haryana</SHIPPEDFROMSTATE>
+       <SHIPPEDTOSTATE>${escapeXml(stateName)}</SHIPPEDTOSTATE>
+      </EWAYBILLDETAILS.LIST>
+      <GSTBUYERADDRESS.LIST TYPE="String">
+${gstBuyerLines}
+      </GSTBUYERADDRESS.LIST>
+      <GSTCONSIGNEEADDRESS.LIST TYPE="String">
+${gstConsigneeLines}
+      </GSTCONSIGNEEADDRESS.LIST>
      </VOUCHER>
     </TALLYMESSAGE>
    </REQUESTDATA>
@@ -528,7 +417,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Invoice not found' }, { status: 404 });
     }
 
-    // 2. Fetch order items (for tax rates and MRP)
+    // 2. Fetch order items (for tax rates, quantities, product details)
     const items = inv.sales_order_id
       ? await base44.asServiceRole.entities.SalesOrderItem.filter({ sales_order_id: inv.sales_order_id })
       : [];
@@ -540,7 +429,7 @@ Deno.serve(async (req) => {
       order = orders?.[0] || null;
     }
 
-    // 4. Fetch customer (for address, place_of_supply)
+    // 4. Fetch customer (for address, place_of_supply, pincode)
     let customer = null;
     try {
       if (inv.customer_gstin) {
@@ -557,7 +446,6 @@ Deno.serve(async (req) => {
 
     // 5. Build XML
     const xmlBody = buildTallyXml(inv, items, order, customer);
-
     const pushedAt = new Date().toISOString();
 
     // 6. Send to Tally
@@ -572,7 +460,6 @@ Deno.serve(async (req) => {
       const responseBuffer = await tallyResponse.arrayBuffer();
       responseText = new TextDecoder('utf-8').decode(responseBuffer);
     } catch (fetchErr) {
-      // Log network failure
       await base44.asServiceRole.entities.TallyPushLog.create({
         invoice_id,
         invoice_number: inv.invoice_number,
