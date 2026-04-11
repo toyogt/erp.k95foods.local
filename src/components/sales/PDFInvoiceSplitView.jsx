@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
-import { Edit2, Check, AlertTriangle, TrendingUp, TrendingDown, User, Tag, Ban, Calendar, FileText } from 'lucide-react';
+import { Edit2, Check, AlertTriangle, TrendingUp, TrendingDown, User, Tag, Ban, Calendar, FileText, Loader2, CheckCircle2 } from 'lucide-react';
 
 // Map platform to ProductMaster field for platform-specific ID
 const PLATFORM_ID_FIELD = {
@@ -45,6 +45,7 @@ export default function PDFInvoiceSplitView({ pdfEntry, onConfirm }) {
   const [editing, setEditing] = useState(false);
   const [items, setItems] = useState([]);
   const [mismatchRemarks, setMismatchRemarks] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   // Sync items from pdfEntry whenever the entry changes
   useEffect(() => {
@@ -157,8 +158,38 @@ export default function PDFInvoiceSplitView({ pdfEntry, onConfirm }) {
     );
   }
 
+  async function handleConfirmClick() {
+    setSubmitting(true);
+    setEditing(false);
+    await onConfirm({
+      ...data,
+      items,
+      price_list: priceList,
+      taxable_amount: taxable,
+      tax_amount: tax,
+      total_amount: total,
+      ...(hasTotalGap ? { mismatch_remarks: mismatchRemarks.trim(), mismatch_gap: taxableGap } : {}),
+    });
+    // submitting stays true — parent will switch to confirmed state
+  }
+
   return (
-    <div className="flex h-full min-h-[480px] gap-0">
+    <div className="flex h-full min-h-[480px] gap-0 relative">
+
+      {/* Submitting overlay */}
+      {submitting && (
+        <div className="absolute inset-0 z-30 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center gap-4 animate-in fade-in duration-300">
+          <div className="relative">
+            <div className="w-16 h-16 rounded-full border-4 border-emerald-200 border-t-emerald-600 animate-spin" />
+            <CheckCircle2 className="w-6 h-6 text-emerald-600 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+          </div>
+          <div className="text-center">
+            <p className="text-sm font-semibold text-slate-900">Creating Sales Order...</p>
+            <p className="text-xs text-slate-500 mt-1">Saving items, linking documents and logging audit trail</p>
+          </div>
+        </div>
+      )}
+
       {/* Left — PDF Preview */}
       <div className="w-1/2 border-r border-slate-200 overflow-auto bg-slate-50 flex flex-col">
         <div className="px-3 py-2 bg-white border-b border-slate-200 text-xs font-medium text-slate-600 truncate flex items-center gap-1.5">
@@ -218,25 +249,18 @@ export default function PDFInvoiceSplitView({ pdfEntry, onConfirm }) {
             )}
           </div>
           <div className="flex gap-1.5">
-            <Button size="sm" variant="outline" className="h-7 text-xs px-2 gap-1" onClick={() => setEditing(!editing)}>
+            <Button size="sm" variant="outline" className="h-7 text-xs px-2 gap-1" disabled={submitting} onClick={() => setEditing(!editing)}>
               <Edit2 className="w-3 h-3" /> {editing ? 'Done' : 'Edit'}
             </Button>
             <Button
               size="sm"
               className="h-7 text-xs px-3 gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
-              disabled={hasTotalGap && !mismatchRemarks.trim()}
+              disabled={submitting || (hasTotalGap && !mismatchRemarks.trim())}
               title={hasTotalGap && !mismatchRemarks.trim() ? 'Please add mismatch remarks before confirming' : ''}
-              onClick={() => onConfirm({
-                ...data,
-                items,
-                price_list: priceList,
-                taxable_amount: taxable,
-                tax_amount: tax,
-                total_amount: total,
-                ...(hasTotalGap ? { mismatch_remarks: mismatchRemarks.trim(), mismatch_gap: taxableGap } : {}),
-              })}
+              onClick={handleConfirmClick}
             >
-              <Check className="w-3 h-3" /> Confirm &amp; Create SO
+              {submitting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+              {submitting ? 'Submitting...' : 'Confirm & Create SO'}
             </Button>
           </div>
         </div>
