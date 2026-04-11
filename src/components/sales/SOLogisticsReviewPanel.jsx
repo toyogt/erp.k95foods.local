@@ -12,7 +12,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
-import { CheckCircle2, Loader2, Truck, Package, Calendar, Scale, AlertCircle, Info } from 'lucide-react';
+import { CheckCircle2, Loader2, Truck, Package, Calendar, Scale, AlertCircle, Info, ExternalLink } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { fireFMSEvent, linkFMSRef, findFMSInstanceByRef } from '@/lib/useFMSAutoComplete';
 import { generateDocNumber } from '@/lib/docNumberHelper';
 import SystemEstimateCard from '@/components/sales/logistics/SystemEstimateCard';
@@ -264,6 +265,19 @@ export default function SOLogisticsReviewPanel({ order, onUpdated }) {
                 {matchedCard.destination_region && ` · Region: ${matchedCard.destination_region}`}
               </p>
             )}
+            {!suggestedTransporter && orderWeight > 0 && (
+              <div className="mt-1.5 p-2 bg-amber-50 border border-amber-200 rounded-lg">
+                <p className="text-xs text-amber-800">
+                  No rate card matches this order (Weight: {orderWeight} kg{customerRegion ? `, Region: ${customerRegion}` : ''}).
+                </p>
+                <Link
+                  to="/TransportRateCards"
+                  className="inline-flex items-center gap-1 mt-1 text-xs font-medium text-blue-700 hover:text-blue-900 hover:underline"
+                >
+                  <ExternalLink className="w-3 h-3" /> Set up Transport Rate Cards
+                </Link>
+              </div>
+            )}
           </div>
 
           {/* Packaging Type */}
@@ -347,6 +361,7 @@ export default function SOLogisticsReviewPanel({ order, onUpdated }) {
       <PlannedCostForm
         costRecord={costRecord}
         systemEstimate={generateSystemEstimate()}
+        hasRateCardMatch={!!matchedCard}
         onSave={async (data) => {
           await saveCostData({ ...data, status: 'planned', planned_by: user?.email });
           toast({ title: 'Planned cost saved successfully' });

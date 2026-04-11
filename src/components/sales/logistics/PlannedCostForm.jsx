@@ -3,9 +3,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { COST_HEADS } from './costHeads';
-import { Save, Loader2, ArrowDown, Check } from 'lucide-react';
+import { Save, Loader2, ArrowDown, Check, ExternalLink, AlertCircle } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
-export default function PlannedCostForm({ costRecord, systemEstimate, onSave, saving }) {
+export default function PlannedCostForm({ costRecord, systemEstimate, onSave, saving, hasRateCardMatch }) {
   const [form, setForm] = useState({});
   const [showConfirm, setShowConfirm] = useState(false);
 
@@ -46,6 +47,23 @@ export default function PlannedCostForm({ costRecord, systemEstimate, onSave, sa
           )}
         </div>
       </div>
+      {hasRateCardMatch === false && (
+        <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm font-medium text-amber-800">No system estimate available</p>
+            <p className="text-xs text-amber-600 mt-0.5">
+              No transport rate card matches this order. Add a rate card to enable auto-calculated estimates.
+            </p>
+            <Link
+              to="/TransportRateCards"
+              className="inline-flex items-center gap-1 mt-1.5 text-xs font-medium text-blue-700 hover:text-blue-900 hover:underline"
+            >
+              <ExternalLink className="w-3 h-3" /> Go to Transport Rate Cards
+            </Link>
+          </div>
+        </div>
+      )}
       {showConfirm && (
         <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
           <p className="text-sm text-blue-800 font-medium">Apply system estimate to planned costs?</p>
