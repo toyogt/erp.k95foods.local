@@ -23,6 +23,7 @@ import CostComparisonCard from '@/components/sales/logistics/CostComparisonCard'
 import OrderItemsReviewTable from '@/components/sales/logistics/OrderItemsReviewTable';
 import AutoWeightCalculator from '@/components/sales/AutoWeightCalculator';
 
+
 export default function SOLogisticsReviewPanel({ order, onUpdated }) {
   const { user } = useAuth();
   const { toast } = useToast();
