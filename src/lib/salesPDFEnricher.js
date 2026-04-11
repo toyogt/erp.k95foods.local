@@ -20,15 +20,32 @@ export async function enrichParsedData(parsedData) {
 
   // Build lookup maps
   const productByCode = {}, productByEAN = {};
+  // Platform-specific ID maps: parsed item_code → ProductMaster record
+  const productByPlatformId = {
+    swiggy: {},
+    zepto: {},
+    bigbasket: {},
+    amazon: {},
+    blinkit: {},  // Blinkit uses same item_code as system
+  };
   for (const p of allProducts) {
     if (p.item_code) productByCode[p.item_code.trim().toUpperCase()] = p;
     if (p.product_barcode) productByEAN[p.product_barcode.trim()] = p;
+    // Map platform-specific IDs
+    if (p.swiggy_item_id) productByPlatformId.swiggy[p.swiggy_item_id.trim().toUpperCase()] = p;
+    if (p.zepto_item_id) productByPlatformId.zepto[p.zepto_item_id.trim().toUpperCase()] = p;
+    if (p.bigbasket_item_id) productByPlatformId.bigbasket[p.bigbasket_item_id.trim().toUpperCase()] = p;
+    if (p.amazon_item_id) productByPlatformId.amazon[p.amazon_item_id.trim().toUpperCase()] = p;
   }
   const barcodeToItemCode = {};
   for (const cb of allCustomerBarcodes) {
     if (cb.customer_barcode && cb.item_code) barcodeToItemCode[cb.customer_barcode.trim().toUpperCase()] = cb.item_code.trim();
     if (cb.customer_sku && cb.item_code) barcodeToItemCode[cb.customer_sku.trim().toUpperCase()] = cb.item_code.trim();
   }
+
+  // Determine which platform map to use
+  const platform = (parsedData.platform || '').toLowerCase();
+  const platformMap = productByPlatformId[platform] || {};
 
   // Customer lookup
   const extractedGstin = (parsedData.customer_gstin || '').trim().toUpperCase();
@@ -67,18 +84,41 @@ export async function enrichParsedData(parsedData) {
   // Enrich items
   let matchedCount = 0;
   const enrichedItems = (parsedData.items || []).map(item => {
-    let resolvedItemCode = (item.item_code || '').trim().toUpperCase();
-    if (barcodeToItemCode[resolvedItemCode]) {
-      resolvedItemCode = barcodeToItemCode[resolvedItemCode];
+    const rawParsedCode = (item.item_code || '').trim().toUpperCase();
+
+    // Priority 1: Match via platform-specific ID (swiggy_item_id, zepto_item_id, etc.)
+    let product = platformMap[rawParsedCode] || null;
+
+    // Priority 2: Match via SKUCustomerBarcode mapping
+    let resolvedItemCode = rawParsedCode;
+    if (!product && barcodeToItemCode[rawParsedCode]) {
+      resolvedItemCode = barcodeToItemCode[rawParsedCode].toUpperCase();
+      product = productByCode[resolvedItemCode];
     }
-    
-    const product = productByCode[resolvedItemCode];
-    const rm = rateByItemCode[resolvedItemCode];
+
+    // Priority 3: Direct system item_code match
+    if (!product) {
+      product = productByCode[resolvedItemCode];
+    }
+
+    // Priority 4: Try EAN barcode match (material_code from Zepto can be EAN)
+    if (!product && item.ean_number) {
+      product = productByEAN[item.ean_number.trim()];
+    }
+
+    // Once matched, use the system item_code for rate lookup and storage
+    if (product) {
+      resolvedItemCode = product.item_code.trim().toUpperCase();
+    }
+
+    const rm = rateByItemCode[resolvedItemCode] || rateByItemCode[product?.item_code?.trim()];
 
     const enriched = { ...item };
-    enriched.item_code = resolvedItemCode;
+    enriched.item_code = product ? product.item_code.trim() : item.item_code; // Store system item_code
+    enriched._parsed_platform_code = rawParsedCode; // Keep original parsed code for reference
     if (product) {
       enriched.description = product.product_name;
+      enriched.sku_code = product.item_code;
       enriched.hsn_code = product.hsn_code || '22029990';
       enriched.packing_unit = product.bottles_per_box || 12;
       enriched._product_name = product.product_name;

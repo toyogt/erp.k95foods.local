@@ -441,11 +441,24 @@ export default function CreateSalesOrderModal({ defaultType = 'manual', onClose,
                         <tbody className="divide-y divide-slate-100">
                           {extractedData.items.map((item, i) => (
                             <tr key={i} className="hover:bg-slate-50">
-                              <td className="px-3 py-2 text-slate-500 font-mono text-[11px] whitespace-nowrap">{item.item_code || '—'}</td>
+                              <td className="px-3 py-2 font-mono text-[11px] whitespace-nowrap">
+                                {item._product_matched ? (
+                                  <div className="text-slate-700">{item.item_code}</div>
+                                ) : (
+                                  <div className="text-slate-400">{item._parsed_platform_code || item.item_code || '—'}</div>
+                                )}
+                                {item._parsed_platform_code && item._product_matched && item._parsed_platform_code !== item.item_code?.toUpperCase() && (
+                                  <div className="text-slate-400 text-[9px] mt-0.5">{form.platform}: {item._parsed_platform_code}</div>
+                                )}
+                              </td>
                               <td className="px-3 py-2 text-slate-700">
-                                <div>{item._product_name || item.description}</div>
-                                {!item._product_matched && item.description && (
-                                  <span className="text-[10px] text-amber-600">⚠ Not matched in system</span>
+                                {item._product_matched ? (
+                                  <div className="font-medium">{item._product_name}</div>
+                                ) : (
+                                  <>
+                                    <div className="text-slate-500">{item.description || '—'}</div>
+                                    <span className="text-[10px] text-amber-600">⚠ Not matched in Product Master</span>
+                                  </>
                                 )}
                               </td>
                               <td className="px-3 py-2 text-right text-slate-700">{item.quantity}</td>
