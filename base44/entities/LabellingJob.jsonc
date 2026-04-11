@@ -30,6 +30,27 @@
       "type": "string",
       "maxLength": 50
     },
+    "manufacturing_date": {
+      "type": "string",
+      "maxLength": 20,
+      "description": "Manufacturing date DD/MM/YYYY"
+    },
+    "labelling_date": {
+      "type": "string",
+      "maxLength": 20,
+      "description": "Actual labelling start date DD/MM/YYYY \u2014 set at stock transfer step"
+    },
+    "batch_no": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Generated batch number for this labelling run"
+    },
+    "batch_seq": {
+      "type": "number",
+      "minimum": 1,
+      "default": 1,
+      "description": "Sequence number used in batch generation (for day_year_seq scheme)"
+    },
     "quantity_bottles_planned": {
       "type": "number",
       "minimum": 0
