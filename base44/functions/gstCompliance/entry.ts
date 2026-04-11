@@ -58,7 +58,7 @@ function fmtDate(d) { const dt = d ? new Date(d) : new Date(); return `${String(
  */
 function rsaEncrypt(plaintext, pemPublicKey) {
   const publicKey = forge.pki.publicKeyFromPem(pemPublicKey);
-  const encrypted = publicKey.encrypt(plaintext, 'PKCS1v15');
+  const encrypted = publicKey.encrypt(plaintext, 'RSAES-PKCS1-V1_5');
   return forge.util.encode64(encrypted);
 }
 
@@ -116,39 +116,61 @@ let nicPublicKeyPEM = null;
 async function getNicPublicKey() {
   if (nicPublicKeyPEM) return nicPublicKeyPEM;
 
+  const clientId = Deno.env.get('ADAEQUARE_APP_KEY') || '';
+  const clientSecret = Deno.env.get('ADAEQUARE_CLIENT_SECRET') || '';
+  const gstin = Deno.env.get('ADAEQUARE_GSTIN') || SELLER_GSTIN;
+
   // Try fetching from NIC sandbox endpoint
   const urls = [
-    `${NIC_BASE_AUTH}/Master/GetPublicKey`,
     `${NIC_ALT_AUTH}/Master/GetPublicKey`,
+    `${NIC_BASE_AUTH}/Master/GetPublicKey`,
   ];
 
   for (const url of urls) {
     try {
+      console.log('Fetching public key from:', url);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      const username = Deno.env.get('ADAEQUARE_USERNAME') || '';
       const resp = await fetch(url, {
         method: 'GET',
+        signal: controller.signal,
         headers: {
           'Content-Type': 'application/json',
-          'client_id': Deno.env.get('ADAEQUARE_APP_KEY') || '',
-          'client_secret': Deno.env.get('ADAEQUARE_CLIENT_SECRET') || '',
-          'Gstin': Deno.env.get('ADAEQUARE_GSTIN') || SELLER_GSTIN,
+          'client_id': clientId,
+          'client_secret': clientSecret,
+          'Gstin': gstin,
+          'user_name': username,
         },
       });
+      clearTimeout(timeoutId);
+      const text = await resp.text();
+      console.log('Public key response status:', resp.status, 'body:', text.substring(0, 500));
       if (resp.ok) {
-        const data = await resp.json();
-        // Response could be: {Status: 1, Data: "PEM string"} or direct PEM
-        const key = data?.Data || data?.data || data?.result || data;
-        if (typeof key === 'string' && key.includes('PUBLIC KEY')) {
-          nicPublicKeyPEM = key;
-          return nicPublicKeyPEM;
+        let parsed;
+        try { parsed = JSON.parse(text); } catch { parsed = { raw: text }; }
+        // Response could be {Status:1, Data:"PEM"} or plain PEM
+        let key = parsed?.Data || parsed?.data || parsed?.result || text;
+        if (typeof key === 'string') {
+          key = key.trim();
+          if (key.includes('PUBLIC KEY')) {
+            nicPublicKeyPEM = key;
+            return nicPublicKeyPEM;
+          }
+          // May be raw base64 without PEM headers
+          if (key.length > 100 && !key.includes(' ')) {
+            nicPublicKeyPEM = `-----BEGIN PUBLIC KEY-----\n${key}\n-----END PUBLIC KEY-----`;
+            return nicPublicKeyPEM;
+          }
         }
       }
-    } catch (_e) {
-      // Try next URL
+    } catch (e) {
+      console.error('Failed to fetch public key from', url, ':', e.message);
     }
   }
 
-  // Fallback: use the well-known NIC sandbox public key
-  // This is the standard NIC e-Invoice sandbox RSA 2048 public key
+  // Fallback: well-known NIC sandbox public key
+  console.warn('Using hardcoded fallback NIC public key');
   nicPublicKeyPEM = `-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArxd93uLDs8HTPqcSPpxZ
 rf0Dc29r3iPp0a8fFPGkJBWVGMlPe32EBJ0gpt4FibdqMEH8hFNJ4MxMEVLSXEDE
@@ -192,14 +214,25 @@ async function authenticate() {
   const base64AuthData = forge.util.encode64(authData);
   const encryptedData = rsaEncrypt(base64AuthData, publicKey);
 
-  // Try primary then alternate NIC sandbox URL
+  // Log encryption details for debugging
+  console.log('AppKey (32 chars):', appKey.length, 'chars');
+  console.log('Auth JSON length:', authData.length);
+  console.log('Base64 auth length:', base64AuthData.length);
+  console.log('Encrypted data length:', encryptedData.length);
+  console.log('Public key starts with:', publicKey.substring(0, 50));
+
+  // Try both NIC sandbox URLs
   const authUrls = [`${NIC_BASE_AUTH}/auth`, `${NIC_ALT_AUTH}/auth`];
   let lastError = null;
 
   for (const authUrl of authUrls) {
     try {
+      console.log('Trying auth URL:', authUrl);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
       const resp = await fetch(authUrl, {
         method: 'POST',
+        signal: controller.signal,
         headers: {
           'Content-Type': 'application/json',
           'client_id': clientId,
@@ -209,9 +242,12 @@ async function authenticate() {
         },
         body: JSON.stringify({ Data: encryptedData }),
       });
+      clearTimeout(timeoutId);
 
-      const result = await resp.json();
-      console.log('Auth response status:', resp.status, 'body keys:', Object.keys(result));
+      const respText = await resp.text();
+      console.log('Auth response status:', resp.status, 'body:', respText.substring(0, 1000));
+      let result;
+      try { result = JSON.parse(respText); } catch { result = { raw: respText }; }
 
       // NIC Standard API response: {Status: 1, Data: {AuthToken, Sek}} or {Status: 1, AuthToken, Sek}
       const data = result.Data || result;
@@ -219,8 +255,8 @@ async function authenticate() {
       const encryptedSek = data.Sek || data.sek;
 
       if (!authToken || !encryptedSek) {
-        console.error('Auth failed, response:', JSON.stringify(result).substring(0, 500));
-        lastError = result.ErrorDetails?.[0]?.ErrorMessage || result.message || result.Message || 'Authentication failed - no token received';
+        console.error('Auth missing token/sek. Full response:', JSON.stringify(result).substring(0, 1000));
+        lastError = result.ErrorDetails?.[0]?.ErrorMessage || result.error?.message || result.message || result.Message || 'Authentication failed - no token received';
         continue;
       }
 
@@ -244,7 +280,7 @@ async function authenticate() {
       console.log('NIC auth successful, token obtained');
       return;
     } catch (e) {
-      console.error('Auth attempt failed for', authUrl, ':', e.message);
+      console.error('Auth attempt failed for', authUrl, ':', e.message, e.stack?.substring(0, 300));
       lastError = e.message;
     }
   }
@@ -288,7 +324,11 @@ async function callNIC(baseUrl, altBaseUrl, endpoint, method, payload) {
       if (body) opts.body = body;
 
       console.log(`Calling NIC: ${method} ${url}`);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      opts.signal = controller.signal;
       const resp = await fetch(url, opts);
+      clearTimeout(timeoutId);
       const result = await resp.json();
 
       console.log('NIC response status:', resp.status, 'Status field:', result.Status);
