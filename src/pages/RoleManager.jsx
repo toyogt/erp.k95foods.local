@@ -14,8 +14,10 @@ import { auditRoleCreated, auditRoleUpdated, auditRoleDeactivated } from '@/lib/
 
 const MODULE_LABELS = {
   DASHBOARD: 'Dashboard', PRODUCTION: 'Production', LABELLING: 'Labelling & Packing',
-  WAREHOUSE: 'Warehouse & FG', PURCHASE: 'Purchase', GRN: 'Goods Receipt',
-  QUALITY: 'Quality', ACCOUNTS: 'Accounts', FMS: 'Process Flow', ADMIN: 'Admin',
+  LBL_DEPT: 'Labelling Department', WAREHOUSE: 'Warehouse & FG', PURCHASE: 'Purchase',
+  STORE: 'Store Management', QUALITY: 'Quality', ACCOUNTS: 'Accounts',
+  FMS: 'Process Flow', SALES: 'Sales', USER_MANAGEMENT: 'User Management',
+  ADMIN: 'System',
 };
 
 const EMPTY_FORM = { role_key: '', label: '', description: '', module_access: [], page_access: [], is_active: true, is_system: false };
@@ -115,7 +117,7 @@ function RoleForm({ initial, onSave, onCancel, saving }) {
          <Label>Module Access</Label>
          <p className="text-xs text-slate-400 mb-2">Select modules and configure page-level access within each module</p>
          <div className="space-y-2">
-           {ALL_MODULE_KEYS.filter(m => m !== 'ADMIN').map(mod => {
+           {ALL_MODULE_KEYS.map(mod => {
              const isSelected = form.module_access.includes(mod);
              const modulePages = getPagesInModule(mod);
              return (
