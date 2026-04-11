@@ -171,7 +171,11 @@ export default function SOStockPicklistPanel({ order, items, onUpdated }) {
     const pl = await base44.entities.SalesPicklist.create({
       sales_order_id: order.id, so_number: order.so_number, picklist_number: plNumber,
       status: 'draft', generated_by: user?.email,
+      company: 'K95 Foods Private Limited', purpose: 'Delivery',
+      customer_name: order?.customer_name || '',
+      warehouse: 'Finished Goods - KFPL',
       transporter: order.transporter, packaging_type: order.packaging_type,
+      po_number: order.po_number || order.so_number || '',
       items: picklistItems,
     });
 

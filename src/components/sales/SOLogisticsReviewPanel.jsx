@@ -182,7 +182,11 @@ export default function SOLogisticsReviewPanel({ order, onUpdated }) {
     const newPicklist = await base44.entities.SalesPicklist.create({
       sales_order_id: order.id, so_number: order.so_number,
       picklist_number: plNumber, status: 'draft',
+      company: 'K95 Foods Private Limited', purpose: 'Delivery',
+      customer_name: order.customer_name || '',
+      warehouse: 'Finished Goods - KFPL',
       transporter: form.transporter, packaging_type: form.packaging_type,
+      po_number: order.po_number || order.so_number || '',
       appointment_date: form.appointment_date || '', dispatch_date: form.dispatch_date || '',
       expiry_date: order.po_expiry_date || '', generated_by: user?.email, items: plItems,
     });

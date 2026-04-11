@@ -1,33 +1,34 @@
 /**
- * Pick List Detail Page — dedicated page for a single Pick List.
- * Shows full PL workflow: Draft → Dispatch Scheduled → Pick & Packed → Cancelled
+ * Pick List Detail Page — ERPNext-style layout with header meta, items table,
+ * picking workflow, print preview, and status transitions.
  */
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Package, CheckCircle2, Calendar, Loader2, XCircle, Printer, Trash2 } from 'lucide-react';
-import PicklistLogisticsSection from '@/components/sales/PicklistLogisticsSection';
-import DeleteWithRemarks from '@/components/sales/DeleteWithRemarks';
-import PicklistPrintTemplate from '@/components/sales/PicklistPrintTemplate';
-import WarehousePackingPanel from '@/components/sales/WarehousePackingPanel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { fireFMSEvent } from '@/lib/useFMSAutoComplete';
-
-const PL_STEPS = [
-  { key: 'draft', label: 'Draft' },
-  { key: 'dispatch_scheduled', label: 'Dispatch Scheduled' },
-  { key: 'pick_packed', label: 'Pick & Packed' },
-];
+import PicklistPrintTemplate from '@/components/sales/PicklistPrintTemplate';
+import PicklistHeaderMeta from '@/components/sales/PicklistHeaderMeta';
+import PicklistItemsTable from '@/components/sales/PicklistItemsTable';
+import PicklistWorkflowBar from '@/components/sales/PicklistWorkflowBar';
+import DeleteWithRemarks from '@/components/sales/DeleteWithRemarks';
+import {
+  ArrowLeft, Printer, Trash2, Loader2, XCircle,
+  Calendar, Package, Play, CheckCircle2, Download
+} from 'lucide-react';
 
 const STATUS_COLOR = {
   draft: 'bg-slate-100 text-slate-600',
-  dispatch_scheduled: 'bg-blue-100 text-blue-800',
+  picking: 'bg-amber-100 text-amber-800',
+  picked: 'bg-blue-100 text-blue-800',
+  dispatch_scheduled: 'bg-indigo-100 text-indigo-800',
   pick_packed: 'bg-green-100 text-green-700',
+  completed: 'bg-emerald-100 text-emerald-700',
   cancelled: 'bg-red-100 text-red-700',
 };
 
@@ -38,13 +39,27 @@ export default function SalesPicklistDetail() {
   const { toast } = useToast();
   const qc = useQueryClient();
   const [saving, setSaving] = useState(false);
+  const [showPrint, setShowPrint] = useState(false);
+  const [showDelete, setShowDelete] = useState(false);
   const [showCancel, setShowCancel] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [dispatchDate, setDispatchDate] = useState('');
   const [pickQtys, setPickQtys] = useState({});
-  const [showPrint, setShowPrint] = useState(false);
-  const [showDelete, setShowDelete] = useState(false);
   const printRef = useRef();
+
+  const { data: pl, isLoading, refetch } = useQuery({
+    queryKey: ['pl_detail', plId],
+    queryFn: async () => {
+      const results = await base44.entities.SalesPicklist.filter({ id: plId });
+      return results[0] || null;
+    },
+    enabled: !!plId,
+  });
+
+  // Init dispatch date from picklist
+  useState(() => {
+    if (pl?.dispatch_date) setDispatchDate(pl.dispatch_date);
+  });
 
   function handlePrint() {
     const content = printRef.current;
@@ -52,27 +67,28 @@ export default function SalesPicklistDetail() {
     const win = window.open('', '_blank', 'width=900,height=700');
     win.document.write(`
       <html><head><title>${pl?.picklist_number || 'Picklist'} — K95 Foods</title>
-      <style>body{margin:0;padding:0;} @media print { body { margin: 0; } }</style>
+      <style>
+        body{margin:0;padding:0;font-family:Arial,sans-serif;}
+        @media print{body{margin:0;}@page{size:A4;margin:15mm;}}
+      </style>
       </head><body>${content.innerHTML}</body></html>
     `);
     win.document.close();
     win.focus();
-    win.print();
+    setTimeout(() => win.print(), 300);
   }
 
-  const { data: pl, isLoading, refetch } = useQuery({
-    queryKey: ['pl_detail', plId],
-    queryFn: () => base44.entities.SalesPicklist.filter({ id: plId }).then(r => r[0]),
-    enabled: !!plId,
-    onSuccess: (data) => {
-      if (data?.dispatch_date) setDispatchDate(data.dispatch_date);
-    },
-  });
-
-  if (isLoading) return <div className="p-8 text-center text-slate-400">Loading...</div>;
-  if (!pl) return <div className="p-8 text-center text-slate-400">Pick List not found</div>;
-
-  const stepIdx = PL_STEPS.findIndex(s => s.key === pl.status);
+  async function handleStartPicking() {
+    setSaving(true);
+    await base44.entities.SalesPicklist.update(plId, { status: 'picking' });
+    await base44.entities.SalesAuditLog.create({
+      entity_type: 'SalesPicklist', entity_id: plId,
+      reference_number: pl.picklist_number, action: 'picking_started', user_email: user?.email,
+    });
+    setSaving(false);
+    toast({ title: 'Picking Started' });
+    refetch();
+  }
 
   async function handleConfirmDispatch() {
     if (!dispatchDate) { toast({ title: 'Dispatch date is required', variant: 'destructive' }); return; }
@@ -89,11 +105,15 @@ export default function SalesPicklistDetail() {
     refetch();
   }
 
-  async function handlePickPackDone() {
+  async function handlePickComplete() {
     setSaving(true);
     const updatedItems = (pl.items || []).map(item => {
       const picked = parseFloat(pickQtys[item.sales_order_item_id] ?? item.required_qty ?? 0);
-      return { ...item, picked_qty: picked, status: picked >= item.required_qty ? 'picked' : picked > 0 ? 'short' : 'pending' };
+      return {
+        ...item,
+        picked_qty: picked,
+        status: picked >= item.required_qty ? 'picked' : picked > 0 ? 'short' : 'pending',
+      };
     });
     await base44.entities.SalesPicklist.update(plId, {
       items: updatedItems, status: 'pick_packed',
@@ -105,29 +125,32 @@ export default function SalesPicklistDetail() {
       reference_number: pl.picklist_number, action: 'pick_and_pack_done', user_email: user?.email,
     });
     setSaving(false);
-    toast({ title: 'Pick & Pack complete' });
+    toast({ title: 'Pick & Pack Complete' });
     refetch();
   }
 
   async function handleCancel() {
     if (!cancelReason.trim()) { toast({ title: 'Reason required', variant: 'destructive' }); return; }
     setSaving(true);
-    await base44.entities.SalesPicklist.update(plId, { status: 'cancelled', notes: cancelReason });
+    await base44.entities.SalesPicklist.update(plId, { status: 'cancelled', cancellation_reason: cancelReason, notes: cancelReason });
     await base44.entities.SalesAuditLog.create({
       entity_type: 'SalesPicklist', entity_id: plId,
-      reference_number: pl.picklist_number, action: 'cancelled',
-      notes: cancelReason, user_email: user?.email,
+      reference_number: pl.picklist_number, action: 'cancelled', notes: cancelReason, user_email: user?.email,
     });
-    setSaving(false); setShowCancel(false);
-    toast({ title: 'Picklist cancelled' });
+    setSaving(false);
+    setShowCancel(false);
+    toast({ title: 'Picklist Cancelled' });
     refetch();
   }
+
+  if (isLoading) return <div className="p-8 text-center text-slate-400">Loading...</div>;
+  if (!pl) return <div className="p-8 text-center text-slate-400">Pick List not found</div>;
 
   return (
     <div className="p-3 md:p-6 max-w-5xl mx-auto space-y-4">
       {/* Header */}
       <div className="flex items-start gap-3">
-        <Link to={`/SalesOrderDetail?id=${pl.sales_order_id}`} className="mt-1 text-slate-500 hover:text-slate-900">
+        <Link to="/SalesPicklists" className="mt-1 text-slate-500 hover:text-slate-900">
           <ArrowLeft className="w-5 h-5" />
         </Link>
         <div className="flex-1">
@@ -139,137 +162,97 @@ export default function SalesPicklistDetail() {
           </div>
           <p className="text-sm text-slate-500 mt-0.5">
             Sales Order: <Link to={`/SalesOrderDetail?id=${pl.sales_order_id}`} className="text-blue-600 hover:underline">{pl.so_number}</Link>
+            {pl.customer_name && <> · {pl.customer_name}</>}
           </p>
         </div>
-        <Button variant="outline" className="h-9 text-sm gap-1" onClick={() => setShowPrint(p => !p)}>
-          <Printer className="w-4 h-4" /> {showPrint ? 'Hide Print' : 'Print'}
-        </Button>
-        {showPrint && (
-          <Button variant="outline" className="h-9 text-sm gap-1 text-blue-700 border-blue-300" onClick={handlePrint}>
-            <Printer className="w-4 h-4" /> Send to Printer
+        <div className="flex gap-2">
+          <Button variant="outline" className="h-9 text-sm gap-1" onClick={() => setShowPrint(p => !p)}>
+            <Printer className="w-4 h-4" /> {showPrint ? 'Hide' : 'Print'}
           </Button>
-        )}
+          {showPrint && (
+            <Button variant="outline" className="h-9 text-sm gap-1 text-blue-700 border-blue-300" onClick={handlePrint}>
+              <Download className="w-4 h-4" /> Send to Printer
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Print Preview */}
       {showPrint && (
         <div className="border border-slate-200 rounded-xl overflow-hidden">
-          <div className="bg-slate-50 px-4 py-2 border-b border-slate-100 flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-600">Print Preview</span>
+          <div className="bg-slate-50 px-4 py-2 border-b border-slate-100">
+            <span className="text-xs font-medium text-slate-600">Print Preview (A4)</span>
           </div>
-          <div ref={printRef} className="p-2 overflow-auto">
-            <PicklistPrintTemplate picklist={pl} soNumber={pl.so_number} customerName={''} />
-          </div>
-        </div>
-      )}
-
-      {/* Workflow progress */}
-      {pl.status !== 'cancelled' && (
-        <div className="bg-white border border-slate-200 rounded-xl p-4 overflow-x-auto">
-          <div className="flex items-center min-w-max">
-            {PL_STEPS.map((step, i) => {
-              const done = stepIdx > i; const active = stepIdx === i;
-              return (
-                <div key={step.key} className="flex items-center">
-                  <div className="flex flex-col items-center gap-1 px-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs ${done ? 'bg-green-100 text-green-600' : active ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-400'}`}>
-                      {done ? <CheckCircle2 className="w-4 h-4" /> : (i + 1)}
-                    </div>
-                    <span className={`text-xs font-medium ${active ? 'text-slate-900' : done ? 'text-green-700' : 'text-slate-400'}`}>{step.label}</span>
-                  </div>
-                  {i < PL_STEPS.length - 1 && <div className={`w-8 h-0.5 mb-5 ${done ? 'bg-green-400' : 'bg-slate-200'}`} />}
-                </div>
-              );
-            })}
+          <div ref={printRef} className="p-2 overflow-auto bg-white">
+            <PicklistPrintTemplate picklist={pl} soNumber={pl.so_number} customerName={pl.customer_name} />
           </div>
         </div>
       )}
 
-      {/* Meta info */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {[
-          ['Dispatch Date', pl.dispatch_date],
-          ['Appointment Date', pl.appointment_date],
-          ['Generated By', pl.generated_by],
-          ['Completed By', pl.completed_by],
-        ].filter(([, v]) => v).map(([k, v]) => (
-          <div key={k} className="bg-white border border-slate-200 rounded-lg p-3">
-            <p className="text-xs text-slate-500 mb-1">{k}</p>
-            <p className="text-sm font-medium text-slate-900">{v}</p>
-          </div>
-        ))}
-      </div>
+      {/* Workflow Progress Bar */}
+      {pl.status !== 'cancelled' && <PicklistWorkflowBar status={pl.status} />}
 
-      {/* Logistics Details — highlighted for filling */}
-      <PicklistLogisticsSection picklist={pl} onUpdated={refetch} />
+      {/* Header Meta — ERPNext style */}
+      <PicklistHeaderMeta picklist={pl} />
 
-      {/* Action panel */}
+      {/* Action Panels based on status */}
       {pl.status === 'draft' && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
-          <h4 className="text-sm font-semibold text-amber-900">Confirm Dispatch Date</h4>
-          <div className="flex items-end gap-3">
-            <div className="flex-1 max-w-xs">
-              <Label className="text-xs font-medium text-slate-700">Dispatch Date *</Label>
+          <h4 className="text-sm font-semibold text-amber-900">Next Step: Start Picking or Schedule Dispatch</h4>
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="flex-1 min-w-[160px] max-w-xs">
+              <Label className="text-xs font-medium text-slate-700">Dispatch Date</Label>
               <Input type="date" className="h-9 text-sm mt-1" value={dispatchDate} onChange={e => setDispatchDate(e.target.value)} />
             </div>
-            <Button className="h-11 bg-slate-900 text-white text-sm" onClick={handleConfirmDispatch} disabled={saving}>
-              {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Calendar className="w-4 h-4 mr-1" />}
-              Dispatch Date Confirmed
+            <Button className="h-11 text-sm bg-slate-900 text-white gap-1.5" onClick={handleConfirmDispatch} disabled={saving}>
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Calendar className="w-4 h-4" />}
+              Confirm Dispatch Date
+            </Button>
+            <Button className="h-11 text-sm bg-amber-600 hover:bg-amber-700 text-white gap-1.5" onClick={handleStartPicking} disabled={saving}>
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+              Start Picking
             </Button>
           </div>
         </div>
       )}
 
-      {/* Items table */}
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-        <div className="bg-slate-50 px-4 py-3 border-b border-slate-100">
-          <h3 className="text-sm font-semibold text-slate-900">Picklist Items</h3>
+      {(pl.status === 'picking' || pl.status === 'dispatch_scheduled') && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-3">
+          <h4 className="text-sm font-semibold text-blue-900">
+            {pl.status === 'picking' ? 'Picking in Progress — Update quantities below' : 'Dispatch Scheduled — Complete picking'}
+          </h4>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-slate-100 text-slate-700">
-                <th className="px-3 py-2 text-left">Description</th>
-                <th className="px-3 py-2 text-left">Location</th>
-                <th className="px-3 py-2 text-right">Required Quantity</th>
-                <th className="px-3 py-2 text-right">{pl.status === 'dispatch_scheduled' ? 'Picked Quantity' : 'Picked'}</th>
-                <th className="px-3 py-2 text-center">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {(pl.items || []).map(item => (
-                <tr key={item.sales_order_item_id} className="hover:bg-slate-50">
-                  <td className="px-3 py-2 text-slate-800">{item.description}</td>
-                  <td className="px-3 py-2 text-slate-500">{item.location || '—'}</td>
-                  <td className="px-3 py-2 text-right font-medium">{item.required_qty}</td>
-                  <td className="px-3 py-2 text-right">
-                    {pl.status === 'dispatch_scheduled' ? (
-                      <Input type="number" min="0" className="h-8 w-20 text-sm text-right ml-auto"
-                        defaultValue={item.required_qty}
-                        onChange={e => setPickQtys(p => ({ ...p, [item.sales_order_item_id]: e.target.value }))} />
-                    ) : (
-                      <span>{item.picked_qty ?? '—'}</span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2 text-center">
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                      item.status === 'picked' ? 'bg-green-100 text-green-700' :
-                      item.status === 'short' ? 'bg-amber-100 text-amber-700' :
-                      'bg-slate-100 text-slate-500'
-                    }`}>{item.status || 'pending'}</span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      )}
 
-      {/* Warehouse Packing Panel — replaces the simple button with a proper packing UI */}
-      <WarehousePackingPanel picklist={pl} onUpdated={refetch} />
+      {/* Items Table */}
+      <PicklistItemsTable
+        items={pl.items || []}
+        status={pl.status}
+        pickQtys={pickQtys}
+        onPickQtyChange={setPickQtys}
+      />
+
+      {/* Pick & Pack Done button */}
+      {(pl.status === 'picking' || pl.status === 'dispatch_scheduled') && (
+        <div className="flex justify-end">
+          <Button className="h-11 bg-green-600 hover:bg-green-700 text-white text-sm gap-1.5" onClick={handlePickComplete} disabled={saving}>
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Package className="w-4 h-4" />}
+            Pick & Packing Done
+          </Button>
+        </div>
+      )}
+
+      {/* Completed / Pick & Packed summary */}
+      {(pl.status === 'pick_packed' || pl.status === 'completed') && (
+        <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-xl text-sm">
+          <CheckCircle2 className="w-4 h-4 text-green-600" />
+          <span className="text-green-800 font-medium">Pick & Pack completed</span>
+          {pl.completed_by && <span className="text-green-600 text-xs ml-2">by {pl.completed_by}</span>}
+        </div>
+      )}
 
       {/* Cancel section */}
-      {pl.status === 'pick_packed' && !showCancel && (
+      {['draft', 'picking', 'picked', 'dispatch_scheduled', 'pick_packed'].includes(pl.status) && !showCancel && (
         <div className="flex justify-end">
           <Button variant="outline" className="h-11 text-sm text-red-600 border-red-200 hover:bg-red-50" onClick={() => setShowCancel(true)}>
             <XCircle className="w-4 h-4 mr-1" /> Cancel Picklist
@@ -284,7 +267,7 @@ export default function SalesPicklistDetail() {
           <div className="flex gap-2">
             <Button variant="outline" className="h-11 text-sm" onClick={() => setShowCancel(false)}>Back</Button>
             <Button className="h-11 bg-red-600 hover:bg-red-700 text-white text-sm" onClick={handleCancel} disabled={saving}>
-              Confirm Cancel
+              {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null} Confirm Cancel
             </Button>
           </div>
         </div>
@@ -293,7 +276,7 @@ export default function SalesPicklistDetail() {
         <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-sm">
           <XCircle className="w-4 h-4 text-red-500" />
           <span className="text-red-800 font-medium">Picklist Cancelled</span>
-          {pl.notes && <span className="text-red-600 text-xs ml-2">Reason: {pl.notes}</span>}
+          {(pl.cancellation_reason || pl.notes) && <span className="text-red-600 text-xs ml-2">Reason: {pl.cancellation_reason || pl.notes}</span>}
         </div>
       )}
 
@@ -305,15 +288,9 @@ export default function SalesPicklistDetail() {
           </Button>
         </div>
       )}
-
-      <DeleteWithRemarks
-        open={showDelete}
-        onClose={() => setShowDelete(false)}
-        entityName="SalesPicklist"
-        recordId={plId}
-        referenceNumber={pl.picklist_number}
-        onDeleted={() => window.location.href = '/SalesPicklists'}
-      />
+      <DeleteWithRemarks open={showDelete} onClose={() => setShowDelete(false)}
+        entityName="SalesPicklist" recordId={plId} referenceNumber={pl.picklist_number}
+        onDeleted={() => window.location.href = '/SalesPicklists'} />
     </div>
   );
 }
