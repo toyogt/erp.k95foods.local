@@ -16,12 +16,13 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
 // ─── Seller Constants ────────────────────────────────────────────────
-const SELLER_GSTIN = '06AAHCK7191E1ZF';
+// Use ADAEQUARE_GSTIN env var if set, otherwise fall back to K95 production GSTIN
+const SELLER_GSTIN = Deno.env.get('ADAEQUARE_GSTIN') || '06AAHCK7191E1ZF';
 const SELLER_NAME  = 'K95 Foods Private Limited';
 const SELLER_ADDR  = 'Plot No. V8, M.I.E , Part - B, Bahadurgarh';
 const SELLER_CITY  = 'Bahadurgarh';
 const SELLER_PIN   = 124507;
-const SELLER_STATE = '06';
+const SELLER_STATE = SELLER_GSTIN.substring(0, 2) || '06';
 
 // ─── Adaequare Enriched API Endpoints (Staging/Sandbox) ─────────────
 const GSP_AUTH_URL   = 'https://gsp.adaequare.com/gsp/authenticate?grant_type=token';
