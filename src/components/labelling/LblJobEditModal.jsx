@@ -16,6 +16,8 @@ export default function LblJobEditModal({ open, onClose, job, products, planDate
   const [form, setForm] = useState(job || emptyJob);
   const [casesManual, setCasesManual] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [mfgDateError, setMfgDateError] = useState('');
+  const todayStr = moment().format('YYYY-MM-DD');
 
   const handleProductChange = (productId) => {
     const prod = products.find(p => p.id === productId);
@@ -34,9 +36,19 @@ export default function LblJobEditModal({ open, onClose, job, products, planDate
     setForm(f => ({ ...f, quantity_cases_planned: Number(value) || 0 }));
   };
 
+  const handleMfgDateChange = (value) => {
+    if (value && value > todayStr) {
+      setMfgDateError('Manufacturing date cannot be a future date.');
+    } else {
+      setMfgDateError('');
+    }
+    setForm(f => ({ ...f, manufacturing_date: value }));
+  };
+
   const handleSubmit = async () => {
     if (!form.sku_code) return;
     if (!form.quantity_bottles_planned || form.quantity_bottles_planned <= 0) return;
+    if (form.manufacturing_date && form.manufacturing_date > todayStr) return;
     setSaving(true);
     await onSave(form);
     setSaving(false);
@@ -80,7 +92,8 @@ export default function LblJobEditModal({ open, onClose, job, products, planDate
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label className="text-xs font-medium text-slate-700">Manufacturing Date</Label>
-              <Input type="date" value={form.manufacturing_date || ''} onChange={e => setForm(f => ({ ...f, manufacturing_date: e.target.value }))} className="h-11 md:h-9" />
+              <Input type="date" value={form.manufacturing_date || ''} max={todayStr} onChange={e => handleMfgDateChange(e.target.value)} className={`h-11 md:h-9 ${mfgDateError ? 'border-red-400' : ''}`} />
+              {mfgDateError && <p className="text-xs text-red-600">{mfgDateError}</p>}
             </div>
             <div className="space-y-1">
               <Label className="text-xs font-medium text-slate-700">Batch Number</Label>
@@ -98,7 +111,7 @@ export default function LblJobEditModal({ open, onClose, job, products, planDate
         </div>
         <DialogFooter className="gap-2">
           <Button variant="outline" className="h-11 md:h-9" onClick={onClose}>Cancel</Button>
-          <Button className="h-11 md:h-9 gap-2" onClick={handleSubmit} disabled={saving || !form.sku_code || !form.quantity_bottles_planned}>
+          <Button className="h-11 md:h-9 gap-2" onClick={handleSubmit} disabled={saving || !form.sku_code || !form.quantity_bottles_planned || !!mfgDateError}>
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             {isAdd ? 'Add to Plan' : 'Save Changes'}
           </Button>
