@@ -105,9 +105,22 @@ export default function LblPlanCreate() {
         return;
       }
     }
+    // Block if a plan already exists for same date + shift + line
+    const existingPlans = await base44.entities.LabellingShiftPlan.filter({ plan_date: fd, shift_type: shiftType, line_id: lineId });
+    const activePlan = existingPlans.find(p => p.status !== 'cancelled');
+    if (activePlan) {
+      toast({
+        title: 'Plan Already Exists',
+        description: `A ${shiftType} shift plan for ${fd} on ${selectedMachine?.display_name || lineId} already exists (${activePlan.plan_id}). Please edit that plan to add more products.`,
+        variant: 'destructive',
+      });
+      setSaving(false);
+      navigate(`/LblPlanDetail?planId=${activePlan.id}`);
+      return;
+    }
+
     setSaving(true);
     const pid = generatePlanId();
-    const plan = { plan_id: pid, plan_date: fd, shift_type: shiftType, line_id: lineId, line_name: selectedMachine?.display_name || lineId, supervisor_email: user?.email, supervisor_name: user?.full_name, status: lockAfterSave ? 'locked' : 'draft', total_jobs: jobs.length, completed_jobs: 0, notes };
     const createdPlan = await base44.entities.LabellingShiftPlan.create(plan);
     const jobRecords = jobs.map((j, i) => {
       const mfgRaw = j.manufacturing_date || planDate;
