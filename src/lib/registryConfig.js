@@ -136,7 +136,7 @@ export const pageRegistry = [
   { pageKey: 'SalesPriceListView',  title: 'Price Lists',     moduleKey: 'SALES', icon: Tag,          roles: ['admin', 'sales_manager', 'sales_user', 'user'] },
   { pageKey: 'SalesDistributors',   title: 'Distributors',    moduleKey: 'SALES', icon: Users,        roles: ['admin', 'sales_manager'] },
   { pageKey: 'SalesRateListManager',title: 'Rate List',        moduleKey: 'SALES', icon: Tag,          roles: ['admin', 'sales_manager'], adminOnly: false },
-  { pageKey: 'SalesSettingsPage',   title: 'Sales Settings',  moduleKey: 'SALES', icon: Settings,     roles: ['admin'], adminOnly: true },
+  { pageKey: 'SalesSettingsPage',   title: 'Sales & Tally Settings',  moduleKey: 'SALES', icon: Settings,     roles: ['admin', 'sales_manager', 'accounts_manager', 'user'], adminOnly: false },
   { pageKey: 'DistributorPortal',    title: 'Distributor Portal', moduleKey: 'SALES', icon: Users,       roles: ['admin', 'user', 'distributor', 'sales_manager', 'sales_user'] },
   { pageKey: 'SalesGRNReconciliation', title: 'GRN Reconciliation', moduleKey: 'SALES', icon: PackageOpen, roles: ['admin', 'sales_manager', 'accounts_manager', 'user'] },
   { pageKey: 'TransportRateCards',     title: 'Transport Rate Cards', moduleKey: 'SALES', icon: Truck,       roles: ['admin', 'sales_manager'], adminOnly: false },
