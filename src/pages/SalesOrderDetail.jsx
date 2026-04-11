@@ -23,15 +23,35 @@ import { fireFMSEvent } from '@/lib/useFMSAutoComplete';
 
 const STATUS_ORDER = ['draft', 'confirmed', 'logistics_review', 'picking', 'packing', 'invoiced', 'delivered', 'paid', 'closed'];
 
-const NEXT_STATUS = {
-  draft: { label: 'Confirm Order', next: 'confirmed', event: null },
-  confirmed: { label: 'Send for Logistics Review', next: 'logistics_review', event: 'sales_logistics_review' },
-  // logistics_review → picking is handled by SOLogisticsReviewPanel (Approve for Picking)
-  picking: { label: 'Mark Packed', next: 'packing', event: null },
-  // packing → invoiced requires Invoice tab
-  invoiced: { label: 'Mark Delivered', next: 'delivered', event: null },
-  delivered: { label: 'Go to GRN Reconciliation', next: null, event: null, link: '/SalesGRNReconciliation' },
-};
+// Workflow-aware next action — only shows the button for the CURRENT stage
+// Once an order progresses past a stage, that stage's button must not reappear
+function getNextAction(order) {
+  const status = order?.status;
+  const wf = order?.workflow_state;
+  // Terminal / no-action states
+  if (['cancelled', 'closed', 'paid'].includes(status)) return null;
+
+  // Use the LATER of status/workflow_state to determine current position
+  const STAGE_ORDER = ['draft', 'confirmed', 'logistics_review', 'under_logistics_review', 'ready_to_pick', 'picking', 'packing', 'invoiced', 'delivered', 'paid', 'closed'];
+  const statusIdx = STAGE_ORDER.indexOf(status);
+  const wfIdx = STAGE_ORDER.indexOf(wf);
+  const effectiveIdx = Math.max(statusIdx, wfIdx);
+
+  // Map: effective stage → action
+  const stageActions = {
+    draft:        { label: 'Confirm Order', next: 'confirmed', event: null },
+    confirmed:    { label: 'Send for Logistics Review', next: 'logistics_review', event: 'sales_logistics_review' },
+    // logistics_review → picking is handled by SOLogisticsReviewPanel
+    picking:      { label: 'Mark Packed', next: 'packing', event: null },
+    // packing → invoiced requires Invoice tab
+    invoiced:     { label: 'Mark Delivered', next: 'delivered', event: null },
+    delivered:    { label: 'Go to GRN Reconciliation', next: null, event: null, link: '/SalesGRNReconciliation' },
+  };
+
+  // Find the action for the effective stage
+  const effectiveStage = STAGE_ORDER[effectiveIdx];
+  return stageActions[effectiveStage] || null;
+}
 
 const PANELS = [
   { key: 'items',            label: 'Details' },
@@ -177,7 +197,7 @@ export default function SalesOrderDetail() {
   const isExpired = order.po_expiry_date && new Date(order.po_expiry_date) < new Date()
     && !['paid', 'closed', 'cancelled'].includes(order.status);
 
-  const nextAction = NEXT_STATUS[order.status];
+  const nextAction = getNextAction(order);
   const hasInvoice = invoices.length > 0;
   const firstInvoice = invoices[0];
   const tallyNotPushed = hasInvoice && !firstInvoice?.posted_to_tally;
