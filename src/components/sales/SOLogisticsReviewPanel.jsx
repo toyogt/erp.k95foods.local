@@ -110,7 +110,9 @@ export default function SOLogisticsReviewPanel({ order, onUpdated }) {
   const suggestedTransporter = matchedCard?.transporter || '';
 
   const alreadyApproved = order?.workflow_state === 'ready_to_pick';
-  const isInReview = order?.workflow_state === 'under_logistics_review';
+  // Treat both explicit workflow_state AND status-based fallback (for orders where workflow_state was never set)
+  const isInReview = order?.workflow_state === 'under_logistics_review'
+    || (order?.status === 'logistics_review' && !order?.workflow_state);
   const isDelivered = ['delivered', 'paid', 'closed'].includes(order?.status);
 
   // Locked = only lock logistics fields once invoiced/dispatched/delivered (not during picking)
@@ -503,7 +505,7 @@ export default function SOLogisticsReviewPanel({ order, onUpdated }) {
       {/* ── Action Buttons ── */}
       {!isLocked && (
         <div className="flex flex-wrap gap-3 pt-2 border-t border-slate-200">
-          {order.workflow_state === 'draft' && (
+          {(order.workflow_state === 'draft' || (order.status === 'confirmed' && !order.workflow_state)) && (
             <Button className="h-11 bg-slate-900 text-white text-sm" onClick={handleSendForReview} disabled={saving}>
               {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
               Send for Logistics Review
