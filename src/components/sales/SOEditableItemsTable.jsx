@@ -17,7 +17,7 @@ import { Pencil, Check, X, Loader2, Trash2, Plus } from 'lucide-react';
 const PLATFORM_ID_FIELD = {
   zepto: 'zepto_item_id',
   swiggy: 'swiggy_item_id',
-  blinkit: 'swiggy_item_id',
+  blinkit: null,
   direct: null,
   other: null,
 };
@@ -25,7 +25,6 @@ const PLATFORM_ID_FIELD = {
 const PLATFORM_LABEL = {
   zepto: 'Zepto Item ID',
   swiggy: 'Swiggy Item ID',
-  blinkit: 'Swiggy Item ID',
 };
 
 const EDITABLE_STATUSES = ['draft', 'confirmed', 'logistics_review'];
@@ -50,7 +49,18 @@ export default function SOEditableItemsTable({ order, items, onUpdated }) {
     staleTime: 300000,
   });
   const productMap = {};
-  products.forEach(p => { if (p.item_code) productMap[p.item_code] = p; });
+  const productByEAN = {};
+  products.forEach(p => {
+    if (p.item_code) productMap[p.item_code] = p;
+    if (p.product_barcode) productByEAN[p.product_barcode.trim()] = p;
+    // Also index by bigbasket_item_id (actually stores Blinkit IDs)
+    if (p.bigbasket_item_id) productMap[p.bigbasket_item_id.trim()] = p;
+  });
+
+  // Helper to find product for an item — tries item_code, then EAN, then blinkit ID
+  const findProduct = (item) => {
+    return productMap[item.item_code] || productByEAN[item.ean_number?.trim()] || null;
+  };
 
   const platform = order?.platform;
   // Scootsy Logistics = Swiggy/Instamart
@@ -201,13 +211,13 @@ export default function SOEditableItemsTable({ order, items, onUpdated }) {
                 <tr key={item.id} className={`hover:bg-slate-50 ${isEditing ? 'bg-blue-50' : ''}`}>
                   <td className="px-2 py-2 text-slate-400">{idx + 1}</td>
                   <td className="px-2 py-2 text-slate-700 font-mono text-[11px]">
-                    <div>{item.item_code || '—'}</div>
+                    <div>{findProduct(item)?.item_code || item.item_code || '—'}</div>
                   </td>
-                  <td className="px-2 py-2 text-slate-600 font-mono text-[11px]">{item.sku_code || productMap[item.item_code]?.item_code || '—'}</td>
-                  <td className="px-2 py-2 text-slate-600 font-mono text-[11px]">{item.ean_number || productMap[item.item_code]?.product_barcode || '—'}</td>
+                  <td className="px-2 py-2 text-slate-600 font-mono text-[11px]">{item.sku_code || findProduct(item)?.item_code || '—'}</td>
+                  <td className="px-2 py-2 text-slate-600 font-mono text-[11px]">{item.ean_number || findProduct(item)?.product_barcode || '—'}</td>
                   {platformField && (
                     <td className="px-2 py-2 text-blue-700 font-mono text-[11px] font-medium">
-                      {productMap[item.item_code]?.[platformField] || '—'}
+                      {findProduct(item)?.[platformField] || '—'}
                     </td>
                   )}
                   <td className="px-2 py-2 text-slate-900">
@@ -216,8 +226,8 @@ export default function SOEditableItemsTable({ order, items, onUpdated }) {
                         onChange={e => setEditData(d => ({ ...d, description: e.target.value }))} />
                     ) : (
                       <div>
-                        <div>{productMap[item.item_code]?.product_name || item.description}</div>
-                        {productMap[item.item_code]?.product_name && item.description !== productMap[item.item_code]?.product_name && (
+                        <div>{findProduct(item)?.product_name || item.description}</div>
+                        {findProduct(item)?.product_name && item.description !== findProduct(item)?.product_name && (
                           <div className="text-[10px] text-slate-400 mt-0.5">{item.description}</div>
                         )}
                       </div>

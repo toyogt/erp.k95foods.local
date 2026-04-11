@@ -26,7 +26,7 @@ export async function enrichParsedData(parsedData) {
     zepto: {},
     bigbasket: {},
     amazon: {},
-    blinkit: {},  // Blinkit uses same item_code as system
+    blinkit: {},
   };
   for (const p of allProducts) {
     if (p.item_code) productByCode[p.item_code.trim().toUpperCase()] = p;
@@ -34,7 +34,11 @@ export async function enrichParsedData(parsedData) {
     // Map platform-specific IDs
     if (p.swiggy_item_id) productByPlatformId.swiggy[p.swiggy_item_id.trim().toUpperCase()] = p;
     if (p.zepto_item_id) productByPlatformId.zepto[p.zepto_item_id.trim().toUpperCase()] = p;
-    if (p.bigbasket_item_id) productByPlatformId.bigbasket[p.bigbasket_item_id.trim().toUpperCase()] = p;
+    // bigbasket_item_id actually stores Blinkit IDs — map to both blinkit and bigbasket
+    if (p.bigbasket_item_id) {
+      productByPlatformId.bigbasket[p.bigbasket_item_id.trim().toUpperCase()] = p;
+      productByPlatformId.blinkit[p.bigbasket_item_id.trim().toUpperCase()] = p;
+    }
     if (p.amazon_item_id) productByPlatformId.amazon[p.amazon_item_id.trim().toUpperCase()] = p;
   }
   const barcodeToItemCode = {};
@@ -101,9 +105,14 @@ export async function enrichParsedData(parsedData) {
       product = productByCode[resolvedItemCode];
     }
 
-    // Priority 4: Try EAN barcode match (material_code from Zepto can be EAN)
+    // Priority 4: Try EAN barcode match (material_code from Zepto can be EAN, Blinkit also extracts EAN)
     if (!product && item.ean_number) {
       product = productByEAN[item.ean_number.trim()];
+    }
+
+    // Priority 5: For platforms without dedicated ID fields (e.g. Blinkit), try matching the raw parsed code as EAN
+    if (!product && rawParsedCode.match(/^\d{12,14}$/)) {
+      product = productByEAN[rawParsedCode];
     }
 
     // Once matched, use the system item_code for rate lookup and storage
