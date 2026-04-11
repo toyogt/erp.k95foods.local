@@ -3,17 +3,19 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { PLAN_STATUSES, canManagePlans } from '@/lib/labellingHelpers';
+import { PLAN_STATUSES, canManagePlans, generateJobId } from '@/lib/labellingHelpers';
 import { logLabellingEvent } from '@/lib/labellingEventLogger';
 import { toast } from '@/components/ui/use-toast';
 import LblJobCard from '@/components/labelling/LblJobCard';
 import LblDraggableJobCards from '@/components/labelling/LblDraggableJobCards';
+import LblJobEditModal from '@/components/labelling/LblJobEditModal';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
   AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { ArrowLeft, Lock, Loader2, Save, Trash2 } from 'lucide-react';
+import { ArrowLeft, Lock, Unlock, Loader2, Save, Trash2, Plus, Pencil } from 'lucide-react';
+import moment from 'moment';
 
 export default function LblPlanDetail() {
   const navigate = useNavigate();
@@ -21,22 +23,35 @@ export default function LblPlanDetail() {
   const planId = new URLSearchParams(window.location.search).get('planId');
   const [user, setUser] = useState(null);
   const [acting, setActing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [reorderedJobs, setReorderedJobs] = useState(null);
+  const [savingOrder, setSavingOrder] = useState(false);
+  const [editingJob, setEditingJob] = useState(null);
+  const [addingJob, setAddingJob] = useState(false);
 
   useEffect(() => { base44.auth.me().then(setUser); }, []);
 
-  const { data: plan, isLoading: planLoading } = useQuery({ queryKey: ['labelling-plan', planId], queryFn: async () => { const p = await base44.entities.LabellingShiftPlan.filter({ id: planId }); return p[0] || null; }, enabled: !!planId });
-  const { data: jobs = [], isLoading: jobsLoading } = useQuery({ queryKey: ['labelling-jobs', planId], queryFn: () => base44.entities.LabellingJob.filter({ plan_id: planId }), enabled: !!planId });
+  const { data: plan, isLoading: planLoading } = useQuery({
+    queryKey: ['labelling-plan', planId],
+    queryFn: async () => { const p = await base44.entities.LabellingShiftPlan.filter({ id: planId }); return p[0] || null; },
+    enabled: !!planId,
+  });
+  const { data: jobs = [], isLoading: jobsLoading } = useQuery({
+    queryKey: ['labelling-jobs', planId],
+    queryFn: () => base44.entities.LabellingJob.filter({ plan_id: planId }),
+    enabled: !!planId,
+  });
+  const { data: products = [] } = useQuery({
+    queryKey: ['product-master-list'],
+    queryFn: () => base44.entities.ProductMaster.list('-created_date', 500),
+  });
 
-  const [reorderedJobs, setReorderedJobs] = useState(null);
-  const [savingOrder, setSavingOrder] = useState(false);
-  const [deleting, setDeleting] = useState(false);
   const sortedJobs = reorderedJobs || [...jobs].sort((a, b) => a.priority_order - b.priority_order);
   const isManager = canManagePlans(user?.role);
   const isDraft = plan?.status === 'draft';
   const canReorder = isManager && isDraft;
   const hasOrderChanged = reorderedJobs !== null;
 
-  // Reset reordered state when jobs data changes from server
   useEffect(() => { setReorderedJobs(null); }, [jobs]);
 
   const handleReorder = (fromIdx, toIdx) => {
@@ -61,7 +76,6 @@ export default function LblPlanDetail() {
   const handleDeletePlan = async () => {
     if (!plan) return;
     setDeleting(true);
-    // Delete all associated jobs first
     for (const j of jobs) {
       await base44.entities.LabellingJob.delete(j.id);
     }
@@ -72,10 +86,74 @@ export default function LblPlanDetail() {
     navigate('/LblPlanningDashboard');
   };
 
-  const handleLockPlan = async () => {
-    if (!plan) return;
+  const handleAddJob = async (form) => {
+    const nextPriority = sortedJobs.length + 1;
+    const mfgFormatted = form.manufacturing_date ? moment(form.manufacturing_date).format('DD/MM/YYYY') : plan.plan_date;
+    const newJob = {
+      job_id: generateJobId(),
+      plan_id: plan.id,
+      sku_code: form.sku_code,
+      product_name: form.product_name,
+      bottle_type: form.bottle_type,
+      mrp: String(form.mrp || ''),
+      manufacturing_date: mfgFormatted,
+      batch_no: form.batch_no || '',
+      quantity_bottles_planned: form.quantity_bottles_planned,
+      quantity_cases_planned: form.quantity_cases_planned,
+      priority_order: nextPriority,
+      line_id: plan.line_id,
+      line_name: plan.line_name,
+      shift_type: plan.shift_type,
+      plan_date: plan.plan_date,
+      status: 'pending',
+    };
+    await base44.entities.LabellingJob.create(newJob);
+    await base44.entities.LabellingShiftPlan.update(plan.id, { total_jobs: nextPriority });
+    await logLabellingEvent({ action_type: 'job_added', plan_id: plan.id, description: `Product ${form.product_name} added to plan ${plan.plan_id}`, user });
+    queryClient.invalidateQueries({ queryKey: ['labelling-jobs', planId] });
+    toast({ title: 'Product Added', description: `${form.product_name} added to plan` });
+  };
 
-    // Validate priority sequence before locking
+  const handleEditJob = async (form) => {
+    if (!editingJob) return;
+    const mfgFormatted = form.manufacturing_date ? moment(form.manufacturing_date).format('DD/MM/YYYY') : editingJob.manufacturing_date;
+    await base44.entities.LabellingJob.update(editingJob.id, {
+      sku_code: form.sku_code,
+      product_name: form.product_name,
+      bottle_type: form.bottle_type,
+      mrp: String(form.mrp || ''),
+      manufacturing_date: mfgFormatted,
+      batch_no: form.batch_no || '',
+      quantity_bottles_planned: form.quantity_bottles_planned,
+      quantity_cases_planned: form.quantity_cases_planned,
+    });
+    await logLabellingEvent({ action_type: 'job_updated', plan_id: plan.id, description: `Job ${editingJob.job_id} updated`, user });
+    queryClient.invalidateQueries({ queryKey: ['labelling-jobs', planId] });
+    toast({ title: 'Job Updated' });
+  };
+
+  const handleRemoveJob = async (job) => {
+    await base44.entities.LabellingJob.delete(job.id);
+    const remaining = sortedJobs.filter(j => j.id !== job.id);
+    for (let i = 0; i < remaining.length; i++) {
+      await base44.entities.LabellingJob.update(remaining[i].id, { priority_order: i + 1 });
+    }
+    await base44.entities.LabellingShiftPlan.update(plan.id, { total_jobs: remaining.length });
+    await logLabellingEvent({ action_type: 'job_removed', plan_id: plan.id, description: `Job ${job.job_id} removed from plan ${plan.plan_id}`, user });
+    queryClient.invalidateQueries({ queryKey: ['labelling-jobs', planId] });
+    toast({ title: 'Product Removed', description: `${job.product_name} removed from plan` });
+  };
+
+  const handleUnlockPlan = async () => {
+    setActing(true);
+    await base44.entities.LabellingShiftPlan.update(plan.id, { status: 'draft' });
+    await logLabellingEvent({ action_type: 'plan_unlocked', plan_id: plan.id, description: `Plan ${plan.plan_id} unlocked for editing`, user });
+    queryClient.invalidateQueries({ queryKey: ['labelling-plan', planId] });
+    toast({ title: 'Plan Unlocked', description: 'Plan reverted to draft for editing' });
+    setActing(false);
+  };
+
+  const handleLockPlan = async () => {
     const priorities = sortedJobs.map(j => j.priority_order);
     const uniquePriorities = new Set(priorities);
     if (uniquePriorities.size !== sortedJobs.length) {
@@ -88,18 +166,14 @@ export default function LblPlanDetail() {
       toast({ title: 'Priority Gap', description: 'Priority numbers must be sequential starting from 1. Save the correct order first.', variant: 'destructive' });
       return;
     }
-
-    // Do not lock if there are unsaved reorder changes
     if (hasOrderChanged) {
       toast({ title: 'Unsaved Changes', description: 'Save the priority order before locking the plan.', variant: 'destructive' });
       return;
     }
-
     if (sortedJobs.length === 0) {
       toast({ title: 'No Jobs', description: 'Cannot lock a plan with no jobs.', variant: 'destructive' });
       return;
     }
-
     setActing(true);
     await base44.entities.LabellingShiftPlan.update(plan.id, { status: 'locked' });
     await logLabellingEvent({ action_type: 'plan_locked', plan_id: plan.id, description: `Plan ${plan.plan_id} locked`, user });
@@ -118,12 +192,20 @@ export default function LblPlanDetail() {
       <div className="flex items-start gap-3">
         <Button variant="ghost" size="icon" onClick={() => navigate('/LblPlanningDashboard')}><ArrowLeft className="w-4 h-4" /></Button>
         <div className="flex-1">
-          <div className="flex items-center gap-2 flex-wrap"><h1 className="text-xl font-bold text-slate-900">{plan.plan_id}</h1><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${st.color}`}>{st.label}</span></div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-xl font-bold text-slate-900">{plan.plan_id}</h1>
+            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${st.color}`}>{st.label}</span>
+          </div>
           <p className="text-sm text-slate-500">{plan.plan_date} · {plan.shift_type} Shift · {plan.line_name || plan.line_id}</p>
           {plan.supervisor_name && <p className="text-xs text-slate-400">Supervisor: {plan.supervisor_name}</p>}
         </div>
-        {isManager && plan.status === 'draft' && (
-          <div className="flex items-center gap-2">
+
+        {/* Draft actions */}
+        {isManager && isDraft && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button variant="outline" className="h-11 md:h-9 gap-2" onClick={() => setAddingJob(true)}>
+              <Plus className="w-4 h-4" /> Add Product
+            </Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="outline" className="h-11 md:h-9 gap-2 text-red-600 border-red-200 hover:bg-red-50" disabled={deleting}>
@@ -150,8 +232,18 @@ export default function LblPlanDetail() {
             </Button>
           </div>
         )}
+
+        {/* Locked — unlock button */}
+        {isManager && plan.status === 'locked' && (
+          <Button variant="outline" className="h-11 md:h-9 gap-2 text-amber-600 border-amber-200 hover:bg-amber-50" onClick={handleUnlockPlan} disabled={acting}>
+            {acting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Unlock className="w-4 h-4" />}
+            Unlock to Edit
+          </Button>
+        )}
       </div>
+
       {plan.notes && <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">{plan.notes}</div>}
+
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-slate-900">Jobs ({sortedJobs.length})</h2>
@@ -163,16 +255,84 @@ export default function LblPlanDetail() {
           )}
         </div>
         {canReorder && <p className="text-xs text-slate-500">Drag jobs to change execution priority. Save after reordering.</p>}
-        {sortedJobs.length === 0 ? <div className="text-center py-8 text-slate-400">No jobs</div> : (
-          canReorder ? (
-            <LblDraggableJobCards jobs={sortedJobs} planLocked={plan.status !== 'draft'} onReorder={handleReorder} />
-          ) : (
-            sortedJobs.map((job, idx) => (
-              <LblJobCard key={job.id} job={job} isFirst={idx === sortedJobs.findIndex(j => j.status === 'pending')} planLocked={plan.status !== 'draft'} />
-            ))
-          )
+
+        {sortedJobs.length === 0 ? (
+          <div className="text-center py-8 text-slate-400">No products added yet</div>
+        ) : canReorder ? (
+          <div className="space-y-1">
+            {sortedJobs.map((job, idx) => (
+              <div key={job.id} className="space-y-1">
+                <LblDraggableJobCards
+                  jobs={[job]}
+                  planLocked={false}
+                  onReorder={(from, to) => handleReorder(idx + from, idx + to)}
+                />
+                <div className="flex gap-2 px-1 pb-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 gap-1 text-xs"
+                    onClick={() => setEditingJob({ ...job, manufacturing_date: job.manufacturing_date ? moment(job.manufacturing_date, 'DD/MM/YYYY').format('YYYY-MM-DD') : '' })}
+                  >
+                    <Pencil className="w-3 h-3" /> Edit Job #{job.priority_order}
+                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button size="sm" variant="outline" className="h-8 gap-1 text-xs text-red-600 border-red-200 hover:bg-red-50">
+                        <Trash2 className="w-3 h-3" /> Remove
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Remove {job.product_name}?</AlertDialogTitle>
+                        <AlertDialogDescription>This product will be removed from the plan. Remaining jobs will be resequenced.</AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel className="h-11 md:h-9">Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => handleRemoveJob(job)} className="h-11 md:h-9 bg-red-600 hover:bg-red-700">Remove Product</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              </div>
+            ))}
+            {/* Full list drag support */}
+            {sortedJobs.length > 1 && (
+              <div className="mt-2">
+                <LblDraggableJobCards jobs={sortedJobs} planLocked={false} onReorder={handleReorder} />
+              </div>
+            )}
+          </div>
+        ) : (
+          sortedJobs.map((job, idx) => (
+            <LblJobCard key={job.id} job={job} isFirst={idx === sortedJobs.findIndex(j => j.status === 'pending')} planLocked={plan.status !== 'draft'} />
+          ))
         )}
       </div>
+
+      {/* Add Product Modal */}
+      <LblJobEditModal
+        open={addingJob}
+        onClose={() => setAddingJob(false)}
+        job={null}
+        products={products}
+        planDate={plan?.plan_date}
+        onSave={handleAddJob}
+        mode="add"
+      />
+
+      {/* Edit Job Modal */}
+      {editingJob && (
+        <LblJobEditModal
+          open={!!editingJob}
+          onClose={() => setEditingJob(null)}
+          job={editingJob}
+          products={products}
+          planDate={plan?.plan_date}
+          onSave={handleEditJob}
+          mode="edit"
+        />
+      )}
     </div>
   );
 }
