@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
-import { motion } from 'framer-motion';
+
 import { Link } from 'react-router-dom';
 import { formatDateTime, formatDate } from '@/lib/dateFormatter';
 import {
@@ -292,7 +292,7 @@ export default function SalesOrderDetail() {
       </div>
 
       {/* Page content */}
-      <motion.div className="mx-auto px-4 py-4 space-y-0" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
+      <div className="mx-auto px-4 py-4 space-y-0">
 
         {/* ── Details (Items) ─────────────────────────────────────────── */}
         {activePanel === 'items' && (
@@ -461,7 +461,7 @@ export default function SalesOrderDetail() {
           </Section>
         )}
 
-      </motion.div>
+      </div>
 
       <DeleteWithRemarks
         open={showDelete}

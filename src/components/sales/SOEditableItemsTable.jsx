@@ -17,7 +17,7 @@ import { Pencil, Check, X, Loader2, Trash2, Plus } from 'lucide-react';
 const PLATFORM_ID_FIELD = {
   zepto: 'zepto_item_id',
   swiggy: 'swiggy_item_id',
-  blinkit: 'bigbasket_item_id',
+  blinkit: 'swiggy_item_id',
   direct: null,
   other: null,
 };
@@ -25,7 +25,7 @@ const PLATFORM_ID_FIELD = {
 const PLATFORM_LABEL = {
   zepto: 'Zepto Item ID',
   swiggy: 'Swiggy Item ID',
-  blinkit: 'BigBasket Item ID',
+  blinkit: 'Swiggy Item ID',
 };
 
 const EDITABLE_STATUSES = ['draft', 'confirmed', 'logistics_review'];
@@ -182,24 +182,27 @@ export default function SOEditableItemsTable({ order, items, onUpdated }) {
               <th className="text-left px-2 py-2 font-medium">Product Code</th>
               <th className="text-left px-2 py-2 font-medium">EAN</th>
               {platformField && <th className="text-left px-2 py-2 font-medium">{platformLabel}</th>}
-              <th className="text-left px-2 py-2 font-medium">Description</th>
+              <th className="text-left px-2 py-2 font-medium">Product Name</th>
               <th className="text-right px-2 py-2 font-medium">Quantity</th>
               <th className="text-right px-2 py-2 font-medium">Rate</th>
               <th className="text-right px-2 py-2 font-medium">Taxable Value</th>
-              <th className="text-right px-2 py-2 font-medium">IGST %</th>
+              <th className="text-right px-2 py-2 font-medium">Tax %</th>
+              <th className="text-right px-2 py-2 font-medium">Tax Amount</th>
               <th className="text-right px-2 py-2 font-medium">Amount</th>
               {canEdit && <th className="text-center px-2 py-2 font-medium w-20">Actions</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {items.length === 0 ? (
-              <tr><td colSpan={canEdit ? (platformField ? 12 : 11) : (platformField ? 11 : 10)} className="text-center py-6 text-slate-400">No items</td></tr>
+              <tr><td colSpan={canEdit ? (platformField ? 13 : 12) : (platformField ? 12 : 11)} className="text-center py-6 text-slate-400">No items</td></tr>
             ) : items.map((item, idx) => {
               const isEditing = editingId === item.id;
               return (
                 <tr key={item.id} className={`hover:bg-slate-50 ${isEditing ? 'bg-blue-50' : ''}`}>
                   <td className="px-2 py-2 text-slate-400">{idx + 1}</td>
-                  <td className="px-2 py-2 text-slate-700 font-mono">{item.item_code || '—'}</td>
+                  <td className="px-2 py-2 text-slate-700 font-mono text-[11px]">
+                    <div>{item.item_code || '—'}</div>
+                  </td>
                   <td className="px-2 py-2 text-slate-600 font-mono text-[11px]">{item.sku_code || productMap[item.item_code]?.item_code || '—'}</td>
                   <td className="px-2 py-2 text-slate-600 font-mono text-[11px]">{item.ean_number || productMap[item.item_code]?.product_barcode || '—'}</td>
                   {platformField && (
@@ -211,7 +214,14 @@ export default function SOEditableItemsTable({ order, items, onUpdated }) {
                     {isEditing ? (
                       <Input className="h-7 text-xs w-full" value={editData.description}
                         onChange={e => setEditData(d => ({ ...d, description: e.target.value }))} />
-                    ) : item.description}
+                    ) : (
+                      <div>
+                        <div>{productMap[item.item_code]?.product_name || item.description}</div>
+                        {productMap[item.item_code]?.product_name && item.description !== productMap[item.item_code]?.product_name && (
+                          <div className="text-[10px] text-slate-400 mt-0.5">{item.description}</div>
+                        )}
+                      </div>
+                    )}
                   </td>
                   <td className="px-2 py-2 text-right">
                     {isEditing ? (
@@ -228,7 +238,12 @@ export default function SOEditableItemsTable({ order, items, onUpdated }) {
                     ) : <span className="text-slate-700">₹{(item.unit_base_cost || item.rate_snapshot || 0).toLocaleString('en-IN')}</span>}
                   </td>
                   <td className="px-2 py-2 text-right text-slate-700">₹{(item.taxable_value || 0).toLocaleString('en-IN')}</td>
-                  <td className="px-2 py-2 text-right text-slate-500">{item.igst_rate || 0}%</td>
+                  <td className="px-2 py-2 text-right text-slate-500">
+                    {item.igst_rate ? `IGST ${item.igst_rate}%` : item.cgst_rate ? `CGST ${item.cgst_rate}% + SGST ${item.sgst_rate || item.cgst_rate}%` : '—'}
+                  </td>
+                  <td className="px-2 py-2 text-right text-slate-600">
+                    ₹{((item.igst_amount || 0) + (item.cgst_amount || 0) + (item.sgst_amount || 0)).toLocaleString('en-IN')}
+                  </td>
                   <td className="px-2 py-2 text-right font-medium text-slate-900">₹{(item.total_amount || 0).toLocaleString('en-IN')}</td>
                   {canEdit && (
                     <td className="px-2 py-2 text-center">

@@ -62,7 +62,7 @@ export async function enrichParsedData(parsedData) {
     rateSource = `customer:${customerFound.name}`;
   } else if (customerFound?.customer_group) {
     const grp = customerFound.customer_group.trim().toLowerCase();
-    const pls = [...new Set(allRates.map(r => r.price_list).filter(Boolean))];
+    const pls = [...new Set(allRates.map(r => r.price_list).filter(Boolean))].filter(pl => pl !== 'Internal Transfer');
     const gm = pls.find(pl => pl.trim().toLowerCase() === grp || pl.trim().toLowerCase().startsWith(grp));
     if (gm) { priceListUsed = gm; rateSource = `group:${customerFound.customer_group}`; }
   }

@@ -147,7 +147,8 @@ export default function CreateSalesOrderModal({ defaultType = 'manual', onClose,
       const allRates = await base44.entities.SalesRateList.filter({ is_active: true });
       const groupName = c.customer_group.toLowerCase();
       const groupList = [...new Set(allRates.map(r => r.price_list).filter(Boolean))]
-        .find(pl => (pl.toLowerCase().includes(groupName) || groupName.includes(pl.toLowerCase())) && pl !== 'Internal Transfer');
+        .filter(pl => pl !== 'Internal Transfer')
+        .find(pl => pl.toLowerCase().includes(groupName) || groupName.includes(pl.toLowerCase()));
       if (groupList) resolvedPriceList = groupList;
     }
 
