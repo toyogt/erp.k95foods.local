@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
 import { fireFMSEvent } from '@/lib/useFMSAutoComplete';
+import VehicleArrivalStep from '@/components/sales/VehicleArrivalStep';
 
 const WORKFLOW_STEPS = [
   { key: 'waiting_for_transporter', label: 'Waiting for Transporter' },
@@ -183,6 +184,9 @@ export default function SalesDeliveryNoteDetail() {
           </div>
         </div>
       )}
+
+      {/* Vehicle Arrival Step */}
+      <VehicleArrivalStep deliveryNote={dn} onUpdated={refetch} />
 
       {/* Details grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">

@@ -17,6 +17,7 @@ import SOAddressPanel from '@/components/sales/SOAddressPanel';
 import DeleteWithRemarks from '@/components/sales/DeleteWithRemarks';
 import SOConnectionsGrid from '@/components/sales/SOConnectionsGrid';
 import SOActivityTimeline from '@/components/sales/SOActivityTimeline';
+import SOEditableItemsTable from '@/components/sales/SOEditableItemsTable';
 import { fireFMSEvent } from '@/lib/useFMSAutoComplete';
 
 const STATUS_ORDER = ['draft', 'confirmed', 'logistics_review', 'picking', 'packing', 'invoiced', 'delivered', 'paid', 'closed'];
@@ -301,62 +302,7 @@ export default function SalesOrderDetail() {
             </Section>
 
             <Section title="Items" defaultOpen={true}>
-              <div className="overflow-x-auto -mx-1">
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="bg-slate-100 text-slate-700">
-                      <th className="text-left px-2 py-2 font-medium w-6">#</th>
-                      <th className="text-left px-2 py-2 font-medium">Item Code</th>
-                      <th className="text-left px-2 py-2 font-medium">Description</th>
-                      <th className="text-right px-2 py-2 font-medium">Qty</th>
-                      <th className="text-right px-2 py-2 font-medium">MRP</th>
-                      <th className="text-right px-2 py-2 font-medium">Rate</th>
-                      <th className="text-right px-2 py-2 font-medium">Taxable Value</th>
-                      <th className="text-right px-2 py-2 font-medium">IGST %</th>
-                      <th className="text-right px-2 py-2 font-medium">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {items.length === 0 ? (
-                      <tr><td colSpan={9} className="text-center py-6 text-slate-400">No items</td></tr>
-                    ) : items.map((item, idx) => (
-                      <tr key={item.id} className="hover:bg-slate-50">
-                        <td className="px-2 py-2 text-slate-400">{idx + 1}</td>
-                        <td className="px-2 py-2 text-slate-700 font-mono">{item.sku_code || item.item_code || '—'}</td>
-                        <td className="px-2 py-2 text-slate-900">{item.description}</td>
-                        <td className="px-2 py-2 text-right text-slate-900">{item.quantity}</td>
-                        <td className="px-2 py-2 text-right text-slate-700">₹{(item.mrp || 0).toLocaleString('en-IN')}</td>
-                        <td className="px-2 py-2 text-right text-slate-700">₹{(item.rate_snapshot || item.unit_base_cost || 0).toLocaleString('en-IN')}</td>
-                        <td className="px-2 py-2 text-right text-slate-700">₹{(item.taxable_value || 0).toLocaleString('en-IN')}</td>
-                        <td className="px-2 py-2 text-right text-slate-500">{item.igst_rate || 0}%</td>
-                        <td className="px-2 py-2 text-right font-medium text-slate-900">₹{(item.total_amount || 0).toLocaleString('en-IN')}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Totals */}
-              <div className="mt-3 flex justify-end">
-                <div className="w-72 space-y-1.5 text-xs border border-slate-200 rounded-lg p-3 bg-slate-50">
-                  <div className="flex justify-between text-slate-600">
-                    <span>Total Quantity</span>
-                    <span className="font-medium text-slate-900">{items.reduce((s, i) => s + (i.quantity || 0), 0)}</span>
-                  </div>
-                  <div className="flex justify-between text-slate-600">
-                    <span>Net Total</span>
-                    <span className="font-medium text-slate-900">₹{taxableAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                  </div>
-                  <div className="flex justify-between text-slate-600">
-                    <span>Total Tax</span>
-                    <span className="font-medium text-slate-900">₹{taxAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                  </div>
-                  <div className="flex justify-between text-slate-900 font-bold border-t border-slate-300 pt-1.5 mt-1">
-                    <span>Grand Total</span>
-                    <span>₹{grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                  </div>
-                </div>
-              </div>
+              <SOEditableItemsTable order={order} items={items} onUpdated={() => { refetch(); qc.invalidateQueries(['so_items', soId]); }} />
             </Section>
 
             {/* Taxes section */}

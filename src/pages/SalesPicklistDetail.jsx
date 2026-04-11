@@ -11,6 +11,7 @@ import { ArrowLeft, Package, CheckCircle2, Calendar, Loader2, XCircle, Printer, 
 import PicklistLogisticsSection from '@/components/sales/PicklistLogisticsSection';
 import DeleteWithRemarks from '@/components/sales/DeleteWithRemarks';
 import PicklistPrintTemplate from '@/components/sales/PicklistPrintTemplate';
+import WarehousePackingPanel from '@/components/sales/WarehousePackingPanel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -264,15 +265,8 @@ export default function SalesPicklistDetail() {
         </div>
       </div>
 
-      {/* Pick & Pack Done button */}
-      {pl.status === 'dispatch_scheduled' && (
-        <div className="flex justify-end">
-          <Button className="h-11 bg-green-600 hover:bg-green-700 text-white text-sm" onClick={handlePickPackDone} disabled={saving}>
-            {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Package className="w-4 h-4 mr-1" />}
-            Pick & Packing Done
-          </Button>
-        </div>
-      )}
+      {/* Warehouse Packing Panel — replaces the simple button with a proper packing UI */}
+      <WarehousePackingPanel picklist={pl} onUpdated={refetch} />
 
       {/* Cancel section */}
       {pl.status === 'pick_packed' && !showCancel && (

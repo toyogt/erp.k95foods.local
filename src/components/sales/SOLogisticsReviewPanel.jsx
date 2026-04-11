@@ -21,6 +21,7 @@ import ExtraChargesSection from '@/components/sales/logistics/ExtraChargesSectio
 import ActualCostForm from '@/components/sales/logistics/ActualCostForm';
 import CostComparisonCard from '@/components/sales/logistics/CostComparisonCard';
 import OrderItemsReviewTable from '@/components/sales/logistics/OrderItemsReviewTable';
+import AutoWeightCalculator from '@/components/sales/AutoWeightCalculator';
 
 export default function SOLogisticsReviewPanel({ order, onUpdated }) {
   const { user } = useAuth();
@@ -56,13 +57,34 @@ export default function SOLogisticsReviewPanel({ order, onUpdated }) {
     staleTime: 120000,
   });
 
+  // Load customer for region
+  const { data: customerList = [] } = useQuery({
+    queryKey: ['customer-for-logistics', order?.customer_name],
+    queryFn: () => base44.entities.Customer.filter({ name: order?.customer_name }),
+    enabled: !!order?.customer_name,
+    staleTime: 300000,
+  });
+  const customer = customerList[0];
+  const customerRegion = customer?.region || '';
+
   const orderWeight = costRecord?.order_weight_kg || Number(weightInput) || 0;
+  // Region-based + weight-based transporter matching
   const matchedCard = rateCards.find(rc =>
+    orderWeight >= rc.weight_from_kg && orderWeight <= rc.weight_to_kg &&
+    customerRegion && rc.destination_region && rc.destination_region.toLowerCase() === customerRegion.toLowerCase() &&
+    (!form.transporter || !rc.transporter || rc.transporter === form.transporter)
+  ) || rateCards.find(rc =>
+    orderWeight >= rc.weight_from_kg && orderWeight <= rc.weight_to_kg &&
+    customerRegion && rc.destination_region && rc.destination_region.toLowerCase() === customerRegion.toLowerCase()
+  ) || rateCards.find(rc =>
     orderWeight >= rc.weight_from_kg && orderWeight <= rc.weight_to_kg &&
     (!form.transporter || !rc.transporter || rc.transporter === form.transporter)
   ) || rateCards.find(rc =>
     orderWeight >= rc.weight_from_kg && orderWeight <= rc.weight_to_kg
   );
+
+  // Auto-suggest transporter from matched rate card
+  const suggestedTransporter = matchedCard?.transporter || '';
 
   const alreadyApproved = order?.workflow_state === 'ready_to_pick';
   const isInReview = order?.workflow_state === 'under_logistics_review';
@@ -224,9 +246,18 @@ export default function SOLogisticsReviewPanel({ order, onUpdated }) {
                 onChange={e => setForm(f => ({ ...f, transporter: e.target.value }))}
                 placeholder="Enter transporter name" />
             )}
+            {suggestedTransporter && !form.transporter && (
+              <button
+                className="text-xs text-blue-700 hover:text-blue-900 mt-1 underline"
+                onClick={() => setForm(f => ({ ...f, transporter: suggestedTransporter }))}
+              >
+                Use suggested: {suggestedTransporter} (based on {customerRegion || 'weight'})
+              </button>
+            )}
             {form.transporter && matchedCard && (
               <p className="text-xs text-green-700 mt-1">
                 Rate card matched: {matchedCard.weight_from_kg}–{matchedCard.weight_to_kg} kg
+                {matchedCard.destination_region && ` · Region: ${matchedCard.destination_region}`}
               </p>
             )}
           </div>
@@ -273,11 +304,22 @@ export default function SOLogisticsReviewPanel({ order, onUpdated }) {
         </div>
       </div>
 
+      {/* ── Auto Weight Calculator ── */}
+      <AutoWeightCalculator order={order} onWeightCalculated={async (weight) => {
+        setWeightInput(String(weight));
+        await saveCostData({ order_weight_kg: weight, ...generateSystemEstimate(), status: costRecord?.status || 'pending_plan' });
+      }} />
+
       {/* ── Weight & Transportation Cost (collapsible, optional) ── */}
       <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3">
         <h4 className="text-xs font-semibold text-slate-600 uppercase tracking-wide flex items-center gap-1.5">
           <Scale className="w-3.5 h-3.5" /> Order Weight & Transportation Estimate
         </h4>
+        {customerRegion && (
+          <p className="text-xs text-slate-500">Customer Region: <span className="font-medium text-slate-700">{customerRegion}</span>
+            {suggestedTransporter && <> · Suggested Transporter: <span className="font-medium text-blue-700">{suggestedTransporter}</span></>}
+          </p>
+        )}
         <div className="flex flex-wrap items-end gap-3">
           <div className="flex-1 min-w-[160px] max-w-xs">
             <Label className="text-xs font-medium text-slate-700">Order Weight (kg)</Label>
