@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import TallyPushLogViewer from '@/components/sales/TallyPushLogViewer';
 import { fireFMSEvent } from '@/lib/useFMSAutoComplete';
+import Swal from 'sweetalert2';
 
 const SI_STEPS = [
   { key: 'draft',                  label: 'Draft' },
@@ -146,17 +147,28 @@ export default function EInvoicePanel({ invoice, order, onUpdated }) {
     return missing;
   }
 
-  // Auto-generate flow triggered by "Bills Generated" button — mirrors Frappe client script
+  // Auto-generate flow triggered by "Bills Generated" button
   async function handleBillsGenerated() {
+    const confirm = await Swal.fire({
+      title: 'Generate E-Invoice & E-Way Bill?',
+      text: 'This will auto-generate IRN and E-Way Bill via the government portal.',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#0f172a',
+      confirmButtonText: 'Yes, Proceed',
+      cancelButtonText: 'Cancel',
+    });
+    if (!confirm.isConfirmed) return;
+
     setSaving(true);
     try {
       // Step 1: Generate IRN if missing
       const currentIrn = irn || invoice?.irn;
       if (!currentIrn) {
-        toast({ title: 'Generating E-Invoice (IRN)…' });
+        Swal.fire({ title: 'Generating E-Invoice (IRN)...', text: 'Connecting to government portal', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
         const resp = await base44.functions.invoke('gstCompliance', { action: 'generate_irn', invoice_id: invoice.id });
         if (!resp.data?.success) {
-          toast({ title: 'E-Invoice generation failed', description: resp.data?.error || 'Check API settings', variant: 'destructive' });
+          Swal.fire({ icon: 'error', title: 'E-Invoice Generation Failed', text: resp.data?.error || 'Check API settings', confirmButtonColor: '#dc2626' });
           setSaving(false);
           return;
         }
@@ -186,22 +198,23 @@ export default function EInvoicePanel({ invoice, order, onUpdated }) {
   async function confirmEwayGeneration() {
     const km = parseInt(distanceKm, 10);
     if (!km || km < 1 || km > 4000) {
-      toast({ title: 'Enter a distance between 1 and 4000 km', variant: 'destructive' });
+      Swal.fire({ icon: 'warning', title: 'Invalid Distance', text: 'Enter a distance between 1 and 4000 km.', confirmButtonColor: '#2563eb' });
       return;
     }
     setShowDistancePrompt(false);
     setSaving(true);
     try {
-      toast({ title: 'Generating E-Way Bill…' });
+      Swal.fire({ title: 'Generating E-Way Bill...', text: 'Connecting to government portal', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
       const resp = await base44.functions.invoke('gstCompliance', { action: 'generate_ewb', invoice_id: invoice.id, distance_km: km });
       if (!resp.data?.success) {
-        toast({ title: 'E-Way Bill generation failed', description: resp.data?.error || 'Check API settings', variant: 'destructive' });
+        Swal.fire({ icon: 'error', title: 'E-Way Bill Generation Failed', text: resp.data?.error || 'Check API settings', confirmButtonColor: '#dc2626' });
         setSaving(false);
         return;
       }
       setEwayBill(resp.data.eway_bill || '');
       setEwayBillDate(resp.data.eway_bill_date || '');
       if (onUpdated) onUpdated();
+      Swal.close();
       // Now advance workflow
       await advanceWorkflow('waiting_for_dispatch');
     } catch (err) {
@@ -281,26 +294,46 @@ export default function EInvoicePanel({ invoice, order, onUpdated }) {
   }
 
   async function generateIRN() {
+    const confirm = await Swal.fire({
+      title: 'Generate E-Invoice (IRN)?',
+      text: `Generate IRN for invoice ${invoice.invoice_number}?`,
+      icon: 'question', showCancelButton: true,
+      confirmButtonColor: '#7c3aed', confirmButtonText: 'Generate',
+    });
+    if (!confirm.isConfirmed) return;
+
     setSaving(true);
+    Swal.fire({ title: 'Generating IRN...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
     const resp = await base44.functions.invoke('gstCompliance', { action: 'generate_irn', invoice_id: invoice.id });
     setSaving(false);
     if (resp.data?.success) {
       setIrn(resp.data.irn || ''); setAckNo(resp.data.ack_number || ''); setAckDate(resp.data.ack_date || '');
-      toast({ title: 'IRN generated successfully' }); if (onUpdated) onUpdated();
+      Swal.fire({ icon: 'success', title: 'IRN Generated!', html: `<p class="text-sm"><b>IRN:</b> <span style="word-break:break-all;font-family:monospace;font-size:11px">${resp.data.irn || ''}</span></p>`, confirmButtonColor: '#16a34a' });
+      if (onUpdated) onUpdated();
     } else {
-      toast({ title: 'IRN generation failed', description: resp.data?.error || 'Check API settings', variant: 'destructive' });
+      Swal.fire({ icon: 'error', title: 'IRN Generation Failed', text: resp.data?.error || 'Check API settings', confirmButtonColor: '#dc2626' });
     }
   }
 
   async function generateEwayBill() {
+    const confirm = await Swal.fire({
+      title: 'Generate E-Way Bill?',
+      text: 'This requires a valid IRN.',
+      icon: 'question', showCancelButton: true,
+      confirmButtonColor: '#2563eb', confirmButtonText: 'Generate',
+    });
+    if (!confirm.isConfirmed) return;
+
     setSaving(true);
+    Swal.fire({ title: 'Generating E-Way Bill...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
     const resp = await base44.functions.invoke('gstCompliance', { action: 'generate_ewb', invoice_id: invoice.id });
     setSaving(false);
     if (resp.data?.success) {
       setEwayBill(resp.data.eway_bill || ''); setEwayBillDate(resp.data.eway_bill_date || '');
-      toast({ title: 'E-Way Bill generated' }); if (onUpdated) onUpdated();
+      Swal.fire({ icon: 'success', title: 'E-Way Bill Generated!', html: `<p class="text-sm"><b>E-Way Bill:</b> ${resp.data.eway_bill || ''}</p>`, confirmButtonColor: '#16a34a' });
+      if (onUpdated) onUpdated();
     } else {
-      toast({ title: 'E-Way Bill generation failed', description: resp.data?.error || 'Check API settings', variant: 'destructive' });
+      Swal.fire({ icon: 'error', title: 'E-Way Bill Failed', text: resp.data?.error || 'Check API settings', confirmButtonColor: '#dc2626' });
     }
   }
 
@@ -477,10 +510,10 @@ export default function EInvoicePanel({ invoice, order, onUpdated }) {
             </div>
             <div className="flex gap-2 flex-wrap">
               <Button variant="outline" className="h-11 text-sm" onClick={generateIRN} disabled={saving}>
-                <Zap className="w-4 h-4 mr-2" /> Generate IRN
+                {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Zap className="w-4 h-4 mr-2" />} Generate IRN
               </Button>
               <Button variant="outline" className="h-11 text-sm" onClick={generateEwayBill} disabled={saving || !invoice?.irn}>
-                <Zap className="w-4 h-4 mr-2" /> Generate E-Way Bill{!invoice?.irn && <span className="text-xs ml-1 opacity-60">(IRN first)</span>}
+                {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Zap className="w-4 h-4 mr-2" />} Generate E-Way Bill{!invoice?.irn && <span className="text-xs ml-1 opacity-60">(IRN first)</span>}
               </Button>
             </div>
           </div>

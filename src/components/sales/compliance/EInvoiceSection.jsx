@@ -3,15 +3,14 @@
  */
 import { useState } from 'react';
 import { base44 } from '@/api/base44Client';
-import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { EInvoiceStatusBadge } from './ComplianceStatusBadges';
 import { Zap, XCircle, Loader2, FileText } from 'lucide-react';
+import Swal from 'sweetalert2';
 
 export default function EInvoiceSection({ invoice, onUpdated }) {
-  const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [showCancel, setShowCancel] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
@@ -20,37 +19,65 @@ export default function EInvoiceSection({ invoice, onUpdated }) {
   const hasIRN = !!invoice.irn;
 
   async function generateIRN() {
+    const confirm = await Swal.fire({
+      title: 'Generate E-Invoice?',
+      text: `This will generate IRN for invoice ${invoice.invoice_number} via the government portal.`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#7c3aed',
+      confirmButtonText: 'Yes, Generate',
+      cancelButtonText: 'Cancel',
+    });
+    if (!confirm.isConfirmed) return;
+
     setLoading(true);
+    Swal.fire({ title: 'Generating E-Invoice...', text: 'Connecting to government portal via Adaequare GSP', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
     const resp = await base44.functions.invoke('gstCompliance', {
       action: 'generate_irn', invoice_id: invoice.id,
     });
     setLoading(false);
+
     if (resp.data?.success) {
-      toast({ title: 'E-Invoice (IRN) generated successfully' });
+      Swal.fire({ icon: 'success', title: 'E-Invoice Generated!', html: `<div class="text-left text-sm"><p><b>IRN:</b> <span style="word-break:break-all;font-family:monospace;font-size:11px">${resp.data.irn || ''}</span></p><p><b>Acknowledgement Number:</b> ${resp.data.ack_number || ''}</p><p><b>Acknowledgement Date:</b> ${resp.data.ack_date || ''}</p></div>`, confirmButtonColor: '#16a34a' });
       onUpdated();
     } else {
-      toast({ title: 'E-Invoice generation failed', description: resp.data?.error || 'Check API settings', variant: 'destructive' });
+      Swal.fire({ icon: 'error', title: 'E-Invoice Generation Failed', text: resp.data?.error || 'Check API settings and try again.', confirmButtonColor: '#dc2626' });
     }
   }
 
   async function cancelIRN() {
     if (!cancelReason.trim()) {
-      toast({ title: 'Cancellation reason is required', variant: 'destructive' });
+      Swal.fire({ icon: 'warning', title: 'Reason Required', text: 'Please enter a cancellation reason.', confirmButtonColor: '#dc2626' });
       return;
     }
+    const confirm = await Swal.fire({
+      title: 'Cancel E-Invoice?',
+      text: 'This action will cancel the IRN on the government portal. This cannot be undone.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#dc2626',
+      confirmButtonText: 'Yes, Cancel IRN',
+      cancelButtonText: 'Go Back',
+    });
+    if (!confirm.isConfirmed) return;
+
     setLoading(true);
+    Swal.fire({ title: 'Cancelling E-Invoice...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
     const resp = await base44.functions.invoke('gstCompliance', {
       action: 'cancel_irn', invoice_id: invoice.id,
       cancel_reason: cancelReason, cancel_reason_code: '1',
     });
     setLoading(false);
+
     if (resp.data?.success) {
-      toast({ title: 'E-Invoice cancelled successfully' });
+      Swal.fire({ icon: 'success', title: 'E-Invoice Cancelled', confirmButtonColor: '#16a34a' });
       setShowCancel(false);
       setCancelReason('');
       onUpdated();
     } else {
-      toast({ title: 'Cancellation failed', description: resp.data?.error || 'API error', variant: 'destructive' });
+      Swal.fire({ icon: 'error', title: 'Cancellation Failed', text: resp.data?.error || 'API error', confirmButtonColor: '#dc2626' });
     }
   }
 

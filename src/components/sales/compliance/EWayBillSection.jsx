@@ -3,12 +3,12 @@
  */
 import { useState } from 'react';
 import { base44 } from '@/api/base44Client';
-import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { EWayBillStatusBadge } from './ComplianceStatusBadges';
 import { Zap, XCircle, Loader2, Truck, RefreshCw, Clock, Edit } from 'lucide-react';
+import Swal from 'sweetalert2';
 
 const TRANSPORT_MODES = [
   { value: '1', label: 'Road' },
@@ -18,7 +18,6 @@ const TRANSPORT_MODES = [
 ];
 
 export default function EWayBillSection({ invoice, onUpdated }) {
-  const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [activeAction, setActiveAction] = useState(null); // 'generate', 'cancel', 'vehicle', 'transporter', 'extend'
   const [distanceKm, setDistanceKm] = useState(invoice.distance || '');
@@ -57,96 +56,126 @@ export default function EWayBillSection({ invoice, onUpdated }) {
   async function generateEWB() {
     const km = parseInt(distanceKm, 10);
     if (!km || km < 1 || km > 4000) {
-      toast({ title: 'Enter a distance between 1 and 4000 km', variant: 'destructive' });
+      Swal.fire({ icon: 'warning', title: 'Invalid Distance', text: 'Enter a distance between 1 and 4000 km.', confirmButtonColor: '#2563eb' });
       return;
     }
+    const confirm = await Swal.fire({
+      title: 'Generate E-Way Bill?',
+      text: `Distance: ${km} km. This will generate an E-Way Bill via the government portal.`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#2563eb',
+      confirmButtonText: 'Yes, Generate',
+      cancelButtonText: 'Cancel',
+    });
+    if (!confirm.isConfirmed) return;
+
+    Swal.fire({ title: 'Generating E-Way Bill...', text: 'Connecting to government portal via Adaequare GSP', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
     const result = await callAPI('generate_ewb', { distance_km: km });
+
     if (result?.success) {
-      toast({ title: 'E-Way Bill generated successfully' });
+      Swal.fire({ icon: 'success', title: 'E-Way Bill Generated!', html: `<div class="text-left text-sm"><p><b>E-Way Bill Number:</b> ${result.eway_bill || ''}</p><p><b>Valid Until:</b> ${result.valid_upto || ''}</p></div>`, confirmButtonColor: '#16a34a' });
       setActiveAction(null);
       onUpdated();
     } else {
-      toast({ title: 'E-Way Bill generation failed', description: result?.error, variant: 'destructive' });
+      Swal.fire({ icon: 'error', title: 'E-Way Bill Generation Failed', text: result?.error || 'Check API settings and try again.', confirmButtonColor: '#dc2626' });
     }
   }
 
   async function cancelEWB() {
     if (!cancelReason.trim()) {
-      toast({ title: 'Cancellation reason is required', variant: 'destructive' });
+      Swal.fire({ icon: 'warning', title: 'Reason Required', text: 'Please enter a cancellation reason.', confirmButtonColor: '#dc2626' });
       return;
     }
+    const confirm = await Swal.fire({
+      title: 'Cancel E-Way Bill?',
+      text: 'This will cancel the E-Way Bill on the government portal.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#dc2626',
+      confirmButtonText: 'Yes, Cancel',
+      cancelButtonText: 'Go Back',
+    });
+    if (!confirm.isConfirmed) return;
+
+    Swal.fire({ title: 'Cancelling E-Way Bill...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
     const result = await callAPI('cancel_ewb', { cancel_reason: cancelReason, cancel_reason_code: '2' });
+
     if (result?.success) {
-      toast({ title: 'E-Way Bill cancelled' });
+      Swal.fire({ icon: 'success', title: 'E-Way Bill Cancelled', confirmButtonColor: '#16a34a' });
       setActiveAction(null);
       onUpdated();
     } else {
-      toast({ title: 'Cancellation failed', description: result?.error, variant: 'destructive' });
+      Swal.fire({ icon: 'error', title: 'Cancellation Failed', text: result?.error || 'API error', confirmButtonColor: '#dc2626' });
     }
   }
 
   async function updateVehicle() {
     if (!vehicleNo.trim()) {
-      toast({ title: 'Vehicle number is required', variant: 'destructive' });
+      Swal.fire({ icon: 'warning', title: 'Required', text: 'Vehicle number is required.', confirmButtonColor: '#2563eb' });
       return;
     }
+    Swal.fire({ title: 'Updating Vehicle...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
     const result = await callAPI('update_vehicle', {
       vehicle_no: vehicleNo, from_place: fromPlace, from_state: fromState,
       transport_mode: transportMode, reason_code: reasonCode, reason_remark: reasonRemark,
     });
     if (result?.success) {
-      toast({ title: 'Vehicle info updated successfully' });
+      Swal.fire({ icon: 'success', title: 'Vehicle Updated', confirmButtonColor: '#16a34a' });
       setActiveAction(null);
       onUpdated();
     } else {
-      toast({ title: 'Vehicle update failed', description: result?.error, variant: 'destructive' });
+      Swal.fire({ icon: 'error', title: 'Vehicle Update Failed', text: result?.error, confirmButtonColor: '#dc2626' });
     }
   }
 
   async function updateTransporter() {
     if (!transporterId.trim()) {
-      toast({ title: 'Transporter GSTIN is required', variant: 'destructive' });
+      Swal.fire({ icon: 'warning', title: 'Required', text: 'Transporter GSTIN is required.', confirmButtonColor: '#2563eb' });
       return;
     }
+    Swal.fire({ title: 'Updating Transporter...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
     const result = await callAPI('update_transporter', {
       transporter_id: transporterId, transporter_name: transporterName,
     });
     if (result?.success) {
-      toast({ title: 'Transporter updated successfully' });
+      Swal.fire({ icon: 'success', title: 'Transporter Updated', confirmButtonColor: '#16a34a' });
       setActiveAction(null);
       onUpdated();
     } else {
-      toast({ title: 'Transporter update failed', description: result?.error, variant: 'destructive' });
+      Swal.fire({ icon: 'error', title: 'Transporter Update Failed', text: result?.error, confirmButtonColor: '#dc2626' });
     }
   }
 
   async function extendValidity() {
     const dist = parseInt(remainingDistance, 10);
     if (!dist || dist < 1) {
-      toast({ title: 'Enter remaining distance', variant: 'destructive' });
+      Swal.fire({ icon: 'warning', title: 'Required', text: 'Enter remaining distance in km.', confirmButtonColor: '#2563eb' });
       return;
     }
+    Swal.fire({ title: 'Extending Validity...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
     const result = await callAPI('extend_validity', {
       remaining_distance: dist, from_place: fromPlace, from_state: fromState,
       transport_mode: transportMode, reason_code: reasonCode || '1',
       reason_remark: reasonRemark || 'Validity extension',
     });
     if (result?.success) {
-      toast({ title: `Validity extended. New expiry: ${result.valid_upto}` });
+      Swal.fire({ icon: 'success', title: 'Validity Extended', text: `New expiry: ${result.valid_upto}`, confirmButtonColor: '#16a34a' });
       setActiveAction(null);
       onUpdated();
     } else {
-      toast({ title: 'Extension failed', description: result?.error, variant: 'destructive' });
+      Swal.fire({ icon: 'error', title: 'Extension Failed', text: result?.error, confirmButtonColor: '#dc2626' });
     }
   }
 
   async function fetchStatus() {
+    Swal.fire({ title: 'Fetching Status...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
     const result = await callAPI('fetch_ewb_status');
     if (result?.success) {
-      toast({ title: `E-Way Bill Status: ${result.ewb_status}`, description: result.valid_upto ? `Valid until: ${result.valid_upto}` : '' });
+      Swal.fire({ icon: 'info', title: 'E-Way Bill Status', html: `<div class="text-left text-sm"><p><b>Status:</b> ${result.ewb_status || 'Unknown'}</p>${result.valid_upto ? `<p><b>Valid Until:</b> ${result.valid_upto}</p>` : ''}</div>`, confirmButtonColor: '#2563eb' });
       onUpdated();
     } else {
-      toast({ title: 'Status fetch failed', description: result?.error, variant: 'destructive' });
+      Swal.fire({ icon: 'error', title: 'Status Fetch Failed', text: result?.error || 'Could not retrieve status', confirmButtonColor: '#dc2626' });
     }
   }
 
