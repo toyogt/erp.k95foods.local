@@ -13,6 +13,21 @@ import { useToast } from '@/components/ui/use-toast';
 import SOEditReasonModal from './SOEditReasonModal';
 import { Pencil, Check, X, Loader2, Trash2, Plus } from 'lucide-react';
 
+// Map order platform to ProductMaster field for platform-specific ID
+const PLATFORM_ID_FIELD = {
+  zepto: 'zepto_item_id',
+  swiggy: 'swiggy_item_id',
+  blinkit: 'bigbasket_item_id',
+  direct: null,
+  other: null,
+};
+
+const PLATFORM_LABEL = {
+  zepto: 'Zepto Item ID',
+  swiggy: 'Swiggy Item ID',
+  blinkit: 'BigBasket Item ID',
+};
+
 const EDITABLE_STATUSES = ['draft', 'confirmed', 'logistics_review'];
 
 export default function SOEditableItemsTable({ order, items, onUpdated }) {
@@ -25,6 +40,23 @@ export default function SOEditableItemsTable({ order, items, onUpdated }) {
   const [saving, setSaving] = useState(false);
 
   const canEdit = EDITABLE_STATUSES.includes(order?.status);
+
+  // Fetch products to get platform-specific IDs, EAN, SKU code
+  const itemCodes = items.map(i => i.item_code).filter(Boolean);
+  const { data: products = [] } = useQuery({
+    queryKey: ['product_master_for_items', order?.id],
+    queryFn: () => base44.entities.ProductMaster.filter({}),
+    enabled: items.length > 0,
+    staleTime: 300000,
+  });
+  const productMap = {};
+  products.forEach(p => { if (p.item_code) productMap[p.item_code] = p; });
+
+  const platform = order?.platform;
+  // Scootsy Logistics = Swiggy/Instamart
+  const effectivePlatform = (order?.customer_name || '').toLowerCase().includes('scootsy') ? 'swiggy' : platform;
+  const platformField = PLATFORM_ID_FIELD[effectivePlatform];
+  const platformLabel = PLATFORM_LABEL[effectivePlatform];
 
   function startEdit(item) {
     setEditingId(item.id);
@@ -147,6 +179,9 @@ export default function SOEditableItemsTable({ order, items, onUpdated }) {
             <tr className="bg-slate-100 text-slate-700">
               <th className="text-left px-2 py-2 font-medium w-6">#</th>
               <th className="text-left px-2 py-2 font-medium">Item Code</th>
+              <th className="text-left px-2 py-2 font-medium">Product Code</th>
+              <th className="text-left px-2 py-2 font-medium">EAN</th>
+              {platformField && <th className="text-left px-2 py-2 font-medium">{platformLabel}</th>}
               <th className="text-left px-2 py-2 font-medium">Description</th>
               <th className="text-right px-2 py-2 font-medium">Quantity</th>
               <th className="text-right px-2 py-2 font-medium">Rate</th>
@@ -158,13 +193,20 @@ export default function SOEditableItemsTable({ order, items, onUpdated }) {
           </thead>
           <tbody className="divide-y divide-slate-100">
             {items.length === 0 ? (
-              <tr><td colSpan={canEdit ? 9 : 8} className="text-center py-6 text-slate-400">No items</td></tr>
+              <tr><td colSpan={canEdit ? (platformField ? 12 : 11) : (platformField ? 11 : 10)} className="text-center py-6 text-slate-400">No items</td></tr>
             ) : items.map((item, idx) => {
               const isEditing = editingId === item.id;
               return (
                 <tr key={item.id} className={`hover:bg-slate-50 ${isEditing ? 'bg-blue-50' : ''}`}>
                   <td className="px-2 py-2 text-slate-400">{idx + 1}</td>
                   <td className="px-2 py-2 text-slate-700 font-mono">{item.item_code || '—'}</td>
+                  <td className="px-2 py-2 text-slate-600 font-mono text-[11px]">{item.sku_code || productMap[item.item_code]?.item_code || '—'}</td>
+                  <td className="px-2 py-2 text-slate-600 font-mono text-[11px]">{item.ean_number || productMap[item.item_code]?.product_barcode || '—'}</td>
+                  {platformField && (
+                    <td className="px-2 py-2 text-blue-700 font-mono text-[11px] font-medium">
+                      {productMap[item.item_code]?.[platformField] || '—'}
+                    </td>
+                  )}
                   <td className="px-2 py-2 text-slate-900">
                     {isEditing ? (
                       <Input className="h-7 text-xs w-full" value={editData.description}
