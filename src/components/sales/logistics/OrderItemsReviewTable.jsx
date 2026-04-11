@@ -22,26 +22,22 @@ export default function OrderItemsReviewTable({ order, onPicklistQtyChange }) {
     staleTime: 30000,
   });
 
-  const { data: warehouseLots = [], isLoading: stockLoading } = useQuery({
-    queryKey: ['warehouse-lots-crosscheck'],
-    queryFn: () => base44.entities.WarehouseLot.filter({ status: 'ACTIVE' }),
-    staleTime: 60000,
-  });
+  // Stock is tracked on ProductMaster.current_stock — no separate warehouse lot query needed
 
-  const { data: products = [] } = useQuery({
-    queryKey: ['product-master-weights'],
-    queryFn: () => base44.entities.ProductMaster.filter({ is_active: true }),
-    staleTime: 300000,
+  const { data: products = [], isLoading: stockLoading } = useQuery({
+    queryKey: ['product-master-all'],
+    queryFn: () => base44.entities.ProductMaster.list(),
+    staleTime: 60000,
   });
 
   const stockByCode = useMemo(() => {
     const map = {};
-    warehouseLots.forEach(lot => {
-      const code = (lot.sku_code || '').trim().toUpperCase();
-      if (code) map[code] = (map[code] || 0) + (lot.boxes_balance || 0);
+    products.forEach(p => {
+      const code = (p.item_code || '').trim().toUpperCase();
+      if (code) map[code] = (map[code] || 0) + (p.current_stock || 0);
     });
     return map;
-  }, [warehouseLots]);
+  }, [products]);
 
   const productMap = useMemo(() => {
     const map = {};
@@ -89,13 +85,12 @@ export default function OrderItemsReviewTable({ order, onPicklistQtyChange }) {
   const hasPendencies = missingWeight.length > 0 || missingPacking.length > 0;
 
   function handleProductUpdated() {
-    qc.invalidateQueries({ queryKey: ['product-master-weights'] });
+    qc.invalidateQueries({ queryKey: ['product-master-all'] });
   }
 
   function handleRefresh() {
     refetchItems();
-    qc.invalidateQueries({ queryKey: ['warehouse-lots-crosscheck'] });
-    qc.invalidateQueries({ queryKey: ['product-master-weights'] });
+    qc.invalidateQueries({ queryKey: ['product-master-all'] });
   }
 
   if (stockLoading) {
