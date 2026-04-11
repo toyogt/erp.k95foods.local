@@ -125,7 +125,6 @@ export default function SOLogisticsReviewPanel({ order, onUpdated }) {
       });
     }
     qc.invalidateQueries({ queryKey: ['order-logistics-cost', order.id] });
-    toast({ title: 'Logistics cost saved' });
     setSaving(false);
   };
 
@@ -247,12 +246,16 @@ export default function SOLogisticsReviewPanel({ order, onUpdated }) {
                 onChange={e => setForm(f => ({ ...f, transporter: e.target.value }))}
                 placeholder="Enter transporter name" />
             )}
-            {suggestedTransporter && !form.transporter && (
+                    {suggestedTransporter && (
               <button
-                className="text-xs text-blue-700 hover:text-blue-900 mt-1 underline"
-                onClick={() => setForm(f => ({ ...f, transporter: suggestedTransporter }))}
+                className="mt-1 inline-flex items-center gap-1 px-2 py-1 bg-blue-50 border border-blue-200 rounded-md text-xs font-medium text-blue-700 hover:bg-blue-100 transition-colors"
+                onClick={() => {
+                  setForm(f => ({ ...f, transporter: suggestedTransporter }));
+                  toast({ title: `Transporter set to ${suggestedTransporter}`, description: `Based on region: ${customerRegion || 'N/A'}, weight: ${orderWeight} kg` });
+                }}
               >
-                Use suggested: {suggestedTransporter} (based on {customerRegion || 'weight'})
+                <Truck className="w-3 h-3" /> Apply: {suggestedTransporter}
+                {customerRegion && <span className="text-blue-500">({customerRegion})</span>}
               </button>
             )}
             {form.transporter && matchedCard && (
@@ -311,7 +314,7 @@ export default function SOLogisticsReviewPanel({ order, onUpdated }) {
         await saveCostData({ order_weight_kg: weight, ...generateSystemEstimate(), status: costRecord?.status || 'pending_plan' });
       }} />
 
-      {/* ── Weight & Transportation Cost (collapsible, optional) ── */}
+      {/* ── Weight & Transportation Cost ── */}
       <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3">
         <h4 className="text-xs font-semibold text-slate-600 uppercase tracking-wide flex items-center gap-1.5">
           <Scale className="w-3.5 h-3.5" /> Order Weight & Transportation Estimate
@@ -336,13 +339,20 @@ export default function SOLogisticsReviewPanel({ order, onUpdated }) {
             </Button>
           )}
         </div>
-        <SystemEstimateCard costRecord={costRecord} compact />
+        {/* Full system estimate bifurcation */}
+        <SystemEstimateCard costRecord={costRecord} />
       </div>
 
       {/* ── Planned Transportation Cost ── */}
-      <PlannedCostForm costRecord={costRecord} onSave={async (data) => {
-        await saveCostData({ ...data, status: 'planned', planned_by: user?.email });
-      }} saving={saving} />
+      <PlannedCostForm
+        costRecord={costRecord}
+        systemEstimate={generateSystemEstimate()}
+        onSave={async (data) => {
+          await saveCostData({ ...data, status: 'planned', planned_by: user?.email });
+          toast({ title: 'Planned cost saved successfully' });
+        }}
+        saving={saving}
+      />
 
       {/* Extra Charges */}
       <ExtraChargesSection

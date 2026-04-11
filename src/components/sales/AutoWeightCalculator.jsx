@@ -98,7 +98,8 @@ export default function AutoWeightCalculator({ order, onWeightCalculated }) {
         <table className="w-full text-xs">
           <thead className="bg-slate-50">
             <tr>
-              <th className="px-2 py-1.5 text-left font-medium text-slate-600">Item</th>
+              <th className="px-2 py-1.5 text-left font-medium text-slate-600">Item Code</th>
+              <th className="px-2 py-1.5 text-left font-medium text-slate-600">Description</th>
               <th className="px-2 py-1.5 text-right font-medium text-slate-600">Quantity</th>
               <th className="px-2 py-1.5 text-right font-medium text-slate-600">Units/Box</th>
               <th className="px-2 py-1.5 text-right font-medium text-slate-600">Boxes</th>
@@ -109,7 +110,8 @@ export default function AutoWeightCalculator({ order, onWeightCalculated }) {
           <tbody className="divide-y divide-slate-100">
             {breakdown.map((row, i) => (
               <tr key={i} className={row.hasMissingData ? 'bg-amber-50' : ''}>
-                <td className="px-2 py-1.5 text-slate-700">{row.code || row.description}</td>
+                <td className="px-2 py-1.5 font-mono text-slate-900 whitespace-nowrap">{row.code || '—'}</td>
+                <td className="px-2 py-1.5 text-slate-600 max-w-[180px] truncate">{row.description || '—'}</td>
                 <td className="px-2 py-1.5 text-right">{row.qty}</td>
                 <td className="px-2 py-1.5 text-right">{row.packingUnit}</td>
                 <td className="px-2 py-1.5 text-right">{row.boxes}</td>
@@ -120,7 +122,7 @@ export default function AutoWeightCalculator({ order, onWeightCalculated }) {
           </tbody>
           <tfoot>
             <tr className="bg-slate-100 border-t-2 border-slate-200">
-              <td colSpan={5} className="px-2 py-2 text-right font-semibold text-slate-900">Total Order Weight</td>
+              <td colSpan={6} className="px-2 py-2 text-right font-semibold text-slate-900">Total Order Weight</td>
               <td className="px-2 py-2 text-right font-bold text-slate-900">{totalWeight} kg</td>
             </tr>
           </tfoot>

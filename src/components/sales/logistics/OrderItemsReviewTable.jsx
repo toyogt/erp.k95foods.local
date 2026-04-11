@@ -3,15 +3,17 @@
  * Merges stock cross-check + weight breakdown + "Set Now" for pendencies.
  * Columns: Item Code | Description | Ordered Qty | Available Stock | Status | Units/Box | Wt/Box | Boxes | Line Weight
  */
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { CheckCircle2, AlertTriangle, AlertCircle, RefreshCw, PackageCheck } from 'lucide-react';
 import SetProductDetailInline from './SetProductDetailInline';
 
-export default function OrderItemsReviewTable({ order }) {
+export default function OrderItemsReviewTable({ order, onPicklistQtyChange }) {
   const qc = useQueryClient();
+  const [picklistQtys, setPicklistQtys] = useState({});
 
   const { data: soItems = [], refetch: refetchItems } = useQuery({
     queryKey: ['so-items-review', order?.id],
@@ -128,6 +130,7 @@ export default function OrderItemsReviewTable({ order }) {
                 <th className="px-3 py-2 text-right font-medium text-slate-600">Ordered</th>
                 <th className="px-3 py-2 text-right font-medium text-slate-600">Stock</th>
                 <th className="px-3 py-2 text-center font-medium text-slate-600">Availability</th>
+                <th className="px-3 py-2 text-right font-medium text-slate-600">Picklist Qty</th>
                 <th className="px-3 py-2 text-right font-medium text-slate-600">Units/Box</th>
                 <th className="px-3 py-2 text-right font-medium text-slate-600">Weight/Box</th>
                 <th className="px-3 py-2 text-right font-medium text-slate-600">Boxes</th>
@@ -136,9 +139,9 @@ export default function OrderItemsReviewTable({ order }) {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {rows.length === 0 ? (
-                <tr><td colSpan={9} className="text-center py-6 text-slate-400">No items found</td></tr>
+                <tr><td colSpan={10} className="text-center py-6 text-slate-400">No items found</td></tr>
               ) : rows.map(row => (
-                <tr key={row.id} className="hover:bg-slate-50">
+                <tr key={row.id} className={`hover:bg-slate-50 ${row.stockQty <= 0 ? 'bg-red-50/50' : ''}`}>
                   <td className="px-3 py-2 font-mono text-slate-900 whitespace-nowrap">{row.itemCode || '—'}</td>
                   <td className="px-3 py-2 text-slate-600 max-w-[200px] truncate">{row.description || '—'}</td>
                   <td className="px-3 py-2 text-right font-medium text-slate-800">{row.ordered}</td>
@@ -158,9 +161,26 @@ export default function OrderItemsReviewTable({ order }) {
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-red-100 text-red-700 rounded-full text-xs">
-                        <AlertTriangle className="w-3 h-3" /> None
+                        <AlertTriangle className="w-3 h-3" /> Out of Stock
                       </span>
                     )}
+                  </td>
+                  <td className="px-3 py-2 text-right">
+                    <Input
+                      type="number"
+                      className="h-7 w-20 text-xs text-right ml-auto"
+                      min={0}
+                      max={Math.min(row.ordered, row.stockQty)}
+                      value={picklistQtys[row.id] ?? Math.min(row.ordered, row.stockQty)}
+                      onChange={e => {
+                        const val = Math.max(0, Math.min(Number(e.target.value) || 0, row.ordered, row.stockQty));
+                        const newQtys = { ...picklistQtys, [row.id]: val };
+                        setPicklistQtys(newQtys);
+                        if (onPicklistQtyChange) onPicklistQtyChange(newQtys);
+                      }}
+                      disabled={row.stockQty <= 0}
+                    />
+                    {row.stockQty <= 0 && <span className="text-[10px] text-red-500 block mt-0.5">No stock</span>}
                   </td>
                   <td className="px-3 py-2 text-right">
                     {row.packingUnit !== null ? (
@@ -210,7 +230,7 @@ export default function OrderItemsReviewTable({ order }) {
             {calculatedTotalWeight !== null && (
               <tfoot>
                 <tr className="bg-slate-50 border-t-2 border-slate-200">
-                  <td colSpan={8} className="px-3 py-2 text-right text-sm font-semibold text-slate-900">
+                  <td colSpan={9} className="px-3 py-2 text-right text-sm font-semibold text-slate-900">
                     Total Calculated Weight
                   </td>
                   <td className="px-3 py-2 text-right text-sm font-bold text-slate-900">

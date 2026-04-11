@@ -40,6 +40,7 @@ const PANELS = [
   { key: 'connections',      label: 'Connections' },
   { key: 'logistics_review', label: 'Logistics Review' },
   { key: 'invoice',          label: 'Invoice' },
+  { key: 'history',          label: 'History' },
 ];
 
 function Section({ title, children, defaultOpen = true }) {
@@ -114,8 +115,8 @@ export default function SalesOrderDetail() {
 
   const { data: auditLogs = [] } = useQuery({
     queryKey: ['so_audit', soId],
-    queryFn: () => base44.entities.SalesAuditLog.filter({ entity_id: soId }, '-created_date', 30),
-    enabled: !!soId && activePanel === 'items',
+    queryFn: () => base44.entities.SalesAuditLog.filter({ entity_id: soId }, '-created_date', 50),
+    enabled: !!soId && (activePanel === 'items' || activePanel === 'history'),
     staleTime: 30000,
   });
 
@@ -432,11 +433,20 @@ export default function SalesOrderDetail() {
           </Section>
         )}
 
+        {/* ── History ──────────────────────────────────────────────────── */}
+        {activePanel === 'history' && (
+          <Section title="Order History & Audit Trail" defaultOpen={true}>
+            <SOActivityTimeline auditLogs={auditLogs} />
+          </Section>
+        )}
+
         {/* ── Activity — always visible below tab content (like ERPNext) ──── */}
-        <div className="mt-6 border-t border-slate-200 pt-4">
-          <h3 className="text-sm font-bold text-slate-900 mb-3">Activity</h3>
-          <SOActivityTimeline auditLogs={auditLogs} />
-        </div>
+        {activePanel !== 'history' && (
+          <div className="mt-6 border-t border-slate-200 pt-4">
+            <h3 className="text-sm font-bold text-slate-900 mb-3">Activity</h3>
+            <SOActivityTimeline auditLogs={auditLogs} />
+          </div>
+        )}
 
       </div>
 
