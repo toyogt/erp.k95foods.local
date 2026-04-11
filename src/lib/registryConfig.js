@@ -97,23 +97,23 @@ export const pageRegistry = [
 
   // ─── ADMIN / MASTER DATA ───
   { pageKey: 'MasterData', title: 'Master Data', moduleKey: 'ADMIN', icon: Settings, roles: ['admin', 'production_manager', 'user'] },
-  { pageKey: 'SKUSetup', title: 'SKU Setup', moduleKey: 'ADMIN', icon: PackageSearch, roles: ['admin'], adminOnly: true },
-  { pageKey: 'RecipeBuilder', title: 'Recipe Builder', moduleKey: 'ADMIN', icon: FlaskConical, roles: ['admin'], adminOnly: true },
-  { pageKey: 'ItemMasterManager', title: 'Item Master', moduleKey: 'ADMIN', icon: PackageSearch, roles: ['admin'], adminOnly: true },
-  { pageKey: 'SKUBOMConfig', title: 'Material Planning Config', moduleKey: 'ADMIN', icon: PackageSearch, roles: ['admin'], adminOnly: true },
-  { pageKey: 'IngredientManager', title: 'Ingredients', moduleKey: 'ADMIN', icon: Zap, roles: ['admin'], adminOnly: true },
-  { pageKey: 'IngredientGroupManager', title: 'Ingredient Groups', moduleKey: 'ADMIN', icon: Zap, roles: ['admin'], adminOnly: true },
-  { pageKey: 'UOMManager', title: 'UOMs', moduleKey: 'ADMIN', icon: Tag, roles: ['admin'], adminOnly: true },
-  { pageKey: 'BoxTypeManager', title: 'Box Types', moduleKey: 'ADMIN', icon: Box, roles: ['admin'], adminOnly: true },
-  { pageKey: 'LabelArtworkManager', title: 'Label Artworks', moduleKey: 'ADMIN', icon: Printer, roles: ['admin'], adminOnly: true },
-  { pageKey: 'RyanTemplateManager', title: 'Ryan Templates', moduleKey: 'ADMIN', icon: Printer, roles: ['admin'], adminOnly: true },
-  { pageKey: 'ProductTaxonomy', title: 'Product Taxonomy', moduleKey: 'ADMIN', icon: Layers, roles: ['admin'], adminOnly: true },
-  { pageKey: 'WarehouseBins', title: 'Warehouses & Bins', moduleKey: 'ADMIN', icon: Warehouse, roles: ['admin'], adminOnly: true },
+  { pageKey: 'SKUSetup', title: 'SKU Setup', moduleKey: 'ADMIN', icon: PackageSearch, roles: ['admin', 'production_manager', 'user'] },
+  { pageKey: 'RecipeBuilder', title: 'Recipe Builder', moduleKey: 'ADMIN', icon: FlaskConical, roles: ['admin', 'production_manager', 'user'] },
+  { pageKey: 'ItemMasterManager', title: 'Item Master', moduleKey: 'ADMIN', icon: PackageSearch, roles: ['admin', 'store_manager', 'purchase_manager', 'user'] },
+  { pageKey: 'SKUBOMConfig', title: 'Material Planning Config', moduleKey: 'ADMIN', icon: PackageSearch, roles: ['admin', 'production_manager', 'user'] },
+  { pageKey: 'IngredientManager', title: 'Ingredients', moduleKey: 'ADMIN', icon: Zap, roles: ['admin', 'production_manager', 'user'] },
+  { pageKey: 'IngredientGroupManager', title: 'Ingredient Groups', moduleKey: 'ADMIN', icon: Zap, roles: ['admin', 'production_manager', 'user'] },
+  { pageKey: 'UOMManager', title: 'UOMs', moduleKey: 'ADMIN', icon: Tag, roles: ['admin', 'production_manager', 'user'] },
+  { pageKey: 'BoxTypeManager', title: 'Box Types', moduleKey: 'ADMIN', icon: Box, roles: ['admin', 'production_manager', 'user'] },
+  { pageKey: 'LabelArtworkManager', title: 'Label Artworks', moduleKey: 'ADMIN', icon: Printer, roles: ['admin', 'production_manager', 'user'] },
+  { pageKey: 'RyanTemplateManager', title: 'Ryan Templates', moduleKey: 'ADMIN', icon: Printer, roles: ['admin', 'production_manager', 'user'] },
+  { pageKey: 'ProductTaxonomy', title: 'Product Taxonomy', moduleKey: 'ADMIN', icon: Layers, roles: ['admin', 'production_manager', 'user'] },
+  { pageKey: 'WarehouseBins', title: 'Warehouses & Bins', moduleKey: 'ADMIN', icon: Warehouse, roles: ['admin', 'warehouse_ops', 'store_manager', 'user'] },
   { pageKey: 'TraceInvestigation', title: 'Trace Investigation', moduleKey: 'ADMIN', icon: Search, roles: ['admin', 'production_manager', 'user'] },
   { pageKey: 'AlertsPage', title: 'Alerts', moduleKey: 'ADMIN', icon: Bell, roles: ['admin', 'production_manager', 'label_supervisor', 'labelling_supervisor', 'user'] },
   { pageKey: 'AuditLogPage', title: 'Audit Log', moduleKey: 'ADMIN', icon: ScrollText, roles: ['admin', 'production_manager', 'qa', 'user'] },
   { pageKey: 'TraceabilityExplorer', title: 'Traceability Explorer', moduleKey: 'ADMIN', icon: Search, roles: ['admin', 'production_manager', 'qa', 'warehouse_ops', 'user'] },
-  { pageKey: 'ReconciliationDashboard', title: 'Reconciliation Dashboard', moduleKey: 'ADMIN', icon: AlertTriangle, roles: ['admin', 'production_manager', 'warehouse_ops', 'supervisor'] },
+  { pageKey: 'ReconciliationDashboard', title: 'Reconciliation Dashboard', moduleKey: 'ADMIN', icon: AlertTriangle, roles: ['admin', 'production_manager', 'warehouse_ops', 'supervisor', 'user'] },
 
   // ─── STORE MANAGEMENT ───
   { pageKey: 'SMSDashboard',       title: 'Store Dashboard',    moduleKey: 'STORE', icon: Store,           roles: ['admin', 'store_manager', 'store_receiver', 'user'], sortOrder: 1 },
@@ -155,10 +155,11 @@ export const pageRegistry = [
   { pageKey: 'ApprovalWorkflowHub', title: 'Approval Workflow Hub', moduleKey: 'USER_MANAGEMENT', icon: ClipboardCheck, roles: ['admin'], adminOnly: true },
 
   // ─── ADMIN / SYSTEM ───
-  { pageKey: 'SyncCenter', title: 'Sync Center', moduleKey: 'ADMIN', icon: Activity, roles: ['admin'], adminOnly: true },
-  { pageKey: 'RulesManager', title: 'Rules Manager', moduleKey: 'ADMIN', icon: ShieldCheck, roles: ['admin'], adminOnly: true },
-  { pageKey: 'BlockedAttemptsViewer', title: 'Blocked Attempts', moduleKey: 'ADMIN', icon: AlertCircle, roles: ['admin'], adminOnly: true },
-  { pageKey: 'RoutesDiagnostics', title: 'Routes Diagnostics', moduleKey: 'ADMIN', icon: Activity, roles: ['admin'], adminOnly: true, system: true, mobileVisible: false },
+  { pageKey: 'SyncCenter', title: 'Sync Center', moduleKey: 'ADMIN', icon: Activity, roles: ['admin', 'user'] },
+  { pageKey: 'RulesManager', title: 'Rules Manager', moduleKey: 'ADMIN', icon: ShieldCheck, roles: ['admin', 'user'] },
+  { pageKey: 'BlockedAttemptsViewer', title: 'Blocked Attempts', moduleKey: 'ADMIN', icon: AlertCircle, roles: ['admin', 'user'] },
+  { pageKey: 'SystemSettings', title: 'System Settings', moduleKey: 'ADMIN', icon: Settings, roles: ['admin', 'accounts_manager', 'sales_manager', 'user'] },
+  { pageKey: 'RoutesDiagnostics', title: 'Routes Diagnostics', moduleKey: 'ADMIN', icon: Activity, roles: ['admin', 'user'] },
 ];
 
 /**
@@ -280,7 +281,7 @@ export const moduleRegistry = [
     icon: Settings,
     color: 'text-slate-600',
     bgColor: 'bg-slate-100',
-    adminOnly: true,
+    adminOnly: false,
     sortOrder: 100,
   },
 ];
