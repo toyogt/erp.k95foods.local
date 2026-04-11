@@ -154,9 +154,9 @@ export default function EInvoicePanel({ invoice, order, onUpdated }) {
       const currentIrn = irn || invoice?.irn;
       if (!currentIrn) {
         toast({ title: 'Generating E-Invoice (IRN)…' });
-        const resp = await base44.functions.invoke('cleartaxGenerate', { action: 'generate_irn', invoice_id: invoice.id });
+        const resp = await base44.functions.invoke('gstCompliance', { action: 'generate_irn', invoice_id: invoice.id });
         if (!resp.data?.success) {
-          toast({ title: 'E-Invoice generation failed', description: resp.data?.error || 'Check ClearTax settings', variant: 'destructive' });
+          toast({ title: 'E-Invoice generation failed', description: resp.data?.error || 'Check API settings', variant: 'destructive' });
           setSaving(false);
           return;
         }
@@ -193,9 +193,9 @@ export default function EInvoicePanel({ invoice, order, onUpdated }) {
     setSaving(true);
     try {
       toast({ title: 'Generating E-Way Bill…' });
-      const resp = await base44.functions.invoke('cleartaxGenerate', { action: 'generate_eway', invoice_id: invoice.id, distance_km: km });
+      const resp = await base44.functions.invoke('gstCompliance', { action: 'generate_ewb', invoice_id: invoice.id, distance_km: km });
       if (!resp.data?.success) {
-        toast({ title: 'E-Way Bill generation failed', description: resp.data?.error || 'Check ClearTax settings', variant: 'destructive' });
+        toast({ title: 'E-Way Bill generation failed', description: resp.data?.error || 'Check API settings', variant: 'destructive' });
         setSaving(false);
         return;
       }
@@ -282,25 +282,25 @@ export default function EInvoicePanel({ invoice, order, onUpdated }) {
 
   async function generateIRN() {
     setSaving(true);
-    const resp = await base44.functions.invoke('cleartaxGenerate', { action: 'generate_irn', invoice_id: invoice.id });
+    const resp = await base44.functions.invoke('gstCompliance', { action: 'generate_irn', invoice_id: invoice.id });
     setSaving(false);
     if (resp.data?.success) {
       setIrn(resp.data.irn || ''); setAckNo(resp.data.ack_number || ''); setAckDate(resp.data.ack_date || '');
       toast({ title: 'IRN generated successfully' }); if (onUpdated) onUpdated();
     } else {
-      toast({ title: 'IRN generation failed', description: resp.data?.error || 'Check ClearTax settings', variant: 'destructive' });
+      toast({ title: 'IRN generation failed', description: resp.data?.error || 'Check API settings', variant: 'destructive' });
     }
   }
 
   async function generateEwayBill() {
     setSaving(true);
-    const resp = await base44.functions.invoke('cleartaxGenerate', { action: 'generate_eway', invoice_id: invoice.id });
+    const resp = await base44.functions.invoke('gstCompliance', { action: 'generate_ewb', invoice_id: invoice.id });
     setSaving(false);
     if (resp.data?.success) {
       setEwayBill(resp.data.eway_bill || ''); setEwayBillDate(resp.data.eway_bill_date || '');
       toast({ title: 'E-Way Bill generated' }); if (onUpdated) onUpdated();
     } else {
-      toast({ title: 'E-Way Bill generation failed', description: resp.data?.error || 'Check ClearTax settings', variant: 'destructive' });
+      toast({ title: 'E-Way Bill generation failed', description: resp.data?.error || 'Check API settings', variant: 'destructive' });
     }
   }
 
@@ -477,7 +477,7 @@ export default function EInvoicePanel({ invoice, order, onUpdated }) {
             </div>
             <div className="flex gap-2 flex-wrap">
               <Button variant="outline" className="h-11 text-sm" onClick={generateIRN} disabled={saving}>
-                <Zap className="w-4 h-4 mr-2" /> Generate IRN via ClearTax
+                <Zap className="w-4 h-4 mr-2" /> Generate IRN
               </Button>
               <Button variant="outline" className="h-11 text-sm" onClick={generateEwayBill} disabled={saving || !invoice?.irn}>
                 <Zap className="w-4 h-4 mr-2" /> Generate E-Way Bill{!invoice?.irn && <span className="text-xs ml-1 opacity-60">(IRN first)</span>}
