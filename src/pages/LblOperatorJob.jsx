@@ -11,7 +11,7 @@ import LblChecklistStep from '@/components/labelling/LblChecklistStep';
 import LblBulkPrintStep from '@/components/labelling/LblBulkPrintStep';
 import LblCompletionStep from '@/components/labelling/LblCompletionStep';
 import { toast } from '@/components/ui/use-toast';
-import { ArrowLeft, Loader2, Play } from 'lucide-react';
+import { ArrowLeft, Loader2, Play, RotateCcw } from 'lucide-react';
 
 export default function LblOperatorJob() {
   const navigate = useNavigate();
@@ -77,7 +77,28 @@ export default function LblOperatorJob() {
       {job.status === 'active' && <LblStockTransferStep job={job} user={user} onComplete={refreshJob} />}
       {job.status === 'stock_transferred' && <LblDemoPrintStep job={job} user={user} onComplete={refreshJob} />}
       {(job.status === 'demo_print_sent' || job.status === 'demo_rejected') && <LblChecklistStep job={job} user={user} onComplete={refreshJob} />}
-      {job.status === 'demo_pending_approval' && <div className="bg-amber-50 border border-amber-200 rounded-lg p-6 text-center space-y-2"><h2 className="text-lg font-semibold text-amber-800">Waiting for Supervisor Approval</h2><p className="text-sm text-amber-600">Your checklist and demo sample have been submitted for review.</p></div>}
+      {job.status === 'demo_pending_approval' && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-6 text-center space-y-4">
+          <h2 className="text-lg font-semibold text-amber-800">Waiting for Supervisor Approval</h2>
+          <p className="text-sm text-amber-600">Your checklist and demo sample have been submitted for review.</p>
+          <Button
+            variant="outline"
+            className="h-11 gap-2 border-amber-300 text-amber-700 hover:bg-amber-100"
+            disabled={acting}
+            onClick={async () => {
+              setActing(true);
+              await base44.entities.LabellingJob.update(job.id, { status: 'demo_print_sent', approval_status: 'not_required' });
+              await logLabellingEvent({ action_type: 'checklist_withdrawn', job_id: job.id, plan_id: job.plan_id, description: `Checklist submission withdrawn for job ${job.job_id} — re-opening for edit`, user });
+              toast({ title: 'Submission Withdrawn', description: 'You can now re-fill and re-submit the checklist.' });
+              refreshJob();
+              setActing(false);
+            }}
+          >
+            {acting ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
+            Withdraw &amp; Redo Checklist
+          </Button>
+        </div>
+      )}
       {job.status === 'demo_approved' && <LblBulkPrintStep job={job} user={user} onComplete={refreshJob} mode="start" />}
       {(job.status === 'bulk_printing' || job.status === 'paused') && <LblBulkPrintStep job={job} user={user} onComplete={refreshJob} mode="control" />}
       {job.status === 'completed' && <LblCompletionStep job={job} />}
