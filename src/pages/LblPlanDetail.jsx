@@ -14,6 +14,11 @@ import {
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
   AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { SHIFT_TYPES } from '@/lib/labellingHelpers';
 import { ArrowLeft, Lock, Unlock, Loader2, Save, Trash2, Plus, Pencil } from 'lucide-react';
 import moment from 'moment';
 
@@ -28,6 +33,9 @@ export default function LblPlanDetail() {
   const [savingOrder, setSavingOrder] = useState(false);
   const [editingJob, setEditingJob] = useState(null);
   const [addingJob, setAddingJob] = useState(false);
+  const [editingHeader, setEditingHeader] = useState(false);
+  const [headerForm, setHeaderForm] = useState({});
+  const [savingHeader, setSavingHeader] = useState(false);
 
   useEffect(() => { base44.auth.me().then(setUser); }, []);
 
@@ -41,6 +49,10 @@ export default function LblPlanDetail() {
     queryFn: () => base44.entities.LabellingJob.filter({ plan_id: planId }),
     enabled: !!planId,
   });
+  const { data: machines = [] } = useQuery({
+    queryKey: ['labelling-machines'],
+    queryFn: () => base44.entities.Machine.filter({ machine_type: 'LABEL-LINE', is_active: true }),
+  });
   const { data: products = [] } = useQuery({
     queryKey: ['product-master-list'],
     queryFn: () => base44.entities.ProductMaster.list('-created_date', 500),
@@ -53,6 +65,35 @@ export default function LblPlanDetail() {
   const hasOrderChanged = reorderedJobs !== null;
 
   useEffect(() => { setReorderedJobs(null); }, [jobs]);
+
+  useEffect(() => {
+    if (plan) {
+      setHeaderForm({
+        plan_date: plan.plan_date ? moment(plan.plan_date, 'DD/MM/YYYY').format('YYYY-MM-DD') : '',
+        shift_type: plan.shift_type || 'day',
+        line_id: plan.line_id || '',
+        notes: plan.notes || '',
+      });
+    }
+  }, [plan]);
+
+  const handleSaveHeader = async () => {
+    setSavingHeader(true);
+    const fd = moment(headerForm.plan_date).format('DD/MM/YYYY');
+    const selectedMachine = machines.find(m => m.id === headerForm.line_id);
+    await base44.entities.LabellingShiftPlan.update(plan.id, {
+      plan_date: fd,
+      shift_type: headerForm.shift_type,
+      line_id: headerForm.line_id,
+      line_name: selectedMachine?.display_name || headerForm.line_id,
+      notes: headerForm.notes,
+    });
+    await logLabellingEvent({ action_type: 'plan_updated', plan_id: plan.id, description: `Plan ${plan.plan_id} header updated`, user });
+    queryClient.invalidateQueries({ queryKey: ['labelling-plan', planId] });
+    toast({ title: 'Plan Updated' });
+    setEditingHeader(false);
+    setSavingHeader(false);
+  };
 
   const handleReorder = (fromIdx, toIdx) => {
     const current = [...sortedJobs];
@@ -242,7 +283,60 @@ export default function LblPlanDetail() {
         )}
       </div>
 
-      {plan.notes && <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">{plan.notes}</div>}
+      {/* Plan Header — editable in draft mode */}
+      {isDraft && editingHeader ? (
+        <div className="bg-white border border-slate-200 rounded-lg p-4 space-y-3">
+          <h2 className="text-sm font-semibold text-slate-900">Plan Details</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs font-medium text-slate-700">Plan Date</Label>
+              <Input type="date" value={headerForm.plan_date} onChange={e => setHeaderForm(f => ({ ...f, plan_date: e.target.value }))} className="h-11 md:h-9" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs font-medium text-slate-700">Shift</Label>
+              <Select value={headerForm.shift_type} onValueChange={v => setHeaderForm(f => ({ ...f, shift_type: v }))}>
+                <SelectTrigger className="h-11 md:h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>{SHIFT_TYPES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs font-medium text-slate-700">Labelling Line</Label>
+              <Select value={headerForm.line_id} onValueChange={v => setHeaderForm(f => ({ ...f, line_id: v }))}>
+                <SelectTrigger className="h-11 md:h-9"><SelectValue placeholder="Select line" /></SelectTrigger>
+                <SelectContent>{machines.map(m => <SelectItem key={m.id} value={m.id}>{m.display_name}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs font-medium text-slate-700">Notes</Label>
+            <Textarea value={headerForm.notes} onChange={e => setHeaderForm(f => ({ ...f, notes: e.target.value }))} placeholder="Optional plan notes..." className="min-h-[60px]" />
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" className="h-9" onClick={() => setEditingHeader(false)}>Cancel</Button>
+            <Button className="h-9 gap-2" onClick={handleSaveHeader} disabled={savingHeader}>
+              {savingHeader ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Save Details
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-white border border-slate-200 rounded-lg p-4">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-sm font-semibold text-slate-900">Plan Details</h2>
+            {isDraft && isManager && (
+              <Button variant="outline" size="sm" className="h-8 gap-1 text-xs" onClick={() => setEditingHeader(true)}>
+                <Pencil className="w-3 h-3" /> Edit Details
+              </Button>
+            )}
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+            <div><p className="text-xs text-slate-500">Date</p><p className="font-medium text-slate-900">{plan.plan_date}</p></div>
+            <div><p className="text-xs text-slate-500">Shift</p><p className="font-medium text-slate-900 capitalize">{plan.shift_type} Shift</p></div>
+            <div><p className="text-xs text-slate-500">Line</p><p className="font-medium text-slate-900">{plan.line_name || plan.line_id}</p></div>
+            {plan.supervisor_name && <div><p className="text-xs text-slate-500">Supervisor</p><p className="font-medium text-slate-900">{plan.supervisor_name}</p></div>}
+          </div>
+          {plan.notes && <p className="mt-2 text-sm text-amber-700 bg-amber-50 rounded p-2">{plan.notes}</p>}
+        </div>
+      )}
 
       <div className="space-y-3">
         <div className="flex items-center justify-between">
