@@ -49,7 +49,7 @@ export default function OrderItemsReviewTable({ order }) {
 
   const rows = useMemo(() => {
     return soItems.map(item => {
-      const itemCode = item.item_code || item.sku_code || '';
+      const itemCode = item.item_code || '';
       const codeUpper = itemCode.trim().toUpperCase();
       const stockQty = stockByCode[codeUpper] || 0;
       const ordered = item.quantity || 0;

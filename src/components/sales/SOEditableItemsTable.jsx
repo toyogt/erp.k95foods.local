@@ -164,7 +164,7 @@ export default function SOEditableItemsTable({ order, items, onUpdated }) {
               return (
                 <tr key={item.id} className={`hover:bg-slate-50 ${isEditing ? 'bg-blue-50' : ''}`}>
                   <td className="px-2 py-2 text-slate-400">{idx + 1}</td>
-                  <td className="px-2 py-2 text-slate-700 font-mono">{item.sku_code || item.item_code || '—'}</td>
+                  <td className="px-2 py-2 text-slate-700 font-mono">{item.item_code || '—'}</td>
                   <td className="px-2 py-2 text-slate-900">
                     {isEditing ? (
                       <Input className="h-7 text-xs w-full" value={editData.description}
