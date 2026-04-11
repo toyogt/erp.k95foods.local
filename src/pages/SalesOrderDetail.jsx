@@ -89,36 +89,36 @@ export default function SalesOrderDetail() {
   const { data: deliveryNotes = [] } = useQuery({
     queryKey: ['delivery_notes_detail', soId],
     queryFn: () => base44.entities.SalesDeliveryNote.filter({ sales_order_id: soId }),
-    enabled: !!soId && activePanel === 'invoice',
-    staleTime: 30000,
+    enabled: !!soId && (activePanel === 'invoice' || activePanel === 'connections'),
+    staleTime: 120000,
   });
 
   const { data: invoices = [] } = useQuery({
     queryKey: ['invoices_detail', soId],
     queryFn: () => base44.entities.SalesInvoice.filter({ sales_order_id: soId }),
-    enabled: !!soId && activePanel === 'invoice',
-    staleTime: 30000,
+    enabled: !!soId && (activePanel === 'invoice' || activePanel === 'connections'),
+    staleTime: 120000,
   });
 
   const { data: items = [] } = useQuery({
     queryKey: ['so_items', soId],
     queryFn: () => base44.entities.SalesOrderItem.filter({ sales_order_id: soId }),
     enabled: !!soId,
-    staleTime: 30000,
+    staleTime: 120000,
   });
 
   const { data: picklists = [] } = useQuery({
     queryKey: ['picklists_detail', soId],
     queryFn: () => base44.entities.SalesPicklist.filter({ sales_order_id: soId }),
-    enabled: !!soId,
-    staleTime: 30000,
+    enabled: !!soId && (activePanel === 'connections' || activePanel === 'logistics_review'),
+    staleTime: 120000,
   });
 
   const { data: auditLogs = [] } = useQuery({
     queryKey: ['so_audit', soId],
     queryFn: () => base44.entities.SalesAuditLog.filter({ entity_id: soId }, '-created_date', 50),
     enabled: !!soId && activePanel === 'history',
-    staleTime: 30000,
+    staleTime: 120000,
   });
 
   // Workflow sequence validation

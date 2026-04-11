@@ -23,6 +23,7 @@ import ActualCostForm from '@/components/sales/logistics/ActualCostForm';
 import CostComparisonCard from '@/components/sales/logistics/CostComparisonCard';
 import OrderItemsReviewTable from '@/components/sales/logistics/OrderItemsReviewTable';
 import AutoWeightCalculator from '@/components/sales/AutoWeightCalculator';
+import PicklistSummaryInLogistics from '@/components/sales/PicklistSummaryInLogistics';
 
 
 export default function SOLogisticsReviewPanel({ order, onUpdated }) {
@@ -437,6 +438,9 @@ export default function SOLogisticsReviewPanel({ order, onUpdated }) {
 
       {/* Cost Comparison */}
       <CostComparisonCard costRecord={costRecord} />
+
+      {/* ── Picklist Summary (from picklist work) ── */}
+      <PicklistSummaryInLogistics order={order} onUpdated={onUpdated} />
 
       {/* ── Action Buttons ── */}
       <div className="flex flex-wrap gap-3 pt-2 border-t border-slate-200">

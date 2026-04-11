@@ -7,6 +7,7 @@ import { Save, Loader2, ArrowDown, Check, ExternalLink, AlertCircle } from 'luci
 import { Link } from 'react-router-dom';
 
 export default function PlannedCostForm({ costRecord, systemEstimate, onSave, saving, hasRateCardMatch }) {
+  const isSaved = !!(costRecord?.planned_total && costRecord.planned_total > 0);
   const [form, setForm] = useState({});
   const [showConfirm, setShowConfirm] = useState(false);
 
@@ -97,6 +98,7 @@ export default function PlannedCostForm({ costRecord, systemEstimate, onSave, sa
               value={form[h.key] || ''}
               onChange={e => set(h.key, e.target.value)}
               placeholder="0"
+              disabled={isSaved}
             />
           </div>
         ))}
@@ -106,10 +108,16 @@ export default function PlannedCostForm({ costRecord, systemEstimate, onSave, sa
           <span className="text-sm font-semibold text-slate-900">Planned Total: </span>
           <span className="text-sm font-bold text-slate-900">₹{total.toLocaleString('en-IN')}</span>
         </div>
-        <Button className="h-11 text-sm" onClick={handleSave} disabled={saving}>
-          {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Save className="w-4 h-4 mr-1" />}
-          Save Planned Cost
-        </Button>
+        {isSaved ? (
+          <span className="inline-flex items-center gap-1.5 text-sm font-medium text-green-700 bg-green-50 px-3 py-1.5 rounded-lg">
+            <Check className="w-4 h-4" /> Planned Cost Saved
+          </span>
+        ) : (
+          <Button className="h-11 text-sm" onClick={handleSave} disabled={saving}>
+            {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Save className="w-4 h-4 mr-1" />}
+            Save Planned Cost
+          </Button>
+        )}
       </div>
     </div>
   );
