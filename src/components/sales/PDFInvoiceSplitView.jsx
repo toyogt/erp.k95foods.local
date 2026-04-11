@@ -1,7 +1,20 @@
 import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Edit2, Check, AlertTriangle, TrendingUp, TrendingDown, User, Tag, Ban, Calendar, FileText } from 'lucide-react';
+
+// Map platform to ProductMaster field for platform-specific ID
+const PLATFORM_ID_FIELD = {
+  zepto: 'zepto_item_id',
+  swiggy: 'swiggy_item_id',
+  blinkit: 'bigbasket_item_id',
+};
+const PLATFORM_LABEL = {
+  zepto: 'Zepto ID',
+  swiggy: 'Swiggy ID',
+  blinkit: 'BigBasket ID',
+};
 
 // Shows diff between system rate and PDF rate
 function RateDiff({ pdfRate, sysRate }) {
@@ -74,6 +87,20 @@ export default function PDFInvoiceSplitView({ pdfEntry, onConfirm }) {
   }, [customer, data?.price_list, pdfEntry.id]);
 
   const priceList = customer?.price_list || data?.price_list || '';
+
+  // Fetch ProductMaster for platform IDs, EAN, SKU code
+  const { data: products = [] } = useQuery({
+    queryKey: ['product_master_pdf_view', pdfEntry.id],
+    queryFn: () => base44.entities.ProductMaster.filter({}),
+    staleTime: 300000,
+  });
+  const productMap = {};
+  products.forEach(p => { if (p.item_code) productMap[p.item_code] = p; });
+
+  // Resolve effective platform (Scootsy = Swiggy/Instamart)
+  const effectivePlatform = (data?.customer_name || '').toLowerCase().includes('scootsy') ? 'swiggy' : data?.platform;
+  const platformField = PLATFORM_ID_FIELD[effectivePlatform];
+  const platformLabel = PLATFORM_LABEL[effectivePlatform];
 
   const hasMismatch = items.some(item => {
     const pdfRate = item._pdf_rate;
@@ -235,6 +262,15 @@ export default function PDFInvoiceSplitView({ pdfEntry, onConfirm }) {
                   <tr key={i} className={`hover:bg-slate-50 ${mismatch ? 'bg-amber-50/40' : ''}`}>
                     <td className="px-3 py-2 text-slate-700">
                       <div className="font-medium leading-snug" title={item._product_name || item.description}>{item._product_name || item.description}</div>
+                      <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
+                        {item.sku_code && <span className="text-[10px] text-slate-500">SKU: <span className="font-mono text-slate-700">{item.sku_code}</span></span>}
+                        {(item.ean_number || productMap[item.item_code]?.product_barcode) && (
+                          <span className="text-[10px] text-slate-500">EAN: <span className="font-mono text-slate-700">{item.ean_number || productMap[item.item_code]?.product_barcode}</span></span>
+                        )}
+                        {platformField && productMap[item.item_code]?.[platformField] && (
+                          <span className="text-[10px] text-blue-600 font-medium">{platformLabel}: <span className="font-mono">{productMap[item.item_code][platformField]}</span></span>
+                        )}
+                      </div>
                       {item.item_code && <div className="text-slate-400 text-[10px] mt-0.5">{item.item_code}</div>}
                       <RateDiff pdfRate={pdfRate} sysRate={sysRate} />
                     </td>
