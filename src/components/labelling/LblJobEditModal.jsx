@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import LblBatchSelect from '@/components/labelling/LblBatchSelect';
+import { generateBatchNumber } from '@/lib/batchNumberGenerator';
+import { Hash, Info } from 'lucide-react';
 import { Loader2, Save } from 'lucide-react';
 import moment from 'moment';
 
@@ -22,7 +24,16 @@ export default function LblJobEditModal({ open, onClose, job, products, planDate
   const handleProductChange = (productId) => {
     const prod = products.find(p => p.id === productId);
     if (prod) {
-      setForm(f => ({ ...f, sku_code: prod.item_code || prod.id, product_name: prod.product_name || prod.item_name || '', bottle_type: prod.bottle_type || '', mrp: String(prod.mrp || '') }));
+      setForm(f => ({
+        ...f,
+        sku_code: prod.item_code || prod.id,
+        product_name: prod.product_name || prod.item_name || '',
+        bottle_type: prod.bottle_type || '',
+        mrp: String(prod.mrp || ''),
+        batch_prefix_code: prod.product_prefix_code || '',
+        flavour_code: prod.flavour_code || '',
+        batch_scheme: prod.batch_scheme || 'excel_date',
+      }));
     }
   };
 
@@ -56,6 +67,19 @@ export default function LblJobEditModal({ open, onClose, job, products, planDate
   };
 
   const selectedProductId = form.sku_code ? (products.find(p => (p.item_code || p.id) === form.sku_code)?.id || '') : '';
+
+  // Live batch number preview using manufacturing date + prefix from ProductMaster
+  const batchPreview = useMemo(() => {
+    if (!form.batch_prefix_code || !form.flavour_code || !form.manufacturing_date) return '';
+    const mfgFormatted = form.manufacturing_date.includes('/')
+      ? form.manufacturing_date
+      : form.manufacturing_date.split('-').reverse().join('/');
+    return generateBatchNumber(
+      { product_prefix_code: form.batch_prefix_code, flavour_code: form.flavour_code, batch_scheme: form.batch_scheme || 'excel_date' },
+      mfgFormatted,
+      1
+    );
+  }, [form.batch_prefix_code, form.flavour_code, form.batch_scheme, form.manufacturing_date]);
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -100,6 +124,32 @@ export default function LblJobEditModal({ open, onClose, job, products, planDate
               <LblBatchSelect value={form.batch_no || ''} onChange={val => setForm(f => ({ ...f, batch_no: val }))} skuCode={form.sku_code} />
             </div>
           </div>
+
+          {/* Batch prefix info panel */}
+          {(form.batch_prefix_code || form.flavour_code) && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-1.5">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-blue-800">
+                <Hash className="w-3.5 h-3.5" /> Batch Number Formula
+              </div>
+              <div className="flex flex-wrap gap-3 text-xs text-blue-900">
+                {form.batch_prefix_code && <span>Prefix: <span className="font-mono font-bold">{form.batch_prefix_code}</span></span>}
+                {form.flavour_code && <span>Flavour Code: <span className="font-mono font-bold">{form.flavour_code}</span></span>}
+                <span>Scheme: <span className="font-semibold">{form.batch_scheme === 'day_year_seq' ? 'Day/Year/Seq' : 'Excel Date'}</span></span>
+              </div>
+              {batchPreview ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-blue-700">Preview batch number:</span>
+                  <span className="font-mono font-bold text-blue-900 bg-white border border-blue-200 rounded px-2 py-0.5 text-sm">{batchPreview}</span>
+                  <span className="text-xs text-blue-500">(using Mfg. Date)</span>
+                </div>
+              ) : form.manufacturing_date ? null : (
+                <p className="text-xs text-blue-600 flex items-center gap-1"><Info className="w-3 h-3" /> Set Manufacturing Date to preview batch number</p>
+              )}
+              {!form.batch_prefix_code && (
+                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">⚠ Prefix Code not set in Product Master — batch number must be entered manually at stock transfer</p>
+              )}
+            </div>
+          )}
 
           {form.product_name && (
             <div className="flex gap-3 text-xs text-slate-500 flex-wrap bg-slate-50 rounded-lg p-2">

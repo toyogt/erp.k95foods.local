@@ -51,6 +51,25 @@
       "default": 1,
       "description": "Sequence number used in batch generation (for day_year_seq scheme)"
     },
+    "batch_prefix_code": {
+      "type": "string",
+      "maxLength": 20,
+      "description": "Product prefix code used in batch number (copied from ProductMaster.product_prefix_code)"
+    },
+    "flavour_code": {
+      "type": "string",
+      "maxLength": 10,
+      "description": "Flavour abbreviation used in batch number (copied from ProductMaster.flavour_code)"
+    },
+    "batch_scheme": {
+      "type": "string",
+      "enum": [
+        "excel_date",
+        "day_year_seq"
+      ],
+      "default": "excel_date",
+      "description": "Batch generation scheme: excel_date = prefix+flavour+ExcelSerial, day_year_seq = prefix+DD+flavourInitial+YY+seq"
+    },
     "quantity_bottles_planned": {
       "type": "number",
       "minimum": 0
