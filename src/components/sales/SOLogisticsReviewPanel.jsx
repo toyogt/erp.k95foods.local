@@ -113,8 +113,9 @@ export default function SOLogisticsReviewPanel({ order, onUpdated }) {
   const isInReview = order?.workflow_state === 'under_logistics_review';
   const isDelivered = ['delivered', 'paid', 'closed'].includes(order?.status);
 
-  // Locked = order has moved past logistics stage (picking started, invoiced, dispatched, etc.)
-  const isLocked = !['draft', 'under_logistics_review'].includes(order?.workflow_state);
+  // Locked = only lock logistics fields once invoiced/dispatched/delivered (not during picking)
+  const isLocked = !['draft', 'under_logistics_review', 'ready_to_pick'].includes(order?.workflow_state)
+    && !['picking', 'packing', 'logistics_review', 'confirmed'].includes(order?.status);
 
   // Track what's missing (for highlighting, not blocking)
   const missingFields = [];
@@ -268,7 +269,7 @@ export default function SOLogisticsReviewPanel({ order, onUpdated }) {
           <h4 className="text-xs font-semibold text-slate-600 uppercase tracking-wide flex items-center gap-1.5">
             <Truck className="w-3.5 h-3.5" /> Logistics Details
           </h4>
-          {missingFields.length > 0 && (
+          {missingFields.length > 0 && !isLocked && (
             <span className="inline-flex items-center gap-1 text-xs text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
               <Info className="w-3 h-3" /> Optional — can be set at picklist stage
             </span>
@@ -378,6 +379,48 @@ export default function SOLogisticsReviewPanel({ order, onUpdated }) {
             )}
           </div>
         </div>
+
+        {/* Save logistics details button — visible when editable and past initial review */}
+        {!isLocked && alreadyApproved && (
+          <div className="flex justify-end pt-1">
+            <Button
+              className="h-9 text-sm bg-slate-900 hover:bg-slate-800 text-white gap-1.5"
+              disabled={saving}
+              onClick={async () => {
+                setSaving(true);
+                const updates = {
+                  transporter: form.transporter,
+                  packaging_type: form.packaging_type,
+                  planned_dispatch_date: form.dispatch_date,
+                };
+                await base44.entities.SalesOrder.update(order.id, updates);
+                // Also sync to active picklist if one exists
+                const pls = await base44.entities.SalesPicklist.filter({ sales_order_id: order.id });
+                const activePl = pls.find(p => p.status !== 'cancelled');
+                if (activePl) {
+                  await base44.entities.SalesPicklist.update(activePl.id, {
+                    transporter: form.transporter,
+                    packaging_type: form.packaging_type,
+                    dispatch_date: form.dispatch_date,
+                    appointment_date: form.appointment_date,
+                  });
+                }
+                await base44.entities.SalesAuditLog.create({
+                  entity_type: 'SalesOrder', entity_id: order.id,
+                  reference_number: order.so_number, action: 'logistics_details_updated',
+                  new_value: JSON.stringify(updates), user_email: user?.email,
+                });
+                setSaving(false);
+                toast({ title: 'Logistics details updated' });
+                qc.invalidateQueries({ queryKey: ['picklists_detail', order.id] });
+                if (onUpdated) onUpdated();
+              }}
+            >
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+              Save Logistics Details
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* ── Auto Weight Calculator ── */}
