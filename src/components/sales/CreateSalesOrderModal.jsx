@@ -319,8 +319,32 @@ export default function CreateSalesOrderModal({ defaultType = 'manual', onClose,
                     <span className="text-sm text-blue-700 font-medium">
                       PDF parsed — Platform: <strong>{form.platform?.toUpperCase()}</strong>
                       {extractedData?.items?.length && ` · ${extractedData.items.length} items extracted`}
+                      {extractedData?._customer_found && ' · Customer matched'}
+                      {extractedData?._price_list_used && ` · Price List: ${extractedData._price_list_used}`}
                     </span>
                   </div>
+                  {/* Addresses & Region */}
+                  {(form.billing_address || form.shipping_address) && (
+                    <div className="bg-white border border-slate-200 rounded-lg p-3 space-y-2">
+                      {form.billing_address && (
+                        <div>
+                          <p className="text-xs font-medium text-slate-500">Billing Address</p>
+                          <p className="text-sm text-slate-800">{form.billing_address}</p>
+                        </div>
+                      )}
+                      {form.shipping_address && (
+                        <div>
+                          <p className="text-xs font-medium text-slate-500">Shipping Address</p>
+                          <p className="text-sm text-slate-800">{form.shipping_address}</p>
+                        </div>
+                      )}
+                      {extractedData?._customer_found && extractedData?._customer_region && (
+                        <div className="inline-flex items-center gap-1 px-2 py-1 bg-indigo-50 border border-indigo-200 rounded-md">
+                          <span className="text-xs font-medium text-indigo-700">Region: {extractedData._customer_region}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                   <PDFPreviewPanel pdfUrl={pdfUrl} />
                 </div>
               )}
@@ -407,6 +431,7 @@ export default function CreateSalesOrderModal({ defaultType = 'manual', onClose,
                       <table className="w-full text-xs">
                         <thead className="bg-slate-100">
                           <tr>
+                            <th className="px-3 py-2 text-left text-slate-600 font-medium">Item Code</th>
                             <th className="px-3 py-2 text-left text-slate-600 font-medium">Description</th>
                             <th className="px-3 py-2 text-right text-slate-600 font-medium">Qty</th>
                             <th className="px-3 py-2 text-right text-slate-600 font-medium">Rate</th>
@@ -416,9 +441,12 @@ export default function CreateSalesOrderModal({ defaultType = 'manual', onClose,
                         <tbody className="divide-y divide-slate-100">
                           {extractedData.items.map((item, i) => (
                             <tr key={i} className="hover:bg-slate-50">
+                              <td className="px-3 py-2 text-slate-500 font-mono text-[11px] whitespace-nowrap">{item.item_code || '—'}</td>
                               <td className="px-3 py-2 text-slate-700">
                                 <div>{item._product_name || item.description}</div>
-                                {item.item_code && <div className="text-slate-400 text-[10px] mt-0.5">{item.item_code}</div>}
+                                {!item._product_matched && item.description && (
+                                  <span className="text-[10px] text-amber-600">⚠ Not matched in system</span>
+                                )}
                               </td>
                               <td className="px-3 py-2 text-right text-slate-700">{item.quantity}</td>
                               <td className="px-3 py-2 text-right text-slate-700">

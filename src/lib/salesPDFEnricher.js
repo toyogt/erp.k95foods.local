@@ -114,11 +114,13 @@ export async function enrichParsedData(parsedData) {
     enrichedData._customer_id = customerFound.id;
     enrichedData._customer_price_list = customerFound.price_list || '';
     enrichedData._customer_group = customerFound.customer_group || '';
+    enrichedData._customer_region = customerFound.region || customerFound.territory || '';
+    enrichedData.customer_name = customerFound.name || enrichedData.customer_name;
     enrichedData.price_list = priceListUsed || '';
     enrichedData.payment_terms = enrichedData.payment_terms || customerFound.payment_terms || '';
     enrichedData.customer_gstin = enrichedData.customer_gstin || customerFound.gstin || '';
-    enrichedData.billing_address = enrichedData.billing_address || customerFound.billing_address || '';
-    enrichedData.shipping_address = enrichedData.shipping_address || customerFound.shipping_address || '';
+    enrichedData.billing_address = customerFound.billing_address || enrichedData.billing_address || '';
+    enrichedData.shipping_address = customerFound.shipping_address || enrichedData.shipping_address || '';
   }
 
   enrichedData._rate_source = rateSource;

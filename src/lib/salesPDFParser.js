@@ -162,16 +162,35 @@ export function parseSwiggy(text) {
   // Customer GSTIN (from Billing Address block)
   const billingGstin = (full.match(/Billing\s*Address[\s\S]*?GSTIN\s*[:\s]*(\d{2}[A-Z0-9]{13})/i) || [])[1] || '';
 
-  // Customer name
+  // Customer name — extract from Billing Address block, clean prefixes/suffixes
   let customer_name = 'SCOOTSY LOGISTICS PRIVATE LIMITED';
   const custMatch = full.match(/Billing\s*Address\s*\n*\s*([A-Z][A-Z\s]+(?:PRIVATE|LIMITED|LTD|LOGISTICS)[A-Z\s]*)/i);
-  if (custMatch) customer_name = custMatch[1].replace(/\s+/g, ' ').trim();
+  if (custMatch) {
+    customer_name = custMatch[1].replace(/\s+/g, ' ').trim();
+    // Remove "Shipping Address" and other stray prefixes/suffixes
+    customer_name = customer_name
+      .replace(/^Shipping\s*Address\s*/i, '')
+      .replace(/^Billing\s*Address\s*/i, '')
+      .replace(/\s*Survey\s*No\.?.*$/i, '')
+      .replace(/\s*Plot\s*No\.?.*$/i, '')
+      .replace(/\s*Unit\s*No\.?.*$/i, '')
+      .trim();
+  }
 
-  // Addresses
+  // Addresses — strip customer name from start of address blocks
   const billingBlock = full.match(/Billing\s*Address\s*([\s\S]*?)(?:Shipping\s*Address)/i);
-  const billing_address = billingBlock ? billingBlock[1].replace(/\s*\n\s*/g, ' ').replace(/GSTIN.*$/i, '').replace(/Contact.*$/i, '').trim() : '';
+  let billing_address = billingBlock ? billingBlock[1].replace(/\s*\n\s*/g, ' ').replace(/GSTIN.*$/i, '').replace(/Contact.*$/i, '').trim() : '';
+  // Remove customer name from beginning of address if duplicated
+  if (billing_address && customer_name) {
+    const namePattern = new RegExp('^' + customer_name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*', 'i');
+    billing_address = billing_address.replace(namePattern, '').trim();
+  }
   const shippingBlock = full.match(/Shipping\s*Address\s*([\s\S]*?)(?:S\.\s*No|Item\s*Code|Item\s*\nCode)/i);
-  const shipping_address = shippingBlock ? shippingBlock[1].replace(/\s*\n\s*/g, ' ').replace(/GSTIN.*$/i, '').replace(/Contact.*$/i, '').trim() : billing_address;
+  let shipping_address = shippingBlock ? shippingBlock[1].replace(/\s*\n\s*/g, ' ').replace(/GSTIN.*$/i, '').replace(/Contact.*$/i, '').trim() : billing_address;
+  if (shipping_address && customer_name) {
+    const namePattern = new RegExp('^' + customer_name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*', 'i');
+    shipping_address = shipping_address.replace(namePattern, '').trim();
+  }
 
   // --- Line Item Parsing ---
   const items = [];
