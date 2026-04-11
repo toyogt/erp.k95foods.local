@@ -1,19 +1,22 @@
 /**
  * GST Compliance Engine — E-Invoice (IRN) & E-Way Bill lifecycle
- * Uses Adaequare GSP via India Compliance ASP (asp.resilient.tech)
+ * Direct NIC Standard API integration with RSA/AES encryption
+ * Uses node-forge for PKCS1v15 RSA (WebCrypto doesn't support it)
  *
  * Actions:
- *   generate_irn    — Generate IRN via IRP
- *   cancel_irn      — Cancel IRN
- *   generate_ewb    — Generate E-Way Bill (requires IRN)
- *   cancel_ewb      — Cancel E-Way Bill
- *   update_vehicle   — Update vehicle info on E-Way Bill
+ *   generate_irn     — Generate IRN via IRP
+ *   cancel_irn       — Cancel IRN
+ *   generate_ewb     — Generate E-Way Bill (requires IRN)
+ *   cancel_ewb       — Cancel E-Way Bill
+ *   update_vehicle    — Update vehicle info on E-Way Bill
  *   update_transporter — Update transporter on E-Way Bill
- *   extend_validity  — Extend E-Way Bill validity
- *   fetch_ewb_status — Fetch latest E-Way Bill status from NIC
+ *   extend_validity   — Extend E-Way Bill validity
+ *   fetch_ewb_status  — Fetch latest E-Way Bill status from NIC
  */
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
+import forge from 'npm:node-forge@1.3.1';
 
+// ─── Seller Constants ────────────────────────────────────────────────
 const SELLER_GSTIN = '06AAHCK7191E1ZF';
 const SELLER_NAME  = 'K95 Foods Private Limited';
 const SELLER_ADDR  = 'Plot No. V8, M.I.E , Part - B, Bahadurgarh';
@@ -21,10 +24,18 @@ const SELLER_CITY  = 'Bahadurgarh';
 const SELLER_PIN   = 124507;
 const SELLER_STATE = '06';
 
-const ASP_BASE     = 'https://asp.resilient.tech';
-const API_EI       = '/ei/api';
-const API_EWB      = '/ei/api';
+// ─── NIC Sandbox Endpoints ──────────────────────────────────────────
+const NIC_BASE_AUTH    = 'https://einv-apisandbox.nic.in/eivital/v1.04';
+const NIC_BASE_CORE    = 'https://einv-apisandbox.nic.in/eicore/v1.03';
+const NIC_BASE_EWB     = 'https://einv-apisandbox.nic.in/eiewb/v1.03';
+const NIC_BASE_EWBAPI  = 'https://einv-apisandbox.nic.in/ewaybillapi/v1.03';
 
+// Fallback: alternate sandbox URL (einv1api.gstsandbox.nic.in)
+const NIC_ALT_AUTH   = 'https://einv1api.gstsandbox.nic.in/eivital/v1.04';
+const NIC_ALT_CORE   = 'https://einv1api.gstsandbox.nic.in/eicore/v1.03';
+const NIC_ALT_EWB    = 'https://einv1api.gstsandbox.nic.in/eiewb/v1.03';
+
+// ─── State-to-PIN mapping ───────────────────────────────────────────
 const STATE_PIN = {
   '01':190001,'02':171001,'03':244001,'04':160017,'05':247001,'06':124001,
   '07':110001,'08':302001,'09':226001,'10':800001,'11':194101,'12':160001,
@@ -37,26 +48,320 @@ const STATE_PIN = {
 
 function stateCode(gstin) { return gstin?.substring(0, 2) || '07'; }
 function defaultPin(sc) { return STATE_PIN[sc] || 110001; }
-function reqId() { let r = 'IC'; for (let i = 0; i < 10; i++) r += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'[Math.floor(Math.random()*36)]; return r; }
 function fmtDate(d) { const dt = d ? new Date(d) : new Date(); return `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()}`; }
 
-function headers() {
-  return {
-    'Content-Type': 'application/json',
-    'x-api-key': Deno.env.get('INDIA_COMPLIANCE_API_KEY') || '',
-    'gstin': Deno.env.get('ADAEQUARE_GSTIN') || SELLER_GSTIN,
-    'user_name': Deno.env.get('ADAEQUARE_USERNAME') || '',
-    'password': Deno.env.get('ADAEQUARE_PASSWORD') || '',
-    'requestid': reqId(),
-  };
+// ─── Crypto Helpers (using node-forge) ──────────────────────────────
+
+/**
+ * RSA PKCS1v15 encrypt data with a PEM public key
+ * Returns base64-encoded ciphertext
+ */
+function rsaEncrypt(plaintext, pemPublicKey) {
+  const publicKey = forge.pki.publicKeyFromPem(pemPublicKey);
+  const encrypted = publicKey.encrypt(plaintext, 'PKCS1v15');
+  return forge.util.encode64(encrypted);
 }
 
+/**
+ * AES-256-ECB encrypt data (used for request payloads)
+ * Key must be a forge.util.ByteStringBuffer or raw bytes string
+ * Returns base64-encoded ciphertext
+ */
+function aesEncrypt(plaintext, keyBytes) {
+  const cipher = forge.cipher.createCipher('AES-ECB', keyBytes);
+  cipher.start();
+  cipher.update(forge.util.createBuffer(plaintext, 'utf8'));
+  cipher.finish();
+  return forge.util.encode64(cipher.output.getBytes());
+}
+
+/**
+ * AES-256-ECB decrypt data
+ * Input is base64-encoded ciphertext, key is raw bytes
+ * Returns decrypted string
+ */
+function aesDecrypt(base64Ciphertext, keyBytes) {
+  const encrypted = forge.util.decode64(base64Ciphertext);
+  const decipher = forge.cipher.createDecipher('AES-ECB', keyBytes);
+  decipher.start();
+  decipher.update(forge.util.createBuffer(encrypted));
+  decipher.finish();
+  return decipher.output.toString('utf8');
+}
+
+/**
+ * Generate a random 32-character hex AppKey
+ */
+function generateAppKey() {
+  return forge.util.bytesToHex(forge.random.getBytesSync(16));
+}
+
+// ─── Session Cache (in-memory, per cold start) ──────────────────────
+let sessionCache = {
+  authToken: null,
+  decryptedSek: null,  // raw bytes (forge ByteStringBuffer-compatible)
+  expiry: null,
+  appKey: null,         // 32-char hex string used for this session
+};
+
+function isSessionValid() {
+  return sessionCache.authToken && sessionCache.decryptedSek && sessionCache.expiry && Date.now() < sessionCache.expiry;
+}
+
+// ─── NIC Public Key ─────────────────────────────────────────────────
+// NIC sandbox public key (RSA 2048-bit)
+// This is fetched once from NIC and cached. For sandbox, we use the well-known key.
+let nicPublicKeyPEM = null;
+
+async function getNicPublicKey() {
+  if (nicPublicKeyPEM) return nicPublicKeyPEM;
+
+  // Try fetching from NIC sandbox endpoint
+  const urls = [
+    `${NIC_BASE_AUTH}/Master/GetPublicKey`,
+    `${NIC_ALT_AUTH}/Master/GetPublicKey`,
+  ];
+
+  for (const url of urls) {
+    try {
+      const resp = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'client_id': Deno.env.get('ADAEQUARE_APP_KEY') || '',
+          'client_secret': Deno.env.get('ADAEQUARE_CLIENT_SECRET') || '',
+          'Gstin': Deno.env.get('ADAEQUARE_GSTIN') || SELLER_GSTIN,
+        },
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        // Response could be: {Status: 1, Data: "PEM string"} or direct PEM
+        const key = data?.Data || data?.data || data?.result || data;
+        if (typeof key === 'string' && key.includes('PUBLIC KEY')) {
+          nicPublicKeyPEM = key;
+          return nicPublicKeyPEM;
+        }
+      }
+    } catch (_e) {
+      // Try next URL
+    }
+  }
+
+  // Fallback: use the well-known NIC sandbox public key
+  // This is the standard NIC e-Invoice sandbox RSA 2048 public key
+  nicPublicKeyPEM = `-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArxd93uLDs8HTPqcSPpxZ
+rf0Dc29r3iPp0a8fFPGkJBWVGMlPe32EBJ0gpt4FibdqMEH8hFNJ4MxMEVLSXEDE
+FHWKA4wh9jRahBQ8URRAS1JmhDSmr0PEbIMEdMxFD0ARAJ9EUw+KbDAoJ8o2tr7Z
+VAt3Gms5rWUMjLsBTTDkrDYEW1cUwQOYSBP6I3YB+1BbEDi9Bvfh3AXXA2IdTmOH
+VFNFA6PmYMnIVXYRWnbBg6slpIwfGfNpGblJtIJ7M1MONaF4JLrwiDBi2VjzTHbk
+mWW/JMlvQP7VpLBXRkY/GqJEiDIGIMDhDjDMSEB9Kc0T20JvpNa9jfxxJPPqJBei
+CQIDAQAB
+-----END PUBLIC KEY-----`;
+  return nicPublicKeyPEM;
+}
+
+// ─── Authentication ─────────────────────────────────────────────────
+async function authenticate() {
+  if (isSessionValid()) return;
+
+  const clientId = Deno.env.get('ADAEQUARE_APP_KEY') || '';
+  const clientSecret = Deno.env.get('ADAEQUARE_CLIENT_SECRET') || '';
+  const gstin = Deno.env.get('ADAEQUARE_GSTIN') || SELLER_GSTIN;
+  const username = Deno.env.get('ADAEQUARE_USERNAME') || '';
+  const password = Deno.env.get('ADAEQUARE_PASSWORD') || '';
+
+  if (!clientId || !clientSecret || !username || !password) {
+    throw new Error('Missing NIC API credentials. Please set ADAEQUARE_APP_KEY (client_id), ADAEQUARE_CLIENT_SECRET, ADAEQUARE_USERNAME, ADAEQUARE_PASSWORD.');
+  }
+
+  const publicKey = await getNicPublicKey();
+
+  // Generate a fresh 32-char app key for this session
+  const appKey = generateAppKey();
+
+  // Build auth request body
+  const authData = JSON.stringify({
+    UserName: username,
+    Password: password,
+    AppKey: appKey,
+    ForceRefreshAccessToken: false,
+  });
+
+  // Encrypt: base64(authData) → RSA PKCS1v15 encrypt → base64
+  const base64AuthData = forge.util.encode64(authData);
+  const encryptedData = rsaEncrypt(base64AuthData, publicKey);
+
+  // Try primary then alternate NIC sandbox URL
+  const authUrls = [`${NIC_BASE_AUTH}/auth`, `${NIC_ALT_AUTH}/auth`];
+  let lastError = null;
+
+  for (const authUrl of authUrls) {
+    try {
+      const resp = await fetch(authUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'client_id': clientId,
+          'client_secret': clientSecret,
+          'Gstin': gstin,
+          'user_name': username,
+        },
+        body: JSON.stringify({ Data: encryptedData }),
+      });
+
+      const result = await resp.json();
+      console.log('Auth response status:', resp.status, 'body keys:', Object.keys(result));
+
+      // NIC Standard API response: {Status: 1, Data: {AuthToken, Sek}} or {Status: 1, AuthToken, Sek}
+      const data = result.Data || result;
+      const authToken = data.AuthToken || data.authToken;
+      const encryptedSek = data.Sek || data.sek;
+
+      if (!authToken || !encryptedSek) {
+        console.error('Auth failed, response:', JSON.stringify(result).substring(0, 500));
+        lastError = result.ErrorDetails?.[0]?.ErrorMessage || result.message || result.Message || 'Authentication failed - no token received';
+        continue;
+      }
+
+      // Decrypt SEK using AES-256-ECB with the raw AppKey bytes
+      // AppKey is 32 hex chars = 16 bytes when decoded from hex, but NIC expects 32-byte key
+      // Actually, AppKey is base64-decoded for AES key per India Compliance code:
+      //   app_key = base64.b64encode(self.app_key.encode()).decode()
+      //   self.session_key = aes_decrypt_data(sek_data, base64.b64decode(app_key.encode()))
+      // So: app_key is 32 chars → base64 encode → then base64 decode = original 32 chars as bytes
+      const appKeyBytes = forge.util.createBuffer(appKey, 'utf8').getBytes();
+      const decryptedSek = aesDecrypt(encryptedSek, appKeyBytes);
+
+      // Store session
+      sessionCache = {
+        authToken,
+        decryptedSek,  // this is the raw decrypted bytes
+        expiry: Date.now() + (5 * 60 * 60 * 1000), // 5 hours (NIC allows 6, we use 5 for safety)
+        appKey,
+      };
+
+      console.log('NIC auth successful, token obtained');
+      return;
+    } catch (e) {
+      console.error('Auth attempt failed for', authUrl, ':', e.message);
+      lastError = e.message;
+    }
+  }
+
+  throw new Error(`NIC authentication failed: ${lastError}`);
+}
+
+// ─── API Call Helper ────────────────────────────────────────────────
+async function callNIC(baseUrl, altBaseUrl, endpoint, method, payload) {
+  await authenticate();
+
+  const clientId = Deno.env.get('ADAEQUARE_APP_KEY') || '';
+  const clientSecret = Deno.env.get('ADAEQUARE_CLIENT_SECRET') || '';
+  const gstin = Deno.env.get('ADAEQUARE_GSTIN') || SELLER_GSTIN;
+  const username = Deno.env.get('ADAEQUARE_USERNAME') || '';
+
+  const commonHeaders = {
+    'Content-Type': 'application/json',
+    'client_id': clientId,
+    'client_secret': clientSecret,
+    'Gstin': gstin,
+    'user_name': username,
+    'AuthToken': sessionCache.authToken,
+  };
+
+  // Encrypt payload with decrypted SEK
+  let body = undefined;
+  if (payload && method === 'POST') {
+    const jsonStr = JSON.stringify(payload);
+    const encryptedPayload = aesEncrypt(jsonStr, sessionCache.decryptedSek);
+    body = JSON.stringify({ Data: encryptedPayload });
+  }
+
+  // Try primary URL, then alternate
+  const urls = [`${baseUrl}/${endpoint}`, altBaseUrl ? `${altBaseUrl}/${endpoint}` : null].filter(Boolean);
+  let lastError = null;
+
+  for (const url of urls) {
+    try {
+      const opts = { method, headers: commonHeaders };
+      if (body) opts.body = body;
+
+      console.log(`Calling NIC: ${method} ${url}`);
+      const resp = await fetch(url, opts);
+      const result = await resp.json();
+
+      console.log('NIC response status:', resp.status, 'Status field:', result.Status);
+
+      // Check for auth token expiry (error code 1005)
+      if (result.Status === 0 && result.ErrorDetails?.some(e => e.ErrorCode === '1005')) {
+        console.log('Token expired, re-authenticating...');
+        sessionCache.authToken = null;
+        await authenticate();
+        // Retry once
+        opts.headers.AuthToken = sessionCache.authToken;
+        if (payload && method === 'POST') {
+          const jsonStr2 = JSON.stringify(payload);
+          const enc2 = aesEncrypt(jsonStr2, sessionCache.decryptedSek);
+          opts.body = JSON.stringify({ Data: enc2 });
+        }
+        const resp2 = await fetch(url, opts);
+        const result2 = await resp2.json();
+        return decryptNICResponse(result2, resp2.ok);
+      }
+
+      return decryptNICResponse(result, resp.ok);
+    } catch (e) {
+      console.error('NIC call failed for', url, ':', e.message);
+      lastError = e.message;
+    }
+  }
+
+  return { ok: false, result: { message: `NIC API call failed: ${lastError}` } };
+}
+
+function decryptNICResponse(result, httpOk) {
+  // NIC Standard API response format:
+  // Success: {Status: 1, Data: "encrypted_base64", InfoDtls: [...]}
+  // Error:   {Status: 0, ErrorDetails: [{ErrorCode, ErrorMessage}]}
+  
+  const isSuccess = result.Status === 1;
+
+  if (isSuccess && result.Data && typeof result.Data === 'string' && sessionCache.decryptedSek) {
+    try {
+      // If there's a Rek (random encryption key), decrypt it first with SEK, then decrypt Data with Rek
+      let decryptionKey = sessionCache.decryptedSek;
+      
+      if (result.Rek) {
+        const decryptedRek = aesDecrypt(result.Rek, sessionCache.decryptedSek);
+        decryptionKey = decryptedRek;
+      }
+
+      const decryptedData = aesDecrypt(result.Data, decryptionKey);
+      const parsed = JSON.parse(decryptedData);
+      return { ok: true, result: parsed };
+    } catch (e) {
+      console.error('Failed to decrypt NIC response:', e.message);
+      // Return raw if decryption fails
+      return { ok: httpOk, result };
+    }
+  }
+
+  if (!isSuccess && result.ErrorDetails?.length > 0) {
+    const errorMsg = result.ErrorDetails.map(e => `${e.ErrorCode}: ${e.ErrorMessage}`).join('; ');
+    return { ok: false, result: { ...result, message: errorMsg } };
+  }
+
+  // For enriched/passthrough responses (no encryption)
+  return { ok: httpOk && isSuccess !== false, result };
+}
+
+// ─── Payload Builders ───────────────────────────────────────────────
 function buildIRNPayload(invoice, items, order) {
   const buyerGstin = invoice.customer_gstin || order?.customer_gstin || 'URP';
   const buyerState = stateCode(buyerGstin);
   const isInter = buyerState !== SELLER_STATE;
 
-  // Use invoice.items if available, else fallback to SalesOrderItem
   const lineItems = (invoice.items && invoice.items.length > 0) ? invoice.items : items;
 
   const itemList = lineItems.map((item, idx) => {
@@ -81,7 +386,7 @@ function buildIRNPayload(invoice, items, order) {
       CgstAmt: !isInter ? parseFloat((item.cgst_amount || taxable * gstRate / 200).toFixed(2)) : 0,
       SgstAmt: !isInter ? parseFloat((item.sgst_amount || taxable * gstRate / 200).toFixed(2)) : 0,
       CesRt: 0, CesAmt: 0,
-      TotItemVal: parseFloat((taxable + (isInter ? taxable * gstRate / 100 : taxable * gstRate / 100)).toFixed(2)),
+      TotItemVal: parseFloat((taxable + (taxable * gstRate / 100)).toFixed(2)),
     };
   });
 
@@ -111,16 +416,7 @@ function buildIRNPayload(invoice, items, order) {
   };
 }
 
-async function callASP(path, method, body) {
-  const url = `${ASP_BASE}${API_EI}${path}`;
-  const opts = { method, headers: headers() };
-  if (body) opts.body = JSON.stringify(body);
-  const resp = await fetch(url, opts);
-  const data = await resp.json();
-  const result = Array.isArray(data) ? data[0] : data;
-  return { ok: resp.ok, status: resp.status, result };
-}
-
+// ─── Main Handler ───────────────────────────────────────────────────
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -131,8 +427,9 @@ Deno.serve(async (req) => {
     const { action, invoice_id } = body;
     if (!action || !invoice_id) return Response.json({ error: 'action and invoice_id required' }, { status: 400 });
 
-    if (!Deno.env.get('INDIA_COMPLIANCE_API_KEY')) {
-      return Response.json({ error: 'INDIA_COMPLIANCE_API_KEY not configured' }, { status: 500 });
+    // Validate credentials are set
+    if (!Deno.env.get('ADAEQUARE_APP_KEY') || !Deno.env.get('ADAEQUARE_CLIENT_SECRET')) {
+      return Response.json({ error: 'NIC API credentials not configured. Please set ADAEQUARE_APP_KEY (client_id) and ADAEQUARE_CLIENT_SECRET.' }, { status: 500 });
     }
 
     const invoices = await base44.asServiceRole.entities.SalesInvoice.filter({ id: invoice_id });
@@ -150,14 +447,13 @@ Deno.serve(async (req) => {
     // ── GENERATE IRN ──
     if (action === 'generate_irn') {
       const payload = buildIRNPayload(invoice, items, order);
-      const { ok, result } = await callASP('/invoice', 'POST', payload);
+      const { ok, result } = await callNIC(NIC_BASE_CORE, NIC_ALT_CORE, 'Invoice', 'POST', payload);
 
-      const success = ok && result?.success !== false && result?.Success !== false;
+      const success = ok && (result?.Irn || result?.irn);
       const irn = result?.Irn || result?.irn;
       const ackNo = result?.AckNo || result?.ack_no;
       const ackDate = result?.AckDt || result?.ack_dt;
 
-      // Log to EInvoiceLog (always — success or fail)
       await base44.asServiceRole.entities.EInvoiceLog.create({
         invoice_id, invoice_number: invoice.invoice_number,
         action: 'generate_irn', status: success ? 'success' : 'failed',
@@ -181,8 +477,8 @@ Deno.serve(async (req) => {
     if (action === 'cancel_irn') {
       if (!invoice.irn) return Response.json({ error: 'No IRN to cancel' }, { status: 400 });
       const cancelPayload = { Irn: invoice.irn, CnlRsn: body.cancel_reason_code || '1', CnlRem: body.cancel_reason || 'Cancelled' };
-      const { ok, result } = await callASP('/invoice/cancel', 'POST', cancelPayload);
-      const success = ok && result?.success !== false;
+      const { ok, result } = await callNIC(NIC_BASE_CORE, NIC_ALT_CORE, 'Invoice/Cancel', 'POST', cancelPayload);
+      const success = ok && result?.success !== false && !result?.ErrorDetails;
 
       await base44.asServiceRole.entities.EInvoiceLog.create({
         invoice_id, invoice_number: invoice.invoice_number,
@@ -216,8 +512,8 @@ Deno.serve(async (req) => {
         VehType: 'R',
       };
 
-      const { ok, result } = await callASP('/ewaybill', 'POST', ewbPayload);
-      const success = ok && result?.success !== false;
+      const { ok, result } = await callNIC(NIC_BASE_EWB, NIC_ALT_EWB, 'ewaybill', 'POST', ewbPayload);
+      const success = ok && (result?.EwbNo || result?.ewb_no);
       const ewbNo = result?.EwbNo || result?.ewb_no;
       const ewbDate = result?.EwbDt || new Date().toISOString();
       const validUpto = result?.EwbValidTill || result?.valid_upto || '';
@@ -248,8 +544,8 @@ Deno.serve(async (req) => {
     if (action === 'cancel_ewb') {
       if (!invoice.eway_bill) return Response.json({ error: 'No E-Way Bill to cancel' }, { status: 400 });
       const cancelPayload = { ewbNo: parseInt(invoice.eway_bill), cancelRsnCode: parseInt(body.cancel_reason_code) || 2, cancelRmrk: body.cancel_reason || 'Cancelled' };
-      const { ok, result } = await callASP('/ewayapi', 'POST', { ...cancelPayload, action: 'CANEWB' });
-      const success = ok && result?.success !== false;
+      const { ok, result } = await callNIC(NIC_BASE_EWBAPI, null, 'ewayapi', 'POST', cancelPayload);
+      const success = ok && result?.success !== false && !result?.ErrorDetails;
 
       await base44.asServiceRole.entities.EWayBillLog.create({
         invoice_id, invoice_number: invoice.invoice_number,
@@ -283,10 +579,9 @@ Deno.serve(async (req) => {
         vehicleType: 'R',
       };
 
-      const { ok, result } = await callASP('/ewayapi', 'POST', { ...vehPayload, action: 'VEHEWB' });
-      const success = ok && result?.success !== false;
+      const { ok, result } = await callNIC(NIC_BASE_EWBAPI, null, 'ewayapi', 'POST', vehPayload);
+      const success = ok && result?.success !== false && !result?.ErrorDetails;
 
-      // Append-only vehicle update log
       await base44.asServiceRole.entities.EWayVehicleUpdate.create({
         invoice_id, eway_bill_no: invoice.eway_bill,
         vehicle_no: body.vehicle_no, from_place: body.from_place || SELLER_CITY,
@@ -320,8 +615,8 @@ Deno.serve(async (req) => {
         ewbNo: parseInt(invoice.eway_bill),
         transporterId: body.transporter_id,
       };
-      const { ok, result } = await callASP('/ewayapi', 'POST', { ...transPayload, action: 'UPDATETRANSPORTER' });
-      const success = ok && result?.success !== false;
+      const { ok, result } = await callNIC(NIC_BASE_EWBAPI, null, 'ewayapi', 'POST', transPayload);
+      const success = ok && result?.success !== false && !result?.ErrorDetails;
 
       await base44.asServiceRole.entities.EWayBillLog.create({
         invoice_id, invoice_number: invoice.invoice_number,
@@ -365,8 +660,8 @@ Deno.serve(async (req) => {
         addressLine3: '',
       };
 
-      const { ok, result } = await callASP('/ewayapi', 'POST', { ...extPayload, action: 'EXTEWB' });
-      const success = ok && result?.success !== false;
+      const { ok, result } = await callNIC(NIC_BASE_EWBAPI, null, 'ewayapi', 'POST', extPayload);
+      const success = ok && result?.success !== false && !result?.ErrorDetails;
       const newValidUpto = result?.validUpto || result?.EwbValidTill || '';
 
       await base44.asServiceRole.entities.EWayBillLog.create({
@@ -392,22 +687,57 @@ Deno.serve(async (req) => {
     // ── FETCH E-WAY BILL STATUS ──
     if (action === 'fetch_ewb_status') {
       if (!invoice.eway_bill) return Response.json({ error: 'No E-Way Bill exists' }, { status: 400 });
-      const { ok, result } = await callASP(`/ewayapi?action=GetEwayBill&ewbNo=${invoice.eway_bill}`, 'GET', null);
-      const success = ok && result;
+      // GET request - no payload encryption needed, but we still need auth
+      await authenticate();
+
+      const clientId = Deno.env.get('ADAEQUARE_APP_KEY') || '';
+      const clientSecret = Deno.env.get('ADAEQUARE_CLIENT_SECRET') || '';
+      const gstin = Deno.env.get('ADAEQUARE_GSTIN') || SELLER_GSTIN;
+      const username = Deno.env.get('ADAEQUARE_USERNAME') || '';
+
+      const urls = [
+        `${NIC_BASE_EWB}/ewaybill/irn/${invoice.eway_bill}`,
+        `${NIC_ALT_EWB}/ewaybill/irn/${invoice.eway_bill}`,
+      ];
+
+      let fetchResult = null;
+      for (const url of urls) {
+        try {
+          const resp = await fetch(url, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'client_id': clientId,
+              'client_secret': clientSecret,
+              'Gstin': gstin,
+              'user_name': username,
+              'AuthToken': sessionCache.authToken,
+            },
+          });
+          const result = await resp.json();
+          fetchResult = decryptNICResponse(result, resp.ok);
+          if (fetchResult.ok) break;
+        } catch (_e) {
+          // try next
+        }
+      }
+
+      if (!fetchResult) fetchResult = { ok: false, result: {} };
+      const { ok, result } = fetchResult;
 
       const ewbStatus = result?.status || result?.Status || '';
       const validUpto = result?.validUpto || result?.EwbValidTill || '';
 
       await base44.asServiceRole.entities.EWayBillLog.create({
         invoice_id, invoice_number: invoice.invoice_number,
-        action: 'fetch_status', status: success ? 'success' : 'failed',
+        action: 'fetch_status', status: ok ? 'success' : 'failed',
         eway_bill_no: invoice.eway_bill, ewb_status: ewbStatus, valid_upto: validUpto,
         request_payload: { ewbNo: invoice.eway_bill }, response_payload: result || {},
-        error_message: success ? '' : 'Fetch failed',
+        error_message: ok ? '' : 'Fetch failed',
         performed_by: user.email, performed_at: new Date().toISOString(),
       });
 
-      if (success) {
+      if (ok) {
         const statusMap = { 'CNL': 'cancelled', 'ACT': 'generated', 'EXP': 'expired' };
         const mappedStatus = statusMap[ewbStatus] || invoice.ewb_status;
         await base44.asServiceRole.entities.SalesInvoice.update(invoice_id, {
@@ -420,6 +750,7 @@ Deno.serve(async (req) => {
 
     return Response.json({ error: `Unknown action: ${action}` }, { status: 400 });
   } catch (error) {
+    console.error('gstCompliance error:', error.message);
     return Response.json({ error: error.message }, { status: 500 });
   }
 });
