@@ -60,6 +60,12 @@
       "type": "number",
       "minimum": 0
     },
+    "current_stock": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0,
+      "description": "Current available stock in boxes/cases"
+    },
     "hsn_code": {
       "type": "string",
       "maxLength": 20,
