@@ -50,7 +50,13 @@ export default function LblOperatorQueue() {
         <div className="text-center py-12 bg-white border border-slate-200 rounded-lg"><Tag className="w-8 h-8 text-slate-300 mx-auto mb-2" /><p className="text-slate-500">No jobs for today</p></div>
       ) : Object.entries(byLine).map(([lineName, lineJobs]) => {
         const planGroups = getPlanGroups(lineJobs);
-        const firstPendingId = lineJobs.find(j => j.status === 'pending')?.id;
+        // A pending job is only actionable if ALL lower-priority jobs are completed or cancelled
+  const completedOrCancelled = new Set(['completed', 'cancelled']);
+  const firstPendingId = lineJobs.find(j =>
+    j.status === 'pending' &&
+    lineJobs.filter(other => other.priority_order < j.priority_order)
+            .every(other => completedOrCancelled.has(other.status))
+  )?.id;
         return (
           <div key={lineName} className="space-y-4">
             <h2 className="text-sm font-semibold text-slate-900 flex items-center gap-2"><Tag className="w-4 h-4 text-pink-600" />{lineName}<span className="text-xs text-slate-400 font-normal">{lineJobs.filter(j => j.status === 'completed').length}/{lineJobs.length} completed</span></h2>
