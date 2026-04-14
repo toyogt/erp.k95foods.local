@@ -10,7 +10,7 @@ import { toast } from '@/components/ui/use-toast';
 import { Plus, Pencil, Loader2, Save, Tag, Trash2 } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
-const EDIT_ROLES = ['admin', 'production_manager', 'labelling_supervisor'];
+const EDIT_ROLES = ['admin', 'production_manager', 'labelling_supervisor', 'lbl_supervisor'];
 
 export default function LblLineManager({ userRole = 'user' }) {
   const queryClient = useQueryClient();
@@ -112,7 +112,16 @@ export default function LblLineManager({ userRole = 'user' }) {
           <DialogHeader><DialogTitle>{editModal === 'new' ? 'Add Labelling Line' : 'Edit Labelling Line'}</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1"><Label className="text-xs font-medium text-slate-700">Display Name</Label><Input value={form.display_name} onChange={e => { const name = e.target.value; setForm(f => ({ ...f, display_name: name, ...(editModal === 'new' ? { machine_id: autoId(name) } : {}) })); }} placeholder="e.g. Labelling Line 1" className="h-11 md:h-9" /></div>
-            <div className="space-y-1"><Label className="text-xs font-medium text-slate-700">Machine ID</Label><Input value={form.machine_id} className="h-11 md:h-9 bg-slate-50 text-slate-500" disabled /><p className="text-xs text-slate-500">Auto-generated from display name</p></div>
+            <div className="space-y-1">
+              <Label className="text-xs font-medium text-slate-700">Machine ID</Label>
+              <Input
+                value={form.machine_id}
+                onChange={e => setForm(f => ({ ...f, machine_id: e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, '') }))}
+                className="h-11 md:h-9 font-mono"
+                placeholder="e.g. LL-1"
+              />
+              {editModal === 'new' && <p className="text-xs text-slate-500">Auto-generated from display name — you can edit it</p>}
+            </div>
             <div className="space-y-1"><Label className="text-xs font-medium text-slate-700">Location (Optional)</Label><Input value={form.default_location} onChange={e => setForm(f => ({ ...f, default_location: e.target.value }))} placeholder="e.g. Block A" className="h-11 md:h-9" /></div>
             <div className="flex items-center justify-between"><Label className="text-xs font-medium text-slate-700">Active</Label><Switch checked={form.is_active} onCheckedChange={v => setForm(f => ({ ...f, is_active: v }))} /></div>
             <Button className="h-11 w-full gap-2" onClick={handleSave} disabled={saving}>{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}Save</Button>

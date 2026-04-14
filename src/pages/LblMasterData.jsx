@@ -5,7 +5,7 @@ import LblLineManager from '@/components/labelling/LblLineManager';
 import LblPrinterManager from '@/components/labelling/LblPrinterManager';
 import { Tag, Printer, Shield } from 'lucide-react';
 
-const EDIT_ROLES = ['admin', 'production_manager', 'labelling_supervisor'];
+const EDIT_ROLES = ['admin', 'production_manager', 'labelling_supervisor', 'lbl_supervisor'];
 
 export default function LblMasterData() {
   const [tab, setTab] = useState('lines');
