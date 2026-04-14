@@ -172,7 +172,7 @@ export default function LblPrinterManager({ userRole = 'user' }) {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {printers.map(p => (
-                  <tr key={p.id} className="hover:bg-slate-50">
+                  <tr key={p.id} className="hover:bg-slate-50 cursor-pointer" onClick={() => canEdit && openEdit(p)}>
                     <td className="px-4 py-3 font-mono text-sm font-medium">{p.printer_id}</td>
                     <td className="px-4 py-3">{p.name}</td>
                     <td className="px-4 py-3 text-slate-500">{p.line_name || '—'}</td>
@@ -183,9 +183,11 @@ export default function LblPrinterManager({ userRole = 'user' }) {
                         {p.is_active !== false ? 'Active' : 'Inactive'}
                       </span>
                     </td>
-                    <td className="px-4 py-3 flex items-center gap-1">
-                      {canEdit && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(p)}><Pencil className="w-3.5 h-3.5" /></Button>}
-                      {canEdit && <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => setDeleteTarget(p.id)}><Trash2 className="w-3.5 h-3.5" /></Button>}
+                    <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                      <div className="flex items-center gap-1">
+                        {canEdit && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(p)}><Pencil className="w-3.5 h-3.5" /></Button>}
+                        {canEdit && <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => setDeleteTarget(p.id)}><Trash2 className="w-3.5 h-3.5" /></Button>}
+                      </div>
                     </td>
                   </tr>
                 ))}
