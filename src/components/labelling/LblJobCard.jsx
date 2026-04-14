@@ -1,25 +1,34 @@
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { JOB_STATUSES, getNextOperatorAction } from '@/lib/labellingHelpers';
 import { Button } from '@/components/ui/button';
 import { ChevronRight, Lock, CheckCircle2 } from 'lucide-react';
 
 export default function LblJobCard({ job, isFirst, planLocked }) {
+  const navigate = useNavigate();
   const st = JOB_STATUSES[job.status] || JOB_STATUSES.pending;
   const nextAction = getNextOperatorAction(job.status);
   const isCompleted = job.status === 'completed';
   const isCancelled = job.status === 'cancelled';
   const isPending = job.status === 'pending';
-  // Non-pending jobs (active, bulk_printing, paused, etc.) are always actionable directly
-  // Pending jobs are only actionable if they are the first in queue (isFirst)
   const isActionable = planLocked && !isCompleted && !isCancelled && (!isPending || isFirst);
   const isLocked = planLocked && isPending && !isFirst;
+  const isAwaiting = isActionable && !nextAction && job.status === 'demo_pending_approval';
+
+  const handleClick = () => {
+    if (isActionable && !isAwaiting) navigate(`/LblOperatorJob?jobId=${job.id}`);
+  };
 
   return (
-    <div className={`border rounded-lg p-4 transition-all ${
-      isCompleted ? 'border-green-200 bg-green-50/50' :
-      isLocked ? 'border-slate-200 bg-slate-50 opacity-60' :
-      isActionable ? 'border-blue-200 bg-white shadow-sm' : 'border-slate-200 bg-white'
-    }`}>
+    <div
+      onClick={handleClick}
+      className={`border rounded-lg p-4 transition-all ${
+        isCompleted ? 'border-green-200 bg-green-50/50' :
+        isLocked ? 'border-slate-200 bg-slate-50 opacity-60' :
+        isAwaiting ? 'border-amber-200 bg-amber-50/30' :
+        isActionable ? 'border-blue-200 bg-white shadow-sm cursor-pointer hover:border-blue-400 hover:shadow-md active:bg-blue-50' :
+        'border-slate-200 bg-white'
+      }`}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
@@ -32,7 +41,7 @@ export default function LblJobCard({ job, isFirst, planLocked }) {
             <span>Planned: {job.quantity_bottles_planned?.toLocaleString()} bottles</span>
             {job.quantity_cases_planned > 0 && <span>{job.quantity_cases_planned} cases</span>}
             {job.manufacturing_date && <span>Manufacturing Date: {job.manufacturing_date}</span>}
-            {job.batch_no && <span>Batch {job.batch_no}</span>}
+            {job.batch_no && <span>Batch: {job.batch_no}</span>}
           </div>
           {(job.status === 'bulk_printing' || job.status === 'paused' || isCompleted) && (
             <div className="mt-2">
@@ -41,8 +50,10 @@ export default function LblJobCard({ job, isFirst, planLocked }) {
                 <span>Target: {job.quantity_bottles_planned?.toLocaleString()}</span>
               </div>
               <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
-                <div className={`h-full rounded-full ${isCompleted ? 'bg-green-500' : 'bg-indigo-500'}`}
-                  style={{ width: `${Math.min(100, ((job.current_printed_qty || 0) / (job.quantity_bottles_planned || 1)) * 100)}%` }} />
+                <div
+                  className={`h-full rounded-full ${isCompleted ? 'bg-green-500' : 'bg-indigo-500'}`}
+                  style={{ width: `${Math.min(100, ((job.current_printed_qty || 0) / (job.quantity_bottles_planned || 1)) * 100)}%` }}
+                />
               </div>
             </div>
           )}
@@ -50,15 +61,17 @@ export default function LblJobCard({ job, isFirst, planLocked }) {
         <div className="flex items-center gap-2 shrink-0">
           {isLocked && <Lock className="w-4 h-4 text-slate-300" />}
           {isCompleted && <CheckCircle2 className="w-5 h-5 text-green-500" />}
-          {isActionable && nextAction && (
-            <Link to={`/LblOperatorJob?jobId=${job.id}`}>
-              <Button size="sm" className={`h-9 gap-1 text-white ${nextAction.buttonColor}`}>
-                {nextAction.action} <ChevronRight className="w-3.5 h-3.5" />
-              </Button>
-            </Link>
-          )}
-          {isActionable && !nextAction && job.status === 'demo_pending_approval' && (
+          {isAwaiting && (
             <span className="text-xs text-amber-600 font-medium">Awaiting Supervisor</span>
+          )}
+          {isActionable && nextAction && (
+            <Button
+              size="sm"
+              className={`h-9 gap-1 text-white ${nextAction.buttonColor}`}
+              onClick={e => { e.stopPropagation(); navigate(`/LblOperatorJob?jobId=${job.id}`); }}
+            >
+              {nextAction.action} <ChevronRight className="w-3.5 h-3.5" />
+            </Button>
           )}
         </div>
       </div>
