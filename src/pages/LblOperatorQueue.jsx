@@ -52,11 +52,14 @@ export default function LblOperatorQueue() {
         const planGroups = getPlanGroups(lineJobs);
         // A pending job is only actionable if ALL lower-priority jobs are completed or cancelled
   const completedOrCancelled = new Set(['completed', 'cancelled']);
-  const firstPendingId = lineJobs.find(j =>
+  // A job is "in progress" if it's started but not done
+  const hasAnyInProgress = lineJobs.some(j => !completedOrCancelled.has(j.status) && j.status !== 'pending');
+  // Only mark a pending job as "first" (actionable) if no other job is currently in progress
+  const firstPendingId = !hasAnyInProgress ? lineJobs.find(j =>
     j.status === 'pending' &&
     lineJobs.filter(other => other.priority_order < j.priority_order)
             .every(other => completedOrCancelled.has(other.status))
-  )?.id;
+  )?.id : null;
         return (
           <div key={lineName} className="space-y-4">
             <h2 className="text-sm font-semibold text-slate-900 flex items-center gap-2"><Tag className="w-4 h-4 text-pink-600" />{lineName}<span className="text-xs text-slate-400 font-normal">{lineJobs.filter(j => j.status === 'completed').length}/{lineJobs.length} completed</span></h2>
