@@ -32,6 +32,7 @@ export default function LblPrinterManager({ userRole = 'user' }) {
   const [fetchingPrinters, setFetchingPrinters] = useState(false);
   const [detectedPrinters, setDetectedPrinters] = useState([]);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [errors, setErrors] = useState({});
   const canEdit = true;
 
   const { data: printers = [], isLoading } = useQuery({
@@ -43,7 +44,7 @@ export default function LblPrinterManager({ userRole = 'user' }) {
     queryFn: () => base44.entities.Machine.filter({ machine_type: 'LABEL-LINE', is_active: true }),
   });
 
-  const openNew = () => { setForm(EMPTY_FORM); setDetectedPrinters([]); setEditModal('new'); };
+  const openNew = () => { setForm(EMPTY_FORM); setDetectedPrinters([]); setErrors({}); setEditModal('new'); };
   const openEdit = (p) => {
     setForm({
       printer_id: p.printer_id, name: p.name, line_id: p.line_id || '', line_name: p.line_name || '',
@@ -58,6 +59,7 @@ export default function LblPrinterManager({ userRole = 'user' }) {
       is_active: p.is_active !== false, notes: p.notes || '',
     });
     setDetectedPrinters([]);
+    setErrors({});
     setEditModal(p.id);
   };
 
@@ -97,8 +99,16 @@ export default function LblPrinterManager({ userRole = 'user' }) {
   };
 
   const handleSave = async () => {
-    if (!form.printer_id.trim() || !form.name.trim()) { toast({ title: 'Printer ID and Name are required', variant: 'destructive' }); return; }
-    if (!form.register_app_link.trim() && !form.api_endpoint.trim()) { toast({ title: 'Middleware URL is required', variant: 'destructive' }); return; }
+    const newErrors = {};
+    if (!form.printer_id.trim()) newErrors.printer_id = 'Printer ID is required';
+    if (!form.name.trim()) newErrors.name = 'Printer Name is required';
+    if (!form.register_app_link.trim() && !form.api_endpoint.trim()) newErrors.register_app_link = 'Middleware URL is required';
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      toast({ title: 'Please fix the errors below', variant: 'destructive' });
+      return;
+    }
+    setErrors({});
     setSaving(true);
     const data = {
       ...form,
@@ -205,11 +215,13 @@ export default function LblPrinterManager({ userRole = 'user' }) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs font-medium text-slate-700">Printer ID <span className="text-red-500">*</span></Label>
-                <Input value={form.printer_id} onChange={e => setForm(f => ({ ...f, printer_id: e.target.value }))} placeholder="e.g. PRT-01" className="h-11 md:h-9" />
+                <Input value={form.printer_id} onChange={e => { setForm(f => ({ ...f, printer_id: e.target.value })); setErrors(er => ({ ...er, printer_id: '' })); }} placeholder="e.g. PRT-01" className={`h-11 md:h-9 ${errors.printer_id ? 'border-red-500' : ''}`} />
+                {errors.printer_id && <p className="text-xs text-red-600">{errors.printer_id}</p>}
               </div>
               <div className="space-y-1">
                 <Label className="text-xs font-medium text-slate-700">Printer Name <span className="text-red-500">*</span></Label>
-                <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Label Printer 1" className="h-11 md:h-9" />
+                <Input value={form.name} onChange={e => { setForm(f => ({ ...f, name: e.target.value })); setErrors(er => ({ ...er, name: '' })); }} placeholder="e.g. Label Printer 1" className={`h-11 md:h-9 ${errors.name ? 'border-red-500' : ''}`} />
+                {errors.name && <p className="text-xs text-red-600">{errors.name}</p>}
               </div>
             </div>
 
@@ -227,7 +239,8 @@ export default function LblPrinterManager({ userRole = 'user' }) {
               <p className="text-xs font-semibold text-slate-700 uppercase tracking-wide">Middleware Connection</p>
               <div className="space-y-1">
                 <Label className="text-xs font-medium text-slate-700">Primary Middleware URL <span className="text-red-500">*</span></Label>
-                <Input value={form.register_app_link} onChange={e => setForm(f => ({ ...f, register_app_link: e.target.value }))} placeholder="http://192.168.1.50:8080" className="h-11 md:h-9 font-mono text-sm" />
+                <Input value={form.register_app_link} onChange={e => { setForm(f => ({ ...f, register_app_link: e.target.value })); setErrors(er => ({ ...er, register_app_link: '' })); }} placeholder="http://192.168.1.50:8080" className={`h-11 md:h-9 font-mono text-sm ${errors.register_app_link ? 'border-red-500' : ''}`} />
+                {errors.register_app_link && <p className="text-xs text-red-600">{errors.register_app_link}</p>}
                 <p className="text-xs text-slate-500">The service will auto-append /print for print commands</p>
               </div>
               <div className="space-y-1">
