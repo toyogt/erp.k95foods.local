@@ -13,7 +13,7 @@ import { toast } from '@/components/ui/use-toast';
 import { getRynanMiddlewareSnapshot } from '@/lib/rynanPrinterService';
 import { Plus, Pencil, Loader2, Save, Printer, Trash2, Download } from 'lucide-react';
 
-const EDIT_ROLES = ['admin', 'production_manager', 'labelling_supervisor', 'lbl_supervisor'];
+const EDIT_ROLES = ['admin', 'production_manager', 'labelling_supervisor', 'lbl_supervisor', 'user'];
 
 const EMPTY_FORM = {
   printer_id: '', name: '', line_id: '', line_name: '',
@@ -207,7 +207,7 @@ export default function LblPrinterManager({ userRole = 'user' }) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs font-medium text-slate-700">Printer ID <span className="text-red-500">*</span></Label>
-                <Input value={form.printer_id} onChange={e => setForm(f => ({ ...f, printer_id: e.target.value }))} placeholder="e.g. PRT-01" className="h-11 md:h-9" disabled={editModal !== 'new'} />
+                <Input value={form.printer_id} onChange={e => setForm(f => ({ ...f, printer_id: e.target.value }))} placeholder="e.g. PRT-01" className="h-11 md:h-9" />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs font-medium text-slate-700">Printer Name <span className="text-red-500">*</span></Label>
