@@ -196,16 +196,21 @@ export default function FMSMyTasks() {
   const [activeModal, setActiveModal] = useState(null);
 
   const load = useCallback(async () => {
+    const isAuthed = await base44.auth.isAuthenticated();
+    if (!isAuthed) { setLoading(false); return; }
     const me = await base44.auth.me();
+    if (!me) { setLoading(false); return; }
     setUser(me);
     const [allSteps, myScheduled] = await Promise.all([
-      base44.entities.FMSStepInstance.filter({ assignee_email: me.email, status: 'active' }, '-deadline', 100),
+      base44.entities.FMSStepInstance.filter({ assignee_email: me.email, status: 'active' }, '-deadline', 100).catch(() => []),
       base44.entities.ScheduledTaskInstance.filter({ assignee_email: me.email, status: 'PENDING' }, '-due_at', 100).catch(() => []),
     ]);
-    const instanceIds = [...new Set(allSteps.map(s => s.instance_id))];
-    const instances = await Promise.all(instanceIds.map(id => base44.entities.FMSProcessInstance.filter({ id })));
+    const instanceIds = [...new Set(allSteps.map(s => s.instance_id).filter(Boolean))];
+    const instances = instanceIds.length > 0
+      ? await Promise.all(instanceIds.map(id => base44.entities.FMSProcessInstance.filter({ id }).catch(() => []))).then(r => r.flat())
+      : [];
     const instanceMap = {};
-    instances.flat().forEach(inst => { instanceMap[inst.id] = inst; });
+    instances.forEach(inst => { instanceMap[inst.id] = inst; });
     const enriched = allSteps.map(s => ({
       ...s,
       _process_name: instanceMap[s.instance_id]?.process_name || s.process_id,
@@ -219,7 +224,6 @@ export default function FMSMyTasks() {
       return new Date(a.deadline || 0) - new Date(b.deadline || 0);
     });
     setTasks(enriched);
-    // Sort scheduled: overdue first
     const sorted = [...myScheduled].sort((a, b) => {
       const aOD = a.due_at && new Date(a.due_at) < new Date();
       const bOD = b.due_at && new Date(b.due_at) < new Date();
