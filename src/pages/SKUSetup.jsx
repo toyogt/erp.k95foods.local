@@ -675,6 +675,61 @@ export default function SKUSetup() {
 
 
 
+              {/* Regulatory / Label Info */}
+              <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-4">
+                <p className="text-sm font-bold text-slate-700">🏭 Regulatory & Label Information</p>
+                <div className="grid grid-cols-1 gap-4">
+                  <Field label="FSSAI Number" info="FSSAI licence number printed on the label">
+                    <Input value={skuForm.fssai_no} onChange={e => setSkuForm(f => ({ ...f, fssai_no: e.target.value }))} placeholder="e.g. 10017011002659" className="h-12 text-base font-mono" />
+                  </Field>
+                  <Field label="Manufacturer Name" info="Full legal name of the manufacturer as printed on the label">
+                    <Input value={skuForm.manufacturer_name} onChange={e => setSkuForm(f => ({ ...f, manufacturer_name: e.target.value }))} placeholder="e.g. ABC Beverages Pvt Ltd" className="h-12 text-base" />
+                  </Field>
+                  <Field label="Address Line 1">
+                    <Input value={skuForm.address_1} onChange={e => setSkuForm(f => ({ ...f, address_1: e.target.value }))} placeholder="e.g. 123, Industrial Area" className="h-12 text-base" />
+                  </Field>
+                  <Field label="Address Line 2">
+                    <Input value={skuForm.address_2} onChange={e => setSkuForm(f => ({ ...f, address_2: e.target.value }))} placeholder="e.g. Phase 2, Delhi — 110001" className="h-12 text-base" />
+                  </Field>
+                  <div className="grid grid-cols-2 gap-4">
+                    <Field label="Customer Care Email">
+                      <Input type="email" value={skuForm.customer_care_email} onChange={e => setSkuForm(f => ({ ...f, customer_care_email: e.target.value }))} placeholder="care@brand.com" className="h-12 text-base" />
+                    </Field>
+                    <Field label="Customer Care Phone">
+                      <Input value={skuForm.customer_care_phone} onChange={e => setSkuForm(f => ({ ...f, customer_care_phone: e.target.value }))} placeholder="1800-123-456" className="h-12 text-base" />
+                    </Field>
+                  </div>
+                </div>
+              </div>
+
+              {/* Batch Number Config */}
+              <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-4">
+                <p className="text-sm font-bold text-slate-700">🔢 Batch Number Configuration</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <Field label="Product Prefix Code" info="Short code used in batch number generation, e.g. '02' for Toyo Zero Sugar">
+                    <Input value={skuForm.product_prefix_code || ''} onChange={e => setSkuForm(f => ({ ...f, product_prefix_code: e.target.value }))} placeholder="e.g. 02 or KFB" className="h-12 text-base font-mono" />
+                  </Field>
+                  <Field label="Flavour Code" info="Short flavour abbreviation used in batch numbers, e.g. 'GL' for Ginger Lemon">
+                    <Input value={skuForm.flavour_code || ''} onChange={e => setSkuForm(f => ({ ...f, flavour_code: e.target.value }))} placeholder="e.g. GL or L" className="h-12 text-base font-mono" />
+                  </Field>
+                </div>
+                <Field label="Batch Number Scheme">
+                  <select
+                    value={skuForm.batch_scheme || 'excel_date'}
+                    onChange={e => setSkuForm(f => ({ ...f, batch_scheme: e.target.value }))}
+                    className="w-full border border-slate-200 rounded-lg px-4 py-3 text-base h-12 bg-white"
+                  >
+                    <option value="excel_date">Standard — Excel Date (e.g. 02GL46022)</option>
+                    <option value="day_year_seq">Day / Year / Sequence (e.g. KFB31L2501)</option>
+                  </select>
+                  <p className="text-xs text-slate-500 mt-1">
+                    {(skuForm.batch_scheme || 'excel_date') === 'day_year_seq'
+                      ? 'Format: Prefix + DD (fill day) + Flavour initial + YY + sequence. Example: KFB31L2501'
+                      : 'Format: Prefix + Flavour Code + Excel serial of manufacturing date. Example: 02GL46022'}
+                  </p>
+                </Field>
+              </div>
+
               {/* Status toggle */}
               <div className={`border rounded-xl p-4 ${skuForm.is_active ? 'bg-green-50 border-green-300' : 'bg-slate-50 border-slate-200'}`}>
                 <p className="text-xs font-bold text-slate-700 mb-3">Status</p>
