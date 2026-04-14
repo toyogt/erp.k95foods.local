@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import LblLineManager from '@/components/labelling/LblLineManager';
 import LblPrinterManager from '@/components/labelling/LblPrinterManager';
-import { Tag, Printer } from 'lucide-react';
+import LblPrintTemplateManager from '@/components/labelling/LblPrintTemplateManager';
+import { Tag, Printer, FileCode2 } from 'lucide-react';
 
 export default function LblMasterData() {
   const [tab, setTab] = useState('lines');
@@ -11,7 +12,7 @@ export default function LblMasterData() {
     <div className="p-3 md:p-4 lg:p-6 space-y-4">
       <div>
         <h1 className="text-xl md:text-2xl font-bold text-slate-900">Labelling Master Data</h1>
-        <p className="text-sm text-slate-500">Configure labelling lines and printer settings</p>
+        <p className="text-sm text-slate-500">Configure labelling lines, printers, and Rynan print templates</p>
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
@@ -22,6 +23,9 @@ export default function LblMasterData() {
           <TabsTrigger value="printers" className="gap-2 h-11 md:h-9">
             <Printer className="w-4 h-4" /> Printers
           </TabsTrigger>
+          <TabsTrigger value="templates" className="gap-2 h-11 md:h-9">
+            <FileCode2 className="w-4 h-4" /> Rynan Templates
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="lines" className="mt-4">
@@ -29,6 +33,9 @@ export default function LblMasterData() {
         </TabsContent>
         <TabsContent value="printers" className="mt-4">
           <LblPrinterManager />
+        </TabsContent>
+        <TabsContent value="templates" className="mt-4">
+          <LblPrintTemplateManager />
         </TabsContent>
       </Tabs>
     </div>

@@ -10,6 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import SKUList from '@/components/sku/SKUList';
 import SetupChecklist, { isSetupComplete } from '@/components/sku/SetupChecklist';
 import PayloadMapBuilder from '@/components/sku/PayloadMapBuilder';
+import SKUPrintTemplateTab from '@/components/sku/SKUPrintTemplateTab';
 import ArtworkTab from '@/components/sku/ArtworkTab';
 import BatchRuleBuilder from '@/components/batch/BatchRuleBuilder';
 import BatchRulePreview from '@/components/batch/BatchRulePreview.jsx';
@@ -28,6 +29,7 @@ const EMPTY_SKU = {
   fssai_no: '', manufacturer_name: '', address_1: '', address_2: '',
   customer_care_email: '', customer_care_phone: '', product_barcode: '', box_barcode: '',
   hsn_code: '', swiggy_item_id: '', bigbasket_item_id: '', zepto_item_id: '', amazon_item_id: '',
+  print_template_mappings: {},
 };
 
 const EMPTY_MAPPING = {
@@ -831,6 +833,15 @@ export default function SKUSetup() {
                     </div>
                   )}
                 </Field>
+              </div>
+
+              {/* Rynan Print Template Mapping */}
+              <div className="space-y-2">
+                <p className="text-sm font-semibold text-slate-700">Rynan Print Template Mapping</p>
+                <SKUPrintTemplateTab
+                  mappings={skuForm.print_template_mappings || {}}
+                  onChange={(val) => setSkuForm(f => ({ ...f, print_template_mappings: val }))}
+                />
               </div>
 
               {/* Payload Map Builder */}
