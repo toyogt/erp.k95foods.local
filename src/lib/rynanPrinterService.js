@@ -226,6 +226,79 @@ export async function getRynanMiddlewareSnapshot(printer) {
 }
 
 /**
+ * Fetch printer cartridge/ink status via MON command.
+ * Middleware endpoint: GET /printer-status?printer_id=<id>
+ * Expected response: { has_cartridge: bool, ink_level: number (0-100), mon_output: string }
+ */
+export async function getPrinterStatus(printer) {
+  const base = (printer.register_app_link || printer.api_endpoint || '').replace(/\/print\/?$/, '').replace(/\/$/, '');
+  const headers = {};
+  if (printer.auth_header_key && printer.auth_header_value) {
+    headers[printer.auth_header_key] = printer.auth_header_value;
+  }
+  try {
+    const res = await fetch(`${base}/printer-status?printer_id=${encodeURIComponent(printer.printer_id)}`, { headers });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    return { success: true, has_cartridge: data.has_cartridge ?? false, ink_level: data.ink_level ?? null, mon_output: data.mon_output || data.mon_command_output || null, raw: data };
+  } catch (err) {
+    return { success: false, errorMessage: err.message };
+  }
+}
+
+/**
+ * Send a purge command to the printer via middleware.
+ * Middleware endpoint: POST /purge with { printer_id, printer: { ip, port } }
+ */
+export async function sendPurgeCommand(printer, user) {
+  const base = (printer.register_app_link || printer.api_endpoint || '').replace(/\/print\/?$/, '').replace(/\/$/, '');
+  const headers = { 'Content-Type': 'application/json' };
+  if (printer.auth_header_key && printer.auth_header_value) {
+    headers[printer.auth_header_key] = printer.auth_header_value;
+  }
+  const payload = {
+    printer_id: printer.printer_id,
+    printer: { ip: printer.ip_address, port: printer.port || 2030 },
+    command: { type: 'purge' },
+  };
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), printer.request_timeout_ms || 15000);
+    const res = await fetch(`${base}/purge`, { method: 'POST', headers, body: JSON.stringify(payload), signal: controller.signal });
+    clearTimeout(timer);
+    const data = await res.json().catch(() => ({}));
+    const ok = res.ok && data.success !== false;
+    await base44.entities.LblPrintCommand.create({
+      command_id: `PURGE-${Date.now()}`,
+      job_id: null,
+      printer_id: printer.printer_id,
+      command_type: 'test_ping', // reuse closest type; purge is a maintenance op
+      status: ok ? 'sent' : 'failed',
+      request_payload: payload,
+      response_payload: data,
+      response_status_code: res.status,
+      error_message: ok ? null : (data.message || `HTTP ${res.status}`),
+      sent_at: new Date().toISOString(),
+      sent_by: user?.email || null,
+    });
+    return { success: ok, raw: data };
+  } catch (err) {
+    await base44.entities.LblPrintCommand.create({
+      command_id: `PURGE-${Date.now()}`,
+      job_id: null,
+      printer_id: printer.printer_id,
+      command_type: 'test_ping',
+      status: 'failed',
+      request_payload: payload,
+      error_message: err.message,
+      sent_at: new Date().toISOString(),
+      sent_by: user?.email || null,
+    });
+    return { success: false, errorMessage: err.message };
+  }
+}
+
+/**
  * Fetch a specific middleware job status.
  * Returns { status: 'completed'|'pending'|'failed', raw }
  */

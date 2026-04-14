@@ -1,4 +1,12 @@
-import { useState } from 'react';
+/**
+ * LblDemoPrintStep
+ * Sends a demo print command to the Rynan middleware.
+ * - Checks cartridge presence before allowing print
+ * - Collects all label data: batch number, manufacturing date, expiry date, MRP, USP
+ * - MRP is pre-filled from ProductMaster and is editable
+ * - Number of data commands sent = demo print quantity
+ */
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
@@ -8,40 +16,105 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { logLabellingEvent } from '@/lib/labellingEventLogger';
 import { sendRynanPrintCommand } from '@/lib/rynanPrinterService';
 import { toast } from '@/components/ui/use-toast';
+import LblPrinterStatusPanel from './LblPrinterStatusPanel';
 import { Loader2, Printer, AlertTriangle } from 'lucide-react';
+import moment from 'moment';
+
+/** Parse manufacturing date from job (DD/MM/YYYY) and compute expiry from shelf_life_days */
+function computeExpiryDate(mfgDateStr, shelfLifeDays) {
+  if (!mfgDateStr || !shelfLifeDays) return '';
+  const mfg = moment(mfgDateStr, 'DD/MM/YYYY', true);
+  if (!mfg.isValid()) return '';
+  return mfg.add(shelfLifeDays, 'days').format('DD/MM/YYYY');
+}
 
 export default function LblDemoPrintStep({ job, user, onComplete }) {
   const [demoQty, setDemoQty] = useState('2');
   const [printerId, setPrinterId] = useState('');
   const [sending, setSending] = useState(false);
+  const [printerStatus, setPrinterStatus] = useState(null);
+
+  // Label data fields — pre-filled from job/product, all editable
+  const [labelData, setLabelData] = useState({
+    batch_no: job.batch_no || '',
+    mfg_date: job.manufacturing_date || '',
+    exp_date: '',
+    mrp: '',
+    usp: '',
+  });
 
   const { data: printers = [] } = useQuery({
     queryKey: ['lbl-printers-active'],
     queryFn: () => base44.entities.LblPrinterConfig.filter({ is_active: true }),
   });
 
+  // Fetch product master to get MRP and shelf life
+  const { data: productMaster } = useQuery({
+    queryKey: ['product-master-for-demo', job.sku_code],
+    queryFn: () => base44.entities.ProductMaster.filter({ item_code: job.sku_code }),
+    enabled: !!job.sku_code,
+    select: (rows) => rows?.[0] || null,
+  });
+
+  // Pre-fill MRP + compute expiry when product master loads
+  useEffect(() => {
+    if (!productMaster) return;
+    const mrp = productMaster.mrp != null ? String(productMaster.mrp) : '';
+    const expDate = computeExpiryDate(labelData.mfg_date, productMaster.shelf_life_days);
+    setLabelData(prev => ({ ...prev, mrp, exp_date: expDate }));
+  }, [productMaster]);
+
+  // Recompute expiry whenever manufacturing date changes
+  useEffect(() => {
+    if (!productMaster?.shelf_life_days) return;
+    const expDate = computeExpiryDate(labelData.mfg_date, productMaster.shelf_life_days);
+    setLabelData(prev => ({ ...prev, exp_date: expDate }));
+  }, [labelData.mfg_date]);
+
+  const selectedPrinter = printers.find(p => p.printer_id === printerId) || null;
+  const noPrinters = printers.length === 0;
+  const hasCartridge = printerStatus?.has_cartridge === true;
+  const statusChecked = printerStatus !== null;
+
+  const setField = (key, val) => setLabelData(prev => ({ ...prev, [key]: val }));
+
   const handleSendDemoPrint = async () => {
     if (!demoQty || Number(demoQty) <= 0) { toast({ title: 'Invalid Quantity', variant: 'destructive' }); return; }
-    if (!printerId) { toast({ title: 'Select a printer', variant: 'destructive' }); return; }
+    if (!printerId) { toast({ title: 'Select a printer first', variant: 'destructive' }); return; }
+    if (!statusChecked) { toast({ title: 'Check Printer Status First', description: 'Click "Check Status" to verify cartridge before printing.', variant: 'destructive' }); return; }
+    if (!hasCartridge) { toast({ title: 'No Cartridge Detected', description: 'Cannot send demo print — please install a cartridge and check status again.', variant: 'destructive' }); return; }
+    if (!labelData.batch_no) { toast({ title: 'Batch Number is required', variant: 'destructive' }); return; }
+    if (!labelData.mfg_date) { toast({ title: 'Manufacturing Date is required', variant: 'destructive' }); return; }
+    if (!labelData.mrp) { toast({ title: 'MRP is required', variant: 'destructive' }); return; }
 
-    const printer = printers.find(p => p.printer_id === printerId);
-    if (!printer) { toast({ title: 'Printer not found', variant: 'destructive' }); return; }
-
+    const printer = selectedPrinter;
     setSending(true);
 
+    // Build command — quantity equals demo print count (one data command per label)
+    const qty = Number(demoQty);
     const command = {
       type: 'demo',
       template: printer.demo_template || printer.default_template || '',
-      quantity: Number(demoQty),
+      // number of data commands = demo qty (one per label)
+      data_commands: qty,
+      quantity: qty,
       job_id: job.job_id,
-      batch_no: job.batch_no || '',
-      product: job.product_name,
+      // Label data payload
+      label_data: {
+        batch_no: labelData.batch_no,
+        mfg_date: labelData.mfg_date,
+        exp_date: labelData.exp_date,
+        mrp: labelData.mrp,
+        usp: labelData.usp,
+        product_name: job.product_name,
+        sku_code: job.sku_code,
+      },
     };
 
     const result = await sendRynanPrintCommand(printer, command, {
       jobId: job.id,
       commandType: 'demo',
-      quantity: Number(demoQty),
+      quantity: qty,
       user,
     });
 
@@ -52,10 +125,9 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
       return;
     }
 
-    // Update job status with command tracking fields
     await base44.entities.LabellingJob.update(job.id, {
       status: 'demo_print_sent',
-      demo_print_qty: Number(demoQty),
+      demo_print_qty: qty,
       demo_print_command_id: result.commandRecord?.command_id || null,
       demo_print_middleware_job_id: result.middlewareJobId || null,
     });
@@ -64,30 +136,29 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
       action_type: 'demo_print_sent',
       job_id: job.id,
       plan_id: job.plan_id,
-      description: `Demo print of ${demoQty} labels sent to printer ${printer.name}. Middleware job: ${result.middlewareJobId || 'N/A'}`,
+      description: `Demo print of ${qty} labels sent to ${printer.name}. Batch: ${labelData.batch_no}, MFG: ${labelData.mfg_date}, EXP: ${labelData.exp_date}, MRP: ₹${labelData.mrp}. Middleware job: ${result.middlewareJobId || 'N/A'}`,
       user,
     });
 
-    toast({ title: 'Demo Print Sent', description: `${demoQty} demo labels sent. Proceed to verify physical output.` });
+    toast({ title: 'Demo Print Sent', description: `${qty} demo label(s) sent. Proceed to verify physical output.` });
     onComplete?.();
     setSending(false);
   };
 
-  const noPrinters = printers.length === 0;
-
   return (
     <div className="bg-white border border-slate-200 rounded-lg p-4 space-y-4">
+      {/* Header */}
       <div className="flex items-center gap-2">
         <Printer className="w-5 h-5 text-purple-600" />
         <h2 className="text-base font-semibold text-slate-900">Send Demo Print</h2>
       </div>
 
-      <div className="bg-slate-50 rounded-lg p-3 text-sm space-y-1">
+      {/* Job Summary */}
+      <div className="bg-slate-50 rounded-lg p-3 text-sm grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1">
         <p className="text-slate-600"><span className="font-medium">Product:</span> {job.product_name}</p>
         <p className="text-slate-600"><span className="font-medium">Product Code:</span> {job.sku_code}</p>
         <p className="text-slate-600"><span className="font-medium">Planned:</span> {job.quantity_bottles_planned?.toLocaleString()} bottles</p>
         <p className="text-slate-600"><span className="font-medium">Stock Transferred:</span> {job.stock_transfer_qty?.toLocaleString()} bottles</p>
-        {job.batch_no && <p className="text-slate-600"><span className="font-medium">Batch Number:</span> <span className="font-mono font-bold">{job.batch_no}</span></p>}
       </div>
 
       {noPrinters && (
@@ -97,33 +168,144 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
         </div>
       )}
 
-      <div className="space-y-3">
-        <div className="space-y-1">
-          <Label className="text-xs font-medium text-slate-700">Select Printer <span className="text-red-500">*</span></Label>
-          <Select value={printerId} onValueChange={setPrinterId}>
-            <SelectTrigger className="h-11 md:h-9"><SelectValue placeholder="Select printer" /></SelectTrigger>
-            <SelectContent>
-              {printers.map(p => (
-                <SelectItem key={p.printer_id} value={p.printer_id}>{p.name} ({p.printer_id}) — {p.line_name || 'No line'}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1 max-w-xs">
-          <Label className="text-xs font-medium text-slate-700">Demo Print Quantity (Labels)</Label>
-          <Input type="number" value={demoQty} onChange={e => setDemoQty(e.target.value)} className="h-11 md:h-9" min="1" />
-          <p className="text-xs text-slate-500">Number of sample labels to print for approval</p>
+      {/* Printer Selection */}
+      <div className="space-y-1">
+        <Label className="text-xs font-medium text-slate-700">Select Printer <span className="text-red-500">*</span></Label>
+        <Select value={printerId} onValueChange={(v) => { setPrinterId(v); setPrinterStatus(null); }}>
+          <SelectTrigger className="h-11 md:h-9"><SelectValue placeholder="Select printer" /></SelectTrigger>
+          <SelectContent>
+            {printers.map(p => (
+              <SelectItem key={p.printer_id} value={p.printer_id}>{p.name} ({p.printer_id}) — {p.line_name || 'No line'}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Printer Status Panel — shown once a printer is selected */}
+      {selectedPrinter && (
+        <LblPrinterStatusPanel
+          printer={selectedPrinter}
+          job={job}
+          user={user}
+          onStatusFetched={setPrinterStatus}
+        />
+      )}
+
+      {/* Label Data Section */}
+      <div className="border border-slate-200 rounded-lg p-3 space-y-3">
+        <p className="text-xs font-semibold text-slate-700 uppercase tracking-wide">Label Print Data</p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {/* Batch Number */}
+          <div className="space-y-1">
+            <Label className="text-xs font-medium text-slate-700">Batch Number <span className="text-red-500">*</span></Label>
+            <Input
+              value={labelData.batch_no}
+              onChange={e => setField('batch_no', e.target.value)}
+              className="h-11 md:h-9 font-mono"
+              placeholder="e.g. 02GL46022"
+            />
+          </div>
+
+          {/* MRP — pre-filled from Product Master, editable */}
+          <div className="space-y-1">
+            <Label className="text-xs font-medium text-slate-700">
+              MRP (₹) <span className="text-red-500">*</span>
+              {productMaster?.mrp != null && (
+                <span className="ml-1 text-slate-400 font-normal">(from Product setup: ₹{productMaster.mrp})</span>
+              )}
+            </Label>
+            <Input
+              type="number"
+              value={labelData.mrp}
+              onChange={e => setField('mrp', e.target.value)}
+              className="h-11 md:h-9"
+              placeholder="e.g. 30"
+              min="0"
+            />
+          </div>
+
+          {/* Manufacturing Date */}
+          <div className="space-y-1">
+            <Label className="text-xs font-medium text-slate-700">Manufacturing Date <span className="text-red-500">*</span></Label>
+            <Input
+              value={labelData.mfg_date}
+              onChange={e => setField('mfg_date', e.target.value)}
+              className="h-11 md:h-9"
+              placeholder="DD/MM/YYYY"
+              maxLength={10}
+            />
+            <p className="text-xs text-slate-500">Format: DD/MM/YYYY</p>
+          </div>
+
+          {/* Expiry Date — auto-computed, editable */}
+          <div className="space-y-1">
+            <Label className="text-xs font-medium text-slate-700">
+              Expiry Date
+              {productMaster?.shelf_life_days && (
+                <span className="ml-1 text-slate-400 font-normal">(auto: {productMaster.shelf_life_days} days)</span>
+              )}
+            </Label>
+            <Input
+              value={labelData.exp_date}
+              onChange={e => setField('exp_date', e.target.value)}
+              className="h-11 md:h-9"
+              placeholder="DD/MM/YYYY"
+              maxLength={10}
+            />
+          </div>
+
+          {/* USP */}
+          <div className="space-y-1 md:col-span-2">
+            <Label className="text-xs font-medium text-slate-700">USP / Tag Line (Optional)</Label>
+            <Input
+              value={labelData.usp}
+              onChange={e => setField('usp', e.target.value)}
+              className="h-11 md:h-9"
+              placeholder="e.g. No Added Sugar, Natural Flavour"
+            />
+            <p className="text-xs text-slate-500">Will be printed on label if template supports it</p>
+          </div>
         </div>
       </div>
 
-      <Button
-        className="h-11 w-full md:w-auto gap-2 bg-purple-600 hover:bg-purple-700"
-        onClick={handleSendDemoPrint}
-        disabled={sending || noPrinters || !printerId}
-      >
-        {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
-        Send Demo Print
-      </Button>
+      {/* Demo Quantity */}
+      <div className="space-y-1 max-w-xs">
+        <Label className="text-xs font-medium text-slate-700">Demo Print Quantity (Labels)</Label>
+        <Input
+          type="number"
+          value={demoQty}
+          onChange={e => setDemoQty(e.target.value)}
+          className="h-11 md:h-9"
+          min="1"
+        />
+        <p className="text-xs text-slate-500">
+          {demoQty && Number(demoQty) > 0
+            ? `${Number(demoQty)} data command(s) will be sent to the printer (one per label)`
+            : 'Number of sample labels to print for approval'}
+        </p>
+      </div>
+
+      {/* Action — disabled if no cartridge detected */}
+      <div className="pt-1">
+        {statusChecked && !hasCartridge && (
+          <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg p-3 mb-3">
+            <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+            <p className="text-sm text-red-700 font-medium">No cartridge detected — cannot send demo print.</p>
+          </div>
+        )}
+        {!statusChecked && printerId && (
+          <p className="text-xs text-amber-600 mb-2">⚠ Check printer status above before sending.</p>
+        )}
+        <Button
+          className="h-11 w-full md:w-auto gap-2 bg-purple-600 hover:bg-purple-700"
+          onClick={handleSendDemoPrint}
+          disabled={sending || noPrinters || !printerId || (statusChecked && !hasCartridge)}
+        >
+          {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
+          Send Demo Print
+        </Button>
+      </div>
     </div>
   );
 }
