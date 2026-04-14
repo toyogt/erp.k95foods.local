@@ -183,7 +183,7 @@ export default function LblJobRowEditor({ index, job, products, planDate, onUpda
           mrp={job.mrp}
           mlPerBottle={productMaster?.ml_per_bottle}
           mfgDate={job.manufacturing_date ? moment(job.manufacturing_date).format('DD/MM/YYYY') : ''}
-          labellingDate={planDate}
+          labellingDate={''}
           shelfLifeDays={productMaster?.shelf_life_days}
           fssaiNo={productMaster?.fssai_no}
           bottleType={job.bottle_type}

@@ -34,13 +34,18 @@ export default function LblLabelPreviewCard({
   bottleType,
 }) {
   const expiryDate = useMemo(() => {
-    // Use labelling date if available, else mfg date for expiry calc
-    const base = labellingDate
-      ? (labellingDate.includes('/') ? moment(labellingDate, 'DD/MM/YYYY') : moment(labellingDate, 'YYYY-MM-DD'))
-      : mfgDate
+    // Prefer labelling date for expiry, fall back to mfg date
+    let base = null;
+    if (labellingDate) {
+      base = labellingDate.includes('/')
+        ? moment(labellingDate, 'DD/MM/YYYY')
+        : moment(labellingDate, 'YYYY-MM-DD');
+    } else if (mfgDate) {
+      base = mfgDate.includes('/')
         ? moment(mfgDate, 'DD/MM/YYYY')
-        : null;
-    if (!base || !base.isValid() || !shelfLifeDays) return null;
+        : moment(mfgDate, 'YYYY-MM-DD');
+    }
+    if (!base || !base.isValid() || !shelfLifeDays || Number(shelfLifeDays) === 0) return null;
     return base.clone().add(Number(shelfLifeDays), 'days').format('DD/MM/YYYY');
   }, [labellingDate, mfgDate, shelfLifeDays]);
 
@@ -86,7 +91,7 @@ export default function LblLabelPreviewCard({
               <LabelField label="Volume" value={`${mlPerBottle} ml`} />
             )}
             {uspPerMl && (
-              <LabelField label="MRP/ml" value={`₹${uspPerMl}/ml`} />
+              <LabelField label="USP (Cost/ml)" value={`₹${uspPerMl}/ml`} />
             )}
             {batchNo && (
               <LabelField label="Batch No." value={batchNo} mono />
