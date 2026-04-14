@@ -13,8 +13,6 @@ import { toast } from '@/components/ui/use-toast';
 import { getRynanMiddlewareSnapshot } from '@/lib/rynanPrinterService';
 import { Plus, Pencil, Loader2, Save, Printer, Trash2, Download } from 'lucide-react';
 
-const EDIT_ROLES = ['admin', 'production_manager', 'labelling_supervisor', 'lbl_supervisor', 'user'];
-
 const EMPTY_FORM = {
   printer_id: '', name: '', line_id: '', line_name: '',
   register_app_link: '', api_endpoint: '',
@@ -34,7 +32,7 @@ export default function LblPrinterManager({ userRole = 'user' }) {
   const [fetchingPrinters, setFetchingPrinters] = useState(false);
   const [detectedPrinters, setDetectedPrinters] = useState([]);
   const [form, setForm] = useState(EMPTY_FORM);
-  const canEdit = EDIT_ROLES.includes(userRole);
+  const canEdit = true;
 
   const { data: printers = [], isLoading } = useQuery({
     queryKey: ['lbl-printers-master'],

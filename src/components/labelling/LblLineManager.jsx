@@ -10,15 +10,13 @@ import { toast } from '@/components/ui/use-toast';
 import { Plus, Pencil, Loader2, Save, Tag, Trash2 } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
-const EDIT_ROLES = ['admin', 'production_manager', 'labelling_supervisor', 'lbl_supervisor'];
-
 export default function LblLineManager({ userRole = 'user' }) {
   const queryClient = useQueryClient();
   const [editModal, setEditModal] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ machine_id: '', display_name: '', default_location: '', is_active: true });
-  const canEdit = EDIT_ROLES.includes(userRole);
+  const canEdit = true;
 
   const { data: lines = [], isLoading } = useQuery({
     queryKey: ['labelling-lines-master'],
