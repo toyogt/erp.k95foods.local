@@ -50,11 +50,13 @@ export default function LblOperatorQueue() {
         <div className="text-center py-12 bg-white border border-slate-200 rounded-lg"><Tag className="w-8 h-8 text-slate-300 mx-auto mb-2" /><p className="text-slate-500">No jobs for today</p></div>
       ) : Object.entries(byLine).map(([lineName, lineJobs]) => {
         const planGroups = getPlanGroups(lineJobs);
-        // A pending job is only actionable if ALL lower-priority jobs are completed or cancelled
-  const completedOrCancelled = new Set(['completed', 'cancelled']);
-  // A job is "in progress" if it's started but not done
-  const hasAnyInProgress = lineJobs.some(j => !completedOrCancelled.has(j.status) && j.status !== 'pending');
-  // Only mark a pending job as "first" (actionable) if no other job is currently in progress
+        const completedOrCancelled = new Set(['completed', 'cancelled']);
+  // Any job that is actively being worked on (not pending, not done) is always actionable
+  const inProgressIds = new Set(
+    lineJobs.filter(j => !completedOrCancelled.has(j.status) && j.status !== 'pending').map(j => j.id)
+  );
+  const hasAnyInProgress = inProgressIds.size > 0;
+  // The next pending job is actionable only if nothing is currently in progress
   const firstPendingId = !hasAnyInProgress ? lineJobs.find(j =>
     j.status === 'pending' &&
     lineJobs.filter(other => other.priority_order < j.priority_order)
@@ -69,7 +71,14 @@ export default function LblOperatorQueue() {
                   <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">Plan: {group.planId}</span>
                   <span className="text-xs text-slate-400">{group.jobs.filter(j => j.status === 'completed').length}/{group.jobs.length} done</span>
                 </div>
-                {group.jobs.map((job) => <LblJobCard key={job.id} job={job} isFirst={job.id === firstPendingId} planLocked={true} />)}
+                {group.jobs.map((job) => (
+                  <LblJobCard
+                    key={job.id}
+                    job={job}
+                    isFirst={job.id === firstPendingId || inProgressIds.has(job.id)}
+                    planLocked={true}
+                  />
+                ))}
               </div>
             ))}
           </div>

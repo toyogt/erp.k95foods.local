@@ -9,6 +9,8 @@ export default function LblJobCard({ job, isFirst, planLocked }) {
   const isCompleted = job.status === 'completed';
   const isCancelled = job.status === 'cancelled';
   const isPending = job.status === 'pending';
+  // Non-pending jobs (active, bulk_printing, paused, etc.) are always actionable directly
+  // Pending jobs are only actionable if they are the first in queue (isFirst)
   const isActionable = planLocked && !isCompleted && !isCancelled && (!isPending || isFirst);
   const isLocked = planLocked && isPending && !isFirst;
 
