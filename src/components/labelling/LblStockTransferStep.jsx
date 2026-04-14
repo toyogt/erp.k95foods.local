@@ -9,6 +9,7 @@ import { logLabellingEvent } from '@/lib/labellingEventLogger';
 import { toast } from '@/components/ui/use-toast';
 import { generateBatchNumber, BATCH_SCHEMES } from '@/lib/batchNumberGenerator';
 import { Loader2, Package, RefreshCw, Info } from 'lucide-react';
+import LblLabelPreviewCard from '@/components/labelling/LblLabelPreviewCard';
 import moment from 'moment';
 
 export default function LblStockTransferStep({ job, user, onComplete }) {
@@ -186,6 +187,20 @@ export default function LblStockTransferStep({ job, user, onComplete }) {
         <Label className="text-xs font-medium text-slate-700">Remarks (Optional)</Label>
         <Textarea value={remarks} onChange={e => setRemarks(e.target.value)} placeholder="Any notes..." className="min-h-[60px]" />
       </div>
+
+      {/* Label Preview — shows MRP, expiry, bottle size, USP/ml */}
+      <LblLabelPreviewCard
+        productName={job?.product_name}
+        batchNo={batchNo}
+        mrp={product?.mrp || job?.mrp}
+        mlPerBottle={product?.ml_per_bottle}
+        mfgDate={mfgDate}
+        labellingDate={labellingDate}
+        shelfLifeDays={product?.shelf_life_days}
+        fssaiNo={product?.fssai_no}
+        bottleType={job?.bottle_type || product?.bottle_type}
+        templateName={product?.demo_template || product?.bulk_template}
+      />
 
       <Button className="h-11 w-full md:w-auto gap-2" onClick={handleSubmit} disabled={saving}>
         {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Package className="w-4 h-4" />}

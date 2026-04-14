@@ -32,7 +32,7 @@ export default function LblPlanCreate() {
 
   const selectedMachine = machines.find(m => m.id === lineId);
 
-  const addJob = () => setJobs(prev => [...prev, { _key: Date.now(), sku_code: '', product_name: '', bottle_type: '', mrp: '', manufacturing_date: '', batch_no: '', quantity_bottles_planned: 0, quantity_cases_planned: 0, priority_order: prev.length + 1 }]);
+  const addJob = () => setJobs(prev => [...prev, { _key: Date.now(), sku_code: '', product_name: '', bottle_type: '', mrp: '', manufacturing_date: '', batch_no: '', printer_template_id: '', quantity_bottles_planned: 0, quantity_cases_planned: 0, priority_order: prev.length + 1 }]);
   const updateJob = (idx, field, value) => setJobs(prev => prev.map((j, i) => i === idx ? { ...j, [field]: value } : j));
   const removeJob = (idx) => setJobs(prev => prev.filter((_, i) => i !== idx).map((j, i) => ({ ...j, priority_order: i + 1 })));
   const reorderJobs = (fromIdx, toIdx) => {
@@ -135,7 +135,7 @@ export default function LblPlanCreate() {
     const jobRecords = jobs.map((j, i) => {
       const mfgRaw = j.manufacturing_date || planDate;
       const mfgFormatted = mfgRaw ? moment(mfgRaw).format('DD/MM/YYYY') : fd;
-      return { job_id: generateJobId(), plan_id: createdPlan.id, sku_code: j.sku_code, product_name: j.product_name, bottle_type: j.bottle_type, mrp: String(j.mrp || ''), manufacturing_date: mfgFormatted, batch_no: j.batch_no || '', quantity_bottles_planned: j.quantity_bottles_planned, quantity_cases_planned: j.quantity_cases_planned, priority_order: i + 1, line_id: lineId, line_name: selectedMachine?.display_name || lineId, shift_type: shiftType, plan_date: fd, status: 'pending' };
+      return { job_id: generateJobId(), plan_id: createdPlan.id, sku_code: j.sku_code, product_name: j.product_name, bottle_type: j.bottle_type, mrp: String(j.mrp || ''), manufacturing_date: mfgFormatted, batch_no: j.batch_no || '', printer_template_id: j.printer_template_id || '', quantity_bottles_planned: j.quantity_bottles_planned, quantity_cases_planned: j.quantity_cases_planned, priority_order: i + 1, line_id: lineId, line_name: selectedMachine?.display_name || lineId, shift_type: shiftType, plan_date: fd, status: 'pending' };
     });
     await base44.entities.LabellingJob.bulkCreate(jobRecords);
     await logLabellingEvent({ action_type: lockAfterSave ? 'plan_locked' : 'plan_created', plan_id: createdPlan.id, description: `Plan ${pid} ${lockAfterSave ? 'created and locked' : 'created'}`, user });

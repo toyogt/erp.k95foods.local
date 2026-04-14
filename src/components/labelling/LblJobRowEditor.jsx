@@ -1,9 +1,12 @@
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import LblBatchSelect from '@/components/labelling/LblBatchSelect';
+import LblLabelPreviewCard from '@/components/labelling/LblLabelPreviewCard';
 import { GripVertical, Trash2, Lock, Unlock } from 'lucide-react';
 import moment from 'moment';
 
@@ -12,6 +15,21 @@ const BOTTLES_PER_CASE = 12;
 export default function LblJobRowEditor({ index, job, products, planDate, onUpdate, onRemove, dragHandleProps }) {
   const [casesManuallyEdited, setCasesManuallyEdited] = useState(false);
 
+  // Load full product master record for this SKU (shelf life, ml, fssai, templates)
+  const { data: productDetails = [] } = useQuery({
+    queryKey: ['product-detail-row', job?.sku_code],
+    queryFn: () => base44.entities.ProductMaster.filter({ item_code: job.sku_code }),
+    enabled: !!job?.sku_code,
+  });
+  const productMaster = productDetails[0];
+
+  // Load print templates for template selector
+  const { data: templates = [] } = useQuery({
+    queryKey: ['lbl-print-templates-active'],
+    queryFn: () => base44.entities.LblPrintTemplate.filter({ is_active: true }),
+    staleTime: 60000,
+  });
+
   const handleProductChange = (productId) => {
     const prod = products.find(p => p.id === productId);
     if (prod) {
@@ -19,6 +37,8 @@ export default function LblJobRowEditor({ index, job, products, planDate, onUpda
       onUpdate(index, 'product_name', prod.product_name || prod.item_name || '');
       onUpdate(index, 'bottle_type', prod.bottle_type || prod.container_type || '');
       onUpdate(index, 'mrp', prod.mrp || '');
+      // Reset template on product change
+      onUpdate(index, 'printer_template_id', '');
     }
   };
 
@@ -114,13 +134,63 @@ export default function LblJobRowEditor({ index, job, products, planDate, onUpda
         </div>
       </div>
 
-      {/* Product summary */}
-      {job.product_name && (
-        <div className="flex gap-4 text-xs text-slate-500 flex-wrap">
-          <span>Product: {job.product_name}</span>
-          {job.bottle_type && <span>Bottle: {job.bottle_type}</span>}
-          {job.mrp && <span>MRP: ₹{job.mrp}</span>}
+      {/* Template Selector + MRP override */}
+      {job.sku_code && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <Label className="text-xs font-medium text-slate-700">Print Template</Label>
+            <Select
+              value={job.printer_template_id || ''}
+              onValueChange={v => onUpdate(index, 'printer_template_id', v)}
+            >
+              <SelectTrigger className="h-11 md:h-9">
+                <SelectValue placeholder="Select label template" />
+              </SelectTrigger>
+              <SelectContent>
+                {templates.map(t => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.name} {t.middleware_template_name ? `(${t.middleware_template_name})` : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-slate-500">Template used for demo and bulk print</p>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs font-medium text-slate-700">MRP (₹)</Label>
+            <Input
+              type="number"
+              value={job.mrp || ''}
+              onChange={e => onUpdate(index, 'mrp', e.target.value)}
+              placeholder="Auto-filled from product"
+              className="h-11 md:h-9"
+            />
+            <p className="text-xs text-slate-500">
+              {productMaster?.ml_per_bottle ? `${productMaster.ml_per_bottle} ml per bottle` : ''}
+              {productMaster?.ml_per_bottle && job.mrp
+                ? ` · ₹${(Number(job.mrp) / productMaster.ml_per_bottle).toFixed(2)}/ml`
+                : ''}
+            </p>
+          </div>
         </div>
+      )}
+
+      {/* Label Preview Card */}
+      {job.sku_code && (
+        <LblLabelPreviewCard
+          productName={job.product_name}
+          batchNo={job.batch_no}
+          mrp={job.mrp}
+          mlPerBottle={productMaster?.ml_per_bottle}
+          mfgDate={job.manufacturing_date ? moment(job.manufacturing_date).format('DD/MM/YYYY') : ''}
+          labellingDate={planDate}
+          shelfLifeDays={productMaster?.shelf_life_days}
+          fssaiNo={productMaster?.fssai_no}
+          bottleType={job.bottle_type}
+          templateName={job.printer_template_id
+            ? templates.find(t => t.id === job.printer_template_id)?.name
+            : productMaster?.label_template_4x6 || ''}
+        />
       )}
     </div>
   );

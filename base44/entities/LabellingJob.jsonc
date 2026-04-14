@@ -70,6 +70,11 @@
       "default": "excel_date",
       "description": "Batch generation scheme"
     },
+    "printer_template_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Selected LblPrintTemplate ID for this job's label printing"
+    },
     "quantity_bottles_planned": {
       "type": "number",
       "minimum": 0
