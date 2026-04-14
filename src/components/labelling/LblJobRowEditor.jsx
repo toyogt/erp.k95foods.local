@@ -166,23 +166,20 @@ export default function LblJobRowEditor({ index, job, products, planDate, onUpda
               className="h-11 md:h-9"
             />
             <p className="text-xs text-slate-500">
-              {productMaster?.ml_per_bottle ? `${productMaster.ml_per_bottle} ml per bottle` : ''}
-              {productMaster?.ml_per_bottle && job.mrp
-                ? ` · ₹${(Number(job.mrp) / productMaster.ml_per_bottle).toFixed(2)}/ml`
-                : ''}
+              {productMaster?.ml_per_bottle ? `${productMaster.ml_per_bottle} ml · USP shown in preview below` : 'Auto-filled from product master'}
             </p>
           </div>
         </div>
       )}
 
-      {/* Label Preview Card */}
+      {/* Label Preview Card — MRP, Mfg Date, Expiry (from mfg date + shelf life) set at plan time */}
       {job.sku_code && (
         <LblLabelPreviewCard
           productName={job.product_name}
           batchNo={job.batch_no}
           mrp={job.mrp}
           mlPerBottle={productMaster?.ml_per_bottle}
-          mfgDate={job.manufacturing_date ? moment(job.manufacturing_date).format('DD/MM/YYYY') : ''}
+          mfgDate={job.manufacturing_date ? moment(job.manufacturing_date).format('DD/MM/YYYY') : (planDate ? moment(planDate).format('DD/MM/YYYY') : '')}
           labellingDate={''}
           shelfLifeDays={productMaster?.shelf_life_days}
           fssaiNo={productMaster?.fssai_no}
