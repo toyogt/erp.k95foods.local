@@ -42,7 +42,7 @@ export default class ErrorBoundary extends React.Component {
               </p>
             </div>
 
-            {process.env.NODE_ENV === 'development' && this.state.error && (
+            {import.meta.env.DEV && this.state.error && (
               <div className="p-3 bg-slate-50 rounded border border-slate-200 text-left">
                 <p className="text-xs font-mono text-red-600 break-words">
                   {this.state.error.toString()}

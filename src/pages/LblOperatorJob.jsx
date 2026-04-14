@@ -7,6 +7,7 @@ import { JOB_STATUSES } from '@/lib/labellingHelpers';
 import { logLabellingEvent } from '@/lib/labellingEventLogger';
 import LblStockTransferStep from '@/components/labelling/LblStockTransferStep';
 import LblDemoPrintStep from '@/components/labelling/LblDemoPrintStep';
+import LblDemoPrintVerificationStep from '@/components/labelling/LblDemoPrintVerificationStep';
 import LblChecklistStep from '@/components/labelling/LblChecklistStep';
 import LblBulkPrintStep from '@/components/labelling/LblBulkPrintStep';
 import LblCompletionStep from '@/components/labelling/LblCompletionStep';
@@ -38,7 +39,7 @@ export default function LblOperatorJob() {
   if (!job) return <div className="p-6 text-center text-slate-500">Job not found</div>;
 
   const st = JOB_STATUSES[job.status] || JOB_STATUSES.pending;
-  const steps = ['Start', 'Stock Transfer', 'Demo Print', 'Checklist', 'Approval', 'Bulk Print', 'Complete'];
+  const steps = ['Start', 'Stock Transfer', 'Demo Print', 'Verify Demo', 'Checklist', 'Approval', 'Bulk Print', 'Complete'];
   const currentStep = st.step >= 0 ? Math.min(st.step, steps.length - 1) : 0;
 
   return (
@@ -76,7 +77,8 @@ export default function LblOperatorJob() {
       )}
       {job.status === 'active' && <LblStockTransferStep job={job} user={user} onComplete={refreshJob} />}
       {job.status === 'stock_transferred' && <LblDemoPrintStep job={job} user={user} onComplete={refreshJob} />}
-      {(job.status === 'demo_print_sent' || job.status === 'demo_rejected') && <LblChecklistStep job={job} user={user} onComplete={refreshJob} />}
+      {job.status === 'demo_print_sent' && <LblDemoPrintVerificationStep job={job} user={user} onComplete={refreshJob} />}
+      {(job.status === 'demo_print_verified' || job.status === 'demo_rejected') && <LblChecklistStep job={job} user={user} onComplete={refreshJob} />}
       {job.status === 'demo_pending_approval' && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-6 text-center space-y-4">
           <h2 className="text-lg font-semibold text-amber-800">Waiting for Supervisor Approval</h2>
@@ -87,7 +89,7 @@ export default function LblOperatorJob() {
             disabled={acting}
             onClick={async () => {
               setActing(true);
-              await base44.entities.LabellingJob.update(job.id, { status: 'demo_print_sent', approval_status: 'not_required' });
+              await base44.entities.LabellingJob.update(job.id, { status: 'demo_print_verified', approval_status: 'not_required' });
               await logLabellingEvent({ action_type: 'checklist_withdrawn', job_id: job.id, plan_id: job.plan_id, description: `Checklist submission withdrawn for job ${job.job_id} — re-opening for edit`, user });
               toast({ title: 'Submission Withdrawn', description: 'You can now re-fill and re-submit the checklist.' });
               refreshJob();

@@ -68,7 +68,7 @@
         "day_year_seq"
       ],
       "default": "excel_date",
-      "description": "Batch generation scheme: excel_date = prefix+flavour+ExcelSerial, day_year_seq = prefix+DD+flavourInitial+YY+seq"
+      "description": "Batch generation scheme"
     },
     "quantity_bottles_planned": {
       "type": "number",
@@ -109,6 +109,7 @@
         "active",
         "stock_transferred",
         "demo_print_sent",
+        "demo_print_verified",
         "checklist_submitted",
         "demo_pending_approval",
         "demo_approved",
@@ -141,6 +142,26 @@
     "demo_image_url": {
       "type": "string",
       "maxLength": 1000
+    },
+    "demo_print_command_id": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Command ID of the demo print command sent to middleware"
+    },
+    "demo_print_middleware_job_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Job ID returned by middleware for demo print"
+    },
+    "demo_print_verified_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when demo print was physically verified by operator"
+    },
+    "demo_print_verified_by": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Email of operator who verified demo print"
     },
     "current_printed_qty": {
       "type": "number",

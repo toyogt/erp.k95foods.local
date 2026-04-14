@@ -16,15 +16,73 @@
     "line_id": {
       "type": "string",
       "maxLength": 100,
-      "description": "Assigned labelling line"
+      "description": "Assigned labelling line machine ID"
     },
     "line_name": {
       "type": "string",
       "maxLength": 200
     },
+    "register_app_link": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "Primary Rynan middleware base URL (e.g. http://192.168.1.50:8080)"
+    },
     "api_endpoint": {
       "type": "string",
-      "maxLength": 500
+      "maxLength": 500,
+      "description": "Fallback API endpoint"
+    },
+    "auth_header_key": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Authorization header key (e.g. X-Api-Key)"
+    },
+    "auth_header_value": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "Authorization header value"
+    },
+    "request_timeout_ms": {
+      "type": "number",
+      "minimum": 1000,
+      "maximum": 60000,
+      "default": 15000
+    },
+    "ip_address": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "port": {
+      "type": "number",
+      "default": 2030
+    },
+    "demo_template": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Template used for demo prints"
+    },
+    "bulk_template": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Template used for bulk prints"
+    },
+    "default_template": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "default_priority": {
+      "type": "string",
+      "enum": [
+        "normal",
+        "high"
+      ],
+      "default": "normal"
+    },
+    "send_retries": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5,
+      "default": 1
     },
     "connection_type": {
       "type": "string",
@@ -34,19 +92,7 @@
         "network",
         "manual"
       ],
-      "default": "manual"
-    },
-    "ip_address": {
-      "type": "string",
-      "maxLength": 100
-    },
-    "port": {
-      "type": "number"
-    },
-    "default_template": {
-      "type": "string",
-      "maxLength": 200,
-      "description": "Default label template name"
+      "default": "api"
     },
     "is_active": {
       "type": "boolean",

@@ -12,9 +12,18 @@
       "type": "string",
       "maxLength": 50
     },
+    "middleware_job_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Job ID returned by Rynan middleware after command acknowledgement"
+    },
     "printer_id": {
       "type": "string",
       "maxLength": 50
+    },
+    "endpoint_url": {
+      "type": "string",
+      "maxLength": 500
     },
     "command_type": {
       "type": "string",
@@ -22,7 +31,8 @@
         "demo",
         "bulk_start",
         "bulk_stop",
-        "bulk_resume"
+        "bulk_resume",
+        "test_ping"
       ],
       "description": "Type of print command"
     },
@@ -41,9 +51,17 @@
       ],
       "default": "queued"
     },
+    "request_payload": {
+      "type": "object",
+      "description": "Exact payload sent to middleware"
+    },
     "response_payload": {
       "type": "object",
-      "description": "Response from printer API"
+      "description": "Response from middleware"
+    },
+    "response_status_code": {
+      "type": "number",
+      "description": "HTTP status code from middleware"
     },
     "error_message": {
       "type": "string",

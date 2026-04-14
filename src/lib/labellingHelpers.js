@@ -20,13 +20,14 @@ export const JOB_STATUSES = {
   active: { label: 'Active', color: 'bg-blue-100 text-blue-700', step: 1 },
   stock_transferred: { label: 'Stock Transferred', color: 'bg-cyan-100 text-cyan-700', step: 2 },
   demo_print_sent: { label: 'Demo Print Sent', color: 'bg-purple-100 text-purple-700', step: 3 },
-  checklist_submitted: { label: 'Checklist Submitted', color: 'bg-violet-100 text-violet-700', step: 4 },
-  demo_pending_approval: { label: 'Pending Approval', color: 'bg-amber-100 text-amber-700', step: 5 },
-  demo_approved: { label: 'Demo Approved', color: 'bg-green-100 text-green-700', step: 6 },
+  demo_print_verified: { label: 'Demo Verified', color: 'bg-teal-100 text-teal-700', step: 4 },
+  checklist_submitted: { label: 'Checklist Submitted', color: 'bg-violet-100 text-violet-700', step: 5 },
+  demo_pending_approval: { label: 'Pending Approval', color: 'bg-amber-100 text-amber-700', step: 6 },
+  demo_approved: { label: 'Demo Approved', color: 'bg-green-100 text-green-700', step: 7 },
   demo_rejected: { label: 'Demo Rejected', color: 'bg-red-100 text-red-700', step: -1 },
-  bulk_printing: { label: 'Bulk Printing', color: 'bg-indigo-100 text-indigo-700', step: 7 },
-  paused: { label: 'Paused', color: 'bg-orange-100 text-orange-700', step: 7 },
-  completed: { label: 'Completed', color: 'bg-green-100 text-green-700', step: 8 },
+  bulk_printing: { label: 'Bulk Printing', color: 'bg-indigo-100 text-indigo-700', step: 8 },
+  paused: { label: 'Paused', color: 'bg-orange-100 text-orange-700', step: 8 },
+  completed: { label: 'Completed', color: 'bg-green-100 text-green-700', step: 9 },
   cancelled: { label: 'Cancelled', color: 'bg-red-100 text-red-700', step: -2 },
 };
 
@@ -62,9 +63,9 @@ export function generateEventId() {
 }
 
 export function canManagePlans(role) {
-  return ['admin', 'lbl_supervisor', 'production_manager'].includes(role);
+  return ['admin', 'lbl_supervisor', 'labelling_supervisor', 'production_manager'].includes(role);
 }
 
 export function canApproveDemoPrint(role) {
-  return ['admin', 'lbl_supervisor', 'production_manager'].includes(role);
+  return ['admin', 'lbl_supervisor', 'labelling_supervisor', 'production_manager'].includes(role);
 }
