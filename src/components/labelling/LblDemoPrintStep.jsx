@@ -16,17 +16,9 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { logLabellingEvent } from '@/lib/labellingEventLogger';
 import { sendRynanPrintCommand } from '@/lib/rynanPrinterService';
 import { toast } from '@/components/ui/use-toast';
+import { computeLabelFields } from '@/lib/labelFieldComputer';
 import LblPrinterStatusPanel from './LblPrinterStatusPanel';
 import { Loader2, Printer, AlertTriangle } from 'lucide-react';
-import moment from 'moment';
-
-/** Parse manufacturing date from job (DD/MM/YYYY) and compute expiry from shelf_life_days */
-function computeExpiryDate(mfgDateStr, shelfLifeDays) {
-  if (!mfgDateStr || !shelfLifeDays) return '';
-  const mfg = moment(mfgDateStr, 'DD/MM/YYYY', true);
-  if (!mfg.isValid()) return '';
-  return mfg.add(shelfLifeDays, 'days').format('DD/MM/YYYY');
-}
 
 export default function LblDemoPrintStep({ job, user, onComplete }) {
   const [demoQty, setDemoQty] = useState('2');
@@ -37,10 +29,9 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
   // Label data fields — pre-filled from job/product, all editable
   const [labelData, setLabelData] = useState({
     batch_no: job.batch_no || '',
-    mfg_date: job.manufacturing_date || '',
-    exp_date: '',
-    mrp: '',
-    usp: '',
+    mfg_date: job.manufacturing_date || '',  // DD/MM/YYYY
+    exp_date: '',                            // auto-computed from mfg + shelf life
+    mrp: job.mrp || '',
   });
 
   const { data: printers = [] } = useQuery({
@@ -56,20 +47,23 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
     select: (rows) => rows?.[0] || null,
   });
 
-  // Pre-fill MRP + compute expiry when product master loads
+  // Pre-fill MRP when product master loads (if not already set from job)
   useEffect(() => {
     if (!productMaster) return;
-    const mrp = productMaster.mrp != null ? String(productMaster.mrp) : '';
-    const expDate = computeExpiryDate(labelData.mfg_date, productMaster.shelf_life_days);
-    setLabelData(prev => ({ ...prev, mrp, exp_date: expDate }));
+    const mrp = job.mrp || (productMaster.mrp != null ? String(productMaster.mrp) : '');
+    setLabelData(prev => ({ ...prev, mrp }));
   }, [productMaster]);
 
-  // Recompute expiry whenever manufacturing date changes
-  useEffect(() => {
-    if (!productMaster?.shelf_life_days) return;
-    const expDate = computeExpiryDate(labelData.mfg_date, productMaster.shelf_life_days);
-    setLabelData(prev => ({ ...prev, exp_date: expDate }));
-  }, [labelData.mfg_date]);
+  // Always compute expiry from mfg date + shelf life (derived, not stored)
+  const computed = computeLabelFields({
+    mrp: labelData.mrp,
+    mlPerBottle: productMaster?.ml_per_bottle,
+    mfgDate: labelData.mfg_date,
+    labellingDate: job.labelling_date || '',
+    shelfLifeDays: productMaster?.shelf_life_days,
+    batchNo: labelData.batch_no,
+    productName: job.product_name,
+  });
 
   const selectedPrinter = printers.find(p => p.printer_id === printerId) || null;
   const noPrinters = printers.length === 0;
@@ -92,20 +86,43 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
 
     // Build command — quantity equals demo print count (one data command per label)
     const qty = Number(demoQty);
+    // All POD fields computed from current inputs
+    const podFields = computeLabelFields({
+      mrp: labelData.mrp,
+      mlPerBottle: productMaster?.ml_per_bottle,
+      mfgDate: labelData.mfg_date,
+      labellingDate: job.labelling_date || '',
+      shelfLifeDays: productMaster?.shelf_life_days,
+      batchNo: labelData.batch_no,
+      productName: job.product_name,
+    });
+
     const command = {
       type: 'demo',
       template: printer.demo_template || printer.default_template || '',
-      // number of data commands = demo qty (one per label)
       data_commands: qty,
       quantity: qty,
       job_id: job.job_id,
-      // Label data payload
+      // All POD fields for Rynan middleware
       label_data: {
-        batch_no: labelData.batch_no,
-        mfg_date: labelData.mfg_date,
-        exp_date: labelData.exp_date,
-        mrp: labelData.mrp,
-        usp: labelData.usp,
+        POD1: podFields.mrp,
+        POD2: podFields.mrpWithUsp,
+        POD3: podFields.taxLine,
+        POD4: podFields.batchNo,
+        POD5: podFields.mfgDate,
+        POD6: podFields.expiryDate,
+        POD7: podFields.usp,
+        POD8: podFields.mfgDateOffset,
+        POD9: podFields.expiryDateOffset,
+        POD10: podFields.netWeight,
+        POD11: podFields.uspWithUnit,
+        POD12: podFields.mrpAndUsp,
+        // Legacy keys for backward compat
+        batch_no: podFields.batchNo,
+        mfg_date: podFields.mfgDate,
+        exp_date: podFields.expiryDate,
+        mrp: podFields.mrp,
+        usp: podFields.usp,
         product_name: job.product_name,
         sku_code: job.sku_code,
       },
@@ -136,7 +153,7 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
       action_type: 'demo_print_sent',
       job_id: job.id,
       plan_id: job.plan_id,
-      description: `Demo print of ${qty} labels sent to ${printer.name}. Batch: ${labelData.batch_no}, MFG: ${labelData.mfg_date}, EXP: ${labelData.exp_date}, MRP: ₹${labelData.mrp}. Middleware job: ${result.middlewareJobId || 'N/A'}`,
+      description: `Demo print of ${qty} labels sent to ${printer.name}. Batch: ${podFields.batchNo}, MFG: ${podFields.mfgDate}, EXP: ${podFields.expiryDate}, MRP: ₹${podFields.mrp}, USP: ₹${podFields.usp}/ml. Middleware job: ${result.middlewareJobId || 'N/A'}`,
       user,
     });
 
@@ -238,33 +255,29 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
             <p className="text-xs text-slate-500">Format: DD/MM/YYYY</p>
           </div>
 
-          {/* Expiry Date — auto-computed, editable */}
+          {/* Expiry Date — auto-computed from MFG date + shelf life */}
           <div className="space-y-1">
             <Label className="text-xs font-medium text-slate-700">
-              Expiry Date
+              Expiry / Use By Date
               {productMaster?.shelf_life_days && (
-                <span className="ml-1 text-slate-400 font-normal">(auto: {productMaster.shelf_life_days} days)</span>
+                <span className="ml-1 text-slate-400 font-normal">(auto: {productMaster.shelf_life_days} days from MFG)</span>
               )}
             </Label>
-            <Input
-              value={labelData.exp_date}
-              onChange={e => setField('exp_date', e.target.value)}
-              className="h-11 md:h-9"
-              placeholder="DD/MM/YYYY"
-              maxLength={10}
-            />
+            <div className="h-11 md:h-9 flex items-center px-3 bg-slate-50 border border-slate-200 rounded-md">
+              <span className={`text-sm font-mono ${computed.expiryDate ? 'text-amber-700 font-semibold' : 'text-slate-400'}`}>
+                {computed.expiryDate || 'Enter MFG date above'}
+              </span>
+            </div>
           </div>
 
-          {/* USP */}
-          <div className="space-y-1 md:col-span-2">
-            <Label className="text-xs font-medium text-slate-700">USP / Tag Line (Optional)</Label>
-            <Input
-              value={labelData.usp}
-              onChange={e => setField('usp', e.target.value)}
-              className="h-11 md:h-9"
-              placeholder="e.g. No Added Sugar, Natural Flavour"
-            />
-            <p className="text-xs text-slate-500">Will be printed on label if template supports it</p>
+          {/* USP — auto-computed from MRP / ml */}
+          <div className="space-y-1">
+            <Label className="text-xs font-medium text-slate-700">USP (Cost per ml) — auto-computed</Label>
+            <div className="h-11 md:h-9 flex items-center px-3 bg-slate-50 border border-slate-200 rounded-md">
+              <span className={`text-sm ${computed.uspWithUnit ? 'text-green-700 font-semibold' : 'text-slate-400'}`}>
+                {computed.uspWithUnit || 'Enter MRP and volume in product setup'}
+              </span>
+            </div>
           </div>
         </div>
       </div>
