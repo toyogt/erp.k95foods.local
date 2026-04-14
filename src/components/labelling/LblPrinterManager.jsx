@@ -102,7 +102,8 @@ export default function LblPrinterManager({ userRole = 'user' }) {
     const newErrors = {};
     if (!form.printer_id.trim()) newErrors.printer_id = 'Printer ID is required';
     if (!form.name.trim()) newErrors.name = 'Printer Name is required';
-    if (!form.register_app_link.trim() && !form.api_endpoint.trim()) newErrors.register_app_link = 'Middleware URL is required';
+    // Middleware URL only required for new printers
+    if (editModal === 'new' && !form.register_app_link.trim() && !form.api_endpoint.trim()) newErrors.register_app_link = 'Middleware URL is required';
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       toast({ title: 'Please fix the errors below', variant: 'destructive' });
@@ -238,7 +239,7 @@ export default function LblPrinterManager({ userRole = 'user' }) {
             <div className="space-y-3 border border-slate-200 rounded-lg p-3">
               <p className="text-xs font-semibold text-slate-700 uppercase tracking-wide">Middleware Connection</p>
               <div className="space-y-1">
-                <Label className="text-xs font-medium text-slate-700">Primary Middleware URL <span className="text-red-500">*</span></Label>
+                <Label className="text-xs font-medium text-slate-700">Primary Middleware URL {editModal === 'new' && <span className="text-red-500">*</span>}</Label>
                 <Input value={form.register_app_link} onChange={e => { setForm(f => ({ ...f, register_app_link: e.target.value })); setErrors(er => ({ ...er, register_app_link: '' })); }} placeholder="http://192.168.1.50:8080" className={`h-11 md:h-9 font-mono text-sm ${errors.register_app_link ? 'border-red-500' : ''}`} />
                 {errors.register_app_link && <p className="text-xs text-red-600">{errors.register_app_link}</p>}
                 <p className="text-xs text-slate-500">The service will auto-append /print for print commands</p>
