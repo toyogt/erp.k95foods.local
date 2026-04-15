@@ -4,18 +4,18 @@
  * Used by LblLabelPreviewCard and demo/bulk print command builders.
  *
  * POD Field definitions (based on Rynan middleware):
- *   POD1  — MRP (e.g. "69.00")
- *   POD2  — MRP with USP (e.g. "₹69.00 (USP: ₹0.35/ml)")
- *   POD3  — "Incl. of all taxes"
- *   POD4  — Batch No. (e.g. "GB46119-1")
- *   POD5  — Manufacturing Date (DD/MM/YYYY)
- *   POD6  — Expiry Date/Use By Date (DD/MM/YYYY)
- *   POD7  — USP value only (e.g. "0.35")
- *   POD8  — Manufacturing Date -1 day (for variant SKU offset)
- *   POD9  — Expiry Date -1 day (for variant SKU offset)
- *   POD10 — Net Weight (e.g. "200 ml")
- *   POD11 — USP with unit (e.g. "₹0.35/ml")
- *   POD12 — MRP and USP combined (e.g. "69.00 / 0.35")
+ *   POD1  — MRP                              key: mrp               e.g. "69.00"
+ *   POD2  — MRP with USP                     key: mrpWithUsp        e.g. "₹69.00 (USP: ₹0.35/ml)"
+ *   POD3  — Incl. of all taxes               key: taxLine           e.g. "Incl. of all taxes"
+ *   POD4  — Batch No.                        key: batchNo           e.g. "GB46119-1"
+ *   POD5  — Manufacturing Date               key: mfgDate           DD/MM/YYYY
+ *   POD6  — Expiry Date/Use By Date          key: expiryDate        DD/MM/YYYY
+ *   POD7  — USP (Product variant)            key: usp               e.g. "0.35"
+ *   POD8  — Manufacturing Date (Product)     key: mfgDateOffset     DD/MM/YYYY  (MFG −1 day)
+ *   POD9  — Expiry Date/Use By Date (Prod.)  key: expiryDateOffset  DD/MM/YYYY  (Expiry −1 day)
+ *   POD10 — Net Weight                       key: netWeight         e.g. "200 ml"
+ *   POD11 — USP                              key: uspWithUnit       e.g. "₹0.35/ml"
+ *   POD12 — MRP and USP                      key: mrpAndUsp         e.g. "69.00 / 0.35"
  */
 
 import moment from 'moment';
