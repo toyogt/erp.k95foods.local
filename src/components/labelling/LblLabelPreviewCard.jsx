@@ -82,9 +82,9 @@ export default function LblLabelPreviewCard({
               <PodRow pod="POD4"  label="Batch No."                        fieldKey="batchNo"            value={fields.batchNo || '—'} mono />
               <PodRow pod="POD5"  label="Manufacturing Date"               fieldKey="mfgDate"            value={fields.mfgDate || '—'} />
               <PodRow pod="POD6"  label="Expiry Date/Use By Date"          fieldKey="expiryDate"         value={fields.expiryDate || '—'} warn={!!fields.expiryDate} />
-              <PodRow pod="POD7"  label={`USP (${productName || 'Product'})`}   fieldKey="usp"           value={fields.usp || '—'} />
-              <PodRow pod="POD8"  label={`Manufacturing Date (${productName || 'Product'})`} fieldKey="mfgDateOffset"  value={fields.mfgDateOffset || '—'} muted />
-              <PodRow pod="POD9"  label={`Expiry Date/Use By Date (${productName || 'Product'})`} fieldKey="expiryDateOffset" value={fields.expiryDateOffset || '—'} muted />
+              <PodRow pod="POD7"  label="USP (Swiggy Noice)"                    fieldKey="usp"               value={fields.usp || '—'} />
+              <PodRow pod="POD8"  label="Manufacturing Date (Swiggy Noice)"    fieldKey="mfgDateOffset"     value={fields.mfgDateOffset || '—'} muted />
+              <PodRow pod="POD9"  label="Expiry Date/Use By Date (Swiggy Noice)" fieldKey="expiryDateOffset" value={fields.expiryDateOffset || '—'} muted />
               <PodRow pod="POD10" label="Net Weight"                       fieldKey="netWeight"          value={fields.netWeight || '—'} />
               <PodRow pod="POD11" label="USP"                              fieldKey="uspWithUnit"        value={fields.uspWithUnit || '—'} />
               <PodRow pod="POD12" label="MRP and USP"                      fieldKey="mrpAndUsp"          value={fields.mrpAndUsp || '—'} />
