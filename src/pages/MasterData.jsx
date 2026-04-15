@@ -73,7 +73,7 @@ export default function MasterData() {
         {isAdmin   && <TabsContent value="sku-barcodes"  className="mt-4"><SKUCustomerBarcodeManager /></TabsContent>}
         <TabsContent value="bottles"    className="mt-4"><ContainerTypeManager user={user} /></TabsContent>
         <TabsContent value="caps"       className="mt-4"><CapTypeManager user={user} /></TabsContent>
-        {isAdmin && <TabsContent value="boxtypes"   className="mt-4"><BoxTypeManager /></TabsContent>}
+        {isAdmin && <TabsContent value="boxtypes"   className="mt-4"><BoxTypeManager user={user} /></TabsContent>}
         <TabsContent value="locations"  className="mt-4"><LocationManager user={user} /></TabsContent>
         <TabsContent value="machines"   className="mt-4"><MachineManager user={user} /></TabsContent>
         <TabsContent value="wos"        className="mt-4"><PackingWOManager /></TabsContent>
