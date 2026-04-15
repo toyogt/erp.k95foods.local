@@ -37,8 +37,12 @@ export default function LblJobRowEditor({ index, job, products, planDate, onUpda
       onUpdate(index, 'product_name', prod.product_name || prod.item_name || '');
       onUpdate(index, 'bottle_type', prod.bottle_type || prod.container_type || '');
       onUpdate(index, 'mrp', prod.mrp || '');
-      // Reset template on product change
-      onUpdate(index, 'printer_template_id', '');
+      // Auto-fill template from SKU's saved print_template_mappings (demo_print → bulk_start fallback)
+      const savedMappings = prod.print_template_mappings || {};
+      const defaultTemplateId = savedMappings.demo_print || savedMappings.bulk_start || '';
+      // Find the template record by template_id to get its db id
+      const matched = templates.find(t => t.template_id === defaultTemplateId);
+      onUpdate(index, 'printer_template_id', matched ? matched.id : '');
     }
   };
 

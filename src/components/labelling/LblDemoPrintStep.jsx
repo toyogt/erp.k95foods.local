@@ -39,6 +39,14 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
     queryFn: () => base44.entities.LblPrinterConfig.filter({ is_active: true }),
   });
 
+  // Load the print template linked to this job (from SKU's print_template_mappings.demo_print)
+  const { data: jobTemplate } = useQuery({
+    queryKey: ['lbl-job-print-template', job.printer_template_id],
+    queryFn: () => base44.entities.LblPrintTemplate.filter({ is_active: true }),
+    enabled: true,
+    select: (rows) => rows.find(t => t.id === job.printer_template_id) || null,
+  });
+
   // Fetch product master to get MRP and shelf life
   const { data: productMaster } = useQuery({
     queryKey: ['product-master-for-demo', job.sku_code],
@@ -97,9 +105,15 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
       productName: job.product_name,
     });
 
+    // Resolve template name: prefer job's assigned template (from SKU setup), fallback to printer config
+    const resolvedTemplateName = jobTemplate?.middleware_template_name
+      || printer.demo_template
+      || printer.default_template
+      || '';
+
     const command = {
       type: 'demo',
-      template: printer.demo_template || printer.default_template || '',
+      template: resolvedTemplateName,
       data_commands: qty,
       quantity: qty,
       job_id: job.job_id,
@@ -176,6 +190,13 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
         <p className="text-slate-600"><span className="font-medium">Product Code:</span> {job.sku_code}</p>
         <p className="text-slate-600"><span className="font-medium">Planned:</span> {job.quantity_bottles_planned?.toLocaleString()} bottles</p>
         <p className="text-slate-600"><span className="font-medium">Stock Transferred:</span> {job.stock_transfer_qty?.toLocaleString()} bottles</p>
+        <p className="text-slate-600 col-span-2">
+          <span className="font-medium">Label Template:</span>{' '}
+          {jobTemplate
+            ? <span className="font-mono text-purple-700">{jobTemplate.name} [{jobTemplate.middleware_template_name}]</span>
+            : <span className="text-amber-600">⚠ No template assigned — set in SKU Setup → Printing & Batch tab</span>
+          }
+        </p>
       </div>
 
       {noPrinters && (
