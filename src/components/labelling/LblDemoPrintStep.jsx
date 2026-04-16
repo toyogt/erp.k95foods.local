@@ -93,11 +93,8 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
   const templateMissing = printerStatus?.templateFound === false;
   const statusChecked = printerStatus !== null;
 
-  // Resolve template name at render time (3-level fallback) so status panel can check it
-  const resolvedTemplateName = jobTemplate?.middleware_template_name
-    || selectedPrinter?.demo_template
-    || selectedPrinter?.default_template
-    || '';
+  // Use job's assigned template only — no fallback to printer defaults
+  const resolvedTemplateName = jobTemplate?.middleware_template_name || '';
 
   const setField = (key, val) => setLabelData(prev => ({ ...prev, [key]: val }));
 
