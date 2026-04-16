@@ -10,7 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import SKUList from '@/components/sku/SKUList';
 import SetupChecklist, { isSetupComplete } from '@/components/sku/SetupChecklist';
 import PODFieldMappingEditor from '@/components/labelling/PODFieldMappingEditor';
-import SKUPrintTemplateTab from '@/components/sku/SKUPrintTemplateTab';
+
 import SKUTemplatePODMappingPreview from '@/components/sku/SKUTemplatePODMappingPreview';
 import ArtworkTab from '@/components/sku/ArtworkTab';
 import BatchRuleBuilder from '@/components/batch/BatchRuleBuilder';
@@ -900,7 +900,7 @@ export default function SKUSetup() {
                     <option value="">— Select print template —</option>
                     {printTemplates.map(t => (
                       <option key={t.id} value={t.id}>
-                        {t.name} [{t.middleware_template_name}] — {t.command_type}
+                        {t.name} [{t.middleware_template_name}]
                       </option>
                     ))}
                   </select>
@@ -909,19 +909,10 @@ export default function SKUSetup() {
                   </p>
                 </div>
 
-                {/* POD Mapping Preview — shows template's field mappings like your screenshot */}
+                {/* POD Mapping Preview — shows template's field mappings */}
                 {mappingForm.printer_template_id && (
                   <SKUTemplatePODMappingPreview templateId={mappingForm.printer_template_id} />
                 )}
-              </div>
-
-              {/* Legacy Rynan Template Mapping (deprecated) */}
-              <div className="space-y-2">
-                <p className="text-sm font-semibold text-slate-700">Legacy: Rynan Template (Deprecated)</p>
-                <SKUPrintTemplateTab
-                  mappings={skuForm.print_template_mappings || {}}
-                  onChange={(val) => setSkuForm(f => ({ ...f, print_template_mappings: val }))}
-                />
               </div>
 
               {/* POD Field Mapping (Legacy) */}
