@@ -55,10 +55,14 @@ export function computeLabelFields({ mrp, mlPerBottle, mfgDate, labellingDate, s
   const expiryBase = mfgMoment;
 
   // Compute expiry — honour shelf life unit (days / months / years)
+  // Convention: "Best Before" = MFG + shelf_life − 1 day
+  // moment handles leap years and variable month lengths automatically.
+  // e.g. MFG 16/04/2026 + 12 months = 16/04/2027 − 1 day = 15/04/2027
+  // e.g. MFG 01/03/2024 + 12 months = 01/03/2025 − 1 day = 28/02/2025 (leap-safe)
   let expiryMoment = null;
   if (expiryBase && shelfLifeDays && Number(shelfLifeDays) > 0) {
-    const unit = shelfLifeUnit || 'days'; // default to days for backward compat
-    expiryMoment = expiryBase.clone().add(Number(shelfLifeDays), unit);
+    const unit = shelfLifeUnit || 'months';
+    expiryMoment = expiryBase.clone().add(Number(shelfLifeDays), unit).subtract(1, 'day');
   }
 
   // USP = MRP / ml
