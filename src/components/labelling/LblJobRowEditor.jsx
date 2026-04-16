@@ -23,12 +23,25 @@ export default function LblJobRowEditor({ index, job, products, planDate, onUpda
   });
   const productMaster = productDetails[0];
 
-  // Load print templates for template selector
-  const { data: templates = [] } = useQuery({
+  // Load ALL active print templates
+  const { data: allTemplates = [] } = useQuery({
     queryKey: ['lbl-print-templates-active'],
     queryFn: () => base44.entities.LblPrintTemplate.filter({ is_active: true }),
     staleTime: 60000,
   });
+
+  // Derive which templates are linked to the currently selected SKU via print_template_mappings
+  // print_template_mappings = { demo_print: templateId, bulk_start: templateId, ... }
+  // We collect all unique template IDs assigned to any command type for this SKU
+  const skuLinkedTemplateIds = (() => {
+    if (!productMaster?.print_template_mappings) return [];
+    return [...new Set(Object.values(productMaster.print_template_mappings).filter(Boolean))];
+  })();
+
+  // Templates to show in dropdown: only those linked to this SKU (fallback to all if SKU has no mappings yet)
+  const availableTemplates = skuLinkedTemplateIds.length > 0
+    ? allTemplates.filter(t => skuLinkedTemplateIds.includes(t.template_id))
+    : allTemplates;
 
   const handleProductChange = (productId) => {
     const prod = products.find(p => p.id === productId);
@@ -37,11 +50,15 @@ export default function LblJobRowEditor({ index, job, products, planDate, onUpda
       onUpdate(index, 'product_name', prod.product_name || prod.item_name || '');
       onUpdate(index, 'bottle_type', prod.bottle_type || prod.container_type || '');
       onUpdate(index, 'mrp', prod.mrp || '');
-      // Auto-fill template from SKU's saved print_template_mappings (demo_print → bulk_start fallback)
+
+      // Resolve default template from SKU's print_template_mappings
+      // Priority: demo_print → bulk_start → first linked template
       const savedMappings = prod.print_template_mappings || {};
-      const defaultTemplateId = savedMappings.demo_print || savedMappings.bulk_start || '';
-      // Find the template record by template_id to get its db id
-      const matched = templates.find(t => t.template_id === defaultTemplateId);
+      const linkedIds = [...new Set(Object.values(savedMappings).filter(Boolean))];
+      const defaultTemplateId = savedMappings.demo_print || savedMappings.bulk_start || linkedIds[0] || '';
+      const matched = allTemplates.find(t => t.template_id === defaultTemplateId);
+
+      // Auto-select if exactly 1 linked template or if a default is found
       onUpdate(index, 'printer_template_id', matched ? matched.id : '');
     }
   };
@@ -142,7 +159,18 @@ export default function LblJobRowEditor({ index, job, products, planDate, onUpda
       {job.sku_code && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="space-y-1">
-            <Label className="text-xs font-medium text-slate-700">Print Template</Label>
+            <div className="flex items-center gap-2">
+              <Label className="text-xs font-medium text-slate-700">Print Template</Label>
+              {skuLinkedTemplateIds.length === 1 && job.printer_template_id && (
+                <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-medium">Auto-selected</span>
+              )}
+              {skuLinkedTemplateIds.length > 1 && (
+                <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium">{skuLinkedTemplateIds.length} linked</span>
+              )}
+              {skuLinkedTemplateIds.length === 0 && job.sku_code && (
+                <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium">No SKU templates — showing all</span>
+              )}
+            </div>
             <Select
               value={job.printer_template_id || ''}
               onValueChange={v => onUpdate(index, 'printer_template_id', v)}
@@ -151,14 +179,22 @@ export default function LblJobRowEditor({ index, job, products, planDate, onUpda
                 <SelectValue placeholder="Select label template" />
               </SelectTrigger>
               <SelectContent>
-                {templates.map(t => (
-                  <SelectItem key={t.id} value={t.id}>
-                    {t.name} {t.middleware_template_name ? `(${t.middleware_template_name})` : ''}
-                  </SelectItem>
-                ))}
+                {availableTemplates.length === 0 ? (
+                  <SelectItem value={null} disabled>No templates available</SelectItem>
+                ) : (
+                  availableTemplates.map(t => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.name} {t.middleware_template_name ? `[${t.middleware_template_name}]` : ''}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
-            <p className="text-xs text-slate-500">Template used for demo and bulk print</p>
+            <p className="text-xs text-slate-500">
+              {skuLinkedTemplateIds.length > 0
+                ? `Showing ${availableTemplates.length} template(s) linked to this product in SKU Setup`
+                : 'Link templates in SKU Setup → Printing & Batch tab'}
+            </p>
           </div>
           <div className="space-y-1">
             <Label className="text-xs font-medium text-slate-700">MRP (₹)</Label>
@@ -189,7 +225,7 @@ export default function LblJobRowEditor({ index, job, products, planDate, onUpda
           fssaiNo={productMaster?.fssai_no}
           bottleType={job.bottle_type}
           templateName={job.printer_template_id
-            ? templates.find(t => t.id === job.printer_template_id)?.name
+            ? allTemplates.find(t => t.id === job.printer_template_id)?.name
             : productMaster?.label_template_4x6 || ''}
         />
       )}
