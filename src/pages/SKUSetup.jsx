@@ -273,6 +273,7 @@ export default function SKUSetup() {
     // Upsert SKUPrintMapping
     const mappingPayload = {
       ...mappingForm,
+      template_id: mappingForm.printer_template_id || '', // Map printer_template_id to template_id (required field)
       product_code: skuForm.item_code,
       sku_code: skuForm.item_code,
       payload_map_json: JSON.stringify(payloadRows),
@@ -281,7 +282,7 @@ export default function SKUSetup() {
 
     if (currentMapping) {
       await base44.entities.SKUPrintMapping.update(currentMapping.id, mappingPayload);
-    } else if (mappingForm.ryan_template_id || mappingForm.batch_format_rule_id) {
+    } else if (mappingForm.printer_template_id || mappingForm.ryan_template_id || mappingForm.batch_format_rule_id) {
       await base44.entities.SKUPrintMapping.create({
         ...mappingPayload,
         mapping_id: genId('MAP'),
