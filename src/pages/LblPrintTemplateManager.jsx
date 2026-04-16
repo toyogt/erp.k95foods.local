@@ -23,11 +23,50 @@ import { toast } from '@/components/ui/use-toast';
 import { Plus, Edit2, Trash2, Copy, Loader2, Info } from 'lucide-react';
 
 const ERP_FIELDS = [
-  { key: 'mrp', label: 'MRP' },
-  { key: 'batchNo', label: 'Batch Number' },
-  { key: 'mfgDate', label: 'Manufacturing Date' },
-  { key: 'expiryDate', label: 'Expiry Date' },
+  // Product & SKU Info
+  { key: 'sku_code', label: 'Product Code (SKU)' },
+  { key: 'product_name', label: 'Product Name' },
+  { key: 'brand_name', label: 'Brand Name' },
+  { key: 'flavour', label: 'Flavour' },
+  { key: 'bottle_type', label: 'Bottle Type' },
+  
+  // Pricing & Tax
+  { key: 'mrp', label: 'MRP (Price)' },
+  { key: 'mrp_with_usp', label: 'MRP with USP' },
   { key: 'usp', label: 'USP (Cost per ml)' },
+  { key: 'hsn_code', label: 'HSN Code' },
+  { key: 'tax_percent', label: 'Tax Percentage' },
+  
+  // Batch & Dates
+  { key: 'batch_no', label: 'Batch Number' },
+  { key: 'batch_seq', label: 'Batch Sequence' },
+  { key: 'mfg_date', label: 'Manufacturing Date (DD/MM/YYYY)' },
+  { key: 'manufacturing_date', label: 'Manufacturing Date' },
+  { key: 'expiry_date', label: 'Expiry Date (DD/MM/YYYY)' },
+  { key: 'shelf_life', label: 'Shelf Life' },
+  
+  // Quantity & Volume
+  { key: 'ml_per_bottle', label: 'Volume per Bottle (ml)' },
+  { key: 'bottles_per_box', label: 'Bottles per Box' },
+  { key: 'quantity_bottles', label: 'Quantity (Bottles)' },
+  { key: 'quantity_cases', label: 'Quantity (Cases)' },
+  
+  // Regulatory & Info
+  { key: 'fssai_no', label: 'FSSAI Number' },
+  { key: 'manufacturer_name', label: 'Manufacturer Name' },
+  { key: 'manufacturer_address', label: 'Manufacturer Address' },
+  { key: 'customer_care_phone', label: 'Customer Care Phone' },
+  { key: 'customer_care_email', label: 'Customer Care Email' },
+  
+  // Barcode & IDs
+  { key: 'product_barcode', label: 'Product Barcode' },
+  { key: 'box_barcode', label: 'Box Barcode' },
+  { key: 'artwork_id', label: 'Artwork ID' },
+  
+  // Custom/Computed
+  { key: 'line_id', label: 'Labelling Line ID' },
+  { key: 'shift_type', label: 'Shift (Day/Night)' },
+  { key: 'labelling_date', label: 'Labelling Date' },
 ];
 
 export default function LblPrintTemplateManager() {
