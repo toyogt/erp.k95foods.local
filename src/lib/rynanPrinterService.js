@@ -454,32 +454,37 @@ export async function sendPurgeCommand(printer, user) {
  *
  * Returns a structured result object used by LblPrinterStatusPanel.
  *
- * @param {object} printer - LblPrinterConfig record
+ * @param {object} printer       - LblPrinterConfig record
+ * @param {string} [templateName] - Optional: if provided, also checks template exists on printer via RQLI
  * @returns {{
  *   configOk: bool,        configAction: 'found'|'created'|'updated'|'error', configError: string|null,
  *   connectionOk: bool,    connectionError: string|null,
  *   has_cartridge: bool,   ink_level: number|null,
  *   cartridgeError: string|null,
+ *   templateFound: bool|null,  availableTemplates: string[],  templateError: string|null,
  *   mon_raw: object|null,  printers_raw: object|null
  * }}
  */
-export async function checkAndSyncPrinterConfig(printer) {
+export async function checkAndSyncPrinterConfig(printer, templateName = null) {
   const base    = (printer.register_app_link || printer.api_endpoint || '').replace(/\/print\/?$/, '').replace(/\/$/, '');
   const headers       = buildHeaders(printer, false);
   const jsonHeaders   = buildHeaders(printer, true);
   const timeoutMs     = printer.request_timeout_ms || 10000;
 
   const result = {
-    configOk:        false,
-    configAction:    null,   // 'found' | 'created' | 'updated' | 'error'
-    configError:     null,
-    connectionOk:    false,
-    connectionError: null,
-    has_cartridge:   false,
-    ink_level:       null,
-    cartridgeError:  null,
-    mon_raw:         null,
-    printers_raw:    null,
+    configOk:           false,
+    configAction:       null,   // 'found' | 'created' | 'updated' | 'error'
+    configError:        null,
+    connectionOk:       false,
+    connectionError:    null,
+    has_cartridge:      false,
+    ink_level:          null,
+    cartridgeError:     null,
+    templateFound:      null,   // null = not checked, true/false = result
+    availableTemplates: [],
+    templateError:      null,
+    mon_raw:            null,
+    printers_raw:       null,
   };
 
   // ── STEP 1: GET /printers ─────────────────────────────────────────────────
@@ -625,7 +630,71 @@ export async function checkAndSyncPrinterConfig(printer) {
     result.connectionError = err.message;
   }
 
+  // ── STEP 5: RQLI — check if templateName exists on the printer ────────────
+  if (templateName && result.connectionOk) {
+    const tplCheck = await checkTemplateExists(printer, templateName);
+    result.templateFound      = tplCheck.found;
+    result.availableTemplates = tplCheck.availableTemplates;
+    result.templateError      = tplCheck.error;
+  }
+
   return result;
+}
+
+/**
+ * checkTemplateExists
+ *
+ * Uses the RQLI command to fetch the list of templates registered on the printer.
+ * Protocol: POST /print with { command: "RQLI" }
+ * Middleware returns the printer's response: { command: "RSLI", template: ["Default-1", "Default-2"] }
+ *
+ * Then checks if the given templateName is in that list.
+ *
+ * @param {object} printer       - LblPrinterConfig record
+ * @param {string} templateName  - Template name to verify (e.g. "Default-1")
+ * @returns {{ found: bool, availableTemplates: string[], error: string|null }}
+ */
+export async function checkTemplateExists(printer, templateName) {
+  const base       = (printer.register_app_link || printer.api_endpoint || '').replace(/\/print\/?$/, '').replace(/\/$/, '');
+  const headers    = buildHeaders(printer, true);
+  const timeoutMs  = printer.request_timeout_ms || 10000;
+
+  const rqliPayload = {
+    printer_id: printer.printer_id,
+    printer:    { ip: printer.ip_address, port: printer.port || 9100 },
+    command:    { command: 'RQLI' },
+    priority:   PRINT_PRIORITY.NORMAL,
+  };
+
+  const { body, error: transportError } = await postToMiddleware(
+    `${base}${MIDDLEWARE_ENDPOINTS.PRINT}`,
+    rqliPayload,
+    headers,
+    timeoutMs
+  );
+
+  if (transportError && !body) {
+    return { found: false, availableTemplates: [], error: `Cannot reach middleware: ${transportError}` };
+  }
+
+  // Middleware wraps printer response — template list is in body.printer_response_payload
+  // or directly in body.template (depends on middleware version)
+  const printerPayload = body?.printer_response_payload || body || {};
+  const templateList = (
+    printerPayload.template ||       // { command: "RSLI", template: [...] }
+    printerPayload.templates ||
+    body?.template ||
+    []
+  );
+
+  const templates = Array.isArray(templateList) ? templateList : [];
+  const found = templates.some(t => t === templateName);
+
+  return {
+    found,
+    availableTemplates: templates,
+    error: null,
+  };
 }
 
 /**

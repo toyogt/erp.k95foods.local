@@ -14,7 +14,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { toast } from '@/components/ui/use-toast';
 import { checkAndSyncPrinterConfig, sendPurgeCommand } from '@/lib/rynanPrinterService';
 import { logLabellingEvent } from '@/lib/labellingEventLogger';
-import { Loader2, CheckCircle2, XCircle, Droplets, Wifi, Settings2, Eraser, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Loader2, CheckCircle2, XCircle, Droplets, Wifi, Settings2, Eraser, RefreshCw, AlertTriangle, FileText } from 'lucide-react';
 
 // Map configAction to a readable label
 const CONFIG_ACTION_LABELS = {
@@ -24,7 +24,7 @@ const CONFIG_ACTION_LABELS = {
   error:   'Could not configure printer in middleware',
 };
 
-export default function LblPrinterStatusPanel({ printer, job, user, onStatusFetched }) {
+export default function LblPrinterStatusPanel({ printer, job, user, templateName, onStatusFetched }) {
   const [result, setResult]       = useState(null);  // full checkAndSyncPrinterConfig result
   const [fetching, setFetching]   = useState(false);
   const [purging, setPurging]     = useState(false);
@@ -32,15 +32,17 @@ export default function LblPrinterStatusPanel({ printer, job, user, onStatusFetc
 
   const runCheck = async () => {
     setFetching(true);
-    const res = await checkAndSyncPrinterConfig(printer);
+    const res = await checkAndSyncPrinterConfig(printer, templateName || null);
     setResult(res);
 
-    // onStatusFetched expects { has_cartridge, success } for the parent demo print gate
-    if (res.configOk && res.connectionOk) {
+    // onStatusFetched: pass result only if config + connection OK AND template found (if checked)
+    const templateOk = res.templateFound === null || res.templateFound === true;
+    if (res.configOk && res.connectionOk && templateOk) {
       onStatusFetched?.({ has_cartridge: res.has_cartridge, success: true, ...res });
     } else {
       onStatusFetched?.(null);
-      const errMsg = res.configError || res.connectionError || 'Printer check failed';
+      const errMsg = res.configError || res.connectionError
+        || (res.templateFound === false ? `Template "${templateName}" not found on printer` : 'Printer check failed');
       toast({ title: 'Printer Check Failed', description: errMsg, variant: 'destructive' });
     }
     setFetching(false);
@@ -179,6 +181,37 @@ export default function LblPrinterStatusPanel({ printer, job, user, onStatusFetc
             </div>
           )}
 
+          {/* Step 5 — Template check (only if templateName was provided) */}
+          {result.templateFound !== null && (
+            <Row
+              icon={FileText}
+              iconClass={result.templateFound ? 'text-green-600' : 'text-red-500'}
+              label={`Template "${templateName}"`}
+              value={result.templateFound ? 'Found on printer' : 'NOT found on printer'}
+              valueClass={result.templateFound ? 'text-green-700' : 'text-red-700'}
+            >
+              {!result.templateFound && result.availableTemplates.length > 0 && (
+                <div className="mt-1">
+                  <p className="text-xs text-slate-500 mb-0.5">Available templates on this printer:</p>
+                  <div className="flex flex-wrap gap-1">
+                    {result.availableTemplates.map(t => (
+                      <span key={t} className="text-xs bg-slate-100 border border-slate-200 rounded px-1.5 py-0.5 font-mono text-slate-700">{t}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {!result.templateFound && result.availableTemplates.length === 0 && (
+                <p className="text-xs text-amber-600 mt-0.5">No templates found on this printer — check middleware configuration.</p>
+              )}
+            </Row>
+          )}
+          {result.templateError && (
+            <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded p-2">
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+              <p className="text-xs text-amber-700">Template check failed: {result.templateError}</p>
+            </div>
+          )}
+
           {/* No cartridge — block print */}
           {!result.has_cartridge && result.connectionOk && (
             <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded p-2 mt-1">
@@ -189,21 +222,26 @@ export default function LblPrinterStatusPanel({ printer, job, user, onStatusFetc
 
           {/* Overall summary badge */}
           <div className="pt-2">
-            {result.configOk && result.connectionOk && result.has_cartridge ? (
-              <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded p-2">
-                <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
-                <p className="text-xs text-green-700 font-semibold">Printer is ready — all checks passed.</p>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded p-2">
-                <XCircle className="w-4 h-4 text-red-600 shrink-0" />
-                <p className="text-xs text-red-700 font-semibold">
-                  Printer not ready —{' '}
-                  {!result.configOk ? 'configuration failed' : !result.connectionOk ? 'connection failed' : 'no cartridge'}
-                  . Cannot send print command.
-                </p>
-              </div>
-            )}
+            {(() => {
+              const tplOk = result.templateFound === null || result.templateFound === true;
+              const allOk = result.configOk && result.connectionOk && result.has_cartridge && tplOk;
+              const failReason = !result.configOk ? 'middleware configuration failed'
+                : !result.connectionOk ? 'printer connection failed'
+                : !result.has_cartridge ? 'no cartridge installed'
+                : !tplOk ? `template "${templateName}" not found on printer`
+                : '';
+              return allOk ? (
+                <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded p-2">
+                  <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
+                  <p className="text-xs text-green-700 font-semibold">Printer is ready — all checks passed.</p>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded p-2">
+                  <XCircle className="w-4 h-4 text-red-600 shrink-0" />
+                  <p className="text-xs text-red-700 font-semibold">Printer not ready — {failReason}. Cannot send print command.</p>
+                </div>
+              );
+            })()}
           </div>
         </div>
       )}

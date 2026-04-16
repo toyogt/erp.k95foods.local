@@ -91,6 +91,12 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
   const hasCartridge = printerStatus?.has_cartridge === true;
   const statusChecked = printerStatus !== null;
 
+  // Resolve template name at render time (3-level fallback) so status panel can check it
+  const resolvedTemplateName = jobTemplate?.middleware_template_name
+    || selectedPrinter?.demo_template
+    || selectedPrinter?.default_template
+    || '';
+
   const setField = (key, val) => setLabelData(prev => ({ ...prev, [key]: val }));
 
   const handleSendDemoPrint = async () => {
@@ -118,15 +124,6 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
       },
       skuPodMappings: skuPrintMapping || [],
     });
-
-    // Resolve middleware template name:
-    // 1. Template linked to job via SKU Setup → Printing tab (most specific)
-    // 2. Printer's configured demo template
-    // 3. Printer's default template
-    const resolvedTemplateName = jobTemplate?.middleware_template_name
-      || printer.demo_template
-      || printer.default_template
-      || '';
 
     if (!resolvedTemplateName) {
       toast({ title: 'No Template Configured', description: 'Assign a print template to this product in SKU Setup → Printing & Batch tab.', variant: 'destructive' });
@@ -218,6 +215,7 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
           printer={selectedPrinter}
           job={job}
           user={user}
+          templateName={resolvedTemplateName || undefined}
           onStatusFetched={setPrinterStatus}
         />
       )}
@@ -327,7 +325,7 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
         <Button
           className="h-11 w-full md:w-auto gap-2 bg-purple-600 hover:bg-purple-700"
           onClick={handleSendDemoPrint}
-          disabled={sending || noPrinters || !printerId || (statusChecked && !hasCartridge)}
+          disabled={sending || noPrinters || !printerId || (statusChecked && !hasCartridge) || (statusChecked && printerStatus?.templateFound === false)}
         >
           {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
           Send Demo Print
