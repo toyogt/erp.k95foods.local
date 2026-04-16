@@ -19,6 +19,7 @@ import { toast } from '@/components/ui/use-toast';
 import { computeLabelFields } from '@/lib/labelFieldComputer';
 import { resolveDemoPrintLabelData } from '@/lib/buildRynanLabelData';
 import LblPrinterStatusPanel from './LblPrinterStatusPanel';
+import LblPrintPreviewModal from './LblPrintPreviewModal';
 import { Loader2, Printer, AlertTriangle } from 'lucide-react';
 
 export default function LblDemoPrintStep({ job, user, onComplete }) {
@@ -26,6 +27,8 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
   const [printerId, setPrinterId] = useState('');
   const [sending, setSending] = useState(false);
   const [printerStatus, setPrinterStatus] = useState(null);
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewPodValues, setPreviewPodValues] = useState(null);
 
   // Label data fields — pre-filled from job/product, all editable
   const [labelData, setLabelData] = useState({
@@ -40,15 +43,34 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
     queryFn: () => base44.entities.LblPrinterConfig.filter({ is_active: true }),
   });
 
+  // Auto-fetch template from SKU if job doesn't have one
+  const { data: skuMapping } = useQuery({
+    queryKey: ['sku-mapping-for-template', job.sku_code],
+    queryFn: async () => {
+      if (!job.sku_code) return null;
+      const rows = await base44.entities.SKUPrintMapping.filter({ sku_code: job.sku_code });
+      return rows?.[0] || null;
+    },
+    enabled: !!job.sku_code && !job.printer_template_id,
+  });
+
+  // Auto-assign template from SKU if job doesn't have one
+  useEffect(() => {
+    if (!job.printer_template_id && skuMapping?.printer_template_id) {
+      base44.entities.LabellingJob.update(job.id, { printer_template_id: skuMapping.printer_template_id }).catch(() => {});
+    }
+  }, [skuMapping?.printer_template_id]);
+
   // Load the print template linked to this job via printer_template_id
   const { data: jobTemplate } = useQuery({
     queryKey: ['lbl-job-print-template', job.printer_template_id],
     queryFn: async () => {
-      if (!job.printer_template_id) return null;
+      const templateId = job.printer_template_id || skuMapping?.printer_template_id;
+      if (!templateId) return null;
       const templates = await base44.entities.LblPrintTemplate.filter({ is_active: true });
-      return templates.find(t => t.id === job.printer_template_id) || null;
+      return templates.find(t => t.id === templateId) || null;
     },
-    enabled: !!job.printer_template_id,
+    enabled: !!(job.printer_template_id || skuMapping?.printer_template_id),
   });
 
   // Fetch SKU's POD field mapping config
@@ -101,7 +123,7 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
 
   const setField = (key, val) => setLabelData(prev => ({ ...prev, [key]: val }));
 
-  const handleSendDemoPrint = async () => {
+  const handlePreviewPrint = () => {
     if (!demoQty || Number(demoQty) <= 0) { toast({ title: 'Invalid Quantity', variant: 'destructive' }); return; }
     if (!printerId) { toast({ title: 'Select a printer first', variant: 'destructive' }); return; }
     if (!statusChecked) { toast({ title: 'Check Printer Status First', description: 'Click "Check Status" to verify cartridge before printing.', variant: 'destructive' }); return; }
@@ -111,6 +133,26 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
     if (!labelData.mfg_date) { toast({ title: 'Manufacturing Date is required', variant: 'destructive' }); return; }
     if (!labelData.mrp) { toast({ title: 'MRP is required', variant: 'destructive' }); return; }
 
+    // Build POD values for preview
+    const podMap = {};
+    if (jobTemplate?.field_mappings) {
+      jobTemplate.field_mappings.forEach(mapping => {
+        const fieldMap = {
+          mrp: labelData.mrp,
+          batchNo: labelData.batch_no,
+          mfgDate: labelData.mfg_date,
+          expiryDate: computed.expiryDate,
+          usp: computed.uspWithUnit?.split(' ')[0],
+        };
+        podMap[mapping.pod_field] = fieldMap[mapping.erp_source] || '';
+      });
+    }
+
+    setPreviewPodValues(podMap);
+    setShowPreview(true);
+  };
+
+  const handleConfirmPrint = async () => {
     const printer = selectedPrinter;
     setSending(true);
 
@@ -165,6 +207,7 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
     });
 
     toast({ title: 'Demo Print Sent', description: `${qty} demo label(s) sent. Proceed to verify physical output.` });
+    setShowPreview(false);
     onComplete?.();
     setSending(false);
   };
@@ -327,13 +370,25 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
         )}
         <Button
           className="h-11 w-full md:w-auto gap-2 bg-purple-600 hover:bg-purple-700"
-          onClick={handleSendDemoPrint}
+          onClick={handlePreviewPrint}
           disabled={sending || noPrinters || !printerId || (statusChecked && !hasCartridge) || (statusChecked && templateMissing)}
         >
           {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
           Send Demo Print
         </Button>
       </div>
+
+      {/* Preview Modal */}
+      <LblPrintPreviewModal
+        open={showPreview}
+        onOpenChange={setShowPreview}
+        podValues={previewPodValues}
+        printerName={selectedPrinter?.name}
+        templateName={resolvedTemplateName}
+        quantity={Number(demoQty)}
+        onConfirm={handleConfirmPrint}
+        isLoading={sending}
+      />
     </div>
   );
 }
