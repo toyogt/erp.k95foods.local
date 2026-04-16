@@ -1,32 +1,47 @@
 /**
  * LblPrinterStatusPanel
- * Fetches and displays cartridge status, ink level, and MON command output
- * from the Rynan middleware. Also provides a Purge button.
+ *
+ * Runs and displays the full 5-step printer validation flow:
+ *   Step 1 — GET /printers  → is printer_id registered? IP/port correct?
+ *   Step 2 — Auto-fix       → POST /printers (register) or PUT /printers/{id} (update IP/port)
+ *   Step 3 — POST /print { command:"MON" } → live middleware ↔ printer connection test
+ *   Step 4 — Parse MON response → cartridge presence + ink level (RSAL error codes)
+ *   Step 5 — Show overall result → enable/block the print button
  */
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { toast } from '@/components/ui/use-toast';
-import { getPrinterStatus, sendPurgeCommand } from '@/lib/rynanPrinterService';
+import { checkAndSyncPrinterConfig, sendPurgeCommand } from '@/lib/rynanPrinterService';
 import { logLabellingEvent } from '@/lib/labellingEventLogger';
-import { Loader2, CheckCircle2, XCircle, Droplets, Activity, Eraser, RefreshCw } from 'lucide-react';
+import { Loader2, CheckCircle2, XCircle, Droplets, Wifi, Settings2, Eraser, RefreshCw, AlertTriangle } from 'lucide-react';
+
+// Map configAction to a readable label
+const CONFIG_ACTION_LABELS = {
+  found:   'Printer ID found — configuration matches',
+  created: 'Printer registered in middleware (was missing)',
+  updated: 'Printer IP/port updated in middleware',
+  error:   'Could not configure printer in middleware',
+};
 
 export default function LblPrinterStatusPanel({ printer, job, user, onStatusFetched }) {
-  const [status, setStatus] = useState(null); // { has_cartridge, ink_level, mon_output, raw }
-  const [fetching, setFetching] = useState(false);
-  const [purging, setPurging] = useState(false);
+  const [result, setResult]       = useState(null);  // full checkAndSyncPrinterConfig result
+  const [fetching, setFetching]   = useState(false);
+  const [purging, setPurging]     = useState(false);
   const [showPurgeConfirm, setShowPurgeConfirm] = useState(false);
 
-  const fetchStatus = async () => {
+  const runCheck = async () => {
     setFetching(true);
-    const result = await getPrinterStatus(printer);
-    if (result.success) {
-      setStatus(result);
-      onStatusFetched?.(result);
+    const res = await checkAndSyncPrinterConfig(printer);
+    setResult(res);
+
+    // onStatusFetched expects { has_cartridge, success } for the parent demo print gate
+    if (res.configOk && res.connectionOk) {
+      onStatusFetched?.({ has_cartridge: res.has_cartridge, success: true, ...res });
     } else {
-      toast({ title: 'Could not fetch printer status', description: result.errorMessage, variant: 'destructive' });
-      setStatus(null);
       onStatusFetched?.(null);
+      const errMsg = res.configError || res.connectionError || 'Printer check failed';
+      toast({ title: 'Printer Check Failed', description: errMsg, variant: 'destructive' });
     }
     setFetching(false);
   };
@@ -34,19 +49,14 @@ export default function LblPrinterStatusPanel({ printer, job, user, onStatusFetc
   const handlePurge = async () => {
     setShowPurgeConfirm(false);
     setPurging(true);
-    const result = await sendPurgeCommand(printer, user);
-    if (result.success) {
+    const res = await sendPurgeCommand(printer, user);
+    if (res.success) {
       toast({ title: 'Printer Purged', description: 'Purge command accepted by printer.' });
-      if (job) {
-        await logLabellingEvent({ action_type: 'printer_command_sent', job_id: job.id, plan_id: job.plan_id, description: `Purge command sent to printer ${printer.name}`, user });
-      }
-      // Refresh status after purge
-      await fetchStatus();
+      if (job) await logLabellingEvent({ action_type: 'printer_command_sent', job_id: job.id, plan_id: job.plan_id, description: `Purge sent to ${printer.name}`, user });
+      await runCheck(); // refresh status after purge
     } else {
-      toast({ title: 'Purge Failed', description: result.errorMessage || 'Printer did not accept purge command.', variant: 'destructive' });
-      if (job) {
-        await logLabellingEvent({ action_type: 'printer_command_failed', job_id: job.id, plan_id: job.plan_id, description: `Purge failed: ${result.errorMessage}`, user });
-      }
+      toast({ title: 'Purge Failed', description: res.errorMessage || 'Printer did not accept purge.', variant: 'destructive' });
+      if (job) await logLabellingEvent({ action_type: 'printer_command_failed', job_id: job.id, plan_id: job.plan_id, description: `Purge failed: ${res.errorMessage}`, user });
     }
     setPurging(false);
   };
@@ -57,7 +67,6 @@ export default function LblPrinterStatusPanel({ printer, job, user, onStatusFetc
     if (level <= 30) return 'text-amber-600';
     return 'text-green-700';
   };
-
   const inkBg = (level) => {
     if (level == null) return 'bg-slate-200';
     if (level <= 15) return 'bg-red-500';
@@ -65,72 +74,142 @@ export default function LblPrinterStatusPanel({ printer, job, user, onStatusFetc
     return 'bg-green-500';
   };
 
+  const Row = ({ icon: Icon, iconClass, label, value, valueClass, children }) => (
+    <div className="flex items-start gap-2.5 py-1.5">
+      <Icon className={`w-4 h-4 mt-0.5 shrink-0 ${iconClass}`} />
+      <div className="flex-1 min-w-0">
+        <span className="text-xs font-medium text-slate-600">{label}: </span>
+        {value && <span className={`text-xs font-semibold ${valueClass || 'text-slate-900'}`}>{value}</span>}
+        {children}
+      </div>
+    </div>
+  );
+
   return (
     <div className="border border-slate-200 rounded-lg p-3 space-y-3 bg-slate-50">
+
+      {/* Header + Check button */}
       <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold text-slate-700 uppercase tracking-wide">Printer Status — {printer.name}</p>
-        <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" onClick={fetchStatus} disabled={fetching}>
+        <p className="text-xs font-semibold text-slate-700 uppercase tracking-wide">
+          Printer Check — {printer.name}
+        </p>
+        <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" onClick={runCheck} disabled={fetching}>
           {fetching ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
-          {status ? 'Refresh' : 'Check Status'}
+          {result ? 'Re-check' : 'Check Status'}
         </Button>
       </div>
 
-      {!status && !fetching && (
-        <p className="text-xs text-slate-500 text-center py-2">Click "Check Status" to verify printer before sending command.</p>
+      {/* Idle state */}
+      {!result && !fetching && (
+        <p className="text-xs text-slate-500 text-center py-2">
+          Click "Check Status" to verify printer configuration, connection, and cartridge before printing.
+        </p>
       )}
 
+      {/* Loading */}
       {fetching && (
-        <div className="flex items-center justify-center gap-2 py-3 text-sm text-slate-500">
-          <Loader2 className="w-4 h-4 animate-spin" /> Checking printer…
+        <div className="flex items-center justify-center gap-2 py-4 text-sm text-slate-500">
+          <Loader2 className="w-4 h-4 animate-spin" /> Running printer checks…
         </div>
       )}
 
-      {status && !fetching && (
-        <div className="space-y-2">
-          {/* Cartridge status */}
-          <div className="flex items-center gap-2">
-            {status.has_cartridge ? (
-              <><CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" /><span className="text-sm font-medium text-green-700">Cartridge Detected</span></>
-            ) : (
-              <><XCircle className="w-4 h-4 text-red-600 shrink-0" /><span className="text-sm font-medium text-red-700">No Cartridge Found</span></>
-            )}
-          </div>
+      {/* Results */}
+      {result && !fetching && (
+        <div className="space-y-1 divide-y divide-slate-100">
 
-          {/* Ink Level */}
-          {status.has_cartridge && status.ink_level != null && (
-            <div className="space-y-1">
+          {/* Step 1+2 — Config check */}
+          <Row
+            icon={Settings2}
+            iconClass={result.configOk ? 'text-green-600' : 'text-red-500'}
+            label="Middleware Configuration"
+            value={CONFIG_ACTION_LABELS[result.configAction] || '—'}
+            valueClass={result.configOk ? 'text-green-700' : 'text-red-700'}
+          />
+          {result.configError && (
+            <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded p-2 mt-1">
+              <AlertTriangle className="w-3.5 h-3.5 text-red-600 shrink-0" />
+              <p className="text-xs text-red-700">{result.configError}</p>
+            </div>
+          )}
+
+          {/* Step 3 — Live connection */}
+          <Row
+            icon={Wifi}
+            iconClass={result.connectionOk ? 'text-green-600' : 'text-red-500'}
+            label="Printer Connection (MON)"
+            value={result.connectionOk ? 'Connected and responding' : (result.connectionError || 'No response from printer')}
+            valueClass={result.connectionOk ? 'text-green-700' : 'text-red-700'}
+          />
+
+          {/* Step 4 — Cartridge */}
+          <Row
+            icon={result.has_cartridge ? CheckCircle2 : XCircle}
+            iconClass={result.has_cartridge ? 'text-green-600' : 'text-red-500'}
+            label="Cartridge"
+            value={result.has_cartridge ? 'Detected' : (result.cartridgeError || 'Not detected')}
+            valueClass={result.has_cartridge ? 'text-green-700' : 'text-red-700'}
+          />
+
+          {/* Ink level bar — only if cartridge present and level known */}
+          {result.has_cartridge && result.ink_level != null && (
+            <div className="pt-1.5 space-y-1">
               <div className="flex items-center justify-between text-xs">
-                <span className="flex items-center gap-1 text-slate-600"><Droplets className="w-3.5 h-3.5" /> Ink Level</span>
-                <span className={`font-semibold ${inkColor(status.ink_level)}`}>{status.ink_level}%</span>
+                <span className="flex items-center gap-1 text-slate-600">
+                  <Droplets className="w-3.5 h-3.5" /> Ink Level
+                </span>
+                <span className={`font-semibold ${inkColor(result.ink_level)}`}>{result.ink_level}%</span>
               </div>
               <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
-                <div className={`h-full rounded-full transition-all ${inkBg(status.ink_level)}`} style={{ width: `${status.ink_level}%` }} />
+                <div
+                  className={`h-full rounded-full transition-all ${inkBg(result.ink_level)}`}
+                  style={{ width: `${result.ink_level}%` }}
+                />
               </div>
-              {status.ink_level <= 15 && (
+              {result.ink_level <= 15 && (
                 <p className="text-xs text-red-600">⚠ Very low ink — replace cartridge soon</p>
               )}
             </div>
           )}
 
-          {/* MON command output */}
-          {status.mon_output && (
-            <div className="flex items-start gap-2">
-              <Activity className="w-3.5 h-3.5 text-slate-400 mt-0.5 shrink-0" />
-              <p className="text-xs text-slate-600 font-mono break-all">{status.mon_output}</p>
+          {/* Low ink warning from RSAL 008 even without a numeric level */}
+          {result.has_cartridge && result.cartridgeError && (
+            <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded p-2 mt-1">
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+              <p className="text-xs text-amber-700">{result.cartridgeError}</p>
             </div>
           )}
 
-          {/* No cartridge warning */}
-          {!status.has_cartridge && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-2">
-              <p className="text-xs text-red-700 font-medium">Cannot send print command — no cartridge installed in the printer.</p>
+          {/* No cartridge — block print */}
+          {!result.has_cartridge && result.connectionOk && (
+            <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded p-2 mt-1">
+              <XCircle className="w-3.5 h-3.5 text-red-600 shrink-0" />
+              <p className="text-xs text-red-700 font-medium">Cannot print — no cartridge installed.</p>
             </div>
           )}
+
+          {/* Overall summary badge */}
+          <div className="pt-2">
+            {result.configOk && result.connectionOk && result.has_cartridge ? (
+              <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded p-2">
+                <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
+                <p className="text-xs text-green-700 font-semibold">Printer is ready — all checks passed.</p>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded p-2">
+                <XCircle className="w-4 h-4 text-red-600 shrink-0" />
+                <p className="text-xs text-red-700 font-semibold">
+                  Printer not ready —{' '}
+                  {!result.configOk ? 'configuration failed' : !result.connectionOk ? 'connection failed' : 'no cartridge'}
+                  . Cannot send print command.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
-      {/* Purge button — only show if cartridge is present */}
-      {status?.has_cartridge && (
+      {/* Purge button — only if cartridge present */}
+      {result?.has_cartridge && (
         <div className="pt-1">
           <Button
             variant="outline"
@@ -149,7 +228,7 @@ export default function LblPrinterStatusPanel({ printer, job, user, onStatusFetc
           <AlertDialogHeader>
             <AlertDialogTitle>Purge Printer?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will send a purge command to <strong>{printer.name}</strong>. Purging clears dried ink from the print heads and consumes some ink. Do you want to continue?
+              This will send a purge command to <strong>{printer.name}</strong>. Purging clears dried ink from the print heads and uses some ink. Continue?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

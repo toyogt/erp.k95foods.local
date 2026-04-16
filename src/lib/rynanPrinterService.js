@@ -36,11 +36,13 @@ import { base44 } from '@/api/base44Client';
  * Usage: MIDDLEWARE_ENDPOINTS.PRINT → "/print"
  */
 export const MIDDLEWARE_ENDPOINTS = {
-  PRINT:          '/print',           // POST — send a STAR command to trigger one label print
+  PRINT:          '/print',           // POST — send STAR/MON command to printer
   PURGE:          '/purge',           // POST — purge print heads
-  PRINTER_STATUS: '/printer-status',  // GET  — cartridge + ink level check (param: ?printer_id=)
+  PRINTER_STATUS: '/printer-status',  // GET  — legacy cartridge + ink check
   HEALTH:         '/health',          // GET  — middleware health check
-  PRINTERS:       '/printers',        // GET  — list all connected printers
+  PRINTERS:       '/printers',        // GET  — list all registered printers
+                                      // POST — register new printer { printer_id, printer: {ip, port} }
+                                      // PUT  — /printers/{id} update existing printer IP/port
   METRICS:        '/metrics',         // GET  — job counts, error stats
   JOB_STATUS:     '/job',             // GET  — job status by ID: /job/{middlewareJobId}
 };
@@ -440,31 +442,208 @@ export async function sendPurgeCommand(printer, user) {
 }
 
 /**
+ * checkAndSyncPrinterConfig
+ *
+ * Implements the full 5-step printer validation flow:
+ *
+ * Step 1 — GET /printers → check if printer_id exists and IP/port match
+ * Step 2 — If missing → POST /printers to register it
+ *           If exists but IP/port mismatch → PUT /printers/{id} to update
+ * Step 3 — POST /print with { command: "MON" } → live connection test
+ * Step 4 — Parse MON response for cartridge/ink status (RSAL error codes)
+ *
+ * Returns a structured result object used by LblPrinterStatusPanel.
+ *
+ * @param {object} printer - LblPrinterConfig record
+ * @returns {{
+ *   configOk: bool,        configAction: 'found'|'created'|'updated'|'error', configError: string|null,
+ *   connectionOk: bool,    connectionError: string|null,
+ *   has_cartridge: bool,   ink_level: number|null,
+ *   cartridgeError: string|null,
+ *   mon_raw: object|null,  printers_raw: object|null
+ * }}
+ */
+export async function checkAndSyncPrinterConfig(printer) {
+  const base    = (printer.register_app_link || printer.api_endpoint || '').replace(/\/print\/?$/, '').replace(/\/$/, '');
+  const headers       = buildHeaders(printer, false);
+  const jsonHeaders   = buildHeaders(printer, true);
+  const timeoutMs     = printer.request_timeout_ms || 10000;
+
+  const result = {
+    configOk:        false,
+    configAction:    null,   // 'found' | 'created' | 'updated' | 'error'
+    configError:     null,
+    connectionOk:    false,
+    connectionError: null,
+    has_cartridge:   false,
+    ink_level:       null,
+    cartridgeError:  null,
+    mon_raw:         null,
+    printers_raw:    null,
+  };
+
+  // ── STEP 1: GET /printers ─────────────────────────────────────────────────
+  let printersData = null;
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const res = await fetch(`${base}${MIDDLEWARE_ENDPOINTS.PRINTERS}`, { headers, signal: controller.signal });
+    clearTimeout(timer);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    printersData = await res.json();
+    result.printers_raw = printersData;
+  } catch (err) {
+    result.configOk    = false;
+    result.configAction = 'error';
+    result.configError  = `Cannot reach middleware: ${err.message}`;
+    return result; // Can't proceed without middleware
+  }
+
+  const existingEntry = printersData?.[printer.printer_id];
+  const expectedIp    = printer.ip_address;
+  const expectedPort  = printer.port || 9100;
+
+  // ── STEP 2: Register or update printer config if needed ───────────────────
+  if (!existingEntry) {
+    // Printer ID not registered — POST /printers
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      const res = await fetch(`${base}${MIDDLEWARE_ENDPOINTS.PRINTERS}`, {
+        method: 'POST',
+        headers: jsonHeaders,
+        body: JSON.stringify({
+          printer_id: printer.printer_id,
+          printer: { ip: expectedIp, port: expectedPort },
+        }),
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      result.configAction = 'created';
+      result.configOk     = true;
+    } catch (err) {
+      result.configAction = 'error';
+      result.configError  = `Failed to register printer: ${err.message}`;
+      return result;
+    }
+  } else {
+    const ipMatch   = existingEntry.ip   === expectedIp;
+    const portMatch = existingEntry.port === expectedPort;
+
+    if (!ipMatch || !portMatch) {
+      // IP or port mismatch — PUT /printers/{id}
+      try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
+        const res = await fetch(`${base}${MIDDLEWARE_ENDPOINTS.PRINTERS}/${printer.printer_id}`, {
+          method: 'PUT',
+          headers: jsonHeaders,
+          body: JSON.stringify({ printer: { ip: expectedIp, port: expectedPort } }),
+          signal: controller.signal,
+        });
+        clearTimeout(timer);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        result.configAction = 'updated';
+        result.configOk     = true;
+      } catch (err) {
+        result.configAction = 'error';
+        result.configError  = `Failed to update printer config: ${err.message}`;
+        return result;
+      }
+    } else {
+      result.configAction = 'found';
+      result.configOk     = true;
+    }
+  }
+
+  // ── STEP 3 + 4: POST /print with MON command — live connection + cartridge ─
+  const monPayload = {
+    printer_id: printer.printer_id,
+    printer:    { ip: expectedIp, port: expectedPort },
+    command:    { command: PRINTER_COMMANDS.MON },
+    priority:   PRINT_PRIORITY.NORMAL,
+  };
+
+  try {
+    const { body, error: transportError } = await postToMiddleware(
+      `${base}${MIDDLEWARE_ENDPOINTS.PRINT}`,
+      monPayload,
+      jsonHeaders,
+      timeoutMs
+    );
+
+    if (transportError && !body) {
+      result.connectionOk    = false;
+      result.connectionError = transportError;
+      return result;
+    }
+
+    result.mon_raw = body;
+
+    const monSuccess = body?.success === true && body?.status !== 'failed' && body?.printer_ok !== false;
+    result.connectionOk = monSuccess;
+
+    if (!monSuccess) {
+      result.connectionError = body?.printer_reason || body?.printer_protocol_error_description || body?.error || `MON returned status: ${body?.status}`;
+    }
+
+    // ── STEP 4: Parse cartridge/ink from MON response ──────────────────────
+    // Check RSAL error codes from firmware
+    const errorCode = (body?.printer_protocol_error_code || '').toUpperCase();
+    const rawPayload = body?.printer_response_payload || body?.printer_raw_response || {};
+
+    // RSAL 004 = no cartridge, 005 = invalid cartridge, 007 = ink out, 008 = ink low
+    const noCartridgeCodes = ['RSAL 004', 'RSAL004', 'RSAL 005', 'RSAL005'];
+    const inkOutCodes      = ['RSAL 007', 'RSAL007'];
+    const inkLowCodes      = ['RSAL 008', 'RSAL008'];
+
+    if (noCartridgeCodes.some(c => errorCode.includes(c.replace(' ', '')))) {
+      result.has_cartridge  = false;
+      result.cartridgeError = errorCode.includes('004') ? 'No cartridge installed' : 'Invalid cartridge detected';
+    } else if (inkOutCodes.some(c => errorCode.includes(c.replace(' ', '')))) {
+      result.has_cartridge  = true;
+      result.ink_level      = 0;
+      result.cartridgeError = 'Ink is empty — replace cartridge';
+    } else if (inkLowCodes.some(c => errorCode.includes(c.replace(' ', '')))) {
+      result.has_cartridge  = true;
+      result.cartridgeError = 'Ink level is low';
+      result.ink_level      = rawPayload?.inkVolume ?? 10;
+    } else if (monSuccess) {
+      // Success + no error code = cartridge OK
+      result.has_cartridge  = rawPayload?.printHeadStatus !== 'error' && rawPayload?.printHeadStatus !== 'missing';
+      result.ink_level      = rawPayload?.inkVolume ?? null;
+      result.cartridgeError = null;
+    } else {
+      // Failed MON — could be connection issue rather than cartridge
+      result.has_cartridge  = false;
+      result.cartridgeError = result.connectionError;
+    }
+
+  } catch (err) {
+    result.connectionOk    = false;
+    result.connectionError = err.message;
+  }
+
+  return result;
+}
+
+/**
  * getPrinterStatus
  *
- * Fetches cartridge presence and ink level from the middleware.
- * Endpoint: GET /printer-status?printer_id={id}
- *
- * Expected response: { has_cartridge: bool, ink_level: 0-100, mon_output: string }
+ * Legacy wrapper — kept for backward compatibility.
+ * Internally calls checkAndSyncPrinterConfig() and maps to old return shape.
  */
 export async function getPrinterStatus(printer) {
-  const base = (printer.register_app_link || printer.api_endpoint || '').replace(/\/print\/?$/, '').replace(/\/$/, '');
-  const headers = buildHeaders(printer, false);
-  try {
-    const url = `${base}${MIDDLEWARE_ENDPOINTS.PRINTER_STATUS}?printer_id=${encodeURIComponent(printer.printer_id)}`;
-    const res  = await fetch(url, { headers });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    return {
-      success:      true,
-      has_cartridge: data.has_cartridge ?? false,
-      ink_level:    data.ink_level ?? null,
-      mon_output:   data.mon_output || data.mon_command_output || null,
-      raw:          data,
-    };
-  } catch (err) {
-    return { success: false, errorMessage: err.message };
-  }
+  const full = await checkAndSyncPrinterConfig(printer);
+  return {
+    success:      full.configOk,
+    has_cartridge: full.has_cartridge,
+    ink_level:    full.ink_level,
+    mon_output:   full.mon_raw ? JSON.stringify(full.mon_raw).substring(0, 200) : null,
+    raw:          full,
+    errorMessage: full.configError || full.connectionError || full.cartridgeError || null,
+  };
 }
 
 /**
