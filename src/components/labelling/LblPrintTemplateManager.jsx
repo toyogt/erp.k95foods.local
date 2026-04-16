@@ -10,7 +10,8 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { toast } from '@/components/ui/use-toast';
-import { Plus, Pencil, Trash2, Loader2, Save, FileCode2, GripVertical, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, Save, FileCode2 } from 'lucide-react';
+import PODFieldMappingEditor from './PODFieldMappingEditor';
 
 const COMMAND_TYPE_LABELS = {
   demo_print: 'Demo Print',
@@ -21,18 +22,7 @@ const COMMAND_TYPE_LABELS = {
   custom: 'Custom',
 };
 
-const ERP_SOURCE_OPTIONS = [
-  { value: 'batch_no', label: 'Batch Number' },
-  { value: 'manufacturing_date', label: 'Manufacturing Date' },
-  { value: 'expiry_date', label: 'Expiry Date' },
-  { value: 'mrp', label: 'MRP (₹)' },
-  { value: 'product_name', label: 'Product Name' },
-  { value: 'quantity', label: 'Quantity' },
-  { value: 'sku_code', label: 'Product Code' },
-  { value: 'fssai_no', label: 'FSSAI Number' },
-  { value: 'manufacturer_name', label: 'Manufacturer Name' },
-  { value: 'manual', label: '— Manual Entry Only —' },
-];
+
 
 const EMPTY_FORM = {
   template_id: '',
@@ -45,7 +35,7 @@ const EMPTY_FORM = {
   notes: '',
 };
 
-const EMPTY_FIELD = { pod_field: '', label: '', erp_source: '', is_editable: true };
+
 
 export default function LblPrintTemplateManager() {
   const queryClient = useQueryClient();
@@ -81,21 +71,7 @@ export default function LblPrintTemplateManager() {
     setEditModal(t.id);
   };
 
-  const addFieldRow = () => {
-    setForm(f => ({ ...f, field_mappings: [...f.field_mappings, { ...EMPTY_FIELD }] }));
-  };
 
-  const updateFieldRow = (idx, key, val) => {
-    setForm(f => {
-      const rows = [...f.field_mappings];
-      rows[idx] = { ...rows[idx], [key]: val };
-      return { ...f, field_mappings: rows };
-    });
-  };
-
-  const removeFieldRow = (idx) => {
-    setForm(f => ({ ...f, field_mappings: f.field_mappings.filter((_, i) => i !== idx) }));
-  };
 
   const handleSave = async () => {
     const errs = {};
@@ -303,82 +279,10 @@ export default function LblPrintTemplateManager() {
             </div>
 
             {/* POD Field Mappings */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label className="text-xs font-medium text-slate-700">POD Field Mappings</Label>
-                  <p className="text-xs text-slate-400">Map each Rynan POD field to an ERP data source</p>
-                </div>
-                <Button variant="outline" size="sm" className="h-9 gap-1.5" onClick={addFieldRow}>
-                  <Plus className="w-3.5 h-3.5" /> Add Field
-                </Button>
-              </div>
-
-              {form.field_mappings.length === 0 ? (
-                <div className="bg-slate-50 border border-dashed border-slate-200 rounded-lg p-4 text-center">
-                  <p className="text-xs text-slate-400">No fields yet. Click "Add Field" to map POD1, POD2, etc.</p>
-                </div>
-              ) : (
-                <div className="border border-slate-200 rounded-lg overflow-hidden">
-                  <div className="hidden md:grid grid-cols-12 gap-0 bg-slate-100 text-xs font-medium text-slate-600 px-3 py-2">
-                    <div className="col-span-2">Rynan Field</div>
-                    <div className="col-span-3">Label</div>
-                    <div className="col-span-4">ERP Source</div>
-                    <div className="col-span-2 text-center">Editable</div>
-                    <div className="col-span-1" />
-                  </div>
-                  <div className="divide-y divide-slate-100">
-                    {form.field_mappings.map((row, idx) => (
-                      <div key={idx} className="grid grid-cols-1 md:grid-cols-12 gap-2 p-3 items-center">
-                        <div className="md:col-span-2">
-                          <Input
-                            value={row.pod_field}
-                            onChange={e => updateFieldRow(idx, 'pod_field', e.target.value.toUpperCase())}
-                            placeholder="POD1"
-                            className="h-9 font-mono text-sm"
-                          />
-                        </div>
-                        <div className="md:col-span-3">
-                          <Input
-                            value={row.label}
-                            onChange={e => updateFieldRow(idx, 'label', e.target.value)}
-                            placeholder="Batch Number"
-                            className="h-9 text-sm"
-                          />
-                        </div>
-                        <div className="md:col-span-4">
-                          <Select value={row.erp_source} onValueChange={v => updateFieldRow(idx, 'erp_source', v)}>
-                            <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Select ERP source" /></SelectTrigger>
-                            <SelectContent>
-                              {ERP_SOURCE_OPTIONS.map(o => (
-                                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="md:col-span-2 flex items-center justify-center gap-2">
-                          <span className="text-xs text-slate-500 md:hidden">Editable:</span>
-                          <Switch
-                            checked={row.is_editable !== false}
-                            onCheckedChange={v => updateFieldRow(idx, 'is_editable', v)}
-                          />
-                        </div>
-                        <div className="md:col-span-1 flex justify-end">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-red-400 hover:text-red-600 hover:bg-red-50"
-                            onClick={() => removeFieldRow(idx)}
-                          >
-                            <X className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+            <PODFieldMappingEditor
+              value={form.field_mappings}
+              onChange={mappings => setForm(f => ({ ...f, field_mappings: mappings }))}
+            />
 
             <div className="space-y-1">
               <Label className="text-xs font-medium text-slate-700">Notes</Label>
