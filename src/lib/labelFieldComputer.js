@@ -26,12 +26,13 @@ import moment from 'moment';
  * @param {number}        params.mlPerBottle   – Volume in ml (e.g. 200)
  * @param {string}        params.mfgDate       – DD/MM/YYYY or YYYY-MM-DD
  * @param {string}        params.labellingDate – DD/MM/YYYY or YYYY-MM-DD (optional)
- * @param {number}        params.shelfLifeDays – Shelf life in days
+ * @param {number}        params.shelfLifeDays – Shelf life value (number)
+ * @param {string}        params.shelfLifeUnit – Unit: 'days' | 'months' | 'years' (default: 'days')
  * @param {string}        params.batchNo       – Batch number string
  * @param {string}        params.productName   – Product display name
  * @returns {object} computed label fields
  */
-export function computeLabelFields({ mrp, mlPerBottle, mfgDate, labellingDate, shelfLifeDays, batchNo, productName }) {
+export function computeLabelFields({ mrp, mlPerBottle, mfgDate, labellingDate, shelfLifeDays, shelfLifeUnit, batchNo, productName }) {
   // Parse MFG date
   let mfgMoment = null;
   if (mfgDate) {
@@ -41,7 +42,7 @@ export function computeLabelFields({ mrp, mlPerBottle, mfgDate, labellingDate, s
     if (!mfgMoment.isValid()) mfgMoment = null;
   }
 
-  // Parse labelling date (used for expiry base if provided)
+  // Parse labelling date (stored for reference only — NOT used as expiry base)
   let labellingMoment = null;
   if (labellingDate) {
     labellingMoment = labellingDate.includes('/')
@@ -50,13 +51,14 @@ export function computeLabelFields({ mrp, mlPerBottle, mfgDate, labellingDate, s
     if (!labellingMoment.isValid()) labellingMoment = null;
   }
 
-  // Expiry base: prefer labelling date, fall back to mfg date
-  const expiryBase = labellingMoment || mfgMoment;
+  // Expiry is ALWAYS calculated from Manufacturing Date (not labelling date)
+  const expiryBase = mfgMoment;
 
-  // Compute expiry
+  // Compute expiry — honour shelf life unit (days / months / years)
   let expiryMoment = null;
   if (expiryBase && shelfLifeDays && Number(shelfLifeDays) > 0) {
-    expiryMoment = expiryBase.clone().add(Number(shelfLifeDays), 'days');
+    const unit = shelfLifeUnit || 'days'; // default to days for backward compat
+    expiryMoment = expiryBase.clone().add(Number(shelfLifeDays), unit);
   }
 
   // USP = MRP / ml

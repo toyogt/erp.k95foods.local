@@ -27,6 +27,7 @@ export default function LblLabelPreviewCard({
   mfgDate,
   labellingDate,
   shelfLifeDays,
+  shelfLifeUnit,
   fssaiNo,
   templateName,
   bottleType,
@@ -37,9 +38,10 @@ export default function LblLabelPreviewCard({
     mfgDate,
     labellingDate,
     shelfLifeDays,
+    shelfLifeUnit: shelfLifeUnit || 'days',
     batchNo,
     productName,
-  }), [mrp, mlPerBottle, mfgDate, labellingDate, shelfLifeDays, batchNo, productName]);
+  }), [mrp, mlPerBottle, mfgDate, labellingDate, shelfLifeDays, shelfLifeUnit, batchNo, productName]);
 
   const hasSomeData = productName || batchNo || mrp;
   if (!hasSomeData) return null;
