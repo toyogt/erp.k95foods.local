@@ -11,6 +11,7 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { toast } from '@/components/ui/use-toast';
 import { computeLabelFields } from '@/lib/labelFieldComputer';
 import { resolveDemoPrintLabelData } from '@/lib/buildRynanLabelData';
@@ -132,7 +133,7 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
         mfg_date: labelData.mfg_date,
         batch_no: labelData.batch_no,
       },
-      skuPodMappings: skuPrintMapping || [],
+      skuPodMappings: [],
     });
 
     if (!jobTemplate) {
@@ -210,14 +211,20 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
       {/* Printer Selection */}
       <div className="space-y-1">
         <Label className="text-xs font-medium text-slate-700">Select Printer <span className="text-red-500">*</span></Label>
-        <Select value={printerId} onValueChange={(v) => { setPrinterId(v); setPrinterStatus(null); }}>
-          <SelectTrigger className="h-11 md:h-9"><SelectValue placeholder="Select printer" /></SelectTrigger>
-          <SelectContent>
-            {printers.map(p => (
-              <SelectItem key={p.printer_id} value={p.printer_id}>{p.name} ({p.printer_id}) — {p.line_name || 'No line'}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {noPrinters ? (
+          <div className="h-11 md:h-9 flex items-center px-3 bg-slate-50 border border-slate-200 rounded-md text-slate-500 text-sm">
+            No printers available
+          </div>
+        ) : (
+          <Select value={printerId} onValueChange={(v) => { setPrinterId(v); setPrinterStatus(null); }}>
+            <SelectTrigger className="h-11 md:h-9"><SelectValue placeholder="Select printer" /></SelectTrigger>
+            <SelectContent>
+              {printers.map(p => (
+                <SelectItem key={p.printer_id} value={p.printer_id}>{p.name} ({p.printer_id}) — {p.line_name || 'No line'}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       {/* Printer Status Panel — shown once a printer is selected */}
