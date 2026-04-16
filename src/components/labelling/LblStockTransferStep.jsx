@@ -14,7 +14,9 @@ import moment from 'moment';
 
 export default function LblStockTransferStep({ job, user, onComplete }) {
   const [qty, setQty] = useState('');
-  const [batchNo, setBatchNo] = useState(job?.batch_no || '');
+  // Start empty — the useEffect below will auto-generate from product config + MFG date.
+  // job.batch_no is intentionally NOT used as initial value to avoid stale/wrong batch carryover.
+  const [batchNo, setBatchNo] = useState('');
   const [batchSeq, setBatchSeq] = useState(1);
   const [labellingDate, setLabellingDate] = useState(
     job?.labelling_date
@@ -36,13 +38,14 @@ export default function LblStockTransferStep({ job, user, onComplete }) {
   const schemeInfo = BATCH_SCHEMES.find(s => s.value === (product?.batch_scheme || 'excel_date'));
   const canAutogenerate = !!(product?.product_prefix_code && product?.flavour_code && mfgDate);
 
-  // Auto-generate when product loads or seq changes
+  // Auto-generate batch number whenever product config or sequence changes.
+  // Always regenerate from formula — do NOT fall back to job.batch_no,
+  // which may be stale or incorrect from a previous run.
   useEffect(() => {
-    if (canAutogenerate && !job?.batch_no) {
-      const generated = generateBatchNumber(product, mfgDate, batchSeq);
-      if (generated) setBatchNo(generated);
-    }
-  }, [product, batchSeq, mfgDate]);
+    if (!canAutogenerate) return;
+    const generated = generateBatchNumber(product, mfgDate, batchSeq);
+    if (generated) setBatchNo(generated);
+  }, [product, batchSeq, mfgDate, canAutogenerate]);
 
   const handleRegenerate = () => {
     if (!canAutogenerate) {
