@@ -431,7 +431,7 @@ export async function sendPurgeCommand(printer, user) {
 
   await base44.entities.LblPrintCommand.create({
     command_id:           commandId,
-    job_id:               null,
+    job_id:               `MAINTENANCE-${commandId}`,
     printer_id:           printer.printer_id,
     endpoint_url:         endpointUrl,
     command_type:         'test_ping', // closest available type for maintenance ops
