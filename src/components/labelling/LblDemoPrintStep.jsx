@@ -16,6 +16,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { logLabellingEvent } from '@/lib/labellingEventLogger';
 import { sendRynanPrintCommand } from '@/lib/rynanPrinterService';
 import { toast } from '@/components/ui/use-toast';
+import { computeLabelFields } from '@/lib/labelFieldComputer';
 import { resolveDemoPrintLabelData } from '@/lib/buildRynanLabelData';
 import LblPrinterStatusPanel from './LblPrinterStatusPanel';
 import { Loader2, Printer, AlertTriangle } from 'lucide-react';
