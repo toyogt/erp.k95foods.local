@@ -10,9 +10,12 @@ import { Loader2 } from 'lucide-react';
 export default function SKUTemplatePODMappingPreview({ templateId }) {
   const { data: template, isLoading } = useQuery({
     queryKey: ['lbl-print-template', templateId],
-    queryFn: () => base44.entities.LblPrintTemplate.filter({ template_id: templateId }),
+    queryFn: async () => {
+      // Fetch the template by its database ID
+      const templates = await base44.entities.LblPrintTemplate.filter({ is_active: true });
+      return templates?.find(t => t.id === templateId) || null;
+    },
     enabled: !!templateId,
-    select: (rows) => rows?.[0] || null,
   });
 
   if (!templateId) return null;
