@@ -11,6 +11,7 @@ import SKUList from '@/components/sku/SKUList';
 import SetupChecklist, { isSetupComplete } from '@/components/sku/SetupChecklist';
 import PODFieldMappingEditor from '@/components/labelling/PODFieldMappingEditor';
 import SKUPrintTemplateTab from '@/components/sku/SKUPrintTemplateTab';
+import SKUTemplatePODMappingPreview from '@/components/sku/SKUTemplatePODMappingPreview';
 import ArtworkTab from '@/components/sku/ArtworkTab';
 import BatchRuleBuilder from '@/components/batch/BatchRuleBuilder';
 import BatchRulePreview from '@/components/batch/BatchRulePreview.jsx';
@@ -33,7 +34,7 @@ const EMPTY_SKU = {
 };
 
 const EMPTY_MAPPING = {
-  ryan_template_id: '', batch_format_rule_id: '',
+  ryan_template_id: '', printer_template_id: '', batch_format_rule_id: '',
   payload_map_json: '[]',
 };
 
@@ -47,6 +48,7 @@ export default function SKUSetup() {
   const [containerTypes, setContainerTypes] = useState([]);
   const [capTypes, setCapTypes] = useState([]);
   const [ryanTemplates, setRyanTemplates] = useState([]);
+  const [printTemplates, setPrintTemplates] = useState([]);
   const [batchRules, setBatchRules] = useState([]);
   const [artworks, setArtworks] = useState([]);
   const [brands, setBrands] = useState([]);
@@ -75,7 +77,7 @@ export default function SKUSetup() {
 
   const loadAll = useCallback(async () => {
     setLoading(true);
-    const [u, s, m, rg, ct, cap, bx, bo, rt, br, art, brnd, fam, flav] = await Promise.all([
+    const [u, s, m, rg, ct, cap, bx, bo, rt, pt, br, art, brnd, fam, flav] = await Promise.all([
       base44.auth.me().catch(() => null),
       base44.entities.ProductMaster.list('-created_date', 500),
       base44.entities.SKUPrintMapping.list('-created_date', 500).catch(() => []),
@@ -85,6 +87,7 @@ export default function SKUSetup() {
       base44.entities.BoxType.filter({ is_active: true }, '-created_date', 200).catch(() => []),
       base44.entities.RecipeOption.list('-created_date', 500).catch(() => []),
       base44.entities.RyanTemplate.filter({ is_active: true }, '-created_date', 200).catch(() => []),
+      base44.entities.LblPrintTemplate.filter({ is_active: true }, '-created_date', 200).catch(() => []),
       base44.entities.BatchFormatRule.filter({ is_active: true }, '-created_date', 200).catch(() => []),
       base44.entities.LabelArtwork.filter({ is_active: true }, '-created_date', 500).catch(() => []),
       base44.entities.BrandMaster.filter({ is_active: true }).catch(() => []),
@@ -100,6 +103,7 @@ export default function SKUSetup() {
     setBoxTypes(bx);
     setRecipeOptions(bo);
     setRyanTemplates(rt);
+    setPrintTemplates(pt);
     setBatchRules(br);
     setArtworks(art);
     setBrands(brnd);
@@ -884,16 +888,43 @@ export default function SKUSetup() {
                 </Field>
               </div>
 
-              {/* Rynan Print Template Mapping */}
+              {/* Print Template Selection — new LblPrintTemplate based */}
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium text-slate-700">Print Template</Label>
+                  <select
+                    value={mappingForm.printer_template_id || ''}
+                    onChange={e => setMappingForm(f => ({ ...f, printer_template_id: e.target.value }))}
+                    className="w-full border border-slate-200 rounded-lg px-4 py-3 text-base h-12 bg-white"
+                  >
+                    <option value="">— Select print template —</option>
+                    {printTemplates.map(t => (
+                      <option key={t.id} value={t.id}>
+                        {t.name} [{t.middleware_template_name}] — {t.command_type}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-slate-500">
+                    Select a template to see the POD field mappings below
+                  </p>
+                </div>
+
+                {/* POD Mapping Preview — shows template's field mappings like your screenshot */}
+                {mappingForm.printer_template_id && (
+                  <SKUTemplatePODMappingPreview templateId={mappingForm.printer_template_id} />
+                )}
+              </div>
+
+              {/* Legacy Rynan Template Mapping (deprecated) */}
               <div className="space-y-2">
-                <p className="text-sm font-semibold text-slate-700">Rynan Print Template Mapping</p>
+                <p className="text-sm font-semibold text-slate-700">Legacy: Rynan Template (Deprecated)</p>
                 <SKUPrintTemplateTab
                   mappings={skuForm.print_template_mappings || {}}
                   onChange={(val) => setSkuForm(f => ({ ...f, print_template_mappings: val }))}
                 />
               </div>
 
-              {/* POD Field Mapping */}
+              {/* POD Field Mapping (Legacy) */}
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
                 <PODFieldMappingEditor
                   value={payloadRows}
