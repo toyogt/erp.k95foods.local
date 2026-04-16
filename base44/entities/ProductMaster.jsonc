@@ -111,7 +111,18 @@
     },
     "shelf_life_days": {
       "type": "number",
-      "minimum": 0
+      "minimum": 0,
+      "description": "Shelf life value (number). Interpret using shelf_life_unit."
+    },
+    "shelf_life_unit": {
+      "type": "string",
+      "enum": [
+        "days",
+        "months",
+        "years"
+      ],
+      "default": "months",
+      "description": "Unit for shelf_life_days: days, months, or years"
     },
     "is_trial_pack": {
       "type": "boolean",
