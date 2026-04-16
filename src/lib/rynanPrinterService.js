@@ -694,7 +694,11 @@ export async function checkTemplateExists(printer, templateName) {
   );
 
   const templates = Array.isArray(templateList) ? templateList : [];
-  const found = templates.some(t => t === templateName);
+  // Debug: log what the printer returned vs what we're looking for
+  console.log('[RQLI] Template check — looking for:', templateName, '| Printer returned:', templates);
+  // Case-insensitive + trimmed match so "Default-1" matches "default-1" or " Default-1 "
+  const normalizedTarget = templateName.trim().toLowerCase();
+  const found = templates.some(t => t.trim().toLowerCase() === normalizedTarget);
 
   return {
     found,
