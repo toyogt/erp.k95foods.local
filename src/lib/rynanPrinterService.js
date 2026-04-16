@@ -398,10 +398,11 @@ export async function sendRynanPrintCommand(printer, { templateName, priority } 
  */
 export async function sendRynanTestCommand(printer, user) {
   const templateName = printer.demo_template || printer.default_template || '';
+  const testJobId = `TEST-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   return sendRynanPrintCommand(
     printer,
     { templateName },
-    { commandType: 'test_ping', user }
+    { jobId: testJobId, commandType: 'test_ping', user }
   );
 }
 
