@@ -35,12 +35,11 @@ export default function LblPrinterStatusPanel({ printer, job, user, templateName
     const res = await checkAndSyncPrinterConfig(printer, templateName || null);
     setResult(res);
 
-    // onStatusFetched: pass result only if config + connection OK AND template found (if checked)
+    // Always pass result so parent knows status was checked (statusChecked = true)
+    // Parent uses has_cartridge + templateFound to gate the print button
+    onStatusFetched?.({ ...res, success: res.configOk && res.connectionOk });
     const templateOk = res.templateFound === null || res.templateFound === true;
-    if (res.configOk && res.connectionOk && templateOk) {
-      onStatusFetched?.({ has_cartridge: res.has_cartridge, success: true, ...res });
-    } else {
-      onStatusFetched?.(null);
+    if (!res.configOk || !res.connectionOk || !templateOk) {
       const errMsg = res.configError || res.connectionError
         || (res.templateFound === false ? `Template "${templateName}" not found on printer` : 'Printer check failed');
       toast({ title: 'Printer Check Failed', description: errMsg, variant: 'destructive' });

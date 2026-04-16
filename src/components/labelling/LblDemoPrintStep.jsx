@@ -89,6 +89,7 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
   const selectedPrinter = printers.find(p => p.printer_id === printerId) || null;
   const noPrinters = printers.length === 0;
   const hasCartridge = printerStatus?.has_cartridge === true;
+  const templateMissing = printerStatus?.templateFound === false;
   const statusChecked = printerStatus !== null;
 
   // Resolve template name at render time (3-level fallback) so status panel can check it
@@ -104,6 +105,7 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
     if (!printerId) { toast({ title: 'Select a printer first', variant: 'destructive' }); return; }
     if (!statusChecked) { toast({ title: 'Check Printer Status First', description: 'Click "Check Status" to verify cartridge before printing.', variant: 'destructive' }); return; }
     if (!hasCartridge) { toast({ title: 'No Cartridge Detected', description: 'Cannot send demo print — please install a cartridge and check status again.', variant: 'destructive' }); return; }
+    if (templateMissing) { toast({ title: 'Template Not Found on Printer', description: `Template "${resolvedTemplateName}" is not loaded on the printer. Contact your middleware administrator.`, variant: 'destructive' }); return; }
     if (!labelData.batch_no) { toast({ title: 'Batch Number is required', variant: 'destructive' }); return; }
     if (!labelData.mfg_date) { toast({ title: 'Manufacturing Date is required', variant: 'destructive' }); return; }
     if (!labelData.mrp) { toast({ title: 'MRP is required', variant: 'destructive' }); return; }
@@ -325,7 +327,7 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
         <Button
           className="h-11 w-full md:w-auto gap-2 bg-purple-600 hover:bg-purple-700"
           onClick={handleSendDemoPrint}
-          disabled={sending || noPrinters || !printerId || (statusChecked && !hasCartridge) || (statusChecked && printerStatus?.templateFound === false)}
+          disabled={sending || noPrinters || !printerId || (statusChecked && !hasCartridge) || (statusChecked && templateMissing)}
         >
           {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
           Send Demo Print
