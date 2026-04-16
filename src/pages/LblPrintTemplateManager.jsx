@@ -15,7 +15,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { toast } from '@/components/ui/use-toast';
 import { Plus, Edit2, Trash2, Copy, Loader2 } from 'lucide-react';
 
-const COMMAND_TYPES = ['demo_print', 'bulk_start', 'bulk_stop', 'purge', 'test_ping', 'custom'];
 const ERP_FIELDS = [
   { key: 'mrp', label: 'MRP' },
   { key: 'batchNo', label: 'Batch Number' },
@@ -32,7 +31,6 @@ export default function LblPrintTemplateManager() {
     template_id: '',
     name: '',
     description: '',
-    command_type: 'demo_print',
     middleware_template_name: '',
     field_mappings: [],
     is_active: true,
@@ -78,7 +76,6 @@ export default function LblPrintTemplateManager() {
       template_id: '',
       name: '',
       description: '',
-      command_type: 'demo_print',
       middleware_template_name: '',
       field_mappings: [],
       is_active: true,
@@ -158,7 +155,6 @@ export default function LblPrintTemplateManager() {
                     <h2 className="text-lg font-semibold text-slate-900">{template.name}</h2>
                     <p className="text-sm text-slate-600">ID: <span className="font-mono">{template.template_id}</span></p>
                     <p className="text-sm text-slate-600">Middleware: <span className="font-mono">{template.middleware_template_name}</span></p>
-                    <p className="text-sm text-slate-600">Type: <span className="inline-block px-2 py-1 bg-slate-100 rounded mt-1">{template.command_type}</span></p>
                   </div>
                   <div className="flex gap-2">
                     <Button variant="outline" size="icon" onClick={() => handleClone(template)} title="Clone">
@@ -252,17 +248,6 @@ export default function LblPrintTemplateManager() {
                 />
                 <p className="text-xs text-slate-500">Must match Rynan middleware template name exactly.</p>
               </div>
-            </div>
-
-            {/* Command Type */}
-            <div className="space-y-1">
-              <Label className="text-xs font-medium text-slate-700">Command Type <span className="text-red-500">*</span></Label>
-              <Select value={formData.command_type} onValueChange={v => setFormData(prev => ({ ...prev, command_type: v }))}>
-                <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {COMMAND_TYPES.map(ct => <SelectItem key={ct} value={ct}>{ct}</SelectItem>)}
-                </SelectContent>
-              </Select>
             </div>
 
             {/* Description */}
