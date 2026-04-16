@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Input } from '@/components/ui/input';
@@ -54,9 +55,9 @@ export default function LblJobRowEditor({ index, job, products, planDate, onUpda
   // Auto-assign default template when SKU mapping is fetched
   useEffect(() => {
     if (job.sku_code && !job.printer_template_id && skuTemplates.length > 0) {
-      const defaultTemplate = skuTemplates.find(m => m.is_default);
-      if (defaultTemplate) {
-        onUpdate(index, 'printer_template_id', defaultTemplate.template_id);
+      const defaultMapping = skuTemplates.find(m => m.is_default);
+      if (defaultMapping?.template_id) {
+        onUpdate(index, 'printer_template_id', defaultMapping.template_id);
       }
     }
   }, [job.sku_code, job.printer_template_id, skuTemplates, index, onUpdate]);
