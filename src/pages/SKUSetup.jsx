@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import SKUList from '@/components/sku/SKUList';
 import SetupChecklist, { isSetupComplete } from '@/components/sku/SetupChecklist';
-import PayloadMapBuilder from '@/components/sku/PayloadMapBuilder';
+import PODFieldMappingEditor from '@/components/labelling/PODFieldMappingEditor';
 import SKUPrintTemplateTab from '@/components/sku/SKUPrintTemplateTab';
 import ArtworkTab from '@/components/sku/ArtworkTab';
 import BatchRuleBuilder from '@/components/batch/BatchRuleBuilder';
@@ -893,21 +893,12 @@ export default function SKUSetup() {
                 />
               </div>
 
-              {/* Payload Map Builder */}
-               <div className="space-y-2">
-                 <p className="text-sm font-semibold text-slate-700">Ryan Payload Mapping</p>
-                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
-                  <PayloadMapBuilder
-                    rows={payloadRows}
-                    onChange={setPayloadRows}
-                    templatePlaceholders={templatePlaceholders}
-                    sku={skuForm}
-                    batchRule={batchRules.find(r => r.rule_id === mappingForm.batch_format_rule_id)}
-                    brands={brands}
-                    families={families}
-                    flavours={flavours}
-                  />
-                </div>
+              {/* POD Field Mapping */}
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                <PODFieldMappingEditor
+                  value={payloadRows}
+                  onChange={setPayloadRows}
+                />
               </div>
             </TabsContent>
 
