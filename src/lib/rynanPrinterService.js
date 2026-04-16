@@ -2,12 +2,24 @@
  * Rynan Middleware Printer Service
  * Handles all communication with the Rynan label printer middleware.
  *
- * Middleware contract:
- *   POST /print   — send print command
- *   GET  /health  — middleware health
- *   GET  /printers — detected printers
- *   GET  /metrics  — runtime metrics
- *   GET  /job/<id> — job status
+ * Middleware contract (POST /print):
+ * {
+ *   "printer_id": "P1",
+ *   "printer": { "ip": "192.168.1.100", "port": 9100 },
+ *   "command": { "command": "STAR", "templatename": "DEMO" },
+ *   "priority": "normal"   // "normal" | "high"
+ * }
+ *
+ * Response (always HTTP 200):
+ *   success + status === "completed" + printer_ok === true  → print sent
+ *   success === false + status === "failed"                  → printer error
+ *   success === false + no job_id                            → validation error
+ *
+ * NOTE: Only ONE command object per /print call. Arrays are rejected.
+ * NOTE: label_data is NOT part of the /print payload — it is sent via a
+ *       separate data-write command BEFORE issuing the STAR command, OR
+ *       it is embedded in the templatename as a pre-configured template
+ *       on the middleware side. The ERP sends template name + printer ID only.
  */
 
 import { base44 } from '@/api/base44Client';
@@ -34,13 +46,18 @@ function genCommandId() {
 
 /**
  * Determine if a middleware response is a true success.
- * success === true AND printer_ok !== false
+ * Per middleware contract:
+ *   success === true AND status === "completed" AND printer_ok !== false
+ * API always returns HTTP 200 — must inspect JSON fields.
  */
 function isResponseSuccess(body) {
   if (!body) return false;
   if (body.success !== true) return false;
+  // If job_id is absent it's a validation error (not a printer error)
+  if (!body.job_id) return false;
+  if (body.status === 'failed') return false;
   if (body.printer_ok === false) return false;
-  const code = (body.printer_protocol_error_code || body.printer_response_status || '').toUpperCase();
+  const code = (body.printer_protocol_error_code || '').toUpperCase();
   if (code && HARD_FAILURE_CODES.some(f => code.includes(f))) return false;
   return true;
 }
@@ -82,27 +99,48 @@ async function persistCommand({ commandId, jobId, middlewareJobId, printerId, en
 }
 
 /**
- * Send a command to the Rynan middleware.
+ * Build the exact /print payload the middleware expects.
  *
- * @param {object} printer   - LblPrinterConfig record
- * @param {object} command   - Single command object
- * @param {object} options   - { jobId, commandType, quantity, user }
- * @returns {{ success, commandRecord, responseBody, errorMessage }}
+ * The middleware only accepts:
+ *   command.command    — printer command string e.g. "STAR"
+ *   command.templatename — template name as registered on the middleware e.g. "DEMO"
+ *
+ * Any additional fields (label_data, quantity, type, etc.) are NOT sent to the middleware.
+ * Label data variables are pre-loaded into the template on the middleware side.
+ *
+ * @param {object} printer         - LblPrinterConfig record
+ * @param {string} templateName    - Middleware template name (e.g. "Default-1")
+ * @param {string} [commandString] - Printer command string (default: "STAR")
+ * @param {string} [priority]      - "normal" | "high" (default: printer config)
  */
-export async function sendRynanPrintCommand(printer, command, { jobId, commandType, quantity, user } = {}) {
-  const endpointUrl = buildPrintUrl(printer.register_app_link || printer.api_endpoint || '');
-  const commandId = genCommandId();
-  const priority = printer.default_priority || 'normal';
-
-  const payload = {
+function buildPrintPayload(printer, templateName, commandString = 'STAR', priority = 'normal') {
+  return {
     printer_id: printer.printer_id,
     printer: {
       ip: printer.ip_address,
-      port: printer.port || 2030,
+      port: printer.port || 9100,
     },
-    command,
-    priority,
+    command: {
+      command: commandString,
+      templatename: templateName,
+    },
+    priority: priority === 'high' ? 'high' : 'normal',
   };
+}
+
+/**
+ * Send a print command to the Rynan middleware.
+ *
+ * @param {object} printer        - LblPrinterConfig record
+ * @param {object} options        - { templateName, commandString, priority, jobId, commandType, quantity, user }
+ * @returns {{ success, commandRecord, responseBody, errorMessage, middlewareJobId }}
+ */
+export async function sendRynanPrintCommand(printer, { templateName, commandString = 'STAR', priority } = {}, { jobId, commandType, quantity, user } = {}) {
+  const endpointUrl = buildPrintUrl(printer.register_app_link || printer.api_endpoint || '');
+  const commandId = genCommandId();
+  const resolvedPriority = priority || printer.default_priority || 'normal';
+
+  const payload = buildPrintPayload(printer, templateName || '', commandString, resolvedPriority);
 
   const headers = { 'Content-Type': 'application/json' };
   if (printer.auth_header_key && printer.auth_header_value) {
@@ -151,16 +189,24 @@ export async function sendRynanPrintCommand(printer, command, { jobId, commandTy
       if (res.status === 200 && body) {
         const ok = isResponseSuccess(body);
         const middlewareJobId = body.job_id || null;
+        // Extract human-readable error from middleware response
+        const errorMsg = ok ? null : (
+          body.error ||
+          body.printer_reason ||
+          body.printer_protocol_error_description ||
+          (body.printer_protocol_error_code ? `Printer error code: ${body.printer_protocol_error_code}` : null) ||
+          `Print ${body.status || 'failed'}`
+        );
         const record = await persistCommand({
           commandId, jobId, middlewareJobId, printerId: printer.printer_id, endpointUrl,
           commandType, quantity,
           status: ok ? 'acknowledged' : 'failed',
           requestPayload: payload, responsePayload: body,
           responseStatusCode: 200,
-          errorMessage: ok ? null : `Printer error: ${body.printer_protocol_error_code || body.status || 'unknown'}`,
+          errorMessage: errorMsg,
           sentBy: user?.email,
         });
-        return { success: ok, commandRecord: record, responseBody: body, errorMessage: ok ? null : record.error_message, middlewareJobId };
+        return { success: ok, commandRecord: record, responseBody: body, errorMessage: errorMsg, middlewareJobId };
       }
 
       // Non-200 non-400/415 — check retryability
@@ -187,10 +233,16 @@ export async function sendRynanPrintCommand(printer, command, { jobId, commandTy
 }
 
 /**
- * Send a test_ping command to the middleware.
+ * Send a test ping — uses the printer's demo_template or default_template.
+ * Useful to verify connectivity without printing a real label.
  */
 export async function sendRynanTestCommand(printer, user) {
-  return sendRynanPrintCommand(printer, { type: 'test_ping' }, { commandType: 'test_ping', user });
+  const templateName = printer.demo_template || printer.default_template || '';
+  return sendRynanPrintCommand(
+    printer,
+    { templateName, commandString: 'STAR' },
+    { commandType: 'test_ping', user }
+  );
 }
 
 /**

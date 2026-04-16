@@ -16,7 +16,6 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { logLabellingEvent } from '@/lib/labellingEventLogger';
 import { sendRynanPrintCommand } from '@/lib/rynanPrinterService';
 import { toast } from '@/components/ui/use-toast';
-import { computeLabelFields } from '@/lib/labelFieldComputer';
 import { resolveDemoPrintLabelData } from '@/lib/buildRynanLabelData';
 import LblPrinterStatusPanel from './LblPrinterStatusPanel';
 import { Loader2, Printer, AlertTriangle } from 'lucide-react';
@@ -105,11 +104,10 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
     const printer = selectedPrinter;
     setSending(true);
 
-    // Build command — quantity equals demo print count (one data command per label)
     const qty = Number(demoQty);
 
-    // Resolve label_data using SKU's POD mapping config (falls back to legacy POD1-12 if not configured)
-    const { label_data, computedFields: podFields } = resolveDemoPrintLabelData({
+    // Compute label fields for audit log only (not sent to middleware — template handles data on printer side)
+    const { computedFields: podFields } = resolveDemoPrintLabelData({
       job,
       productMaster,
       labelInputs: {
@@ -120,27 +118,33 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
       skuPodMappings: skuPrintMapping || [],
     });
 
-    // Resolve template name: prefer job's assigned template (from SKU setup), fallback to printer config
+    // Resolve middleware template name:
+    // 1. Template linked to job via SKU Setup → Printing tab (most specific)
+    // 2. Printer's configured demo template
+    // 3. Printer's default template
     const resolvedTemplateName = jobTemplate?.middleware_template_name
       || printer.demo_template
       || printer.default_template
       || '';
 
-    const command = {
-      type: 'demo',
-      template: resolvedTemplateName,
-      data_commands: qty,
-      quantity: qty,
-      job_id: job.job_id,
-      label_data,
-    };
+    if (!resolvedTemplateName) {
+      toast({ title: 'No Template Configured', description: 'Assign a print template to this product in SKU Setup → Printing & Batch tab.', variant: 'destructive' });
+      setSending(false);
+      return;
+    }
 
-    const result = await sendRynanPrintCommand(printer, command, {
-      jobId: job.id,
-      commandType: 'demo',
-      quantity: qty,
-      user,
-    });
+    // Middleware contract: POST /print with { printer_id, printer:{ip,port}, command:{command,templatename}, priority }
+    // One call per label — send qty times sequentially so middleware processes each as a discrete job
+    let lastResult = null;
+    for (let i = 0; i < qty; i++) {
+      lastResult = await sendRynanPrintCommand(
+        printer,
+        { templateName: resolvedTemplateName, commandString: 'STAR' },
+        { jobId: job.id, commandType: 'demo', quantity: 1, user }
+      );
+      if (!lastResult.success) break;
+    }
+    const result = lastResult;
 
     if (!result.success) {
       toast({ title: 'Demo Print Failed', description: result.errorMessage || 'Middleware returned an error', variant: 'destructive' });
@@ -160,7 +164,7 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
       action_type: 'demo_print_sent',
       job_id: job.id,
       plan_id: job.plan_id,
-      description: `Demo print of ${qty} labels sent to ${printer.name}. Batch: ${podFields.batchNo}, MFG: ${podFields.mfgDate}, EXP: ${podFields.expiryDate}, MRP: ₹${podFields.mrp}, USP: ₹${podFields.usp}/ml. Middleware job: ${result.middlewareJobId || 'N/A'}. POD mapping: ${(skuPrintMapping || []).length > 0 ? 'SKU config' : 'legacy default'}.`,
+      description: `Demo print of ${qty} label(s) sent to ${printer.name} using template "${resolvedTemplateName}". Batch: ${podFields.batchNo}, MFG: ${podFields.mfgDate}, EXP: ${podFields.expiryDate}, MRP: ₹${podFields.mrp}. Middleware job: ${result.middlewareJobId || 'N/A'}.`,
       user,
     });
 
@@ -308,7 +312,7 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
         />
         <p className="text-xs text-slate-500">
           {demoQty && Number(demoQty) > 0
-            ? `${Number(demoQty)} data command(s) will be sent to the printer (one per label)`
+            ? `${Number(demoQty)} separate /print request(s) will be sent to the middleware — one per label`
             : 'Number of sample labels to print for approval'}
         </p>
       </div>
