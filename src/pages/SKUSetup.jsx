@@ -245,10 +245,7 @@ export default function SKUSetup() {
       return;
     }
     
-    if (skuForm.is_active && !complete) {
-      alert('Cannot activate: setup is incomplete. Please complete all required fields first.');
-      return;
-    }
+
 
     setSaving(true);
     const bt = boxTypes.find(b => b.box_type_id === skuForm.box_type_id);
@@ -453,7 +450,7 @@ export default function SKUSetup() {
                 <p className="text-sm font-bold text-slate-700">🏷️ Product Classification</p>
                 <div className="grid grid-cols-1 gap-4">
 
-                  <Field label="Brand Name *">
+                  <Field label="Brand Name">
                     <select 
                       value={skuForm.brand_name} 
                       onChange={e => setSkuForm(f => ({ ...f, brand_name: e.target.value, product_family: '', flavour: '' }))}
@@ -464,7 +461,7 @@ export default function SKUSetup() {
                     </select>
                   </Field>
 
-                  <Field label="Product Family *">
+                  <Field label="Product Family">
                     <select 
                       value={skuForm.product_family} 
                       onChange={e => setSkuForm(f => ({ ...f, product_family: e.target.value, flavour: '' }))}
@@ -481,7 +478,7 @@ export default function SKUSetup() {
                     )}
                   </Field>
 
-                  <Field label="Flavour *">
+                  <Field label="Flavour">
                     <select 
                       value={skuForm.flavour} 
                       onChange={e => setSkuForm(f => ({ ...f, flavour: e.target.value }))}
@@ -506,7 +503,7 @@ export default function SKUSetup() {
                 <div className="grid grid-cols-1 gap-4">
                   {!skuForm.is_trial_pack && (
                     <>
-                      <Field label="Container Type *">
+                      <Field label="Container Type">
                         {containerTypes.length > 0 ? (
                           <select
                             value={containerTypes.find(c => c.auto_generated_name === skuForm.bottle_type)?.container_code || ''}
@@ -527,7 +524,7 @@ export default function SKUSetup() {
                         )}
                       </Field>
 
-                      <Field label="ML per Container *" info="Volume per container (auto-filled from container type selection, cannot be edited)">
+                      <Field label="ML per Container" info="Volume per container (auto-filled from container type selection, cannot be edited)">
                         <Input 
                           type="text" 
                           value={
@@ -539,7 +536,7 @@ export default function SKUSetup() {
                         />
                       </Field>
 
-                      <Field label="Cap Type *">
+                      <Field label="Cap Type">
                         {capTypes.length > 0 ? (
                           <select
                             value={skuForm.cap_sku_code || ''}
@@ -562,7 +559,7 @@ export default function SKUSetup() {
                     </>
                   )}
 
-                  <Field label="Box Type *">
+                  <Field label="Box Type">
                     <select
                       value={skuForm.box_type_id}
                       onChange={e => handleBoxTypeChange(e.target.value)}
@@ -606,7 +603,7 @@ export default function SKUSetup() {
                   </Field>
 
                   {!skuForm.is_trial_pack && (
-                    <Field label="Shelf Life *">
+                    <Field label="Shelf Life">
                     <div className="grid grid-cols-2 gap-2">
                       <Input 
                         type="text" 
@@ -643,7 +640,7 @@ export default function SKUSetup() {
                       <Field label="Box Barcode" info="Barcode printed on shipping boxes/cartons for warehouse and logistics scanning">
                         <Input value={skuForm.box_barcode} onChange={e => setSkuForm(f => ({ ...f, box_barcode: e.target.value }))} placeholder="8901234567999" className="h-12 text-base font-mono" />
                       </Field>
-                      <Field label="MRP per Bottle (₹) *">
+                      <Field label="MRP per Bottle (₹)">
                         <Input 
                           type="text" 
                           inputMode="decimal" 
@@ -737,10 +734,7 @@ export default function SKUSetup() {
                   <button
                     type="button"
                     onClick={() => {
-                      if (!skuForm.is_active && !complete && !skuForm.is_trial_pack) {
-                        alert('Cannot activate: setup is incomplete. Fill all required fields first.');
-                        return;
-                      }
+  
                       setSkuForm(f => ({ ...f, is_active: !f.is_active }));
                     }}
                     className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors ${skuForm.is_active ? 'bg-green-600' : 'bg-slate-400'}`}
@@ -770,7 +764,7 @@ export default function SKUSetup() {
                 <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-4">
                   <p className="text-sm font-bold text-slate-700">🧪 Recipe Configuration</p>
                   <div className="grid grid-cols-1 gap-4">
-                    <Field label="Recipe Group *">
+                    <Field label="Recipe Group">
                       <select
                         value={skuForm.recipe_group_id}
                         onChange={e => setSkuForm(f => ({ ...f, recipe_group_id: e.target.value, default_recipe_option_id: '' }))}
@@ -786,7 +780,7 @@ export default function SKUSetup() {
                       )}
                     </Field>
 
-                    <Field label="Default Recipe Option *">
+                    <Field label="Default Recipe Option">
                       <select
                         value={skuForm.default_recipe_option_id}
                         onChange={e => setSkuForm(f => ({ ...f, default_recipe_option_id: e.target.value }))}
@@ -826,7 +820,7 @@ export default function SKUSetup() {
               </div>
 
               <div className="grid grid-cols-1 gap-4">
-                <Field label="Ryan Template *">
+                <Field label="Ryan Template">
                   <RyanTemplateField
                     value={mappingForm.ryan_template_id}
                     onChange={v => setMappingForm(f => ({ ...f, ryan_template_id: v }))}
@@ -839,7 +833,7 @@ export default function SKUSetup() {
                   />
                 </Field>
 
-                <Field label="Batch Format Rule *">
+                <Field label="Batch Format Rule">
                   <div className="flex gap-2 items-start">
                     <div className="flex-1 min-w-0">
                       <select

@@ -15,12 +15,7 @@ const mappingChecks = [
 ];
 
 export function isSetupComplete(sku, mapping) {
-  const isTrialPack = sku?.is_trial_pack;
-  const relevantChecks = isTrialPack ? checks.filter(c => !c.skipForTrialPack) : checks;
-  const relevantMappingChecks = isTrialPack ? mappingChecks.filter(c => !c.skipForTrialPack) : mappingChecks;
-  const skuOk = relevantChecks.every(c => !!sku[c.key]);
-  const mapOk = relevantMappingChecks.every(c => !!(mapping || {})[c.key]);
-  return skuOk && mapOk;
+  return true;
 }
 
 export default function SetupChecklist({ sku, mapping }) {
