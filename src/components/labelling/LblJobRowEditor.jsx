@@ -23,21 +23,21 @@ export default function LblJobRowEditor({ index, job, products, planDate, onUpda
   });
   const productMaster = productDetails[0];
 
-  // Load SKU print mapping to fetch the template ID
-  const { data: skuMapping } = useQuery({
-    queryKey: ['sku-print-mapping-auto', job?.sku_code],
-    queryFn: async () => {
-      const rows = await base44.entities.SKUPrintMapping.filter({ sku_code: job.sku_code });
-      return rows?.[0] || null;
-    },
-    enabled: !!job?.sku_code,
-  });
-
   // Load ALL active print templates
   const { data: allTemplates = [] } = useQuery({
     queryKey: ['lbl-print-templates-active'],
     queryFn: () => base44.entities.LblPrintTemplate.filter({ is_active: true }),
     staleTime: 60000,
+  });
+
+  // Load available templates for this SKU
+  const { data: skuTemplates = [] } = useQuery({
+    queryKey: ['sku-available-templates', job?.sku_code],
+    queryFn: async () => {
+      const mappings = await base44.entities.SKUPrintMapping.filter({ sku_code: job.sku_code, is_active: true });
+      return mappings || [];
+    },
+    enabled: !!job?.sku_code,
   });
 
   const handleProductChange = (productId) => {
@@ -51,15 +51,15 @@ export default function LblJobRowEditor({ index, job, products, planDate, onUpda
     }
   };
 
-  // Auto-assign template when SKU mapping is fetched
+  // Auto-assign default template when SKU mapping is fetched
   useEffect(() => {
-    if (skuMapping?.ryan_template_id && job.sku_code && !job.printer_template_id) {
-      const template = allTemplates.find(t => t.id === skuMapping.ryan_template_id);
-      if (template) {
-        onUpdate(index, 'printer_template_id', template.id);
+    if (job.sku_code && !job.printer_template_id && skuTemplates.length > 0) {
+      const defaultTemplate = skuTemplates.find(m => m.is_default);
+      if (defaultTemplate) {
+        onUpdate(index, 'printer_template_id', defaultTemplate.template_id);
       }
     }
-  }, [skuMapping?.ryan_template_id, job.sku_code, job.printer_template_id, allTemplates, index, onUpdate]);
+  }, [job.sku_code, job.printer_template_id, skuTemplates, index, onUpdate]);
 
   const handleBottlesChange = (value) => {
     const bottles = Number(value) || 0;
@@ -153,32 +153,33 @@ export default function LblJobRowEditor({ index, job, products, planDate, onUpda
         </div>
       </div>
 
-      {/* Template Display — auto-fetched from SKUPrintMapping */}
+      {/* Template Selection — choose from SKU's available templates */}
       {job.sku_code && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <Label className="text-xs font-medium text-slate-700">Print Template</Label>
-              {skuMapping?.ryan_template_id && !job.printer_template_id && (
-                <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-medium">Auto-fetching...</span>
-              )}
-              {job.printer_template_id && (
-                <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-medium">Auto-assigned</span>
-              )}
-              {!skuMapping?.ryan_template_id && job.sku_code && (
-                <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium">Not configured</span>
-              )}
-            </div>
-            <div className="h-11 md:h-9 flex items-center px-3 bg-slate-50 border border-slate-200 rounded-md">
-              <span className="text-sm font-mono text-slate-900">
-                {job.printer_template_id 
-                  ? allTemplates.find(t => t.id === job.printer_template_id)?.name || 'Template not found'
-                  : 'No template assigned'}
-              </span>
-            </div>
-            <p className="text-xs text-slate-500">
-              Auto-fetched from SKU print setup during product selection
-            </p>
+            <Label className="text-xs font-medium text-slate-700">Print Template <span className="text-red-500">*</span></Label>
+            {skuTemplates.length === 0 ? (
+              <div className="h-11 md:h-9 flex items-center px-3 bg-amber-50 border border-amber-200 rounded-md">
+                <span className="text-xs text-amber-700">No templates available for this SKU — configure in SKU Setup</span>
+              </div>
+            ) : (
+              <Select value={job.printer_template_id || ''} onValueChange={(val) => onUpdate(index, 'printer_template_id', val)}>
+                <SelectTrigger className="h-11 md:h-9">
+                  <SelectValue placeholder="Select a template" />
+                </SelectTrigger>
+                <SelectContent>
+                  {skuTemplates.map(mapping => {
+                    const template = allTemplates.find(t => t.id === mapping.template_id);
+                    return (
+                      <SelectItem key={mapping.id} value={mapping.template_id || ''}>
+                        {template?.name} {mapping.is_default ? '(Default)' : ''}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            )}
+            <p className="text-xs text-slate-500">Available templates for this SKU</p>
           </div>
           <div className="space-y-1">
             <Label className="text-xs font-medium text-slate-700">MRP (₹)</Label>

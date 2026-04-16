@@ -1,10 +1,9 @@
 /**
  * LblDemoPrintStep
- * Sends a demo print command to the Rynan middleware.
- * - Checks cartridge presence before allowing print
- * - Collects all label data: batch number, manufacturing date, expiry date, MRP, USP
- * - MRP is pre-filled from ProductMaster and is editable
- * - Number of data commands sent = demo print quantity
+ * Sends a demo print using the template selected at plan creation.
+ * - No command type branching — same template used throughout job
+ * - Checks cartridge, collects label data, sends to middleware
+ * - Preview modal allows operator to verify before printing
  */
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -12,12 +11,11 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { logLabellingEvent } from '@/lib/labellingEventLogger';
-import { sendStarCommand } from '@/lib/rynanPrinterService';
 import { toast } from '@/components/ui/use-toast';
 import { computeLabelFields } from '@/lib/labelFieldComputer';
 import { resolveDemoPrintLabelData } from '@/lib/buildRynanLabelData';
+import { sendStarCommand } from '@/lib/rynanPrinterService';
+import { logLabellingEvent } from '@/lib/labellingEventLogger';
 import LblPrinterStatusPanel from './LblPrinterStatusPanel';
 import LblPrintPreviewModal from './LblPrintPreviewModal';
 import { Loader2, Printer, AlertTriangle } from 'lucide-react';
@@ -43,46 +41,15 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
     queryFn: () => base44.entities.LblPrinterConfig.filter({ is_active: true }),
   });
 
-  // Auto-fetch template from SKU if job doesn't have one
-  const { data: skuMapping } = useQuery({
-    queryKey: ['sku-mapping-for-template', job.sku_code],
-    queryFn: async () => {
-      if (!job.sku_code) return null;
-      const rows = await base44.entities.SKUPrintMapping.filter({ sku_code: job.sku_code });
-      return rows?.[0] || null;
-    },
-    enabled: !!job.sku_code && !job.printer_template_id,
-  });
-
-  // Auto-assign template from SKU if job doesn't have one
-  useEffect(() => {
-    if (!job.printer_template_id && skuMapping?.printer_template_id) {
-      base44.entities.LabellingJob.update(job.id, { printer_template_id: skuMapping.printer_template_id }).catch(() => {});
-    }
-  }, [skuMapping?.printer_template_id]);
-
-  // Load the print template linked to this job via printer_template_id
+  // Load the selected template (assigned at plan creation)
   const { data: jobTemplate } = useQuery({
     queryKey: ['lbl-job-print-template', job.printer_template_id],
     queryFn: async () => {
-      const templateId = job.printer_template_id || skuMapping?.printer_template_id;
-      if (!templateId) return null;
+      if (!job.printer_template_id) return null;
       const templates = await base44.entities.LblPrintTemplate.filter({ is_active: true });
-      return templates.find(t => t.id === templateId) || null;
+      return templates.find(t => t.id === job.printer_template_id) || null;
     },
-    enabled: !!(job.printer_template_id || skuMapping?.printer_template_id),
-  });
-
-  // Fetch SKU's POD field mapping config
-  const { data: skuPrintMapping } = useQuery({
-    queryKey: ['sku-print-mapping-for-demo', job.sku_code],
-    queryFn: async () => {
-      const rows = await base44.entities.SKUPrintMapping.filter({ sku_code: job.sku_code });
-      const mapping = rows?.[0];
-      if (!mapping?.payload_map_json) return [];
-      try { return JSON.parse(mapping.payload_map_json); } catch { return []; }
-    },
-    enabled: !!job.sku_code,
+    enabled: !!job.printer_template_id,
   });
 
   // Fetch product master to get MRP and shelf life
@@ -117,9 +84,7 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
   const hasCartridge = printerStatus?.has_cartridge === true;
   const templateMissing = printerStatus?.templateFound === false;
   const statusChecked = printerStatus !== null;
-
-  // Use job's assigned template only — no command-type distinction, no printer fallbacks
-  const resolvedTemplateName = jobTemplate?.middleware_template_name || '';
+  const templateName = jobTemplate?.middleware_template_name || '';
 
   const setField = (key, val) => setLabelData(prev => ({ ...prev, [key]: val }));
 
@@ -128,7 +93,7 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
     if (!printerId) { toast({ title: 'Select a printer first', variant: 'destructive' }); return; }
     if (!statusChecked) { toast({ title: 'Check Printer Status First', description: 'Click "Check Status" to verify cartridge before printing.', variant: 'destructive' }); return; }
     if (!hasCartridge) { toast({ title: 'No Cartridge Detected', description: 'Cannot send demo print — please install a cartridge and check status again.', variant: 'destructive' }); return; }
-    if (templateMissing) { toast({ title: 'Template Not Found on Printer', description: `Template "${resolvedTemplateName}" is not loaded on the printer. Contact your middleware administrator.`, variant: 'destructive' }); return; }
+    if (templateMissing) { toast({ title: 'Template Not Found on Printer', description: `Template "${templateName}" is not loaded on the printer. Contact your middleware administrator.`, variant: 'destructive' }); return; }
     if (!labelData.batch_no) { toast({ title: 'Batch Number is required', variant: 'destructive' }); return; }
     if (!labelData.mfg_date) { toast({ title: 'Manufacturing Date is required', variant: 'destructive' }); return; }
     if (!labelData.mrp) { toast({ title: 'MRP is required', variant: 'destructive' }); return; }
@@ -176,10 +141,10 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
       return;
     }
 
-    // Send qty STAR commands — one POST per label, loop handled inside sendStarCommand()
+    // Send qty STAR commands using the selected template
     const result = await sendStarCommand(
       printer,
-      resolvedTemplateName,
+      templateName,
       qty,
       { jobId: job.id, commandType: 'demo', user }
     );
@@ -202,7 +167,7 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
       action_type: 'demo_print_sent',
       job_id: job.id,
       plan_id: job.plan_id,
-      description: `Demo print of ${qty} label(s) sent to ${printer.name} using template "${resolvedTemplateName}". Batch: ${podFields.batchNo}, MFG: ${podFields.mfgDate}, EXP: ${podFields.expiryDate}, MRP: ₹${podFields.mrp}. Middleware job: ${result.lastMiddlewareJobId || 'N/A'}.`,
+      description: `Demo print of ${qty} label(s) sent to ${printer.name} using template "${templateName}". Batch: ${podFields.batchNo}, MFG: ${podFields.mfgDate}, EXP: ${podFields.expiryDate}, MRP: ₹${podFields.mrp}. Middleware job: ${result.lastMiddlewareJobId || 'N/A'}.`,
       user,
     });
 
@@ -227,10 +192,10 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
         <p className="text-slate-600"><span className="font-medium">Planned:</span> {job.quantity_bottles_planned?.toLocaleString()} bottles</p>
         <p className="text-slate-600"><span className="font-medium">Stock Transferred:</span> {job.stock_transfer_qty?.toLocaleString()} bottles</p>
         <p className="text-slate-600 col-span-2">
-          <span className="font-medium">Label Template:</span>{' '}
+          <span className="font-medium">Selected Template:</span>{' '}
           {jobTemplate
-            ? <span className="font-mono text-purple-700">{jobTemplate.name} [{jobTemplate.middleware_template_name}]</span>
-            : <span className="text-amber-600">⚠ No template assigned — set in SKU Setup → Printing & Batch tab</span>
+            ? <span className="font-mono text-purple-700">{jobTemplate.name} [{templateName}]</span>
+            : <span className="text-amber-600">⚠ No template assigned — select during plan creation</span>
           }
         </p>
       </div>
@@ -384,7 +349,7 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
         onOpenChange={setShowPreview}
         podValues={previewPodValues}
         printerName={selectedPrinter?.name}
-        templateName={resolvedTemplateName}
+        templateName={templateName}
         quantity={Number(demoQty)}
         onConfirm={handleConfirmPrint}
         isLoading={sending}

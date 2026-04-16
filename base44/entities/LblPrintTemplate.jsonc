@@ -1,7 +1,7 @@
 {
   "name": "LblPrintTemplate",
   "type": "object",
-  "title": "Labelling Print Template",
+  "title": "Label Print Template",
   "properties": {
     "template_id": {
       "type": "string",
@@ -20,17 +20,10 @@
       "maxLength": 1000,
       "description": "Description of what this template is used for"
     },
-    "command_type": {
+    "artwork_id": {
       "type": "string",
-      "enum": [
-        "demo_print",
-        "bulk_start",
-        "bulk_stop",
-        "purge",
-        "test_ping",
-        "custom"
-      ],
-      "description": "The type of printer command this template is associated with"
+      "maxLength": 100,
+      "description": "Reference to LabelArtwork.artwork_id \u2014 which label design this template prints"
     },
     "middleware_template_name": {
       "type": "string",
@@ -75,7 +68,6 @@
   "required": [
     "template_id",
     "name",
-    "command_type",
     "middleware_template_name"
   ]
 }
