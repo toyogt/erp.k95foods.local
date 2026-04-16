@@ -683,22 +683,35 @@ export async function checkTemplateExists(printer, templateName) {
     return { found: false, availableTemplates: [], error: `Cannot reach middleware: ${transportError}` };
   }
 
-  // Middleware wraps printer response — template list is in body.printer_response_payload
-  // or directly in body.template (depends on middleware version)
-  const printerPayload = body?.printer_response_payload || body || {};
-  const templateList = (
-    printerPayload.template ||       // { command: "RSLI", template: [...] }
+  // Log the full raw body so we can see exactly what the middleware returns
+  console.log('[RQLI] Raw middleware response:', JSON.stringify(body, null, 2));
+
+  // Try every known location where the template list may appear in the response:
+  // - body.printer_response_payload.template  (most common — middleware wraps printer reply)
+  // - body.printer_response_payload.templates
+  // - body.printer_response_payload (if it IS the array itself)
+  // - body.template
+  // - body.templates
+  // - body.data.template
+  // - body (if it IS the array itself)
+  const printerPayload = body?.printer_response_payload || {};
+  const templateList =
+    printerPayload.template ||
     printerPayload.templates ||
+    (Array.isArray(printerPayload) ? printerPayload : null) ||
     body?.template ||
-    []
-  );
+    body?.templates ||
+    body?.data?.template ||
+    body?.data?.templates ||
+    (Array.isArray(body) ? body : null) ||
+    [];
 
   const templates = Array.isArray(templateList) ? templateList : [];
-  // Debug: log what the printer returned vs what we're looking for
-  console.log('[RQLI] Template check — looking for:', templateName, '| Printer returned:', templates);
-  // Case-insensitive + trimmed match so "Default-1" matches "default-1" or " Default-1 "
+  console.log('[RQLI] Parsed template list:', templates, '| Looking for:', templateName);
+
+  // Case-insensitive + trimmed match
   const normalizedTarget = templateName.trim().toLowerCase();
-  const found = templates.some(t => t.trim().toLowerCase() === normalizedTarget);
+  const found = templates.some(t => String(t).trim().toLowerCase() === normalizedTarget);
 
   return {
     found,
