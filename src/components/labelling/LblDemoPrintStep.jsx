@@ -17,6 +17,7 @@ import { logLabellingEvent } from '@/lib/labellingEventLogger';
 import { sendRynanPrintCommand } from '@/lib/rynanPrinterService';
 import { toast } from '@/components/ui/use-toast';
 import { computeLabelFields } from '@/lib/labelFieldComputer';
+import { resolveDemoPrintLabelData } from '@/lib/buildRynanLabelData';
 import LblPrinterStatusPanel from './LblPrinterStatusPanel';
 import { Loader2, Printer, AlertTriangle } from 'lucide-react';
 
@@ -45,6 +46,18 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
     queryFn: () => base44.entities.LblPrintTemplate.filter({ is_active: true }),
     enabled: true,
     select: (rows) => rows.find(t => t.id === job.printer_template_id) || null,
+  });
+
+  // Fetch SKU's POD field mapping config (payload_map_json from SKUPrintMapping)
+  const { data: skuPrintMapping } = useQuery({
+    queryKey: ['sku-print-mapping-for-demo', job.sku_code],
+    queryFn: () => base44.entities.SKUPrintMapping.filter({ sku_code: job.sku_code }),
+    enabled: !!job.sku_code,
+    select: (rows) => {
+      const mapping = rows?.[0];
+      if (!mapping?.payload_map_json) return [];
+      try { return JSON.parse(mapping.payload_map_json); } catch { return []; }
+    },
   });
 
   // Fetch product master to get MRP and shelf life
@@ -94,15 +107,17 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
 
     // Build command — quantity equals demo print count (one data command per label)
     const qty = Number(demoQty);
-    // All POD fields computed from current inputs
-    const podFields = computeLabelFields({
-      mrp: labelData.mrp,
-      mlPerBottle: productMaster?.ml_per_bottle,
-      mfgDate: labelData.mfg_date,
-      labellingDate: job.labelling_date || '',
-      shelfLifeDays: productMaster?.shelf_life_days,
-      batchNo: labelData.batch_no,
-      productName: job.product_name,
+
+    // Resolve label_data using SKU's POD mapping config (falls back to legacy POD1-12 if not configured)
+    const { label_data, computedFields: podFields } = resolveDemoPrintLabelData({
+      job,
+      productMaster,
+      labelInputs: {
+        mrp:      labelData.mrp,
+        mfg_date: labelData.mfg_date,
+        batch_no: labelData.batch_no,
+      },
+      skuPodMappings: skuPrintMapping || [],
     });
 
     // Resolve template name: prefer job's assigned template (from SKU setup), fallback to printer config
@@ -117,29 +132,7 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
       data_commands: qty,
       quantity: qty,
       job_id: job.job_id,
-      // All POD fields for Rynan middleware
-      label_data: {
-        POD1: podFields.mrp,
-        POD2: podFields.mrpWithUsp,
-        POD3: podFields.taxLine,
-        POD4: podFields.batchNo,
-        POD5: podFields.mfgDate,
-        POD6: podFields.expiryDate,
-        POD7: podFields.usp,
-        POD8: podFields.mfgDateOffset,
-        POD9: podFields.expiryDateOffset,
-        POD10: podFields.netWeight,
-        POD11: podFields.uspWithUnit,
-        POD12: podFields.mrpAndUsp,
-        // Legacy keys for backward compat
-        batch_no: podFields.batchNo,
-        mfg_date: podFields.mfgDate,
-        exp_date: podFields.expiryDate,
-        mrp: podFields.mrp,
-        usp: podFields.usp,
-        product_name: job.product_name,
-        sku_code: job.sku_code,
-      },
+      label_data,
     };
 
     const result = await sendRynanPrintCommand(printer, command, {
@@ -167,7 +160,7 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
       action_type: 'demo_print_sent',
       job_id: job.id,
       plan_id: job.plan_id,
-      description: `Demo print of ${qty} labels sent to ${printer.name}. Batch: ${podFields.batchNo}, MFG: ${podFields.mfgDate}, EXP: ${podFields.expiryDate}, MRP: ₹${podFields.mrp}, USP: ₹${podFields.usp}/ml. Middleware job: ${result.middlewareJobId || 'N/A'}`,
+      description: `Demo print of ${qty} labels sent to ${printer.name}. Batch: ${podFields.batchNo}, MFG: ${podFields.mfgDate}, EXP: ${podFields.expiryDate}, MRP: ₹${podFields.mrp}, USP: ₹${podFields.usp}/ml. Middleware job: ${result.middlewareJobId || 'N/A'}. POD mapping: ${(skuPrintMapping || []).length > 0 ? 'SKU config' : 'legacy default'}.`,
       user,
     });
 
