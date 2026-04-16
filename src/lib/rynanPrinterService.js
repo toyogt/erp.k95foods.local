@@ -54,7 +54,7 @@ export const MIDDLEWARE_ENDPOINTS = {
 export const PRINTER_COMMANDS = {
   STAR:  'STAR',   // Trigger label print using a pre-loaded template
   MON:   'MON',    // Query printer monitor status (ink, cartridge)
-  PURGE: 'purge',  // Purge print heads — sent via /purge endpoint, not /print
+  PURGE: 'PURGE',  // Purge print heads — sent via /print endpoint
 };
 
 /**
