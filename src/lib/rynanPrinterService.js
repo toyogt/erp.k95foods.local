@@ -113,11 +113,11 @@ export function buildStarCommand(printer, templateName, priority = PRINT_PRIORIT
 /**
  * buildPurgePayload
  *
- * Builds the JSON payload for POST /purge.
+ * Builds the JSON payload for POST /print.
  * Purge clears dried ink from print heads — maintenance only.
  *
  * @param {object} printer - LblPrinterConfig record
- * @returns {object} JSON payload ready to POST to /purge
+ * @returns {object} JSON payload ready to POST to /print
  */
 export function buildPurgePayload(printer) {
   return {
@@ -127,7 +127,7 @@ export function buildPurgePayload(printer) {
       port: printer.port || 9100,
     },
     command: {
-      type: PRINTER_COMMANDS.PURGE,
+      command: PRINTER_COMMANDS.PURGE,
     },
   };
 }
@@ -415,10 +415,10 @@ export async function sendRynanTestCommand(printer, user) {
  * sendPurgeCommand
  *
  * Sends a purge command to clean the printer heads.
- * Endpoint: POST /purge
+ * Endpoint: POST /print
  */
 export async function sendPurgeCommand(printer, user) {
-  const endpointUrl = buildUrl(printer.register_app_link || printer.api_endpoint || '', MIDDLEWARE_ENDPOINTS.PURGE);
+  const endpointUrl = buildUrl(printer.register_app_link || printer.api_endpoint || '', MIDDLEWARE_ENDPOINTS.PRINT);
   const headers     = buildHeaders(printer);
   const payload     = buildPurgePayload(printer);
 
