@@ -49,7 +49,7 @@ import Putaway from './pages/Putaway';
 import QCInbox from './pages/QCInbox';
 import RecipeBuilder from './pages/RecipeBuilder';
 import RecipeStation from './pages/RecipeStation';
-import RyanTemplateManager from './pages/RyanTemplateManager';
+
 import SKUSetup from './pages/SKUSetup';
 import ShiftKPIDashboard from './pages/ShiftKPIDashboard';
 import StoresIssue from './pages/StoresIssue';
@@ -135,7 +135,7 @@ const PAGE_COMPONENTS = {
   LabelRollManager, LabellingLine, LiquidPlans, MasterData, PaymentRequests, ProductTaxonomy,
   ProductionControl, ProductionOrders, PullLists, Putaway, QCInbox, RecipeBuilder,
   MaterialRequest, PurchaseOrders, PurchaseReports,
-  RecipeStation, RyanTemplateManager, SKUSetup, ShiftKPIDashboard, StoresIssue, SupplierManager, TemplateMappingManager,
+  RecipeStation, SKUSetup, ShiftKPIDashboard, StoresIssue, SupplierManager, TemplateMappingManager,
   ThreeWayMatch, TraceInvestigation, TransferReceiving, UOMManager, WarehouseBins,
   FMSMyTasks, FMSProcesses, FMSActiveRuns, FMSMonitor, UserManagement, RoleManager, ApprovalRulesManager,
   PermissionMatrix, PermissionMatrixDashboard, ApprovalWorkflowHub, AccessAuditLog, FMSHealthDashboard,
@@ -195,6 +195,9 @@ const AuthenticatedApp = () => {
         </LayoutWrapper>
       } />
       
+      {/* Labelling Department */}
+      <Route path="/LblPrintTemplateManager" element={<LayoutWrapper currentPageName="LblPrintTemplateManager"><LblPrintTemplateManager /></LayoutWrapper>} />
+
       {/* Explicit route for Audit Log Viewer */}
       <Route
         path="/AuditLogViewer"
@@ -324,8 +327,6 @@ const AuthenticatedApp = () => {
       <Route path="/LblMasterData" element={<LayoutWrapper currentPageName="LblMasterData"><LblMasterData /></LayoutWrapper>} />
       <Route path="/LblDocTypePermissions" element={<LayoutWrapper currentPageName="LblDocTypePermissions"><LblDocTypePermissions /></LayoutWrapper>} />
       <Route path="/RynanPrinterCenter" element={<LayoutWrapper currentPageName="RynanPrinterCenter"><RynanPrinterCenter /></LayoutWrapper>} />
-      <Route path="/LblPrintTemplateManager" element={<LayoutWrapper currentPageName="LblPrintTemplateManager"><LblPrintTemplateManager /></LayoutWrapper>} />
-
       {/* Store Management System Routes */}
       {[
         ['SMSDashboard', SMSDashboard], ['SMSLocationManager', SMSLocationManager],

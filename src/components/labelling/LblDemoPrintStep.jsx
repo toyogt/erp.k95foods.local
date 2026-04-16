@@ -99,18 +99,19 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
     if (!labelData.mfg_date) { toast({ title: 'Manufacturing Date is required', variant: 'destructive' }); return; }
     if (!labelData.mrp) { toast({ title: 'MRP is required', variant: 'destructive' }); return; }
 
-    // Build POD values for preview
+    // Build POD values for preview using template field mappings
     const podMap = {};
-    if (jobTemplate?.field_mappings) {
+    if (jobTemplate?.field_mappings && jobTemplate.field_mappings.length > 0) {
       jobTemplate.field_mappings.forEach(mapping => {
-        const fieldMap = {
-          mrp: labelData.mrp,
-          batchNo: labelData.batch_no,
-          mfgDate: labelData.mfg_date,
-          expiryDate: computed.expiryDate,
-          usp: computed.uspWithUnit?.split(' ')[0],
-        };
-        podMap[mapping.pod_field] = fieldMap[mapping.erp_source] || '';
+        // Map ERP source field to actual value
+        let value = '';
+        if (mapping.erp_source === 'mrp') value = labelData.mrp;
+        else if (mapping.erp_source === 'batch_no') value = labelData.batch_no;
+        else if (mapping.erp_source === 'mfg_date') value = labelData.mfg_date;
+        else if (mapping.erp_source === 'expiry_date') value = computed.expiryDate;
+        else if (mapping.erp_source === 'usp') value = computed.uspWithUnit?.split(' ')[0];
+        
+        podMap[mapping.pod_field] = value || '';
       });
     }
 
