@@ -40,24 +40,27 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
     queryFn: () => base44.entities.LblPrinterConfig.filter({ is_active: true }),
   });
 
-  // Load the print template linked to this job (from SKU's print_template_mappings.demo_print)
+  // Load the print template linked to this job via printer_template_id
   const { data: jobTemplate } = useQuery({
     queryKey: ['lbl-job-print-template', job.printer_template_id],
-    queryFn: () => base44.entities.LblPrintTemplate.filter({ is_active: true }),
-    enabled: true,
-    select: (rows) => rows.find(t => t.id === job.printer_template_id) || null,
+    queryFn: async () => {
+      if (!job.printer_template_id) return null;
+      const templates = await base44.entities.LblPrintTemplate.filter({ is_active: true });
+      return templates.find(t => t.id === job.printer_template_id) || null;
+    },
+    enabled: !!job.printer_template_id,
   });
 
-  // Fetch SKU's POD field mapping config (payload_map_json from SKUPrintMapping)
+  // Fetch SKU's POD field mapping config
   const { data: skuPrintMapping } = useQuery({
     queryKey: ['sku-print-mapping-for-demo', job.sku_code],
-    queryFn: () => base44.entities.SKUPrintMapping.filter({ sku_code: job.sku_code }),
-    enabled: !!job.sku_code,
-    select: (rows) => {
+    queryFn: async () => {
+      const rows = await base44.entities.SKUPrintMapping.filter({ sku_code: job.sku_code });
       const mapping = rows?.[0];
       if (!mapping?.payload_map_json) return [];
       try { return JSON.parse(mapping.payload_map_json); } catch { return []; }
     },
+    enabled: !!job.sku_code,
   });
 
   // Fetch product master to get MRP and shelf life
@@ -93,7 +96,7 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
   const templateMissing = printerStatus?.templateFound === false;
   const statusChecked = printerStatus !== null;
 
-  // Use job's assigned template only — no fallback to printer defaults
+  // Use job's assigned template only — no command-type distinction, no printer fallbacks
   const resolvedTemplateName = jobTemplate?.middleware_template_name || '';
 
   const setField = (key, val) => setLabelData(prev => ({ ...prev, [key]: val }));
@@ -125,8 +128,8 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
       skuPodMappings: skuPrintMapping || [],
     });
 
-    if (!resolvedTemplateName) {
-      toast({ title: 'No Template Configured', description: 'Assign a print template to this product in SKU Setup → Printing & Batch tab.', variant: 'destructive' });
+    if (!jobTemplate) {
+      toast({ title: 'No Template Configured', description: 'This job has no print template assigned. Ensure a template was selected during plan creation.', variant: 'destructive' });
       setSending(false);
       return;
     }
