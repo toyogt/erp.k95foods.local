@@ -916,14 +916,7 @@ export default function SKUSetup() {
                 )}
               </div>
 
-              {/* POD Field Mapping (Legacy) */}
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
-                <PODFieldMappingEditor
-                  value={payloadRows}
-                  onChange={setPayloadRows}
-                />
-              </div>
-            </TabsContent>
+              </TabsContent>
 
             {/* ─── Tab 4: Artwork ───────────────────────────── */}
             <TabsContent value="artwork" className="mt-4">
