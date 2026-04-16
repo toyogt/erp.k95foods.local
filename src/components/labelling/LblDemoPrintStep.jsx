@@ -82,7 +82,7 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
     mfgDate: labelData.mfg_date,
     labellingDate: job.labelling_date || '',
     shelfLifeDays: productMaster?.shelf_life_days,
-    shelfLifeUnit: productMaster?.shelf_life_unit || 'days',
+    shelfLifeUnit: productMaster?.shelf_life_unit || 'months',
     batchNo: labelData.batch_no,
     productName: job.product_name,
   });

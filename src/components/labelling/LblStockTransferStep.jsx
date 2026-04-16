@@ -200,7 +200,7 @@ export default function LblStockTransferStep({ job, user, onComplete }) {
         mfgDate={mfgDate}
         labellingDate={labellingDate}
         shelfLifeDays={product?.shelf_life_days}
-        shelfLifeUnit={product?.shelf_life_unit || 'days'}
+        shelfLifeUnit={product?.shelf_life_unit || 'months'}
         fssaiNo={product?.fssai_no}
         bottleType={job?.bottle_type || product?.bottle_type}
         templateName={product?.demo_template || product?.bulk_template}

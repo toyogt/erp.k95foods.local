@@ -38,7 +38,7 @@ export default function LblLabelPreviewCard({
     mfgDate,
     labellingDate,
     shelfLifeDays,
-    shelfLifeUnit: shelfLifeUnit || 'days',
+    shelfLifeUnit: shelfLifeUnit || 'months',
     batchNo,
     productName,
   }), [mrp, mlPerBottle, mfgDate, labellingDate, shelfLifeDays, shelfLifeUnit, batchNo, productName]);
