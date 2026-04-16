@@ -1,60 +1,185 @@
 /**
- * Rynan Middleware Printer Service
- * Handles all communication with the Rynan label printer middleware.
+ * rynanPrinterService.js
  *
- * Middleware contract (POST /print):
- * {
- *   "printer_id": "P1",
- *   "printer": { "ip": "192.168.1.100", "port": 9100 },
- *   "command": { "command": "STAR", "templatename": "DEMO" },
- *   "priority": "normal"   // "normal" | "high"
- * }
+ * Single source of truth for ALL communication with the Rynan label printer middleware.
  *
- * Response (always HTTP 200):
- *   success + status === "completed" + printer_ok === true  → print sent
- *   success === false + status === "failed"                  → printer error
- *   success === false + no job_id                            → validation error
+ * ─── ARCHITECTURE ────────────────────────────────────────────────────────────
  *
- * NOTE: Only ONE command object per /print call. Arrays are rejected.
- * NOTE: label_data is NOT part of the /print payload — it is sent via a
- *       separate data-write command BEFORE issuing the STAR command, OR
- *       it is embedded in the templatename as a pre-configured template
- *       on the middleware side. The ERP sends template name + printer ID only.
+ * LAYER 1 — CONSTANTS
+ *   All middleware API endpoint paths and accepted command strings.
+ *
+ * LAYER 2 — JSON BUILDERS (pure, no side effects)
+ *   buildStarCommand()   — builds the STAR print JSON payload
+ *   buildPurgePayload()  — builds the purge JSON payload
+ *
+ * LAYER 3 — TRANSPORT (HTTP + audit persistence)
+ *   postToMiddleware()   — raw HTTP POST with retry + timeout
+ *   sendStarCommand()    — sends N STAR commands (one per label), saves audit records
+ *
+ * LAYER 4 — HIGH-LEVEL EXPORTS
+ *   sendRynanPrintCommand()    — called by Demo/Bulk print steps
+ *   sendRynanTestCommand()     — test ping
+ *   sendPurgeCommand()         — purge printer heads
+ *   getPrinterStatus()         — cartridge / ink check
+ *   getRynanMiddlewareSnapshot()— health + printers + metrics
+ *   fetchRynanMiddlewareJobStatus() — job status by ID
  */
 
 import { base44 } from '@/api/base44Client';
 
-// Hard printer failure codes — do NOT retry
+// ─────────────────────────────────────────────────────────────────────────────
+// LAYER 1 — CONSTANTS
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * All middleware REST endpoint paths.
+ * Usage: MIDDLEWARE_ENDPOINTS.PRINT → "/print"
+ */
+export const MIDDLEWARE_ENDPOINTS = {
+  PRINT:          '/print',           // POST — send a STAR command to trigger one label print
+  PURGE:          '/purge',           // POST — purge print heads
+  PRINTER_STATUS: '/printer-status',  // GET  — cartridge + ink level check (param: ?printer_id=)
+  HEALTH:         '/health',          // GET  — middleware health check
+  PRINTERS:       '/printers',        // GET  — list all connected printers
+  METRICS:        '/metrics',         // GET  — job counts, error stats
+  JOB_STATUS:     '/job',             // GET  — job status by ID: /job/{middlewareJobId}
+};
+
+/**
+ * Printer command strings accepted by the Rynan middleware.
+ * Only STAR is used for label printing. Others are for reference / future use.
+ */
+export const PRINTER_COMMANDS = {
+  STAR:  'STAR',   // Trigger label print using a pre-loaded template
+  MON:   'MON',    // Query printer monitor status (ink, cartridge)
+  PURGE: 'purge',  // Purge print heads — sent via /purge endpoint, not /print
+};
+
+/**
+ * Priority levels accepted by the /print endpoint.
+ */
+export const PRINT_PRIORITY = {
+  NORMAL: 'normal',
+  HIGH:   'high',
+};
+
+/**
+ * Printer protocol error codes that indicate a hard (non-retryable) failure.
+ */
 const HARD_FAILURE_CODES = ['NYES', 'RSAL', 'RSMPOD', 'SYSN', 'FAILED', 'ERROR', 'FULL', 'NOK'];
 
-/** Normalise a base URL so it always resolves to /print */
-function buildPrintUrl(baseUrl) {
-  const url = baseUrl.replace(/\/print\/?$/, '').replace(/\/$/, '');
-  return `${url}/print`;
+// ─────────────────────────────────────────────────────────────────────────────
+// LAYER 2 — JSON BUILDERS (pure functions — no HTTP, no DB)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * buildStarCommand
+ *
+ * Builds the exact JSON payload that must be sent to POST /print
+ * to trigger one label to print using the STAR command.
+ *
+ * The Rynan middleware contract:
+ *   - command.command    : always "STAR"
+ *   - command.templatename : the template name pre-configured on the middleware
+ *   - printer_id / printer.ip / printer.port : identify the physical printer
+ *   - priority : "normal" | "high"
+ *
+ * ⚠️ DO NOT add label_data, quantity, batch_no, mrp etc. here.
+ *    Label variables live inside the template on the middleware side.
+ *    One call to /print = one label printed.
+ *
+ * @param {object} printer      - LblPrinterConfig record
+ * @param {string} templateName - Middleware template name (e.g. "Default-1")
+ * @param {string} [priority]   - "normal" | "high"
+ * @returns {object} JSON payload ready to POST to /print
+ */
+export function buildStarCommand(printer, templateName, priority = PRINT_PRIORITY.NORMAL) {
+  return {
+    printer_id: printer.printer_id,
+    printer: {
+      ip:   printer.ip_address,
+      port: printer.port || 9100,
+    },
+    command: {
+      command:      PRINTER_COMMANDS.STAR,
+      templatename: templateName,
+    },
+    priority: priority === PRINT_PRIORITY.HIGH ? PRINT_PRIORITY.HIGH : PRINT_PRIORITY.NORMAL,
+  };
 }
 
-/** Build the URL for non-print endpoints */
-function buildEndpointUrl(baseUrl, path) {
-  const url = baseUrl.replace(/\/print\/?$/, '').replace(/\/$/, '');
-  return `${url}${path}`;
+/**
+ * buildPurgePayload
+ *
+ * Builds the JSON payload for POST /purge.
+ * Purge clears dried ink from print heads — maintenance only.
+ *
+ * @param {object} printer - LblPrinterConfig record
+ * @returns {object} JSON payload ready to POST to /purge
+ */
+export function buildPurgePayload(printer) {
+  return {
+    printer_id: printer.printer_id,
+    printer: {
+      ip:   printer.ip_address,
+      port: printer.port || 9100,
+    },
+    command: {
+      type: PRINTER_COMMANDS.PURGE,
+    },
+  };
 }
 
-/** Generate a command ID */
+// ─────────────────────────────────────────────────────────────────────────────
+// LAYER 3 — TRANSPORT UTILITIES (HTTP + audit)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Strip trailing /print or / from base URL then append a path */
+function buildUrl(baseUrl, path) {
+  const base = (baseUrl || '').replace(/\/print\/?$/, '').replace(/\/$/, '');
+  return `${base}${path}`;
+}
+
+/** Build auth + content-type headers from printer config */
+function buildHeaders(printer, includeContentType = true) {
+  const headers = {};
+  if (includeContentType) headers['Content-Type'] = 'application/json';
+  if (printer.auth_header_key && printer.auth_header_value) {
+    headers[printer.auth_header_key] = printer.auth_header_value;
+  }
+  return headers;
+}
+
+/** Generate a unique command ID */
 function genCommandId() {
   return `CMD-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 }
 
-/**
- * Determine if a middleware response is a true success.
- * Per middleware contract:
- *   success === true AND status === "completed" AND printer_ok !== false
- * API always returns HTTP 200 — must inspect JSON fields.
- */
+/** Persist an LblPrintCommand audit record */
+async function persistCommand({ commandId, jobId, middlewareJobId, printerId, endpointUrl, commandType, quantity, status, requestPayload, responsePayload, responseStatusCode, errorMessage, sentBy }) {
+  return base44.entities.LblPrintCommand.create({
+    command_id:           commandId,
+    job_id:               jobId || null,
+    middleware_job_id:    middlewareJobId || null,
+    printer_id:           printerId,
+    endpoint_url:         endpointUrl,
+    command_type:         commandType,
+    quantity:             quantity || 0,
+    status,
+    request_payload:      requestPayload,
+    response_payload:     responsePayload || null,
+    response_status_code: responseStatusCode || null,
+    error_message:        errorMessage || null,
+    sent_at:              new Date().toISOString(),
+    sent_by:              sentBy || null,
+  });
+}
+
+/** Check if a middleware response body indicates a genuine success */
 function isResponseSuccess(body) {
   if (!body) return false;
   if (body.success !== true) return false;
-  // If job_id is absent it's a validation error (not a printer error)
-  if (!body.job_id) return false;
+  if (!body.job_id) return false;           // missing job_id = validation error
   if (body.status === 'failed') return false;
   if (body.printer_ok === false) return false;
   const code = (body.printer_protocol_error_code || '').toUpperCase();
@@ -62,155 +187,68 @@ function isResponseSuccess(body) {
   return true;
 }
 
-/**
- * Determine if an error is retryable (transport/timeout/empty) vs hard failure.
- */
+/** Extract a human-readable error message from a middleware response */
+function extractErrorMessage(body) {
+  return (
+    body?.error ||
+    body?.printer_reason ||
+    body?.printer_protocol_error_description ||
+    (body?.printer_protocol_error_code ? `Printer error code: ${body.printer_protocol_error_code}` : null) ||
+    `Print ${body?.status || 'failed'}`
+  );
+}
+
+/** Is this failure retryable (network/timeout) vs hard failure? */
 function isRetryableError(error, responseBody) {
-  // Hard printer failure codes are not retryable
   if (responseBody) {
     const code = (responseBody.printer_protocol_error_code || responseBody.printer_response_status || '').toUpperCase();
     if (HARD_FAILURE_CODES.some(f => code.includes(f))) return false;
   }
-  // Network/timeout errors are retryable
-  if (error instanceof TypeError) return true; // fetch network error
+  if (error instanceof TypeError) return true; // fetch network failure
   return false;
 }
 
 /**
- * Persist a print command record to LblPrintCommand entity.
+ * postToMiddleware
+ *
+ * Raw HTTP POST to a middleware endpoint with timeout + retry support.
+ * Returns { statusCode, body } — does NOT persist to DB.
+ *
+ * @param {string} url          - Full middleware URL
+ * @param {object} payload      - JSON payload to POST
+ * @param {object} headers      - HTTP headers
+ * @param {number} timeoutMs    - Abort timeout in ms
+ * @param {number} maxRetries   - How many attempts before giving up
+ * @returns {{ statusCode, body, error }}
  */
-async function persistCommand({ commandId, jobId, middlewareJobId, printerId, endpointUrl, commandType, quantity, status, requestPayload, responsePayload, responseStatusCode, errorMessage, sentBy }) {
-  return base44.entities.LblPrintCommand.create({
-    command_id: commandId,
-    job_id: jobId,
-    middleware_job_id: middlewareJobId || null,
-    printer_id: printerId,
-    endpoint_url: endpointUrl,
-    command_type: commandType,
-    quantity: quantity || 0,
-    status,
-    request_payload: requestPayload,
-    response_payload: responsePayload || null,
-    response_status_code: responseStatusCode || null,
-    error_message: errorMessage || null,
-    sent_at: new Date().toISOString(),
-    sent_by: sentBy || null,
-  });
-}
-
-/**
- * Build the exact /print payload the middleware expects.
- *
- * The middleware only accepts:
- *   command.command    — printer command string e.g. "STAR"
- *   command.templatename — template name as registered on the middleware e.g. "DEMO"
- *
- * Any additional fields (label_data, quantity, type, etc.) are NOT sent to the middleware.
- * Label data variables are pre-loaded into the template on the middleware side.
- *
- * @param {object} printer         - LblPrinterConfig record
- * @param {string} templateName    - Middleware template name (e.g. "Default-1")
- * @param {string} [commandString] - Printer command string (default: "STAR")
- * @param {string} [priority]      - "normal" | "high" (default: printer config)
- */
-function buildPrintPayload(printer, templateName, commandString = 'STAR', priority = 'normal') {
-  return {
-    printer_id: printer.printer_id,
-    printer: {
-      ip: printer.ip_address,
-      port: printer.port || 9100,
-    },
-    command: {
-      command: commandString,
-      templatename: templateName,
-    },
-    priority: priority === 'high' ? 'high' : 'normal',
-  };
-}
-
-/**
- * Send a print command to the Rynan middleware.
- *
- * @param {object} printer        - LblPrinterConfig record
- * @param {object} options        - { templateName, commandString, priority, jobId, commandType, quantity, user }
- * @returns {{ success, commandRecord, responseBody, errorMessage, middlewareJobId }}
- */
-export async function sendRynanPrintCommand(printer, { templateName, commandString = 'STAR', priority } = {}, { jobId, commandType, quantity, user } = {}) {
-  const endpointUrl = buildPrintUrl(printer.register_app_link || printer.api_endpoint || '');
-  const commandId = genCommandId();
-  const resolvedPriority = priority || printer.default_priority || 'normal';
-
-  const payload = buildPrintPayload(printer, templateName || '', commandString, resolvedPriority);
-
-  const headers = { 'Content-Type': 'application/json' };
-  if (printer.auth_header_key && printer.auth_header_value) {
-    headers[printer.auth_header_key] = printer.auth_header_value;
-  }
-
-  const maxRetries = printer.send_retries || 1;
+async function postToMiddleware(url, payload, headers, timeoutMs = 15000, maxRetries = 1) {
   let lastError = null;
-  let lastResponseBody = null;
+  let lastBody = null;
   let lastStatusCode = null;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       const controller = new AbortController();
-      const timeoutMs = printer.request_timeout_ms || 15000;
       const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-      const res = await fetch(endpointUrl, {
-        method: 'POST',
+      const res = await fetch(url, {
+        method:  'POST',
         headers,
-        body: JSON.stringify(payload),
-        signal: controller.signal,
+        body:    JSON.stringify(payload),
+        signal:  controller.signal,
       });
       clearTimeout(timer);
 
       lastStatusCode = res.status;
-
-      // 400 / 415 = client payload error — non-retryable
-      if (res.status === 400 || res.status === 415) {
-        const body = await res.json().catch(() => ({}));
-        lastResponseBody = body;
-        const record = await persistCommand({
-          commandId, jobId, printerId: printer.printer_id, endpointUrl,
-          commandType, quantity, status: 'failed',
-          requestPayload: payload, responsePayload: body,
-          responseStatusCode: res.status,
-          errorMessage: `HTTP ${res.status}: payload/header error`,
-          sentBy: user?.email,
-        });
-        return { success: false, commandRecord: record, responseBody: body, errorMessage: `HTTP ${res.status}: payload/header error` };
-      }
-
       const body = await res.json().catch(() => null);
-      lastResponseBody = body;
+      lastBody = body;
 
-      if (res.status === 200 && body) {
-        const ok = isResponseSuccess(body);
-        const middlewareJobId = body.job_id || null;
-        // Extract human-readable error from middleware response
-        const errorMsg = ok ? null : (
-          body.error ||
-          body.printer_reason ||
-          body.printer_protocol_error_description ||
-          (body.printer_protocol_error_code ? `Printer error code: ${body.printer_protocol_error_code}` : null) ||
-          `Print ${body.status || 'failed'}`
-        );
-        const record = await persistCommand({
-          commandId, jobId, middlewareJobId, printerId: printer.printer_id, endpointUrl,
-          commandType, quantity,
-          status: ok ? 'acknowledged' : 'failed',
-          requestPayload: payload, responsePayload: body,
-          responseStatusCode: 200,
-          errorMessage: errorMsg,
-          sentBy: user?.email,
-        });
-        return { success: ok, commandRecord: record, responseBody: body, errorMessage: errorMsg, middlewareJobId };
+      // Non-retryable HTTP errors
+      if (res.status === 400 || res.status === 415) {
+        return { statusCode: res.status, body, error: `HTTP ${res.status}: payload error` };
       }
 
-      // Non-200 non-400/415 — check retryability
-      if (!isRetryableError(null, lastResponseBody) || attempt === maxRetries) break;
+      return { statusCode: res.status, body, error: null };
 
     } catch (err) {
       lastError = err;
@@ -219,41 +257,225 @@ export async function sendRynanPrintCommand(printer, { templateName, commandStri
     }
   }
 
-  // All attempts exhausted — persist failure
-  const errMsg = lastError?.message || `HTTP ${lastStatusCode || 'unknown'} error`;
-  const record = await persistCommand({
-    commandId, jobId, printerId: printer.printer_id, endpointUrl,
-    commandType, quantity, status: 'failed',
-    requestPayload: payload, responsePayload: lastResponseBody,
-    responseStatusCode: lastStatusCode,
-    errorMessage: errMsg,
-    sentBy: user?.email,
-  });
-  return { success: false, commandRecord: record, responseBody: lastResponseBody, errorMessage: errMsg };
+  return {
+    statusCode: lastStatusCode,
+    body:       lastBody,
+    error:      lastError?.message || `HTTP ${lastStatusCode || 'unknown'} error`,
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LAYER 4 — HIGH-LEVEL EXPORTS
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * sendStarCommand
+ *
+ * Core print function. Sends N STAR commands to the middleware — one per label.
+ * Each call to /print triggers exactly one label to be printed by the physical printer.
+ *
+ * Flow for each label (repeated `quantity` times):
+ *   1. Build STAR JSON payload via buildStarCommand()
+ *   2. POST to {middleware_base_url}/print
+ *   3. Parse response — check success criteria
+ *   4. Persist LblPrintCommand audit record
+ *   5. If any call fails → stop loop, return failure
+ *
+ * @param {object} printer       - LblPrinterConfig record
+ * @param {string} templateName  - Middleware template name (e.g. "Default-1")
+ * @param {number} quantity      - How many labels to print (sends this many POST calls)
+ * @param {object} context       - { jobId, commandType, user }
+ * @returns {{ success, sentCount, failedAt, lastCommandRecord, lastMiddlewareJobId, errorMessage }}
+ */
+export async function sendStarCommand(printer, templateName, quantity = 1, { jobId, commandType = 'demo', user } = {}) {
+  const endpointUrl = buildUrl(printer.register_app_link || printer.api_endpoint || '', MIDDLEWARE_ENDPOINTS.PRINT);
+  const headers     = buildHeaders(printer);
+  const priority    = printer.default_priority || PRINT_PRIORITY.NORMAL;
+  const timeoutMs   = printer.request_timeout_ms || 15000;
+  const maxRetries  = printer.send_retries || 1;
+
+  // Build the payload once — it's identical for every label of this template
+  const payload = buildStarCommand(printer, templateName, priority);
+
+  let sentCount = 0;
+  let lastCommandRecord = null;
+  let lastMiddlewareJobId = null;
+
+  for (let i = 0; i < quantity; i++) {
+    const commandId = genCommandId();
+
+    const { statusCode, body, error: transportError } = await postToMiddleware(
+      endpointUrl, payload, headers, timeoutMs, maxRetries
+    );
+
+    // Transport / HTTP error (network down, timeout, 400, etc.)
+    if (transportError && !body) {
+      const record = await persistCommand({
+        commandId, jobId, printerId: printer.printer_id, endpointUrl,
+        commandType, quantity: 1,
+        status: 'failed',
+        requestPayload: payload, responsePayload: body,
+        responseStatusCode: statusCode,
+        errorMessage: transportError,
+        sentBy: user?.email,
+      });
+      return {
+        success: false, sentCount, failedAt: i + 1,
+        lastCommandRecord: record, lastMiddlewareJobId: null,
+        errorMessage: transportError,
+      };
+    }
+
+    const ok = isResponseSuccess(body);
+    const middlewareJobId = body?.job_id || null;
+    const errorMsg = ok ? null : extractErrorMessage(body);
+
+    const record = await persistCommand({
+      commandId, jobId, middlewareJobId, printerId: printer.printer_id, endpointUrl,
+      commandType, quantity: 1,
+      status: ok ? 'acknowledged' : 'failed',
+      requestPayload: payload, responsePayload: body,
+      responseStatusCode: statusCode || 200,
+      errorMessage: errorMsg,
+      sentBy: user?.email,
+    });
+
+    lastCommandRecord    = record;
+    lastMiddlewareJobId  = middlewareJobId;
+
+    if (!ok) {
+      return {
+        success: false, sentCount, failedAt: i + 1,
+        lastCommandRecord: record, lastMiddlewareJobId: middlewareJobId,
+        errorMessage: errorMsg,
+      };
+    }
+
+    sentCount++;
+  }
+
+  return {
+    success: true, sentCount, failedAt: null,
+    lastCommandRecord, lastMiddlewareJobId,
+    errorMessage: null,
+  };
 }
 
 /**
- * Send a test ping — uses the printer's demo_template or default_template.
- * Useful to verify connectivity without printing a real label.
+ * sendRynanPrintCommand
+ *
+ * Backward-compatible wrapper used by LblDemoPrintStep and other callers.
+ * Delegates to sendStarCommand() with quantity = 1.
+ *
+ * @param {object} printer   - LblPrinterConfig record
+ * @param {object} options   - { templateName, commandString (ignored — always STAR), priority }
+ * @param {object} context   - { jobId, commandType, quantity (ignored — always 1 per call), user }
+ */
+export async function sendRynanPrintCommand(printer, { templateName, priority } = {}, { jobId, commandType, user } = {}) {
+  const result = await sendStarCommand(
+    printer,
+    templateName || '',
+    1,
+    { jobId, commandType, user }
+  );
+  // Map to legacy return shape
+  return {
+    success:          result.success,
+    commandRecord:    result.lastCommandRecord,
+    responseBody:     result.lastCommandRecord?.response_payload || null,
+    errorMessage:     result.errorMessage,
+    middlewareJobId:  result.lastMiddlewareJobId,
+  };
+}
+
+/**
+ * sendRynanTestCommand
+ *
+ * Sends a single STAR command using the printer's demo or default template.
+ * Used for connectivity checks from the Printer Center page.
  */
 export async function sendRynanTestCommand(printer, user) {
   const templateName = printer.demo_template || printer.default_template || '';
   return sendRynanPrintCommand(
     printer,
-    { templateName, commandString: 'STAR' },
+    { templateName },
     { commandType: 'test_ping', user }
   );
 }
 
 /**
- * Fetch middleware health, printers, and metrics in parallel.
+ * sendPurgeCommand
+ *
+ * Sends a purge command to clean the printer heads.
+ * Endpoint: POST /purge
+ */
+export async function sendPurgeCommand(printer, user) {
+  const endpointUrl = buildUrl(printer.register_app_link || printer.api_endpoint || '', MIDDLEWARE_ENDPOINTS.PURGE);
+  const headers     = buildHeaders(printer);
+  const payload     = buildPurgePayload(printer);
+
+  const { statusCode, body, error: transportError } = await postToMiddleware(
+    endpointUrl, payload, headers, printer.request_timeout_ms || 15000
+  );
+
+  const ok = !transportError && body?.success !== false;
+  const commandId = `PURGE-${Date.now()}`;
+
+  await base44.entities.LblPrintCommand.create({
+    command_id:           commandId,
+    job_id:               null,
+    printer_id:           printer.printer_id,
+    endpoint_url:         endpointUrl,
+    command_type:         'test_ping', // closest available type for maintenance ops
+    status:               ok ? 'sent' : 'failed',
+    request_payload:      payload,
+    response_payload:     body || null,
+    response_status_code: statusCode || null,
+    error_message:        ok ? null : (transportError || body?.message || `HTTP ${statusCode}`),
+    sent_at:              new Date().toISOString(),
+    sent_by:              user?.email || null,
+  });
+
+  return { success: ok, raw: body, errorMessage: ok ? null : (transportError || body?.message) };
+}
+
+/**
+ * getPrinterStatus
+ *
+ * Fetches cartridge presence and ink level from the middleware.
+ * Endpoint: GET /printer-status?printer_id={id}
+ *
+ * Expected response: { has_cartridge: bool, ink_level: 0-100, mon_output: string }
+ */
+export async function getPrinterStatus(printer) {
+  const base = (printer.register_app_link || printer.api_endpoint || '').replace(/\/print\/?$/, '').replace(/\/$/, '');
+  const headers = buildHeaders(printer, false);
+  try {
+    const url = `${base}${MIDDLEWARE_ENDPOINTS.PRINTER_STATUS}?printer_id=${encodeURIComponent(printer.printer_id)}`;
+    const res  = await fetch(url, { headers });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    return {
+      success:      true,
+      has_cartridge: data.has_cartridge ?? false,
+      ink_level:    data.ink_level ?? null,
+      mon_output:   data.mon_output || data.mon_command_output || null,
+      raw:          data,
+    };
+  } catch (err) {
+    return { success: false, errorMessage: err.message };
+  }
+}
+
+/**
+ * getRynanMiddlewareSnapshot
+ *
+ * Fetches health, connected printers, and metrics in parallel.
+ * Used by the Rynan Printer Center diagnostics page.
  */
 export async function getRynanMiddlewareSnapshot(printer) {
-  const base = (printer.register_app_link || printer.api_endpoint || '').replace(/\/print\/?$/, '').replace(/\/$/, '');
-  const headers = {};
-  if (printer.auth_header_key && printer.auth_header_value) {
-    headers[printer.auth_header_key] = printer.auth_header_value;
-  }
+  const base    = (printer.register_app_link || printer.api_endpoint || '').replace(/\/print\/?$/, '').replace(/\/$/, '');
+  const headers = buildHeaders(printer, false);
 
   const fetchJson = async (path) => {
     const res = await fetch(`${base}${path}`, { headers });
@@ -262,110 +484,35 @@ export async function getRynanMiddlewareSnapshot(printer) {
   };
 
   const [health, printers, metrics] = await Promise.allSettled([
-    fetchJson('/health'),
-    fetchJson('/printers'),
-    fetchJson('/metrics'),
+    fetchJson(MIDDLEWARE_ENDPOINTS.HEALTH),
+    fetchJson(MIDDLEWARE_ENDPOINTS.PRINTERS),
+    fetchJson(MIDDLEWARE_ENDPOINTS.METRICS),
   ]);
 
   return {
-    health: health.status === 'fulfilled' ? health.value : null,
-    healthError: health.status === 'rejected' ? health.reason?.message : null,
-    printers: printers.status === 'fulfilled' ? printers.value : null,
-    printersError: printers.status === 'rejected' ? printers.reason?.message : null,
-    metrics: metrics.status === 'fulfilled' ? metrics.value : null,
-    metricsError: metrics.status === 'rejected' ? metrics.reason?.message : null,
+    health:         health.status === 'fulfilled'   ? health.value          : null,
+    healthError:    health.status === 'rejected'    ? health.reason?.message : null,
+    printers:       printers.status === 'fulfilled' ? printers.value        : null,
+    printersError:  printers.status === 'rejected'  ? printers.reason?.message : null,
+    metrics:        metrics.status === 'fulfilled'  ? metrics.value         : null,
+    metricsError:   metrics.status === 'rejected'   ? metrics.reason?.message : null,
   };
 }
 
 /**
- * Fetch printer cartridge/ink status via MON command.
- * Middleware endpoint: GET /printer-status?printer_id=<id>
- * Expected response: { has_cartridge: bool, ink_level: number (0-100), mon_output: string }
- */
-export async function getPrinterStatus(printer) {
-  const base = (printer.register_app_link || printer.api_endpoint || '').replace(/\/print\/?$/, '').replace(/\/$/, '');
-  const headers = {};
-  if (printer.auth_header_key && printer.auth_header_value) {
-    headers[printer.auth_header_key] = printer.auth_header_value;
-  }
-  try {
-    const res = await fetch(`${base}/printer-status?printer_id=${encodeURIComponent(printer.printer_id)}`, { headers });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    return { success: true, has_cartridge: data.has_cartridge ?? false, ink_level: data.ink_level ?? null, mon_output: data.mon_output || data.mon_command_output || null, raw: data };
-  } catch (err) {
-    return { success: false, errorMessage: err.message };
-  }
-}
-
-/**
- * Send a purge command to the printer via middleware.
- * Middleware endpoint: POST /purge with { printer_id, printer: { ip, port } }
- */
-export async function sendPurgeCommand(printer, user) {
-  const base = (printer.register_app_link || printer.api_endpoint || '').replace(/\/print\/?$/, '').replace(/\/$/, '');
-  const headers = { 'Content-Type': 'application/json' };
-  if (printer.auth_header_key && printer.auth_header_value) {
-    headers[printer.auth_header_key] = printer.auth_header_value;
-  }
-  const payload = {
-    printer_id: printer.printer_id,
-    printer: { ip: printer.ip_address, port: printer.port || 2030 },
-    command: { type: 'purge' },
-  };
-  try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), printer.request_timeout_ms || 15000);
-    const res = await fetch(`${base}/purge`, { method: 'POST', headers, body: JSON.stringify(payload), signal: controller.signal });
-    clearTimeout(timer);
-    const data = await res.json().catch(() => ({}));
-    const ok = res.ok && data.success !== false;
-    await base44.entities.LblPrintCommand.create({
-      command_id: `PURGE-${Date.now()}`,
-      job_id: null,
-      printer_id: printer.printer_id,
-      command_type: 'test_ping', // reuse closest type; purge is a maintenance op
-      status: ok ? 'sent' : 'failed',
-      request_payload: payload,
-      response_payload: data,
-      response_status_code: res.status,
-      error_message: ok ? null : (data.message || `HTTP ${res.status}`),
-      sent_at: new Date().toISOString(),
-      sent_by: user?.email || null,
-    });
-    return { success: ok, raw: data };
-  } catch (err) {
-    await base44.entities.LblPrintCommand.create({
-      command_id: `PURGE-${Date.now()}`,
-      job_id: null,
-      printer_id: printer.printer_id,
-      command_type: 'test_ping',
-      status: 'failed',
-      request_payload: payload,
-      error_message: err.message,
-      sent_at: new Date().toISOString(),
-      sent_by: user?.email || null,
-    });
-    return { success: false, errorMessage: err.message };
-  }
-}
-
-/**
- * Fetch a specific middleware job status.
- * Returns { status: 'completed'|'pending'|'failed', raw }
+ * fetchRynanMiddlewareJobStatus
+ *
+ * Checks the status of a specific middleware print job by ID.
+ * Endpoint: GET /job/{middlewareJobId}
  */
 export async function fetchRynanMiddlewareJobStatus({ printer, middlewareJobId }) {
-  const base = (printer.register_app_link || printer.api_endpoint || '').replace(/\/print\/?$/, '').replace(/\/$/, '');
-  const headers = {};
-  if (printer.auth_header_key && printer.auth_header_value) {
-    headers[printer.auth_header_key] = printer.auth_header_value;
-  }
+  const base    = (printer.register_app_link || printer.api_endpoint || '').replace(/\/print\/?$/, '').replace(/\/$/, '');
+  const headers = buildHeaders(printer, false);
 
-  const res = await fetch(`${base}/job/${middlewareJobId}`, { headers });
+  const res = await fetch(`${base}${MIDDLEWARE_ENDPOINTS.JOB_STATUS}/${middlewareJobId}`, { headers });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const raw = await res.json();
 
-  // Normalise status
   const s = (raw.status || raw.state || '').toLowerCase();
   let status = 'pending';
   if (['completed', 'done', 'success'].includes(s)) status = 'completed';

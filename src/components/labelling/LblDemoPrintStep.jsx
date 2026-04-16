@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { logLabellingEvent } from '@/lib/labellingEventLogger';
-import { sendRynanPrintCommand } from '@/lib/rynanPrinterService';
+import { sendStarCommand } from '@/lib/rynanPrinterService';
 import { toast } from '@/components/ui/use-toast';
 import { computeLabelFields } from '@/lib/labelFieldComputer';
 import { resolveDemoPrintLabelData } from '@/lib/buildRynanLabelData';
@@ -134,22 +134,17 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
       return;
     }
 
-    // Middleware contract: POST /print with { printer_id, printer:{ip,port}, command:{command,templatename}, priority }
-    // One call per label — send qty times sequentially so middleware processes each as a discrete job
-    let lastResult = null;
-    for (let i = 0; i < qty; i++) {
-      lastResult = await sendRynanPrintCommand(
-        printer,
-        { templateName: resolvedTemplateName, commandString: 'STAR' },
-        { jobId: job.id, commandType: 'demo', quantity: 1, user }
-      );
-      if (!lastResult.success) break;
-    }
-    const result = lastResult;
+    // Send qty STAR commands — one POST per label, loop handled inside sendStarCommand()
+    const result = await sendStarCommand(
+      printer,
+      resolvedTemplateName,
+      qty,
+      { jobId: job.id, commandType: 'demo', user }
+    );
 
     if (!result.success) {
       toast({ title: 'Demo Print Failed', description: result.errorMessage || 'Middleware returned an error', variant: 'destructive' });
-      await logLabellingEvent({ action_type: 'printer_command_failed', job_id: job.id, plan_id: job.plan_id, description: `Demo print failed: ${result.errorMessage}`, user });
+      await logLabellingEvent({ action_type: 'printer_command_failed', job_id: job.id, plan_id: job.plan_id, description: `Demo print failed after ${result.sentCount} of ${qty} label(s): ${result.errorMessage}`, user });
       setSending(false);
       return;
     }
@@ -157,15 +152,15 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
     await base44.entities.LabellingJob.update(job.id, {
       status: 'demo_print_sent',
       demo_print_qty: qty,
-      demo_print_command_id: result.commandRecord?.command_id || null,
-      demo_print_middleware_job_id: result.middlewareJobId || null,
+      demo_print_command_id: result.lastCommandRecord?.command_id || null,
+      demo_print_middleware_job_id: result.lastMiddlewareJobId || null,
     });
 
     await logLabellingEvent({
       action_type: 'demo_print_sent',
       job_id: job.id,
       plan_id: job.plan_id,
-      description: `Demo print of ${qty} label(s) sent to ${printer.name} using template "${resolvedTemplateName}". Batch: ${podFields.batchNo}, MFG: ${podFields.mfgDate}, EXP: ${podFields.expiryDate}, MRP: ₹${podFields.mrp}. Middleware job: ${result.middlewareJobId || 'N/A'}.`,
+      description: `Demo print of ${qty} label(s) sent to ${printer.name} using template "${resolvedTemplateName}". Batch: ${podFields.batchNo}, MFG: ${podFields.mfgDate}, EXP: ${podFields.expiryDate}, MRP: ₹${podFields.mrp}. Middleware job: ${result.lastMiddlewareJobId || 'N/A'}.`,
       user,
     });
 
