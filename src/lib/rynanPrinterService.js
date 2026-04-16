@@ -290,6 +290,11 @@ async function postToMiddleware(url, payload, headers, timeoutMs = 15000, maxRet
  * @returns {{ success, sentCount, failedAt, lastCommandRecord, lastMiddlewareJobId, errorMessage }}
  */
 export async function sendStarCommand(printer, templateName, quantity = 1, { jobId, commandType = 'demo', user } = {}) {
+  // Ensure jobId is always a valid string
+  if (!jobId) {
+    jobId = `JOB-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  }
+
   const endpointUrl = buildUrl(printer.register_app_link || printer.api_endpoint || '', MIDDLEWARE_ENDPOINTS.PRINT);
   const headers     = buildHeaders(printer);
   const priority    = printer.default_priority || PRINT_PRIORITY.NORMAL;
