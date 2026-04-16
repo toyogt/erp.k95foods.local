@@ -1,7 +1,14 @@
 /**
  * LblPrintTemplateManager
- * Centralized UI for creating, editing, and managing Rynan print templates.
- * Provides POD field mapping configuration with live preview.
+ * 
+ * Single unified page for building Rynan print templates with POD field mappings.
+ * Templates are created here and automatically available in SKU Setup via SKUPrintMapping.
+ * 
+ * Flow:
+ * 1. Create/Edit template with middleware name and POD field mappings
+ * 2. Template auto-appears in SKU Setup when SKUPrintMapping is created
+ * 3. During label plan creation, user selects template for the job
+ * 4. During print, POD mappings are used to auto-populate label data
  */
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -13,7 +20,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { toast } from '@/components/ui/use-toast';
-import { Plus, Edit2, Trash2, Copy, Loader2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, Copy, Loader2, Info } from 'lucide-react';
 
 const ERP_FIELDS = [
   { key: 'mrp', label: 'MRP' },
@@ -132,13 +139,21 @@ export default function LblPrintTemplateManager() {
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl md:text-3xl font-bold text-slate-900">Print Template Manager</h1>
-          <Button className="h-11 gap-2 bg-purple-600 hover:bg-purple-700" onClick={() => { resetForm(); setOpenDialog(true); }}>
-            <Plus className="w-4 h-4" /> New Template
-          </Button>
+      <div className="max-w-6xl mx-auto space-y-6">
+        {/* Header with Info */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h1 className="text-2xl md:text-3xl font-bold text-slate-900">Rynan Print Template Builder</h1>
+            <Button className="h-11 gap-2 bg-purple-600 hover:bg-purple-700" onClick={() => { resetForm(); setOpenDialog(true); }}>
+              <Plus className="w-4 h-4" /> New Template
+            </Button>
+          </div>
+          <div className="flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <Info className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
+            <p className="text-sm text-blue-800">
+              Templates defined here are automatically available in SKU Setup. Link templates to products via <strong>SKU Setup → Printing & Batch</strong>, then select during label plan creation.
+            </p>
+          </div>
         </div>
 
         {/* Templates List */}
@@ -147,56 +162,63 @@ export default function LblPrintTemplateManager() {
             <p className="text-slate-500">No templates created yet. Create one to get started.</p>
           </div>
         ) : (
-          <div className="grid gap-4 md:gap-6">
+          <div className="grid gap-4">
             {templates.map(template => (
-              <div key={template.id} className="bg-white rounded-lg border border-slate-200 p-4 md:p-6 space-y-4">
-                <div className="flex items-start justify-between">
-                  <div>
+              <div key={template.id} className="bg-white rounded-lg border border-slate-200 p-4 space-y-4">
+                {/* Template Header */}
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
                     <h2 className="text-lg font-semibold text-slate-900">{template.name}</h2>
-                    <p className="text-sm text-slate-600">ID: <span className="font-mono">{template.template_id}</span></p>
-                    <p className="text-sm text-slate-600">Middleware: <span className="font-mono">{template.middleware_template_name}</span></p>
+                    <p className="text-xs text-slate-600 mt-1">
+                      <span className="font-medium">Template ID:</span> <span className="font-mono">{template.template_id}</span>
+                    </p>
+                    <p className="text-xs text-slate-600 mt-1">
+                      <span className="font-medium">Middleware:</span> <span className="font-mono">{template.middleware_template_name}</span>
+                    </p>
+                    {template.description && (
+                      <p className="text-sm text-slate-700 mt-2">{template.description}</p>
+                    )}
                   </div>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="icon" onClick={() => handleClone(template)} title="Clone">
+                  <div className="flex gap-2 shrink-0">
+                    <Button variant="outline" size="icon" onClick={() => handleClone(template)} title="Clone template">
                       <Copy className="w-4 h-4" />
                     </Button>
-                    <Button variant="outline" size="icon" onClick={() => handleEdit(template)} title="Edit">
+                    <Button variant="outline" size="icon" onClick={() => handleEdit(template)} title="Edit template">
                       <Edit2 className="w-4 h-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => deleteMutation.mutate(template.id)} title="Delete">
+                    <Button variant="ghost" size="icon" onClick={() => deleteMutation.mutate(template.id)} title="Delete template">
                       <Trash2 className="w-4 h-4 text-red-600" />
                     </Button>
                   </div>
                 </div>
 
-                {template.description && <p className="text-sm text-slate-700">{template.description}</p>}
-
-                {/* POD Mappings Table */}
+                {/* POD Field Mappings */}
                 {template.field_mappings?.length > 0 ? (
                   <div className="border-t border-slate-100 pt-4">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-slate-100">
-                          <th className="text-left py-2 px-2 font-semibold text-slate-700">POD Field</th>
-                          <th className="text-left py-2 px-2 font-semibold text-slate-700">Label</th>
-                          <th className="text-left py-2 px-2 font-semibold text-slate-700">ERP Source</th>
-                          <th className="text-left py-2 px-2 font-semibold text-slate-700">Editable</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {template.field_mappings.map((mapping, i) => (
-                          <tr key={i} className="border-b border-slate-100 hover:bg-slate-50">
-                            <td className="py-2 px-2 font-mono text-slate-900">{mapping.pod_field}</td>
-                            <td className="py-2 px-2 text-slate-600">{mapping.label}</td>
-                            <td className="py-2 px-2 font-mono text-slate-600">{mapping.erp_source}</td>
-                            <td className="py-2 px-2">{mapping.is_editable ? '✓' : '✗'}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                    <p className="text-xs font-semibold text-slate-700 mb-3 uppercase tracking-wide">POD Field Mappings</p>
+                    <div className="grid gap-2">
+                      {template.field_mappings.map((mapping, i) => (
+                        <div key={i} className="bg-slate-50 rounded p-2.5 text-sm">
+                          <div className="flex items-center justify-between">
+                            <span className="font-mono font-semibold text-slate-900">{mapping.pod_field}</span>
+                            <span className="text-xs text-slate-600">{mapping.label}</span>
+                          </div>
+                          <div className="flex items-center justify-between mt-1">
+                            <span className="text-xs text-slate-600">
+                              Maps to: <span className="font-mono text-slate-900">{mapping.erp_source}</span>
+                            </span>
+                            <span className="text-xs bg-white px-1.5 py-0.5 rounded border border-slate-200">
+                              {mapping.is_editable ? 'Editable' : 'Read-only'}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 ) : (
-                  <p className="text-sm text-slate-500">No POD fields configured</p>
+                  <div className="bg-amber-50 border border-amber-200 rounded p-3 text-sm text-amber-800">
+                    ⚠ No POD field mappings configured. Add mappings to use this template.
+                  </div>
                 )}
               </div>
             ))}
@@ -208,7 +230,9 @@ export default function LblPrintTemplateManager() {
       <Dialog open={openDialog} onOpenChange={setOpenDialog}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingId ? 'Edit Template' : 'Create Print Template'}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              {editingId ? 'Edit Print Template' : 'Create Print Template'}
+            </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">
@@ -218,35 +242,35 @@ export default function LblPrintTemplateManager() {
               <Input
                 value={formData.template_id}
                 onChange={e => setFormData(prev => ({ ...prev, template_id: e.target.value }))}
-                placeholder="e.g. TMPL-DEMO-01"
+                placeholder="e.g. TMPL-200ML-01"
                 disabled={!!editingId}
                 className="h-9 text-sm"
               />
-              <p className="text-xs text-slate-500">Unique identifier. Cannot be changed after creation.</p>
+              <p className="text-xs text-slate-500">Unique internal identifier. Cannot change after creation.</p>
             </div>
 
+            {/* Name and Middleware Name */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Name */}
               <div className="space-y-1">
-                <Label className="text-xs font-medium text-slate-700">Name <span className="text-red-500">*</span></Label>
+                <Label className="text-xs font-medium text-slate-700">Template Name <span className="text-red-500">*</span></Label>
                 <Input
                   value={formData.name}
                   onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="e.g. 200ml Demo Label"
+                  placeholder="e.g. 200ml Standard Label"
                   className="h-9 text-sm"
                 />
+                <p className="text-xs text-slate-500">Human-readable name for this template</p>
               </div>
 
-              {/* Middleware Template Name */}
               <div className="space-y-1">
-                <Label className="text-xs font-medium text-slate-700">Middleware Template Name <span className="text-red-500">*</span></Label>
+                <Label className="text-xs font-medium text-slate-700">Rynan Template Name <span className="text-red-500">*</span></Label>
                 <Input
                   value={formData.middleware_template_name}
                   onChange={e => setFormData(prev => ({ ...prev, middleware_template_name: e.target.value }))}
                   placeholder="e.g. Default-1"
                   className="h-9 text-sm"
                 />
-                <p className="text-xs text-slate-500">Must match Rynan middleware template name exactly.</p>
+                <p className="text-xs text-slate-500">Exact name from your Rynan printer</p>
               </div>
             </div>
 
