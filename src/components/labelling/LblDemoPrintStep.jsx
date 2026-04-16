@@ -233,7 +233,7 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
           printer={selectedPrinter}
           job={job}
           user={user}
-          templateName={resolvedTemplateName || undefined}
+          templateName={templateName || undefined}
           onStatusFetched={setPrinterStatus}
         />
       )}
