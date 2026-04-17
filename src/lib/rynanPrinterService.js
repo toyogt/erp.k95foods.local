@@ -645,16 +645,31 @@ export async function checkAndSyncPrinterConfig(printer, templateName = null) {
     result.connectionError = err.message;
   }
 
-  // ── STEP 5: RQLI — check if templateName exists on the printer ────────────
-  // Run template check regardless of connectionOk (MON may fail due to cartridge
-  // but RQLI is independent — it only needs middleware reachability which we
-  // already confirmed in step 1 via GET /printers)
+  // ── STEP 5: Template check ────────────────────────────────────────────────
+  // This middleware returns an RSLI (template list) response for ANY command
+  // (MON, PURGE, RQLI, STAR etc.). So we first try to extract the template
+  // list from the MON response already received in Step 3+4.
+  // Only fall back to a dedicated RQLI call if MON gave us nothing.
   if (templateName) {
-    const tplCheck = await checkTemplateExists(printer, templateName);
-    result.templateFound      = tplCheck.found;
-    result.availableTemplates = tplCheck.availableTemplates;
-    result.templateError      = tplCheck.error;
-    console.log('[STEP5] Template check result:', { templateName, found: tplCheck.found, total: tplCheck.availableTemplates.length, list: tplCheck.availableTemplates });
+    // Try extracting from already-received MON response
+    const templatesFromMon = extractTemplateList(result.mon_raw);
+    if (templatesFromMon.length > 0) {
+      const normalizedTarget = templateName.trim().toLowerCase();
+      const found = templatesFromMon.some(t => String(t).trim().toLowerCase() === normalizedTarget);
+      result.templateFound          = found;
+      result.availableTemplates     = templatesFromMon;
+      result.templateError          = null;
+      result.templateListUnavailable = false;
+      console.log('[STEP5] Template list from MON response:', templatesFromMon, '| Looking for:', templateName, '| Found:', found);
+    } else {
+      // MON didn't carry template list — send dedicated RQLI
+      const tplCheck = await checkTemplateExists(printer, templateName);
+      result.templateFound          = tplCheck.found;
+      result.availableTemplates     = tplCheck.availableTemplates;
+      result.templateError          = tplCheck.error;
+      result.templateListUnavailable = tplCheck.templateListUnavailable;
+      console.log('[STEP5] Template check via RQLI:', { templateName, found: tplCheck.found, total: tplCheck.availableTemplates.length });
+    }
   }
 
   return result;
