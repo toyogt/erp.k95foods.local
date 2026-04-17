@@ -151,18 +151,109 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
     setSendingPrint(false);
   };
 
-  // ── Status-only actions (pause / resume) — no Rynan call needed ──
-  const handleStatusAction = async (actionType, nextStatus) => {
+  // ── Stop: Send STOP command to printer to halt queue ──
+  const handleStopPrinting = async () => {
+    if (!selectedPrinter) {
+      toast({ title: 'No printer selected', variant: 'destructive' });
+      return;
+    }
+
     setActing(true);
-    await base44.entities.LabellingJob.update(job.id, { status: nextStatus, current_printed_qty: printedQty });
+
+    // Import STOP command helper
+    const { postToMiddleware, buildHeaders, getPrinterBase, MIDDLEWARE_ENDPOINTS, PRINTER_COMMANDS } = await import('@/lib/rynanPrinterService');
+
+    const stopPayload = {
+      printer_id: selectedPrinter.printer_id,
+      printer: { ip: selectedPrinter.ip_address, port: selectedPrinter.port },
+      command: { command: PRINTER_COMMANDS.STOP },
+    };
+
+    const base = getPrinterBase(selectedPrinter);
+    const headers = buildHeaders(selectedPrinter);
+    const { error: transportError, body } = await postToMiddleware(
+      `${base}${MIDDLEWARE_ENDPOINTS.PRINT}`,
+      stopPayload,
+      headers,
+      selectedPrinter.request_timeout_ms || 15000
+    );
+
+    if (transportError && !body) {
+      toast({
+        title: 'Failed to Stop Printer',
+        description: transportError,
+        variant: 'destructive',
+      });
+      setActing(false);
+      return;
+    }
+
+    // Update job status
+    await base44.entities.LabellingJob.update(job.id, { status: 'paused' });
     await logLabellingEvent({
-      action_type: actionType,
-      job_id:      job.id,
-      plan_id:     job.plan_id,
-      description: `Bulk print ${actionType.replace('bulk_print_', '')} for job ${job.job_id}`,
+      action_type: 'bulk_print_stopped',
+      job_id: job.id,
+      plan_id: job.plan_id,
+      description: `Bulk print stopped at ${printedQty} bottles (of ${job.quantity_bottles_planned} target).`,
       user,
     });
-    toast({ title: actionType === 'bulk_print_stopped' ? 'Printing Paused' : 'Printing Resumed' });
+
+    toast({ title: 'Printing Stopped', description: 'Printer queue cleared. Ready to resume.' });
+    onComplete?.();
+    setActing(false);
+  };
+
+  // ── Resume: Re-send STAR + MON + remaining DATA ──
+  const handleResumePrinting = async () => {
+    if (!selectedPrinter) {
+      toast({ title: 'No printer selected', variant: 'destructive' });
+      return;
+    }
+    if (!templateName) {
+      toast({ title: 'No print template assigned', variant: 'destructive' });
+      return;
+    }
+
+    setActing(true);
+    const qty = job.quantity_bottles_planned || 0;
+    const alreadyPrinted = printedQty;
+    const remaining = qty - alreadyPrinted;
+
+    if (remaining <= 0) {
+      toast({ title: 'All bottles already printed' });
+      setActing(false);
+      return;
+    }
+
+    // Re-send STAR + MON + remaining DATA
+    const result = await sendStarCommand(
+      selectedPrinter,
+      templateName,
+      remaining,
+      { jobId: job.id, commandType: 'bulk_resume', user, podValues: sentPodValues }
+    );
+
+    if (!result.success) {
+      toast({
+        title: 'Resume Failed',
+        description: result.errorMessage || 'Could not resume printing',
+        variant: 'destructive',
+      });
+      setActing(false);
+      return;
+    }
+
+    // Update job status back to active
+    await base44.entities.LabellingJob.update(job.id, { status: 'bulk_printing' });
+    await logLabellingEvent({
+      action_type: 'bulk_print_resumed',
+      job_id: job.id,
+      plan_id: job.plan_id,
+      description: `Bulk print resumed. Sending ${remaining} more DATA commands to ${selectedPrinter.name}.`,
+      user,
+    });
+
+    toast({ title: 'Printing Resumed', description: `${remaining} labels queued to printer.` });
     onComplete?.();
     setActing(false);
   };
@@ -279,7 +370,7 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
           <Button
             variant="outline"
             className="h-11 flex-1 gap-2 border-orange-300 text-orange-600 hover:bg-orange-50"
-            onClick={() => handleStatusAction('bulk_print_stopped', 'paused')}
+            onClick={handleStopPrinting}
             disabled={acting}
           >
             {acting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Pause className="w-4 h-4" />}
@@ -289,7 +380,7 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
         {job.status === 'paused' && (
           <Button
             className="h-11 flex-1 gap-2 bg-indigo-600 hover:bg-indigo-700"
-            onClick={() => handleStatusAction('bulk_print_resumed', 'bulk_printing')}
+            onClick={handleResumePrinting}
             disabled={acting}
           >
             {acting ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
