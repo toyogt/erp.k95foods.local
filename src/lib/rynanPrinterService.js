@@ -664,13 +664,13 @@ export async function checkAndSyncPrinterConfig(printer, templateName = null) {
  * @returns {{ found: bool, availableTemplates: string[], error: string|null }}
  */
 export async function checkTemplateExists(printer, templateName) {
-  const base       = (printer.register_app_link || printer.api_endpoint || '').replace(/\/print\/?$/, '').replace(/\/$/, '');
-  const headers    = buildHeaders(printer, true);
-  const timeoutMs  = printer.request_timeout_ms || 10000;
+  const base      = (printer.register_app_link || printer.api_endpoint || '').replace(/\/print\/?$/, '').replace(/\/$/, '');
+  const headers   = buildHeaders(printer, true);
+  const timeoutMs = printer.request_timeout_ms || 10000;
 
   const rqliPayload = {
     printer_id: printer.printer_id,
-    printer:    { ip: printer.ip_address, port: printer.port },   // always from LblPrinterConfig
+    printer:    { ip: printer.ip_address, port: printer.port },
     command:    { command: 'RQLI' },
   };
 
@@ -685,31 +685,14 @@ export async function checkTemplateExists(printer, templateName) {
     return { found: false, availableTemplates: [], error: `Cannot reach middleware: ${transportError}` };
   }
 
-  // Log the full raw body so we can see exactly what the middleware returns
-  console.log('[RQLI] Raw middleware response:', JSON.stringify(body, null, 2));
+  // Extract template list from the middleware response.
+  // The actual response structure (confirmed from real middleware):
+  //   body.printer_response_payload.template  → array of template name strings  ✅ PRIMARY
+  //   body.response.response.template          → same array, nested deeper
+  //   body.printer_raw_response               → JSON string — parse as fallback
+  const templates = extractTemplateList(body);
 
-  // Try every known location where the template list may appear in the response:
-  // - body.printer_response_payload.template  (most common — middleware wraps printer reply)
-  // - body.printer_response_payload.templates
-  // - body.printer_response_payload (if it IS the array itself)
-  // - body.template
-  // - body.templates
-  // - body.data.template
-  // - body (if it IS the array itself)
-  const printerPayload = body?.printer_response_payload || {};
-  const templateList =
-    printerPayload.template ||
-    printerPayload.templates ||
-    (Array.isArray(printerPayload) ? printerPayload : null) ||
-    body?.template ||
-    body?.templates ||
-    body?.data?.template ||
-    body?.data?.templates ||
-    (Array.isArray(body) ? body : null) ||
-    [];
-
-  const templates = Array.isArray(templateList) ? templateList : [];
-  console.log('[RQLI] Parsed template list:', templates, '| Looking for:', templateName);
+  console.log('[RQLI] Templates on printer:', templates, '| Looking for:', templateName);
 
   // Case-insensitive + trimmed match
   const normalizedTarget = templateName.trim().toLowerCase();
@@ -718,8 +701,55 @@ export async function checkTemplateExists(printer, templateName) {
   return {
     found,
     availableTemplates: templates,
-    error: null,
+    error: templates.length === 0 ? 'Could not read template list from printer response' : null,
   };
+}
+
+/**
+ * extractTemplateList
+ *
+ * Parses the raw RQLI middleware response and returns a clean string[]
+ * of template names registered on the physical printer.
+ *
+ * Priority order (matches confirmed real response structure):
+ * 1. body.printer_response_payload.template      — already parsed array  ✅ most reliable
+ * 2. body.response.response.template             — nested response object
+ * 3. body.response.details.response.template     — even deeper nesting
+ * 4. body.printer_raw_response                   — JSON string — parse and extract
+ * 5. body.template / body.templates              — flat fallbacks
+ */
+function extractTemplateList(body) {
+  if (!body) return [];
+
+  // 1. Primary: printer_response_payload.template (confirmed real structure)
+  const payload = body.printer_response_payload;
+  if (payload && Array.isArray(payload.template) && payload.template.length > 0) {
+    return payload.template.map(String);
+  }
+
+  // 2. body.response.response.template
+  const r1 = body?.response?.response?.template;
+  if (Array.isArray(r1) && r1.length > 0) return r1.map(String);
+
+  // 3. body.response.details.response.template
+  const r2 = body?.response?.details?.response?.template;
+  if (Array.isArray(r2) && r2.length > 0) return r2.map(String);
+
+  // 4. Parse printer_raw_response string (JSON)
+  if (typeof body.printer_raw_response === 'string') {
+    try {
+      const parsed = JSON.parse(body.printer_raw_response);
+      if (Array.isArray(parsed?.template) && parsed.template.length > 0) {
+        return parsed.template.map(String);
+      }
+    } catch (_) { /* ignore parse errors */ }
+  }
+
+  // 5. Flat fallbacks
+  if (Array.isArray(body.template) && body.template.length > 0) return body.template.map(String);
+  if (Array.isArray(body.templates) && body.templates.length > 0) return body.templates.map(String);
+
+  return [];
 }
 
 /**
