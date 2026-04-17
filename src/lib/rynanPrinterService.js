@@ -105,6 +105,9 @@ export function buildStarCommand(printer, templateName, priority = PRINT_PRIORIT
     command: {
       command:      PRINTER_COMMANDS.STAR,
       templatename: templateName,
+      startpage:    "1",
+      endpage:      "1",
+      loop:         "true",
     },
     priority: priority === PRINT_PRIORITY.HIGH ? PRINT_PRIORITY.HIGH : PRINT_PRIORITY.NORMAL,
   };
