@@ -146,19 +146,17 @@ export default function LblDemoPrintVerificationStep({ job, user, onComplete }) 
     setResetting(false);
   };
 
-  // All three conditions for enabling the confirm button
+  // POD check result (informational only — not blocking confirm for now)
   const podCheckPassed = podCheckResult && !podCheckResult.errorMessage && podCheckResult.allPrinted && podCheckResult.allPodsMatch;
-  const canConfirm     = physicalConfirmed && podCheckPassed;
+  // Only physical checkbox is required to enable confirm
+  const canConfirm = physicalConfirmed;
 
   const handleVerifyAndProceed = async () => {
     if (!physicalConfirmed) {
       toast({ title: 'Please confirm physical label check', variant: 'destructive' });
       return;
     }
-    if (!podCheckPassed) {
-      toast({ title: 'Run printer check first — all labels must be printed with correct data', variant: 'destructive' });
-      return;
-    }
+    // POD validation is informational only — not blocking for now
 
     setVerifying(true);
     const now = new Date().toISOString();
@@ -173,7 +171,7 @@ export default function LblDemoPrintVerificationStep({ job, user, onComplete }) 
       action_type: 'demo_print_verified',
       job_id:      job.id,
       plan_id:     job.plan_id,
-      description: `Demo print physically verified. Labels printed: ${podCheckResult.printedCount}/${podCheckResult.totalCount}. All POD fields matched.`,
+      description: `Demo print physically verified. ${podCheckResult ? `Labels printed: ${podCheckResult.printedCount}/${podCheckResult.totalCount}.` : 'Printer check not run.'}`,
       user,
     });
 
@@ -345,14 +343,7 @@ export default function LblDemoPrintVerificationStep({ job, user, onComplete }) 
       {/* Helper hint */}
       {!canConfirm && (
         <p className="text-xs text-center text-slate-500">
-          {!podCheckResult
-            ? 'Run the printer check first to verify labels are printed and data is correct.'
-            : !podCheckResult.allPrinted
-              ? `Waiting for all ${podCheckResult.totalCount} labels to print (${podCheckResult.printedCount} done so far).`
-              : !podCheckResult.allPodsMatch
-                ? 'Fix data mismatch before confirming — re-send demo print with correct values.'
-                : 'Tick the physical confirmation checkbox above.'
-          }
+          Tick the physical confirmation checkbox above to proceed.
         </p>
       )}
     </div>
