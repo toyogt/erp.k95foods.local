@@ -23,7 +23,7 @@ export function usePrinterPollStatus(job, printer, enabled = false, pollInterval
   const lastPrintedCountRef = useRef(job?.current_printed_qty || 0);
 
   useEffect(() => {
-    if (!enabled || !job?.id || !printer?.printer_id) {
+    if (!enabled || !job?.id || !printer?.printer_id || job?.status === 'completed') {
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
       return;
     }
@@ -58,6 +58,7 @@ export function usePrinterPollStatus(job, printer, enabled = false, pollInterval
 
       const { printedCount, totalCount } = result;
       const planned = job.quantity_bottles_planned || 0;
+      // Cap printed count at planned target (printer may over-report)
       const safePrintedCount = Math.min(printedCount, planned);
 
       // Only update DB if printer reports a NEW count
