@@ -185,12 +185,56 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
       return;
     }
 
-    // Send qty STAR commands using the selected template
+    // Build POD values from template field mappings to send via DATA command
+    // Each key is a POD field (POD1, POD2...) mapped to its resolved ERP value
+    const erpValueMap = {
+      batch_no:             computed.batchNo,
+      mfg_date:             computed.mfgDate,
+      manufacturing_date:   computed.mfgDate,
+      expiry_date:          computed.expiryDate,
+      mrp:                  computed.mrp,
+      mrp_with_usp:         computed.mrpWithUsp,
+      usp:                  computed.usp,
+      usp_with_unit:        computed.uspWithUnit,
+      mrp_and_usp:          computed.mrpAndUsp,
+      tax_line:             computed.taxLine,
+      net_weight:           computed.netWeight,
+      mfg_date_offset:      computed.mfgDateOffset,
+      expiry_date_offset:   computed.expiryDateOffset,
+      sku_code:             job.sku_code,
+      product_name:         job.product_name || computed.productName,
+      bottle_type:          job.bottle_type || productMaster?.bottle_type || '',
+      brand_name:           productMaster?.brand_name || '',
+      flavour:              productMaster?.flavour || '',
+      ml_per_bottle:        productMaster?.ml_per_bottle ? String(productMaster.ml_per_bottle) : '',
+      bottles_per_box:      productMaster?.bottles_per_box ? String(productMaster.bottles_per_box) : '',
+      fssai_no:             productMaster?.fssai_no || '',
+      manufacturer_name:    productMaster?.manufacturer_name || '',
+      manufacturer_address: [productMaster?.address_1, productMaster?.address_2].filter(Boolean).join(', '),
+      customer_care_phone:  productMaster?.customer_care_phone || '',
+      customer_care_email:  productMaster?.customer_care_email || '',
+      hsn_code:             productMaster?.hsn_code || '',
+      product_barcode:      productMaster?.product_barcode || '',
+      box_barcode:          productMaster?.box_barcode || '',
+      line_id:              job.line_id || '',
+      shift_type:           job.shift_type || '',
+      labelling_date:       job.labelling_date || '',
+    };
+
+    // Build { POD1: "value", POD2: "value", ... } from template mappings
+    const podValues = {};
+    if (jobTemplate?.field_mappings?.length > 0) {
+      jobTemplate.field_mappings.forEach(mapping => {
+        podValues[mapping.pod_field] = erpValueMap[mapping.erp_source] ?? '';
+      });
+    }
+
+    // Send qty labels — each label: STOP → STAR (retry) → MON (verify) → DATA (print with POD values)
     const result = await sendStarCommand(
       printer,
       templateName,
       qty,
-      { jobId: job.id, commandType: 'demo', user }
+      { jobId: job.id, commandType: 'demo', user, podValues }
     );
 
     if (!result.success) {

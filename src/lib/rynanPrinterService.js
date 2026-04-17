@@ -10,6 +10,7 @@
  *
  * LAYER 2 — JSON BUILDERS (pure, no side effects)
  *   buildStarCommand()   — builds the STAR print JSON payload
+ *   buildDataPayload()   — builds the DATA command JSON payload (POD field values)
  *   buildPurgePayload()  — builds the purge JSON payload
  *
  * LAYER 3 — TRANSPORT (HTTP + audit persistence)
@@ -46,6 +47,7 @@ export const MIDDLEWARE_ENDPOINTS = {
 export const PRINTER_COMMANDS = {
   STAR:  'STAR',
   STOP:  'STOP',
+  DATA:  'DATA',   // Send POD field values — one DATA command = one label printed
   MON:   'MON',
   RQLI:  'RQLI',   // Query template list — printer responds with RSLI
   PURGE: 'PURGE',
@@ -80,6 +82,37 @@ export function buildStarCommand(printer, templateName, priority = PRINT_PRIORIT
       loop:         "true",
     },
     priority: priority === PRINT_PRIORITY.HIGH ? PRINT_PRIORITY.HIGH : PRINT_PRIORITY.NORMAL,
+  };
+}
+
+/**
+ * buildDataPayload
+ *
+ * Constructs the DATA command payload to send POD field values to the printer.
+ * The DATA command triggers printing of exactly ONE label.
+ * Call it N times to print N labels.
+ *
+ * @param {object} printer    - LblPrinterConfig record
+ * @param {object} podValues  - Plain object of POD field values: { POD1: "val", POD2: "val", ... }
+ *                              Keys must match exactly what the template expects (e.g. POD1, POD2, POD3, POD4)
+ *
+ * Example:
+ *   buildDataPayload(printer, { POD1: "₹95.00", POD2: "01PC46129", POD3: "17/04/2026", POD4: "28/04/2026" })
+ *
+ * Produces:
+ *   { printer_id, printer: { ip, port }, command: { command: "DATA", data: { POD1, POD2, ... } } }
+ */
+export function buildDataPayload(printer, podValues = {}) {
+  return {
+    printer_id: printer.printer_id,
+    printer: {
+      ip:   printer.ip_address,
+      port: printer.port,
+    },
+    command: {
+      command: PRINTER_COMMANDS.DATA,
+      data:    podValues,
+    },
   };
 }
 
@@ -202,6 +235,21 @@ function isStarReadyResponse(body) {
   // Check top-level response_command + response_status
   if (body.printer_response_command === 'STAR' && body.printer_response_status === 'READY') return true;
   return false;
+}
+
+/**
+ * isDataAckResponse
+ * Returns true when the DATA command was successfully acknowledged by the printer.
+ * The printer echoes back the DATA command with a success status.
+ */
+function isDataAckResponse(body) {
+  if (!body) return false;
+  if (body.success !== true) return false;
+  if (body.status === 'failed') return false;
+  if (body.printer_ok === false) return false;
+  const code = (body.printer_protocol_error_code || '').toUpperCase();
+  if (code && HARD_FAILURE_CODES.some(f => code.includes(f))) return false;
+  return true;
 }
 
 function extractErrorMessage(body) {
@@ -474,16 +522,21 @@ export async function checkTemplateExists(printer, templateName, maxRetries = 3)
 /**
  * sendStarCommand
  *
- * Core print function. Sends N STAR commands to the middleware — one per label.
- * Each call to /print triggers exactly one label to be printed.
+ * Core print function. Prints N labels by executing the full protocol per label:
+ *   STOP → STAR (retry until READY, up to 5x) → MON (verify template) → DATA (send POD values → 1 label printed)
+ *
+ * The DATA command is what actually prints the label with the correct field values.
+ * One DATA call = one physical label printed.
  *
  * @param {object} printer       - LblPrinterConfig record
- * @param {string} templateName  - Middleware template name (e.g. "Default-1")
- * @param {number} quantity      - How many labels to print
- * @param {object} context       - { jobId, commandType, user }
+ * @param {string} templateName  - Middleware template name (e.g. "TK-EXPE-LS-GLS-330")
+ * @param {number} quantity      - How many labels to print (DATA sent this many times)
+ * @param {object} context       - { jobId, commandType, user, podValues }
+ *   podValues: { POD1: "val", POD2: "val", ... } — sent in DATA command for each label
+ *              If omitted, DATA is still sent (printer uses its own defaults)
  * @returns {{ success, sentCount, failedAt, lastCommandRecord, lastMiddlewareJobId, errorMessage }}
  */
-export async function sendStarCommand(printer, templateName, quantity = 1, { jobId, commandType = 'demo', user } = {}) {
+export async function sendStarCommand(printer, templateName, quantity = 1, { jobId, commandType = 'demo', user, podValues = {} } = {}) {
   if (!jobId) {
     jobId = `JOB-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   }
@@ -564,27 +617,41 @@ export async function sendStarCommand(printer, templateName, quantity = 1, { job
     }
 
     // ── Step C: MON verification — only if STAR got READY ────────────────────
+    let templateConfirmed = false;
     if (starReady) {
       const monResult = await postToMiddleware(endpointUrl, monPayload, headers, timeoutMs, 1);
       const monActiveTemplate = extractActiveTemplateFromMon(monResult.body);
 
       if (monActiveTemplate !== null) {
-        const monConfirmed = monActiveTemplate.trim().toLowerCase() === templateName.trim().toLowerCase();
-        console.log(`[MON] Active template: "${monActiveTemplate}" — expected: "${templateName}" — match: ${monConfirmed}`);
-
-        if (monConfirmed) {
-          labelSuccess = true;
-          lastMiddlewareJobId = jobIdFromStar;
-          console.log(`[STAR+MON] Label ${i + 1} — template confirmed`);
-        } else {
+        templateConfirmed = monActiveTemplate.trim().toLowerCase() === templateName.trim().toLowerCase();
+        console.log(`[MON] Active template: "${monActiveTemplate}" — expected: "${templateName}" — match: ${templateConfirmed}`);
+        if (!templateConfirmed) {
           console.warn(`[MON] Template mismatch — printer has "${monActiveTemplate}", expected "${templateName}"`);
-          // starReady remains false — falls through to failure handling below
         }
       } else {
         // MON didn't return template info — accept STAR/READY as sufficient
         console.warn(`[MON] Could not extract active template from MON response — accepting STAR/READY`);
+        templateConfirmed = true;
+      }
+    }
+
+    // ── Step D: Send DATA — triggers exactly 1 label to print ────────────────
+    // DATA is sent only when template is confirmed (or STAR READY + MON fallback).
+    // podValues keys must match the template's POD fields (POD1, POD2, etc.)
+    if (templateConfirmed) {
+      const dataPayload = buildDataPayload(printer, podValues);
+      const dataResult  = await postToMiddleware(endpointUrl, dataPayload, headers, timeoutMs, 1);
+
+      if (isDataAckResponse(dataResult.body)) {
         labelSuccess = true;
-        lastMiddlewareJobId = jobIdFromStar;
+        lastMiddlewareJobId = jobIdFromStar || dataResult.body?.job_id || null;
+        console.log(`[DATA] Label ${i + 1} — DATA acknowledged, label printed. PODs:`, podValues);
+      } else {
+        const dataError = dataResult.error || extractErrorMessage(dataResult.body);
+        console.warn(`[DATA] Label ${i + 1} — DATA not acknowledged: ${dataError}`);
+        lastBody        = dataResult.body;
+        lastStatusCode  = dataResult.statusCode;
+        // labelSuccess stays false — falls through to failure handling
       }
     }
 
@@ -655,8 +722,8 @@ export async function sendStarCommand(printer, templateName, quantity = 1, { job
  * sendRynanPrintCommand
  * Backward-compatible wrapper — delegates to sendStarCommand() with quantity = 1.
  */
-export async function sendRynanPrintCommand(printer, { templateName, priority } = {}, { jobId, commandType, user } = {}) {
-  const result = await sendStarCommand(printer, templateName || '', 1, { jobId, commandType, user });
+export async function sendRynanPrintCommand(printer, { templateName, priority, podValues } = {}, { jobId, commandType, user } = {}) {
+  const result = await sendStarCommand(printer, templateName || '', 1, { jobId, commandType, user, podValues: podValues || {} });
   return {
     success:         result.success,
     commandRecord:   result.lastCommandRecord,
