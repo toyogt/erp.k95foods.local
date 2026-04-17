@@ -1118,6 +1118,7 @@ function extractPrintedCountFromRqlpResponse(body) {
     const val = body.printer_response_payload.value;
     // Validate format "X/Y"
     if (typeof val === 'string' && val.includes('/')) {
+      console.log(`[RQLP-PARSE] Found value at printer_response_payload: ${val}`);
       return {
         valueStr: val,
         podData: body.printer_response_payload.data || {},
@@ -1129,6 +1130,7 @@ function extractPrintedCountFromRqlpResponse(body) {
   if (body?.response?.response?.value) {
     const val = body.response.response.value;
     if (typeof val === 'string' && val.includes('/')) {
+      console.log(`[RQLP-PARSE] Found value at response.response: ${val}`);
       return {
         valueStr: val,
         podData: body.response.response.data || {},
@@ -1140,6 +1142,7 @@ function extractPrintedCountFromRqlpResponse(body) {
   if (body?.response?.details?.response?.value) {
     const val = body.response.details.response.value;
     if (typeof val === 'string' && val.includes('/')) {
+      console.log(`[RQLP-PARSE] Found value at response.details.response: ${val}`);
       return {
         valueStr: val,
         podData: body.response.details.response.data || {},
@@ -1149,12 +1152,14 @@ function extractPrintedCountFromRqlpResponse(body) {
 
   // Priority 4: Top-level value (fallback)
   if (body?.value && typeof body.value === 'string' && body.value.includes('/')) {
+    console.log(`[RQLP-PARSE] Found value at top level: ${body.value}`);
     return {
       valueStr: body.value,
       podData: body.data || {},
     };
   }
 
+  console.warn(`[RQLP-PARSE] Could not find value in any known location. Body keys: ${Object.keys(body).join(', ')}`);
   return { valueStr: null, podData: {} };
 }
 
