@@ -36,19 +36,25 @@ export function usePrinterPollStatus(job, printer, enabled = false, pollInterval
       const { printedCount, totalCount } = result;
       const planned = job.quantity_bottles_planned || 0;
 
+      console.log('[POLL] Raw RQLP response:', result.raw);
+      console.log(`[POLL] Parsed: printedCount=${printedCount}, totalCount=${totalCount}, planned=${planned}`);
+
+      // Cap printed count to planned quantity (sanity check)
+      const safePrintedCount = Math.min(printedCount, planned);
+
       // Only update DB if printer reports a NEW count
-      if (printedCount > lastPrintedCountRef.current) {
-        lastPrintedCountRef.current = printedCount;
+      if (safePrintedCount > lastPrintedCountRef.current) {
+        lastPrintedCountRef.current = safePrintedCount;
 
         console.log(
-          `[POLL] Printer reports: ${printedCount} of ${totalCount} printed. Updating job to ${printedCount}/${planned}.`
+          `[POLL] Printer reports: ${printedCount}/${totalCount}. Safe count: ${safePrintedCount}/${planned}.`
         );
 
         // Auto-update job's printed count
         await base44.entities.LabellingJob.update(job.id, {
-          current_printed_qty: printedCount,
+          current_printed_qty: safePrintedCount,
           status:
-            printedCount >= planned && planned > 0
+            safePrintedCount >= planned && planned > 0
               ? 'completed'
               : job.status === 'paused'
               ? 'paused'
