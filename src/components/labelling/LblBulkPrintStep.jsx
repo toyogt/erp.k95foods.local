@@ -81,20 +81,6 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
     ? Math.min(100, (printedQty / job.quantity_bottles_planned) * 100)
     : 0;
 
-  // Auto-fetch active printer from latest print command (MUST be at component level, not inside conditionals)
-  const { data: activePrintCommand } = useQuery({
-    queryKey: ['bulk-print-command', job.id],
-    queryFn: async () => {
-      const commands = await base44.entities.LblPrintCommand.filter(
-        { job_id: job.id, command_type: 'bulk_start' },
-        '-created_date',
-        1
-      );
-      return commands?.[0] || null;
-    },
-    enabled: job.status === 'bulk_printing' || job.status === 'paused',
-  });
-
   const activePrinterId = activePrintCommand?.printer_id;
   const activeSelectedPrinter = printers.find(p => p.printer_id === activePrinterId);
 
