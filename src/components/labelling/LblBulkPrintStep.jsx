@@ -60,7 +60,7 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
 
   // Real-time printer polling — automatically updates printed count
   const shouldPoll = job.status === 'bulk_printing' || job.status === 'paused';
-  usePrinterPollStatus(job, selectedPrinter, shouldPoll, 2000);
+  usePrinterPollStatus(job, selectedPrinter, shouldPoll, 500);
 
   // Auto-fetch active printer from latest print command for CONTROL mode
   const { data: activePrintCommand, refetch: refetchActivePrintCommand } = useQuery({
