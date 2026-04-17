@@ -376,7 +376,7 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
       `${base}${MIDDLEWARE_ENDPOINTS.PRINT}`,
       stopPayload,
       headers,
-      activeSelectedPrinter.request_timeout_ms || 15000
+      activePrinter.request_timeout_ms || 15000
     );
 
     if (transportError && !body) {
