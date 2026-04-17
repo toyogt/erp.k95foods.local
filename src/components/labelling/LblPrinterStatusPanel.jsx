@@ -37,11 +37,12 @@ export default function LblPrinterStatusPanel({ printer, job, user, templateName
 
     // Always pass result so parent knows status was checked (statusChecked = true)
     // Parent uses has_cartridge + templateFound to gate the print button
+    // templateListUnavailable=true means we couldn't read the list — don't block printing in that case
     onStatusFetched?.({ ...res, success: res.configOk && res.connectionOk });
-    const templateOk = res.templateFound === null || res.templateFound === true;
-    if (!res.configOk || !res.connectionOk || !templateOk) {
+    const templateDefinitelyMissing = res.templateFound === false && !res.templateListUnavailable;
+    if (!res.configOk || !res.connectionOk || templateDefinitelyMissing) {
       const errMsg = res.configError || res.connectionError
-        || (res.templateFound === false ? `Template "${templateName}" not found on printer` : 'Printer check failed');
+        || (templateDefinitelyMissing ? `Template "${templateName}" not found on printer` : 'Printer check failed');
       toast({ title: 'Printer Check Failed', description: errMsg, variant: 'destructive' });
     }
     setFetching(false);
@@ -184,12 +185,22 @@ export default function LblPrinterStatusPanel({ printer, job, user, templateName
           {result.templateFound !== null && (
             <Row
               icon={FileText}
-              iconClass={result.templateFound ? 'text-green-600' : 'text-red-500'}
+              iconClass={result.templateListUnavailable ? 'text-amber-500' : result.templateFound ? 'text-green-600' : 'text-red-500'}
               label={`Template "${templateName}"`}
-              value={result.templateFound ? `Found on printer (${result.availableTemplates.length} total templates)` : 'NOT found on printer'}
-              valueClass={result.templateFound ? 'text-green-700' : 'text-red-700'}
+              value={
+                result.templateListUnavailable
+                  ? 'Template list unreadable — printing allowed'
+                  : result.templateFound
+                    ? `Found on printer (${result.availableTemplates.length} total templates)`
+                    : 'NOT found on printer'
+              }
+              valueClass={
+                result.templateListUnavailable ? 'text-amber-700'
+                : result.templateFound ? 'text-green-700'
+                : 'text-red-700'
+              }
             >
-              {!result.templateFound && result.availableTemplates.length > 0 && (
+              {!result.templateFound && !result.templateListUnavailable && result.availableTemplates.length > 0 && (
                 <div className="mt-1">
                   <p className="text-xs text-slate-500 mb-0.5">Templates on this printer ({result.availableTemplates.length}):</p>
                   <div className="flex flex-wrap gap-1">
@@ -199,16 +210,10 @@ export default function LblPrinterStatusPanel({ printer, job, user, templateName
                   </div>
                 </div>
               )}
-              {!result.templateFound && result.availableTemplates.length === 0 && (
-                <p className="text-xs text-amber-600 mt-0.5">Could not read template list from printer — check middleware configuration.</p>
+              {result.templateListUnavailable && (
+                <p className="text-xs text-amber-600 mt-0.5">Could not read template list from printer response — printing will still be attempted.</p>
               )}
             </Row>
-          )}
-          {result.templateError && (
-            <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded p-2">
-              <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-              <p className="text-xs text-amber-700">Template check failed: {result.templateError}</p>
-            </div>
           )}
 
           {/* No cartridge — block print */}
@@ -222,12 +227,15 @@ export default function LblPrinterStatusPanel({ printer, job, user, templateName
           {/* Overall summary badge */}
           <div className="pt-2">
             {(() => {
-              const tplOk = result.templateFound === null || result.templateFound === true;
+              // templateListUnavailable = can't read list → don't block (allow printing)
+              // templateFound===false and NOT unavailable = definitely missing → block
+              const templateDefinitelyMissing = result.templateFound === false && !result.templateListUnavailable;
+              const tplOk = !templateDefinitelyMissing;
               const allOk = result.configOk && result.connectionOk && result.has_cartridge && tplOk;
               const failReason = !result.configOk ? 'middleware configuration failed'
                 : !result.connectionOk ? 'printer connection failed'
                 : !result.has_cartridge ? 'no cartridge installed'
-                : !tplOk ? `template "${templateName}" not found on printer`
+                : templateDefinitelyMissing ? `template "${templateName}" not found on printer`
                 : '';
               return allOk ? (
                 <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded p-2">

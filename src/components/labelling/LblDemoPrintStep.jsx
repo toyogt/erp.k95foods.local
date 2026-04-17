@@ -84,7 +84,8 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
   const selectedPrinter = printers.find(p => p.printer_id === printerId) || null;
   const noPrinters = printers.length === 0;
   const hasCartridge = printerStatus?.has_cartridge === true;
-  const templateMissing = printerStatus?.templateFound === false;
+  // Only block if we confirmed the template is definitely NOT there (list was readable but name absent)
+  const templateMissing = printerStatus?.templateFound === false && !printerStatus?.templateListUnavailable;
   const statusChecked = printerStatus !== null;
   const templateName = jobTemplate?.middleware_template_name || '';
 

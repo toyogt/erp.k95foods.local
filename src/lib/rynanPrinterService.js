@@ -711,7 +711,11 @@ export async function checkTemplateExists(printer, templateName) {
   return {
     found,
     availableTemplates: templates,
+    // Only set error if we got no templates at all (couldn't read list)
+    // If we got templates but didn't find the name → found=false, error=null (template genuinely missing)
     error: templates.length === 0 ? 'Could not read template list from printer response' : null,
+    // templateListUnavailable helps the UI distinguish "list unreadable" vs "template not on printer"
+    templateListUnavailable: templates.length === 0,
   };
 }
 
@@ -731,37 +735,46 @@ export async function checkTemplateExists(printer, templateName) {
 function extractTemplateList(body) {
   if (!body) return [];
 
-  console.log('[RQLI extractTemplateList] body keys:', Object.keys(body));
-  console.log('[RQLI extractTemplateList] printer_response_payload:', body.printer_response_payload);
-  console.log('[RQLI extractTemplateList] success:', body.success, '| printer_ok:', body.printer_ok);
+  // Helper: extract template array from any parsed object
+  const fromObj = (obj) => {
+    if (!obj) return null;
+    if (Array.isArray(obj.template) && obj.template.length > 0) return obj.template.map(String);
+    if (Array.isArray(obj.templates) && obj.templates.length > 0) return obj.templates.map(String);
+    return null;
+  };
 
-  // 1. Primary: printer_response_payload.template (confirmed real structure)
-  const payload = body.printer_response_payload;
-  if (payload && Array.isArray(payload.template) && payload.template.length > 0) {
-    return payload.template.map(String);
-  }
+  // Helper: try to parse a JSON string and extract templates
+  const fromJsonStr = (str) => {
+    if (typeof str !== 'string') return null;
+    try {
+      const parsed = JSON.parse(str);
+      return fromObj(parsed);
+    } catch (_) { return null; }
+  };
+
+  // 1. printer_response_payload.template
+  const r = fromObj(body.printer_response_payload);
+  if (r) return r;
 
   // 2. body.response.response.template
-  const r1 = body?.response?.response?.template;
-  if (Array.isArray(r1) && r1.length > 0) return r1.map(String);
+  const r1 = fromObj(body?.response?.response);
+  if (r1) return r1;
 
   // 3. body.response.details.response.template
-  const r2 = body?.response?.details?.response?.template;
-  if (Array.isArray(r2) && r2.length > 0) return r2.map(String);
+  const r2 = fromObj(body?.response?.details?.response);
+  if (r2) return r2;
 
-  // 4. Parse printer_raw_response string (JSON)
-  if (typeof body.printer_raw_response === 'string') {
-    try {
-      const parsed = JSON.parse(body.printer_raw_response);
-      if (Array.isArray(parsed?.template) && parsed.template.length > 0) {
-        return parsed.template.map(String);
-      }
-    } catch (_) { /* ignore parse errors */ }
-  }
+  // 4. printer_raw_response as JSON string
+  const r3 = fromJsonStr(body.printer_raw_response);
+  if (r3) return r3;
 
-  // 5. Flat fallbacks
-  if (Array.isArray(body.template) && body.template.length > 0) return body.template.map(String);
-  if (Array.isArray(body.templates) && body.templates.length > 0) return body.templates.map(String);
+  // 5. printer_response_payload as JSON string (some middleware versions stringify it)
+  const r4 = fromJsonStr(body.printer_response_payload);
+  if (r4) return r4;
+
+  // 6. Flat fallbacks on body itself
+  const r5 = fromObj(body);
+  if (r5) return r5;
 
   return [];
 }
