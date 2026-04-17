@@ -7,7 +7,7 @@
  * POD values are re-used from the approved demo DATA command (same label data).
  * Printer selection is required before starting.
  */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,7 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
   const [printerId, setPrinterId]     = useState('');
   const [acting, setActing]           = useState(false);
   const [sendingPrint, setSendingPrint] = useState(false);
+  const [activePrinter, setActivePrinter] = useState(null);
 
   // Active printers
   const { data: printers = [] } = useQuery({
@@ -83,8 +84,13 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
     ? Math.min(100, (printedQty / job.quantity_bottles_planned) * 100)
     : 0;
 
-  const activePrinterId = activePrintCommand?.printer_id;
-  const activeSelectedPrinter = printers.find(p => p.printer_id === activePrinterId);
+  // Update activePrinter field when activePrintCommand changes
+  useEffect(() => {
+    if (activePrintCommand?.printer_id) {
+      const found = printers.find(p => p.printer_id === activePrintCommand.printer_id);
+      setActivePrinter(found || null);
+    }
+  }, [activePrintCommand, printers]);
 
   // ── Start bulk print: send actual commands to Rynan middleware ──
   const handleStartBulkPrint = async () => {
@@ -349,7 +355,7 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
 
   // ── Stop: Use active printer from latest print command ──
   const handleStopPrinting_Auto = async () => {
-    if (!activeSelectedPrinter) {
+    if (!activePrinter) {
       toast({ title: 'No active printer found', variant: 'destructive' });
       return;
     }
@@ -359,13 +365,13 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
     const { postToMiddleware, buildHeaders, getPrinterBase, MIDDLEWARE_ENDPOINTS, PRINTER_COMMANDS } = await import('@/lib/rynanPrinterService');
 
     const stopPayload = {
-      printer_id: activeSelectedPrinter.printer_id,
-      printer: { ip: activeSelectedPrinter.ip_address, port: activeSelectedPrinter.port },
+      printer_id: activePrinter.printer_id,
+      printer: { ip: activePrinter.ip_address, port: activePrinter.port },
       command: { command: PRINTER_COMMANDS.STOP },
     };
 
-    const base = getPrinterBase(activeSelectedPrinter);
-    const headers = buildHeaders(activeSelectedPrinter);
+    const base = getPrinterBase(activePrinter);
+    const headers = buildHeaders(activePrinter);
     const { error: transportError, body } = await postToMiddleware(
       `${base}${MIDDLEWARE_ENDPOINTS.PRINT}`,
       stopPayload,
@@ -399,7 +405,7 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
 
   // ── Resume: Use active printer from latest print command ──
   const handleResumePrinting_Auto = async () => {
-    if (!activeSelectedPrinter) {
+    if (!activePrinter) {
       toast({ title: 'No active printer found', variant: 'destructive' });
       return;
     }
@@ -420,7 +426,7 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
     }
 
     const result = await sendStarCommand(
-      activeSelectedPrinter,
+      activePrinter,
       templateName,
       remaining,
       { jobId: job.id, commandType: 'bulk_resume', user, podValues: sentPodValues }
@@ -441,7 +447,7 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
       action_type: 'bulk_print_resumed',
       job_id: job.id,
       plan_id: job.plan_id,
-      description: `Bulk print resumed. Sending ${remaining} more DATA commands to ${activeSelectedPrinter.name}.`,
+      description: `Bulk print resumed. Sending ${remaining} more DATA commands to ${activePrinter.name}.`,
       user,
     });
 
@@ -456,10 +462,10 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
       <h2 className="text-base font-semibold text-slate-900">Bulk Print Control</h2>
 
       {/* Show active printer info */}
-      {activeSelectedPrinter && (
+      {activePrinter && (
         <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3 text-sm text-indigo-700">
-          <p className="font-medium">Printer: {activeSelectedPrinter.name}</p>
-          <p className="text-indigo-600">{activeSelectedPrinter.printer_id}</p>
+          <p className="font-medium">Printer: {activePrinter.name}</p>
+          <p className="text-indigo-600">{activePrinter.printer_id}</p>
         </div>
       )}
 
@@ -501,7 +507,7 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
             variant="outline"
             className="h-11 flex-1 gap-2 border-orange-300 text-orange-600 hover:bg-orange-50"
             onClick={handleStopPrinting_Auto}
-            disabled={acting || !activeSelectedPrinter}
+            disabled={acting || !activePrinter}
           >
             {acting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Pause className="w-4 h-4" />}
             Stop Printing
@@ -511,7 +517,7 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
           <Button
             className="h-11 flex-1 gap-2 bg-indigo-600 hover:bg-indigo-700"
             onClick={handleResumePrinting_Auto}
-            disabled={acting || !activeSelectedPrinter}
+            disabled={acting || !activePrinter}
           >
             {acting ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
             Resume Printing
