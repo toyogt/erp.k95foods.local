@@ -29,11 +29,29 @@ export function usePrinterPollStatus(job, printer, enabled = false, pollInterval
     }
 
     const poll = async () => {
-      const result = await fetchRynanPodStatus(printer);
+      let result = null;
+      let attempts = 0;
+      const maxRetries = 3;
 
+      // Retry RQLP command up to 3 times
+      while (attempts < maxRetries) {
+        attempts++;
+        result = await fetchRynanPodStatus(printer);
+
+        if (result.success) {
+          console.log(`[POLL] RQLP success on attempt ${attempts}`);
+          break;
+        }
+
+        console.warn(`[POLL] RQLP attempt ${attempts}/${maxRetries} failed:`, result.errorMessage);
+        if (attempts < maxRetries) {
+          await new Promise(r => setTimeout(r, 500)); // Wait 500ms before retry
+        }
+      }
+
+      // If all retries failed, log error and skip this poll cycle
       if (!result.success) {
-        console.warn('[POLL] RQLP query failed:', result.errorMessage);
-        // Log errors to database
+        console.error(`[POLL] RQLP failed after ${maxRetries} attempts:`, result.errorMessage);
         await logPrinterStatusToDB(job.id, 'error', null, result.errorMessage);
         return;
       }
