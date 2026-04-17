@@ -100,7 +100,7 @@ export function buildStarCommand(printer, templateName, priority = PRINT_PRIORIT
     printer_id: printer.printer_id,
     printer: {
       ip:   printer.ip_address,
-      port: printer.port || 9100,
+      port: printer.port || 2030,
     },
     command: {
       command:      PRINTER_COMMANDS.STAR,
@@ -124,7 +124,7 @@ export function buildPurgePayload(printer) {
     printer_id: printer.printer_id,
     printer: {
       ip:   printer.ip_address,
-      port: printer.port || 9100,
+      port: printer.port || 2030,
     },
     command: {
       command: PRINTER_COMMANDS.PURGE,
@@ -181,7 +181,7 @@ async function persistCommand({ commandId, jobId, middlewareJobId, printerId, en
 function isResponseSuccess(body) {
   if (!body) return false;
   if (body.success !== true) return false;
-  if (!body.job_id) return false;           // missing job_id = validation error
+  // job_id may be absent on some middleware versions — do not block on it
   if (body.status === 'failed') return false;
   if (body.printer_ok === false) return false;
   const code = (body.printer_protocol_error_code || '').toUpperCase();
@@ -512,7 +512,7 @@ export async function checkAndSyncPrinterConfig(printer, templateName = null) {
 
   const existingEntry = printersData?.[printer.printer_id];
   const expectedIp    = printer.ip_address;
-  const expectedPort  = printer.port || 9100;
+  const expectedPort  = printer.port || 2030;
 
   // ── STEP 2: Register or update printer config if needed ───────────────────
   if (!existingEntry) {
@@ -667,9 +667,8 @@ export async function checkTemplateExists(printer, templateName) {
 
   const rqliPayload = {
     printer_id: printer.printer_id,
-    printer:    { ip: printer.ip_address, port: printer.port || 9100 },
+    printer:    { ip: printer.ip_address, port: printer.port || 2030 },
     command:    { command: 'RQLI' },
-    priority:   PRINT_PRIORITY.NORMAL,
   };
 
   const { body, error: transportError } = await postToMiddleware(
