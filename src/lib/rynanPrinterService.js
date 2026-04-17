@@ -522,18 +522,23 @@ export async function checkTemplateExists(printer, templateName, maxRetries = 3)
 /**
  * sendStarCommand
  *
- * Core print function. Prints N labels by executing the full protocol per label:
- *   STOP → STAR (retry until READY, up to 5x) → MON (verify template) → DATA (send POD values → 1 label printed)
+ * Core print function. Correct protocol:
  *
- * The DATA command is what actually prints the label with the correct field values.
- * One DATA call = one physical label printed.
+ *   PHASE 1 — One-time printer setup (runs ONCE per batch):
+ *     1. STOP  — clear any previous running job
+ *     2. STAR  — load the desired template (retry up to MAX_STAR_READY_ATTEMPTS)
+ *     3. MON   — verify the active template on the printer matches what we sent
+ *
+ *   PHASE 2 — Data loop (runs N times = quantity):
+ *     4. DATA  — send POD field values → triggers exactly 1 physical label print
+ *
+ * This is efficient: template setup happens once, DATA is streamed N times.
  *
  * @param {object} printer       - LblPrinterConfig record
  * @param {string} templateName  - Middleware template name (e.g. "TK-EXPE-LS-GLS-330")
  * @param {number} quantity      - How many labels to print (DATA sent this many times)
  * @param {object} context       - { jobId, commandType, user, podValues }
- *   podValues: { POD1: "val", POD2: "val", ... } — sent in DATA command for each label
- *              If omitted, DATA is still sent (printer uses its own defaults)
+ *   podValues: { POD1: "val", POD2: "val", ... } — sent in each DATA command
  * @returns {{ success, sentCount, failedAt, lastCommandRecord, lastMiddlewareJobId, errorMessage }}
  */
 export async function sendStarCommand(printer, templateName, quantity = 1, { jobId, commandType = 'demo', user, podValues = {} } = {}) {
@@ -545,168 +550,159 @@ export async function sendStarCommand(printer, templateName, quantity = 1, { job
   const headers     = buildHeaders(printer);
   const priority    = printer.default_priority || PRINT_PRIORITY.NORMAL;
   const timeoutMs   = printer.request_timeout_ms || 15000;
-  const maxRetries  = printer.send_retries || 1;
 
-  const payload = buildStarCommand(printer, templateName, priority);
+  const starPayload = buildStarCommand(printer, templateName, priority);
+  const stopPayload = {
+    printer_id: printer.printer_id,
+    printer:    { ip: printer.ip_address, port: printer.port },
+    command:    { command: PRINTER_COMMANDS.STOP },
+  };
+  const monPayload = {
+    printer_id: printer.printer_id,
+    printer:    { ip: printer.ip_address, port: printer.port },
+    command:    { command: PRINTER_COMMANDS.MON },
+    priority,
+  };
 
   let sentCount = 0;
   let lastCommandRecord = null;
   let lastMiddlewareJobId = null;
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // PHASE 1: One-time printer setup — STOP → STAR (retry) → MON (verify)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // Step 1: STOP — clear previous job state
+  const stopResult = await postToMiddleware(endpointUrl, stopPayload, headers, timeoutMs, 1);
+  console.log(`[STOP] ok=${isStopReadyResponse(stopResult.body)}, error=${stopResult.error || 'none'}`);
+
+  // Step 2: STAR — load template, retry up to MAX_STAR_READY_ATTEMPTS
+  let starReady = false;
+  let jobIdFromStar = null;
+  const starAttemptResponses = [];
+
+  for (let attempt = 1; attempt <= MAX_STAR_READY_ATTEMPTS; attempt++) {
+    console.log(`[STAR] Attempt ${attempt}/${MAX_STAR_READY_ATTEMPTS} — loading template "${templateName}"`);
+
+    const { statusCode, body, error: transportError } = await postToMiddleware(
+      endpointUrl, starPayload, headers, timeoutMs, 1
+    );
+    starAttemptResponses.push({ attempt, statusCode, body, transportError });
+
+    if (!transportError && isStarReadyResponse(body)) {
+      starReady = true;
+      jobIdFromStar = body?.job_id || null;
+      console.log(`[STAR] READY on attempt ${attempt}`);
+      break;
+    }
+
+    console.warn(`[STAR] Attempt ${attempt} not READY: ${transportError || extractErrorMessage(body)}`);
+    if (attempt < MAX_STAR_READY_ATTEMPTS) {
+      await new Promise(r => setTimeout(r, 1000 * attempt));
+    }
+  }
+
+  // Step 3: MON — verify active template matches
+  let templateConfirmed = false;
+  if (starReady) {
+    const monResult = await postToMiddleware(endpointUrl, monPayload, headers, timeoutMs, 1);
+    const monActiveTemplate = extractActiveTemplateFromMon(monResult.body);
+
+    if (monActiveTemplate !== null) {
+      templateConfirmed = monActiveTemplate.trim().toLowerCase() === templateName.trim().toLowerCase();
+      console.log(`[MON] Active: "${monActiveTemplate}" — Expected: "${templateName}" — Match: ${templateConfirmed}`);
+    } else {
+      // MON couldn't confirm template — accept STAR/READY as sufficient
+      console.warn(`[MON] Could not read active template — accepting STAR/READY`);
+      templateConfirmed = true;
+    }
+  }
+
+  // If setup failed, do a full diagnostic to give user a useful error message
+  if (!templateConfirmed) {
+    console.log(`[SETUP] Template setup failed after ${MAX_STAR_READY_ATTEMPTS} STAR attempts. Running diagnostic...`);
+    const monCheck = await checkAndSyncPrinterConfig(printer, templateName);
+
+    let finalErrorMessage;
+    if (monCheck.templateListUnavailable) {
+      finalErrorMessage = `Unable to set template "${templateName}" as current template. Could not verify template list — contact admin.`;
+    } else if (monCheck.templateFound === false) {
+      finalErrorMessage = `Unable to set template "${templateName}" in the printer — this template does not exist on the printer. Please load the template first.`;
+    } else {
+      finalErrorMessage = `Unable to activate template "${templateName}". The template exists on the printer but could not be set as active. Contact admin.`;
+    }
+
+    const record = await persistCommand({
+      commandId: genCommandId(), jobId, printerId: printer.printer_id, endpointUrl,
+      commandType, quantity: 0,
+      status: 'failed',
+      requestPayload: starPayload,
+      responsePayload: { starAttempts: starAttemptResponses, monCheck },
+      responseStatusCode: null,
+      errorMessage: finalErrorMessage,
+      sentBy: user?.email,
+    });
+
+    return {
+      success: false, sentCount: 0, failedAt: 0,
+      lastCommandRecord: record, lastMiddlewareJobId: null,
+      errorMessage: finalErrorMessage,
+      templateNotOnPrinter: monCheck.templateFound === false && !monCheck.templateListUnavailable,
+      templateExistsButFailed: monCheck.templateFound === true,
+    };
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // PHASE 2: Data loop — send DATA command N times (one per label)
+  // Template is already loaded and verified above — no need to repeat setup.
+  // ─────────────────────────────────────────────────────────────────────────
+
   for (let i = 0; i < quantity; i++) {
     const commandId = genCommandId();
+    const dataPayload = buildDataPayload(printer, podValues);
 
-    // ── Retry loop: up to MAX_STAR_READY_ATTEMPTS per label ─────────────────
-    // Protocol per attempt:
-    //   1. Send STOP  → wait for STAR/READY ack
-    //   2. Send STAR  → wait for STAR/READY ack
-    //   3. Send MON   → verify active template matches expected
-    //   If MON confirms template → success. Else retry.
-    let labelSuccess = false;
-    let lastBody = null;
-    let lastStatusCode = null;
-    let lastTransportError = null;
-    const attemptResponses = []; // Record all attempt responses for audit
+    console.log(`[DATA] Sending label ${i + 1}/${quantity} — PODs:`, podValues);
+    const dataResult = await postToMiddleware(endpointUrl, dataPayload, headers, timeoutMs, 1);
 
-    const stopPayload = {
-      printer_id: printer.printer_id,
-      printer:    { ip: printer.ip_address, port: printer.port },
-      command:    { command: PRINTER_COMMANDS.STOP },
-    };
-
-    const monPayload = {
-      printer_id: printer.printer_id,
-      printer:    { ip: printer.ip_address, port: printer.port },
-      command:    { command: PRINTER_COMMANDS.MON },
-      priority:   priority,
-    };
-
-    // ── Step A: Send STOP once before the STAR retry loop ────────────────────
-    const stopResult = await postToMiddleware(endpointUrl, stopPayload, headers, timeoutMs, 1);
-    console.log(`[STOP] Label ${i + 1}: ok=${isStopReadyResponse(stopResult.body)}, error=${stopResult.error || 'none'}`);
-
-    // ── Step B: Retry STAR up to MAX_STAR_READY_ATTEMPTS until READY ──────────
-    let starReady = false;
-    let jobIdFromStar = null;
-
-    for (let attempt = 1; attempt <= MAX_STAR_READY_ATTEMPTS; attempt++) {
-      console.log(`[STAR] Label ${i + 1}/${quantity} — attempt ${attempt}/${MAX_STAR_READY_ATTEMPTS}`);
-
-      const { statusCode, body, error: transportError } = await postToMiddleware(
-        endpointUrl, payload, headers, timeoutMs, 1
-      );
-
-      lastBody = body;
-      lastStatusCode = statusCode;
-      lastTransportError = transportError;
-      attemptResponses.push({ attempt, statusCode, body, transportError });
-
-      if (!transportError && isStarReadyResponse(body)) {
-        starReady = true;
-        jobIdFromStar = body?.job_id || null;
-        console.log(`[STAR] Label ${i + 1} — READY on attempt ${attempt}`);
-        break;
-      }
-
-      const attemptError = transportError || extractErrorMessage(body);
-      console.warn(`[STAR] Label ${i + 1} — attempt ${attempt} not READY: ${attemptError}`);
-
-      if (attempt < MAX_STAR_READY_ATTEMPTS) {
-        await new Promise(r => setTimeout(r, 1000 * attempt));
-      }
-    }
-
-    // ── Step C: MON verification — only if STAR got READY ────────────────────
-    let templateConfirmed = false;
-    if (starReady) {
-      const monResult = await postToMiddleware(endpointUrl, monPayload, headers, timeoutMs, 1);
-      const monActiveTemplate = extractActiveTemplateFromMon(monResult.body);
-
-      if (monActiveTemplate !== null) {
-        templateConfirmed = monActiveTemplate.trim().toLowerCase() === templateName.trim().toLowerCase();
-        console.log(`[MON] Active template: "${monActiveTemplate}" — expected: "${templateName}" — match: ${templateConfirmed}`);
-        if (!templateConfirmed) {
-          console.warn(`[MON] Template mismatch — printer has "${monActiveTemplate}", expected "${templateName}"`);
-        }
-      } else {
-        // MON didn't return template info — accept STAR/READY as sufficient
-        console.warn(`[MON] Could not extract active template from MON response — accepting STAR/READY`);
-        templateConfirmed = true;
-      }
-    }
-
-    // ── Step D: Send DATA — triggers exactly 1 label to print ────────────────
-    // DATA is sent only when template is confirmed (or STAR READY + MON fallback).
-    // podValues keys must match the template's POD fields (POD1, POD2, etc.)
-    if (templateConfirmed) {
-      const dataPayload = buildDataPayload(printer, podValues);
-      const dataResult  = await postToMiddleware(endpointUrl, dataPayload, headers, timeoutMs, 1);
-
-      if (isDataAckResponse(dataResult.body)) {
-        labelSuccess = true;
-        lastMiddlewareJobId = jobIdFromStar || dataResult.body?.job_id || null;
-        console.log(`[DATA] Label ${i + 1} — DATA acknowledged, label printed. PODs:`, podValues);
-      } else {
-        const dataError = dataResult.error || extractErrorMessage(dataResult.body);
-        console.warn(`[DATA] Label ${i + 1} — DATA not acknowledged: ${dataError}`);
-        lastBody        = dataResult.body;
-        lastStatusCode  = dataResult.statusCode;
-        // labelSuccess stays false — falls through to failure handling
-      }
-    }
-
-    if (!labelSuccess) {
-      // ── All 5 attempts exhausted — check via MON whether template exists ──
-      console.log(`[STAR] Label ${i + 1} — all ${MAX_STAR_READY_ATTEMPTS} attempts failed. Running MON template check...`);
-      let finalErrorMessage;
-
-      const monCheck = await checkAndSyncPrinterConfig(printer, templateName);
-
-      if (monCheck.templateListUnavailable) {
-        // Could not read template list at all
-        finalErrorMessage = `Unable to set template "${templateName}" as current template. Could not verify template list — contact admin.`;
-      } else if (monCheck.templateFound === false) {
-        // Template is definitely NOT on the printer
-        finalErrorMessage = `Unable to set template "${templateName}" in the printer — this template does not exist on the printer. Please load the template first.`;
-      } else {
-        // Template exists on printer but STAR command still failed
-        finalErrorMessage = `Unable to set template "${templateName}" as the current template. The template exists on the printer but could not be activated. Contact admin.`;
-      }
+    if (isDataAckResponse(dataResult.body)) {
+      lastMiddlewareJobId = jobIdFromStar || dataResult.body?.job_id || null;
+      console.log(`[DATA] Label ${i + 1} acknowledged — printed.`);
 
       const record = await persistCommand({
-        commandId, jobId, printerId: printer.printer_id, endpointUrl,
+        commandId, jobId, middlewareJobId: lastMiddlewareJobId,
+        printerId: printer.printer_id, endpointUrl,
+        commandType, quantity: 1,
+        status: 'acknowledged',
+        requestPayload: dataPayload, responsePayload: dataResult.body,
+        responseStatusCode: dataResult.statusCode || 200,
+        errorMessage: null,
+        sentBy: user?.email,
+      });
+      lastCommandRecord = record;
+      sentCount++;
+    } else {
+      const dataError = dataResult.error || extractErrorMessage(dataResult.body);
+      console.warn(`[DATA] Label ${i + 1} not acknowledged: ${dataError}`);
+
+      const record = await persistCommand({
+        commandId, jobId,
+        printerId: printer.printer_id, endpointUrl,
         commandType, quantity: 1,
         status: 'failed',
-        requestPayload: payload,
-        responsePayload: { attempts: attemptResponses, monCheck },
-        responseStatusCode: lastStatusCode,
-        errorMessage: finalErrorMessage,
+        requestPayload: dataPayload, responsePayload: dataResult.body,
+        responseStatusCode: dataResult.statusCode,
+        errorMessage: dataError,
         sentBy: user?.email,
       });
 
       return {
         success: false, sentCount, failedAt: i + 1,
         lastCommandRecord: record, lastMiddlewareJobId,
-        errorMessage: finalErrorMessage,
-        templateNotOnPrinter: monCheck.templateFound === false && !monCheck.templateListUnavailable,
-        templateExistsButFailed: monCheck.templateFound === true,
+        errorMessage: `Label ${i + 1} failed: ${dataError}`,
+        templateNotOnPrinter: false,
+        templateExistsButFailed: false,
       };
     }
-
-    // ── Label success — persist acknowledged record ───────────────────────────
-    const record = await persistCommand({
-      commandId, jobId, middlewareJobId: lastMiddlewareJobId,
-      printerId: printer.printer_id, endpointUrl,
-      commandType, quantity: 1,
-      status: 'acknowledged',
-      requestPayload: payload, responsePayload: lastBody,
-      responseStatusCode: lastStatusCode || 200,
-      errorMessage: null,
-      sentBy: user?.email,
-    });
-
-    lastCommandRecord = record;
-    sentCount++;
   }
 
   return {
