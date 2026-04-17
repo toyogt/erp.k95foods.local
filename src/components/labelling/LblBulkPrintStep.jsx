@@ -24,16 +24,6 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
   const [acting, setActing]           = useState(false);
   const [sendingPrint, setSendingPrint] = useState(false);
 
-  // Real-time printer polling — automatically updates printed count
-  const shouldPoll = job.status === 'bulk_printing' || job.status === 'paused';
-  usePrinterPollStatus(job, selectedPrinter, shouldPoll, 2000);
-
-  const printedQty = job.current_printed_qty || 0;
-  const remaining = (job.quantity_bottles_planned || 0) - printedQty;
-  const progress  = job.quantity_bottles_planned
-    ? Math.min(100, (printedQty / job.quantity_bottles_planned) * 100)
-    : 0;
-
   // Active printers
   const { data: printers = [] } = useQuery({
     queryKey: ['lbl-printers-active'],
@@ -66,6 +56,16 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
   const sentPodValues = dataCommand?.request_payload?.command?.data || {};
   const templateName  = jobTemplate?.middleware_template_name || '';
   const selectedPrinter = printers.find(p => p.printer_id === printerId) || null;
+
+  // Real-time printer polling — automatically updates printed count
+  const shouldPoll = job.status === 'bulk_printing' || job.status === 'paused';
+  usePrinterPollStatus(job, selectedPrinter, shouldPoll, 2000);
+
+  const printedQty = job.current_printed_qty || 0;
+  const remaining = (job.quantity_bottles_planned || 0) - printedQty;
+  const progress  = job.quantity_bottles_planned
+    ? Math.min(100, (printedQty / job.quantity_bottles_planned) * 100)
+    : 0;
 
   // ── Start bulk print: send actual commands to Rynan middleware ──
   const handleStartBulkPrint = async () => {
