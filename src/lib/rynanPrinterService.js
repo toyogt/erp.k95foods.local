@@ -100,7 +100,7 @@ export function buildStarCommand(printer, templateName, priority = PRINT_PRIORIT
     printer_id: printer.printer_id,
     printer: {
       ip:   printer.ip_address,
-      port: printer.port || 2030,
+      port: printer.port,          // always from LblPrinterConfig — never hardcoded
     },
     command: {
       command:      PRINTER_COMMANDS.STAR,
@@ -124,7 +124,7 @@ export function buildPurgePayload(printer) {
     printer_id: printer.printer_id,
     printer: {
       ip:   printer.ip_address,
-      port: printer.port || 2030,
+      port: printer.port,          // always from LblPrinterConfig — never hardcoded
     },
     command: {
       command: PRINTER_COMMANDS.PURGE,
@@ -512,7 +512,7 @@ export async function checkAndSyncPrinterConfig(printer, templateName = null) {
 
   const existingEntry = printersData?.[printer.printer_id];
   const expectedIp    = printer.ip_address;
-  const expectedPort  = printer.port || 2030;
+  const expectedPort  = printer.port;          // always from LblPrinterConfig — never hardcoded
 
   // ── STEP 2: Register or update printer config if needed ───────────────────
   if (!existingEntry) {
@@ -667,7 +667,7 @@ export async function checkTemplateExists(printer, templateName) {
 
   const rqliPayload = {
     printer_id: printer.printer_id,
-    printer:    { ip: printer.ip_address, port: printer.port || 2030 },
+    printer:    { ip: printer.ip_address, port: printer.port },   // always from LblPrinterConfig
     command:    { command: 'RQLI' },
   };
 
