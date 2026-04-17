@@ -104,6 +104,37 @@ export default function LblOperatorJob() {
       {job.status === 'demo_approved' && <LblBulkPrintStep job={job} user={user} onComplete={refreshJob} mode="start" />}
       {(job.status === 'bulk_printing' || job.status === 'paused') && <LblBulkPrintStep job={job} user={user} onComplete={refreshJob} mode="control" />}
       {job.status === 'completed' && <LblCompletionStep job={job} />}
+      {(job.status === 'bulk_printing' || job.status === 'paused') && job.current_printed_qty >= job.quantity_bottles_planned && (
+        <div className="bg-white border border-slate-200 rounded-lg p-6 text-center space-y-4">
+          <h2 className="text-lg font-semibold text-green-700">Bulk Printing Complete</h2>
+          <p className="text-sm text-slate-500">All {job.quantity_bottles_planned?.toLocaleString()} labels have been printed successfully.</p>
+          <Button
+            className="h-11 gap-2 w-full md:w-auto bg-green-600 hover:bg-green-700"
+            onClick={async () => {
+              setActing(true);
+              await base44.entities.LabellingJob.update(job.id, {
+                status: 'completed',
+                completed_at: new Date().toISOString(),
+                completed_by: user?.email,
+              });
+              await logLabellingEvent({
+                action_type: 'job_completed',
+                job_id: job.id,
+                plan_id: job.plan_id,
+                description: `Job ${job.job_id} completed — all ${job.quantity_bottles_planned} bottles printed`,
+                user,
+              });
+              toast({ title: 'Job Completed', description: 'Labelling job finished successfully.' });
+              refreshJob();
+              setActing(false);
+            }}
+            disabled={acting}
+          >
+            {acting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+            Mark as Complete
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
