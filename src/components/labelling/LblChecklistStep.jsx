@@ -78,7 +78,11 @@ export default function LblChecklistStep({ job, user, onComplete }) {
   const filledSlots    = Array.from({ length: demoQty }).map((_, i) => images[i]).filter(img => img && img.url);
   const analysing      = images.some(img => img?.analysing);
   const allSlotsReady  = filledSlots.length >= demoQty && !analysing;
-  const canSubmit      = template && allSlotsReady && !saving;
+  // Block if ANY image has AI FAIL result
+  const anyAIFail      = filledSlots.some(img => img?.analysis && img.analysis.includes('❌'));
+  // Block if any required yes_no is answered No
+  const anyNoAnswer    = items.some(item => item.type === 'yes_no' && item.required && answers[item.question] === 'No');
+  const canSubmit      = template && allSlotsReady && !anyAIFail && !anyNoAnswer && !saving;
 
   // Upload image then immediately run AI analysis
   const handleImageChange = async (e, slotIndex) => {
@@ -153,6 +157,12 @@ export default function LblChecklistStep({ job, user, onComplete }) {
     // Check if any image is still being analysed
     if (images.some(img => img?.analysing)) {
       toast({ title: 'Please wait', description: 'AI analysis is still running — please wait a moment', variant: 'destructive' });
+      return;
+    }
+
+    // Block if AI detected failures on any image
+    if (filledImages.some(img => img?.analysis?.includes('❌'))) {
+      toast({ title: 'AI Validation Failed', description: 'One or more label images failed AI inspection. Re-send the demo print with corrected label data before submitting.', variant: 'destructive', duration: 7000 });
       return;
     }
 
@@ -351,21 +361,35 @@ export default function LblChecklistStep({ job, user, onComplete }) {
       </div>
 
       {/* Submit readiness summary */}
-      <div className={`rounded-lg border px-3 py-2 flex items-center gap-2 text-xs ${
-        canSubmit ? 'bg-green-50 border-green-200 text-green-700' : 'bg-slate-50 border-slate-200 text-slate-500'
+      <div className={`rounded-lg border px-3 py-2 flex items-center gap-2 text-xs font-medium ${
+        canSubmit
+          ? 'bg-green-50 border-green-200 text-green-700'
+          : anyAIFail
+            ? 'bg-red-50 border-red-200 text-red-700'
+            : anyNoAnswer
+              ? 'bg-red-50 border-red-200 text-red-700'
+              : analysing
+                ? 'bg-purple-50 border-purple-200 text-purple-700'
+                : 'bg-amber-50 border-amber-200 text-amber-700'
       }`}>
         {canSubmit
           ? <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
-          : analysing
-            ? <Loader2 className="w-4 h-4 animate-spin shrink-0" />
-            : <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+          : anyAIFail || anyNoAnswer
+            ? <XCircle className="w-4 h-4 text-red-600 shrink-0" />
+            : analysing
+              ? <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+              : <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
         }
         <span>
           {canSubmit
-            ? `All ${demoQty} image${demoQty > 1 ? 's' : ''} uploaded and AI-analysed — ready to submit`
-            : analysing
-              ? 'AI is analysing uploaded images — please wait…'
-              : `${filledSlots.length} of ${demoQty} bottle image${demoQty > 1 ? 's' : ''} uploaded`
+            ? `All ${demoQty} image${demoQty > 1 ? 's' : ''} AI-verified and passed — ready to submit`
+            : anyAIFail
+              ? 'AI detected label issues (❌ FAIL) — re-send demo print with corrected data before submitting'
+              : anyNoAnswer
+                ? 'All required checklist questions must be answered Yes before submitting'
+                : analysing
+                  ? 'AI is analysing uploaded images — please wait…'
+                  : `${filledSlots.length} of ${demoQty} bottle image${demoQty > 1 ? 's' : ''} uploaded and analysed`
           }
         </span>
       </div>
