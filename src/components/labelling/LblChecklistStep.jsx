@@ -56,17 +56,29 @@ export default function LblChecklistStep({ job, user, onComplete }) {
     queryFn: () => base44.entities.LblChecklistTemplate.filter({ purpose: 'demo_print_approval', is_active: true }),
   });
 
-  // Load the demo print command to get original sent POD values
-  const { data: demoCommand } = useQuery({
-    queryKey: ['demo-command', job.demo_print_command_id],
-    queryFn: () => base44.entities.LblPrintCommand.filter({ command_id: job.demo_print_command_id }),
-    enabled: !!job.demo_print_command_id,
-    select: data => data?.[0] || null,
+  // Load ALL demo print commands for this job to find the DATA command with POD values
+  const { data: demoCommands = [] } = useQuery({
+    queryKey: ['demo-commands-job', job.id],
+    queryFn: () => base44.entities.LblPrintCommand.filter({ job_id: job.id, command_type: 'demo' }),
+    enabled: !!job.id,
   });
 
-  const template    = templates[0];
-  const items       = template?.items_json || [];
-  const sentPodValues = demoCommand?.request_payload?.command?.data || {};
+  const template = templates[0];
+  const items    = template?.items_json || [];
+
+  // DATA command carries the actual POD values in request_payload.command.data
+  // STAR command carries template name — so prefer DATA command for POD values
+  const dataCommand = demoCommands.find(c => c.request_payload?.command?.command === 'DATA')
+    || demoCommands.find(c => c.request_payload?.command?.data)
+    || demoCommands[0]
+    || null;
+  const sentPodValues = dataCommand?.request_payload?.command?.data || {};
+
+  // Derived submit-readiness
+  const filledSlots    = Array.from({ length: demoQty }).map((_, i) => images[i]).filter(img => img && img.url);
+  const analysing      = images.some(img => img?.analysing);
+  const allSlotsReady  = filledSlots.length >= demoQty && !analysing;
+  const canSubmit      = template && allSlotsReady && !saving;
 
   // Upload image then immediately run AI analysis
   const handleImageChange = async (e, slotIndex) => {
@@ -131,22 +143,22 @@ export default function LblChecklistStep({ job, user, onComplete }) {
       }
     }
 
-    // Validate: all image slots must be filled
-    const filledImages = Array.from({ length: demoQty }).map((_, i) => images[i]).filter(Boolean);
+    // Validate: all image slots must be filled with uploaded (not just previewed) images
+    const filledImages = Array.from({ length: demoQty }).map((_, i) => images[i]).filter(img => img && img.url);
     if (filledImages.length < demoQty) {
-      toast({ title: 'All image slots required', description: `Please upload all ${demoQty} demo bottle image(s)`, variant: 'destructive' });
+      toast({ title: 'All bottle images required', description: `Please upload all ${demoQty} demo bottle image(s) and wait for AI analysis to complete`, variant: 'destructive' });
       return;
     }
 
     // Check if any image is still being analysed
-    if (filledImages.some(img => img.analysing)) {
-      toast({ title: 'Please wait', description: 'AI analysis is still running on one or more images', variant: 'destructive' });
+    if (images.some(img => img?.analysing)) {
+      toast({ title: 'Please wait', description: 'AI analysis is still running — please wait a moment', variant: 'destructive' });
       return;
     }
 
     setSaving(true);
 
-    const imageUrls   = filledImages.map(img => img.url).filter(Boolean);
+    const imageUrls = filledImages.map(img => img.url);
     const aiAnalysis  = filledImages.map((img, idx) => ({
       image_index: idx,
       image_url:   img.url,
@@ -270,7 +282,9 @@ export default function LblChecklistStep({ job, user, onComplete }) {
 
         <div className="flex items-center gap-1.5 bg-purple-50 border border-purple-100 rounded px-2 py-1.5 mb-1">
           <Sparkles className="w-3.5 h-3.5 text-purple-500 shrink-0" />
-          <p className="text-xs text-purple-700">Each image will be automatically analysed by AI and compared against the sent label data.</p>
+          <p className="text-xs text-purple-700">
+            Upload a clear image of the labelled bottle. AI will instantly compare the printed label against the expected POD values ({Object.keys(sentPodValues).length > 0 ? Object.keys(sentPodValues).join(', ') : 'sent during demo print'}).
+          </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -336,11 +350,31 @@ export default function LblChecklistStep({ job, user, onComplete }) {
         </div>
       </div>
 
+      {/* Submit readiness summary */}
+      <div className={`rounded-lg border px-3 py-2 flex items-center gap-2 text-xs ${
+        canSubmit ? 'bg-green-50 border-green-200 text-green-700' : 'bg-slate-50 border-slate-200 text-slate-500'
+      }`}>
+        {canSubmit
+          ? <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
+          : analysing
+            ? <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+            : <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+        }
+        <span>
+          {canSubmit
+            ? `All ${demoQty} image${demoQty > 1 ? 's' : ''} uploaded and AI-analysed — ready to submit`
+            : analysing
+              ? 'AI is analysing uploaded images — please wait…'
+              : `${filledSlots.length} of ${demoQty} bottle image${demoQty > 1 ? 's' : ''} uploaded`
+          }
+        </span>
+      </div>
+
       {/* Submit */}
       <Button
         className="h-11 w-full gap-2 bg-violet-600 hover:bg-violet-700"
         onClick={handleSubmit}
-        disabled={saving || !template}
+        disabled={!canSubmit}
       >
         {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <ClipboardCheck className="w-4 h-4" />}
         Submit for Approval
