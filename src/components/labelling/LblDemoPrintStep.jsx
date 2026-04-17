@@ -100,18 +100,50 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
     if (!labelData.mrp) { toast({ title: 'MRP is required', variant: 'destructive' }); return; }
 
     // Build POD values for preview using template field mappings
+    // Full lookup table covering all ERP source keys defined in LblPrintTemplateManager
+    const erpValueMap = {
+      // Batch & Dates
+      batch_no:            labelData.batch_no,
+      mfg_date:            labelData.mfg_date,
+      manufacturing_date:  labelData.mfg_date,
+      expiry_date:         computed.expiryDate,
+      // Pricing
+      mrp:                 labelData.mrp,
+      mrp_with_usp:        labelData.mrp ? `₹${labelData.mrp}` : '',
+      usp:                 computed.uspWithUnit?.split(' ')[0] || '',
+      // Product info (from job)
+      sku_code:            job.sku_code,
+      product_name:        job.product_name,
+      bottle_type:         job.bottle_type || productMaster?.bottle_type || '',
+      brand_name:          productMaster?.brand_name || '',
+      flavour:             productMaster?.flavour || '',
+      // Volume & quantity
+      ml_per_bottle:       productMaster?.ml_per_bottle ? String(productMaster.ml_per_bottle) : '',
+      bottles_per_box:     productMaster?.bottles_per_box ? String(productMaster.bottles_per_box) : '',
+      quantity_bottles:    job.quantity_bottles_planned ? String(job.quantity_bottles_planned) : '',
+      quantity_cases:      job.quantity_cases_planned ? String(job.quantity_cases_planned) : '',
+      // Regulatory
+      fssai_no:            productMaster?.fssai_no || '',
+      manufacturer_name:   productMaster?.manufacturer_name || '',
+      manufacturer_address: [productMaster?.address_1, productMaster?.address_2].filter(Boolean).join(', '),
+      customer_care_phone: productMaster?.customer_care_phone || '',
+      customer_care_email: productMaster?.customer_care_email || '',
+      hsn_code:            productMaster?.hsn_code || '',
+      // Barcodes
+      product_barcode:     productMaster?.product_barcode || '',
+      box_barcode:         productMaster?.box_barcode || '',
+      // Line/shift
+      line_id:             job.line_id || '',
+      shift_type:          job.shift_type || '',
+      labelling_date:      job.labelling_date || '',
+      shelf_life:          productMaster?.shelf_life_days ? `${productMaster.shelf_life_days} ${productMaster.shelf_life_unit || 'months'}` : '',
+      batch_seq:           job.batch_seq ? String(job.batch_seq) : '',
+    };
+
     const podMap = {};
     if (jobTemplate?.field_mappings && jobTemplate.field_mappings.length > 0) {
       jobTemplate.field_mappings.forEach(mapping => {
-        // Map ERP source field to actual value
-        let value = '';
-        if (mapping.erp_source === 'mrp') value = labelData.mrp;
-        else if (mapping.erp_source === 'batch_no') value = labelData.batch_no;
-        else if (mapping.erp_source === 'mfg_date') value = labelData.mfg_date;
-        else if (mapping.erp_source === 'expiry_date') value = computed.expiryDate;
-        else if (mapping.erp_source === 'usp') value = computed.uspWithUnit?.split(' ')[0];
-        
-        podMap[mapping.pod_field] = value || '';
+        podMap[mapping.pod_field] = erpValueMap[mapping.erp_source] ?? '';
       });
     }
 
