@@ -62,7 +62,7 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
   usePrinterPollStatus(job, selectedPrinter, shouldPoll, 2000);
 
   // Auto-fetch active printer from latest print command for CONTROL mode
-  const { data: activePrintCommand } = useQuery({
+  const { data: activePrintCommand, refetch: refetchActivePrintCommand } = useQuery({
     queryKey: ['bulk-print-command', job.id],
     queryFn: async () => {
       const commands = await base44.entities.LblPrintCommand.filter(
@@ -73,6 +73,8 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
       return commands?.[0] || null;
     },
     enabled: job.status === 'bulk_printing' || job.status === 'paused',
+    refetchInterval: 5000, // Refetch every 5 seconds to catch newly created commands
+    staleTime: 2000, // Data is stale after 2 seconds
   });
 
   const printedQty = job.current_printed_qty || 0;
