@@ -18,13 +18,14 @@ import { Label } from '@/components/ui/label';
 import { logLabellingEvent } from '@/lib/labellingEventLogger';
 import { fetchRynanMiddlewareJobStatus } from '@/lib/rynanPrinterService';
 import { toast } from '@/components/ui/use-toast';
-import { Loader2, CheckCircle2, Clock, XCircle, RefreshCw, ShieldCheck } from 'lucide-react';
+import { Loader2, CheckCircle2, Clock, XCircle, RefreshCw, ShieldCheck, RotateCcw, AlertTriangle } from 'lucide-react';
 
 export default function LblDemoPrintVerificationStep({ job, user, onComplete }) {
   const queryClient = useQueryClient();
   const [physicalConfirmed, setPhysicalConfirmed] = useState(false);
   const [checking, setChecking] = useState(false);
   const [verifying, setVerifying] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [middlewareStatus, setMiddlewareStatus] = useState(null); // null | 'completed' | 'pending' | 'failed'
   const [middlewareRaw, setMiddlewareRaw] = useState(null);
 
@@ -68,6 +69,28 @@ export default function LblDemoPrintVerificationStep({ job, user, onComplete }) 
     }
     setChecking(false);
   }, [middlewareJobId, printer]);
+
+  // Roll back to stock_transferred so operator can re-send demo print
+  const handleResetDemoPrint = async () => {
+    setResetting(true);
+    await base44.entities.LabellingJob.update(job.id, {
+      status: 'stock_transferred',
+      demo_print_qty: 0,
+      demo_print_command_id: null,
+      demo_print_middleware_job_id: null,
+    });
+    await logLabellingEvent({
+      action_type: 'demo_print_sent',
+      job_id: job.id,
+      plan_id: job.plan_id,
+      description: `Demo print reset by operator — label was not physically printed. Returning to Demo Print step to re-send.`,
+      user,
+    });
+    toast({ title: 'Reset Done', description: 'You can now re-send the demo print.' });
+    queryClient.invalidateQueries({ queryKey: ['labelling-job', job.id] });
+    onComplete?.();
+    setResetting(false);
+  };
 
   const handleVerifyAndProceed = async () => {
     if (!physicalConfirmed) {
@@ -178,6 +201,26 @@ export default function LblDemoPrintVerificationStep({ job, user, onComplete }) 
             I have physically inspected the demo labels. The batch number, product name, MRP, manufacturing date, and expiry date are all correct and the print quality is acceptable.
           </Label>
         </div>
+      </div>
+
+      {/* Reset section — label not printed, go back to re-send */}
+      <div className="border border-amber-200 bg-amber-50 rounded-lg p-3 space-y-2">
+        <div className="flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+          <p className="text-sm font-medium text-amber-800">Label did not print physically?</p>
+        </div>
+        <p className="text-xs text-amber-700">
+          If the label was not printed on the machine (even if middleware shows success), use this to go back and re-send the demo print with corrected settings.
+        </p>
+        <Button
+          variant="outline"
+          className="h-11 w-full gap-2 border-amber-300 text-amber-800 hover:bg-amber-100"
+          onClick={handleResetDemoPrint}
+          disabled={resetting}
+        >
+          {resetting ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
+          Reset — Go Back to Re-send Demo Print
+        </Button>
       </div>
 
       <Button
