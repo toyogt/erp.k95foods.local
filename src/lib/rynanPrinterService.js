@@ -528,14 +528,17 @@ export async function sendStarCommand(printer, templateName, quantity = 1, { job
       priority:   priority,
     };
 
+    // ── Step A: Send STOP once before the STAR retry loop ────────────────────
+    const stopResult = await postToMiddleware(endpointUrl, stopPayload, headers, timeoutMs, 1);
+    console.log(`[STOP] Label ${i + 1}: ok=${isStopReadyResponse(stopResult.body)}, error=${stopResult.error || 'none'}`);
+
+    // ── Step B: Retry STAR up to MAX_STAR_READY_ATTEMPTS until READY ──────────
+    let starReady = false;
+    let jobIdFromStar = null;
+
     for (let attempt = 1; attempt <= MAX_STAR_READY_ATTEMPTS; attempt++) {
       console.log(`[STAR] Label ${i + 1}/${quantity} — attempt ${attempt}/${MAX_STAR_READY_ATTEMPTS}`);
 
-      // ── Step A: Send STOP before STAR ──────────────────────────────────────
-      const stopResult = await postToMiddleware(endpointUrl, stopPayload, headers, timeoutMs, 1);
-      console.log(`[STOP] Attempt ${attempt}: ok=${isStopReadyResponse(stopResult.body)}, error=${stopResult.error || 'none'}`);
-
-      // ── Step B: Send STAR ───────────────────────────────────────────────────
       const { statusCode, body, error: transportError } = await postToMiddleware(
         endpointUrl, payload, headers, timeoutMs, 1
       );
@@ -543,41 +546,45 @@ export async function sendStarCommand(printer, templateName, quantity = 1, { job
       lastBody = body;
       lastStatusCode = statusCode;
       lastTransportError = transportError;
+      attemptResponses.push({ attempt, statusCode, body, transportError });
 
-      const starReady = !transportError && isStarReadyResponse(body);
-      const jobIdFromStar = body?.job_id || null;
-
-      // ── Step C: Send MON to verify active template ──────────────────────────
-      let monConfirmed = false;
-      let monActiveTemplate = null;
-      if (starReady) {
-        const monResult = await postToMiddleware(endpointUrl, monPayload, headers, timeoutMs, 1);
-        monActiveTemplate = extractActiveTemplateFromMon(monResult.body);
-        if (monActiveTemplate !== null) {
-          // Compare case-insensitively
-          monConfirmed = monActiveTemplate.trim().toLowerCase() === templateName.trim().toLowerCase();
-          console.log(`[MON] Active template: "${monActiveTemplate}" — expected: "${templateName}" — match: ${monConfirmed}`);
-        } else {
-          // MON responded but couldn't extract template — treat STAR/READY as sufficient
-          console.warn(`[MON] Could not extract active template from MON response — accepting STAR/READY`);
-          monConfirmed = true;
-        }
-      }
-
-      attemptResponses.push({ attempt, statusCode, starReady, monActiveTemplate, monConfirmed, body, transportError });
-
-      if (starReady && monConfirmed) {
-        labelSuccess = true;
-        lastMiddlewareJobId = jobIdFromStar;
-        console.log(`[STAR+MON] Label ${i + 1} — template confirmed on attempt ${attempt}`);
+      if (!transportError && isStarReadyResponse(body)) {
+        starReady = true;
+        jobIdFromStar = body?.job_id || null;
+        console.log(`[STAR] Label ${i + 1} — READY on attempt ${attempt}`);
         break;
       }
 
-      const attemptError = transportError || (!starReady ? extractErrorMessage(body) : `MON: active="${monActiveTemplate}", expected="${templateName}"`);
-      console.warn(`[STAR] Label ${i + 1} — attempt ${attempt} not confirmed: ${attemptError}`);
+      const attemptError = transportError || extractErrorMessage(body);
+      console.warn(`[STAR] Label ${i + 1} — attempt ${attempt} not READY: ${attemptError}`);
 
       if (attempt < MAX_STAR_READY_ATTEMPTS) {
-        await new Promise(r => setTimeout(r, 1000 * attempt)); // exponential backoff
+        await new Promise(r => setTimeout(r, 1000 * attempt));
+      }
+    }
+
+    // ── Step C: MON verification — only if STAR got READY ────────────────────
+    if (starReady) {
+      const monResult = await postToMiddleware(endpointUrl, monPayload, headers, timeoutMs, 1);
+      const monActiveTemplate = extractActiveTemplateFromMon(monResult.body);
+
+      if (monActiveTemplate !== null) {
+        const monConfirmed = monActiveTemplate.trim().toLowerCase() === templateName.trim().toLowerCase();
+        console.log(`[MON] Active template: "${monActiveTemplate}" — expected: "${templateName}" — match: ${monConfirmed}`);
+
+        if (monConfirmed) {
+          labelSuccess = true;
+          lastMiddlewareJobId = jobIdFromStar;
+          console.log(`[STAR+MON] Label ${i + 1} — template confirmed`);
+        } else {
+          console.warn(`[MON] Template mismatch — printer has "${monActiveTemplate}", expected "${templateName}"`);
+          // starReady remains false — falls through to failure handling below
+        }
+      } else {
+        // MON didn't return template info — accept STAR/READY as sufficient
+        console.warn(`[MON] Could not extract active template from MON response — accepting STAR/READY`);
+        labelSuccess = true;
+        lastMiddlewareJobId = jobIdFromStar;
       }
     }
 
