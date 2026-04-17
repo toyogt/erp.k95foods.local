@@ -2,6 +2,9 @@ import { useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { fetchRynanPodStatus } from '@/lib/rynanPrinterService';
 
+const MILESTONE_INCREMENT = 100; // Log every 100 bottles
+const MAX_LOG_RECORDS = 1000;    // Max records per job
+
 /**
  * usePrinterPollStatus
  *
@@ -30,36 +33,62 @@ export function usePrinterPollStatus(job, printer, enabled = false, pollInterval
 
       if (!result.success) {
         console.warn('[POLL] RQLP query failed:', result.errorMessage);
+        // Log errors to database
+        await logPrinterStatusToDB(job.id, 'error', null, result.errorMessage);
         return;
       }
 
       const { printedCount, totalCount } = result;
       const planned = job.quantity_bottles_planned || 0;
-
-      console.log('[POLL] Raw RQLP response:', result.raw);
-      console.log(`[POLL] Parsed: printedCount=${printedCount}, totalCount=${totalCount}, planned=${planned}`);
-
-      // Cap printed count to planned quantity (sanity check)
       const safePrintedCount = Math.min(printedCount, planned);
 
       // Only update DB if printer reports a NEW count
       if (safePrintedCount > lastPrintedCountRef.current) {
         lastPrintedCountRef.current = safePrintedCount;
 
-        console.log(
-          `[POLL] Printer reports: ${printedCount}/${totalCount}. Safe count: ${safePrintedCount}/${planned}.`
-        );
+        // Log milestone every 100 bottles + final count
+        const isMilestone = safePrintedCount % MILESTONE_INCREMENT === 0;
+        const isFinal = safePrintedCount >= planned && planned > 0;
+
+        if (isMilestone || isFinal) {
+          console.log(`[POLL] Milestone: ${safePrintedCount}/${planned} bottles`);
+          await logPrinterStatusToDB(job.id, 'milestone', safePrintedCount, null);
+        }
 
         // Auto-update job's printed count
         await base44.entities.LabellingJob.update(job.id, {
           current_printed_qty: safePrintedCount,
           status:
-            safePrintedCount >= planned && planned > 0
+            isFinal
               ? 'completed'
               : job.status === 'paused'
               ? 'paused'
               : 'bulk_printing',
         });
+      }
+    };
+
+    // Log milestone or error to LblPrintCommand
+    const logPrinterStatusToDB = async (jobId, logType, printedQty, errorMsg) => {
+      try {
+        const recordCount = await base44.entities.LblPrintCommand.filter({ job_id: jobId });
+        if (recordCount.length >= MAX_LOG_RECORDS) return; // Skip if at limit
+
+        await base44.entities.LblPrintCommand.create({
+          command_id: `POLL-${jobId}-${Date.now()}`,
+          job_id: jobId,
+          printer_id: printer.printer_id,
+          endpoint_url: `${printer.register_app_link || printer.api_endpoint}/print`,
+          command_type: 'bulk_status_poll',
+          status: logType === 'error' ? 'failed' : 'acknowledged',
+          quantity: printedQty || 0,
+          request_payload: { command: 'RQLP' },
+          response_payload: { log_type: logType, printed_qty: printedQty },
+          error_message: errorMsg || null,
+          sent_at: new Date().toISOString(),
+        });
+      } catch (err) {
+        console.error('[POLL] Failed to log status:', err.message);
       }
     };
 
