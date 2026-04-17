@@ -45,6 +45,35 @@
         "type": "string"
       }
     },
+    "ai_analysis": {
+      "type": "array",
+      "description": "AI analysis result per image \u2014 stored after upload",
+      "items": {
+        "type": "object",
+        "properties": {
+          "image_index": {
+            "type": "number"
+          },
+          "image_url": {
+            "type": "string"
+          },
+          "analysis": {
+            "type": "string",
+            "description": "AI-generated assessment of this label image"
+          },
+          "pod_match": {
+            "type": "boolean",
+            "description": "Whether AI found POD data matches"
+          },
+          "issues": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
     "status": {
       "type": "string",
       "enum": [

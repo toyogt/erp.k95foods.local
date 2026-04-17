@@ -58,16 +58,45 @@ export default function LblSupervisorApprovals() {
                 {sub.image_urls?.length > 0 && (
                   <div className="space-y-2">
                     <h3 className="text-sm font-medium text-slate-900">Demo Bottle Images ({sub.image_urls.length})</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {sub.image_urls.map((url, i) => (
-                        <div key={i} className="space-y-1">
-                          <p className="text-xs text-slate-500 font-medium">Image {i + 1} of {sub.image_urls.length}</p>
-                          <a href={url} target="_blank" rel="noopener noreferrer">
-                            <img src={url} alt={`Demo ${i + 1}`} className="w-full rounded-lg border border-slate-200 object-contain bg-slate-50 max-h-72 hover:opacity-90 transition-opacity cursor-zoom-in" />
-                          </a>
-                          <p className="text-xs text-slate-400 text-center">Click to open full size</p>
-                        </div>
-                      ))}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {sub.image_urls.map((url, i) => {
+                        const aiResult = sub.ai_analysis?.find(a => a.image_index === i) || null;
+                        const isPass = aiResult?.analysis?.includes('✅');
+                        const isFail = aiResult?.analysis?.includes('❌');
+                        return (
+                          <div key={i} className="space-y-2">
+                            <p className="text-xs text-slate-500 font-medium">Image {i + 1} of {sub.image_urls.length}</p>
+                            <a href={url} target="_blank" rel="noopener noreferrer">
+                              <img src={url} alt={`Demo ${i + 1}`} className="w-full rounded-lg border border-slate-200 object-contain bg-slate-50 max-h-72 hover:opacity-90 transition-opacity cursor-zoom-in" />
+                            </a>
+                            <p className="text-xs text-slate-400 text-center">Click to open full size</p>
+                            {/* AI Analysis for supervisor */}
+                            {aiResult?.analysis && (
+                              <div className={`rounded-lg border p-3 space-y-1 ${
+                                isPass ? 'bg-green-50 border-green-200' :
+                                isFail ? 'bg-red-50 border-red-200' :
+                                'bg-amber-50 border-amber-200'
+                              }`}>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-xs">✨</span>
+                                  <span className={`text-xs font-semibold uppercase tracking-wide ${isPass ? 'text-green-700' : isFail ? 'text-red-700' : 'text-amber-700'}`}>
+                                    AI Label Assessment
+                                  </span>
+                                  {isPass && <span className="ml-auto text-xs font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-full">PASS</span>}
+                                  {isFail && <span className="ml-auto text-xs font-bold text-red-700 bg-red-100 px-2 py-0.5 rounded-full">FAIL</span>}
+                                </div>
+                                <p className={`text-xs leading-relaxed whitespace-pre-wrap ${isPass ? 'text-green-800' : isFail ? 'text-red-800' : 'text-amber-800'}`}>
+                                  {aiResult.analysis}
+                                </p>
+                              </div>
+                            )}
+                            {/* No AI analysis available */}
+                            {!aiResult?.analysis && (
+                              <p className="text-xs text-slate-400 italic text-center">No AI analysis available for this image</p>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
