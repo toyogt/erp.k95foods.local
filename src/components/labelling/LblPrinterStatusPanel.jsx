@@ -186,12 +186,12 @@ export default function LblPrinterStatusPanel({ printer, job, user, templateName
               icon={FileText}
               iconClass={result.templateFound ? 'text-green-600' : 'text-red-500'}
               label={`Template "${templateName}"`}
-              value={result.templateFound ? 'Found on printer' : 'NOT found on printer'}
+              value={result.templateFound ? `Found on printer (${result.availableTemplates.length} total templates)` : 'NOT found on printer'}
               valueClass={result.templateFound ? 'text-green-700' : 'text-red-700'}
             >
               {!result.templateFound && result.availableTemplates.length > 0 && (
                 <div className="mt-1">
-                  <p className="text-xs text-slate-500 mb-0.5">Available templates on this printer:</p>
+                  <p className="text-xs text-slate-500 mb-0.5">Templates on this printer ({result.availableTemplates.length}):</p>
                   <div className="flex flex-wrap gap-1">
                     {result.availableTemplates.map(t => (
                       <span key={t} className="text-xs bg-slate-100 border border-slate-200 rounded px-1.5 py-0.5 font-mono text-slate-700">{t}</span>
@@ -200,7 +200,7 @@ export default function LblPrinterStatusPanel({ printer, job, user, templateName
                 </div>
               )}
               {!result.templateFound && result.availableTemplates.length === 0 && (
-                <p className="text-xs text-amber-600 mt-0.5">No templates found on this printer — check middleware configuration.</p>
+                <p className="text-xs text-amber-600 mt-0.5">Could not read template list from printer — check middleware configuration.</p>
               )}
             </Row>
           )}

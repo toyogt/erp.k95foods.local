@@ -640,11 +640,15 @@ export async function checkAndSyncPrinterConfig(printer, templateName = null) {
   }
 
   // ── STEP 5: RQLI — check if templateName exists on the printer ────────────
-  if (templateName && result.connectionOk) {
+  // Run template check regardless of connectionOk (MON may fail due to cartridge
+  // but RQLI is independent — it only needs middleware reachability which we
+  // already confirmed in step 1 via GET /printers)
+  if (templateName) {
     const tplCheck = await checkTemplateExists(printer, templateName);
     result.templateFound      = tplCheck.found;
     result.availableTemplates = tplCheck.availableTemplates;
     result.templateError      = tplCheck.error;
+    console.log('[STEP5] Template check result:', { templateName, found: tplCheck.found, total: tplCheck.availableTemplates.length, list: tplCheck.availableTemplates });
   }
 
   return result;
@@ -720,6 +724,10 @@ export async function checkTemplateExists(printer, templateName) {
  */
 function extractTemplateList(body) {
   if (!body) return [];
+
+  console.log('[RQLI extractTemplateList] body keys:', Object.keys(body));
+  console.log('[RQLI extractTemplateList] printer_response_payload:', body.printer_response_payload);
+  console.log('[RQLI extractTemplateList] success:', body.success, '| printer_ok:', body.printer_ok);
 
   // 1. Primary: printer_response_payload.template (confirmed real structure)
   const payload = body.printer_response_payload;
