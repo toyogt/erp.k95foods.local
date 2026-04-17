@@ -96,7 +96,7 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
   });
 
   const activePrinterId = activePrintCommand?.printer_id;
-  const activeSelectedPrinter = printers.find(p => p.printer_id === activePrinterId) || selectedPrinter;
+  const activeSelectedPrinter = printers.find(p => p.printer_id === activePrinterId);
 
   // ── Start bulk print: send actual commands to Rynan middleware ──
   const handleStartBulkPrint = async () => {
