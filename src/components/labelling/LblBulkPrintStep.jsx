@@ -82,11 +82,21 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
 
     setSendingPrint(true);
 
-    // STOP → STAR (load template, retry up to 5) → MON (verify) → DATA × qty
+    // Calculate remaining bottles to print (account for progress)
+    const alreadyPrinted = job.current_printed_qty || 0;
+    const remaining = qty - alreadyPrinted;
+
+    if (remaining <= 0) {
+      toast({ title: 'All bottles already printed', description: 'This job is complete or has been fully printed.' });
+      setSendingPrint(false);
+      return;
+    }
+
+    // STOP → STAR (load template, retry up to 5) → MON (verify) → DATA × remaining
     const result = await sendStarCommand(
       selectedPrinter,
       templateName,
-      qty,
+      remaining, // only send DATA for remaining bottles
       { jobId: job.id, commandType: 'bulk_start', user, podValues: sentPodValues }
     );
 
@@ -117,10 +127,11 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
       return;
     }
 
-    // Success — update job status
+    // Success — update job status (add to existing count)
+    const newPrintedQty = alreadyPrinted + result.sentCount;
     await base44.entities.LabellingJob.update(job.id, {
-      status:              'bulk_printing',
-      current_printed_qty: result.sentCount,
+      status:              newPrintedQty >= qty ? 'completed' : 'bulk_printing',
+      current_printed_qty: newPrintedQty,
     });
 
     await logLabellingEvent({

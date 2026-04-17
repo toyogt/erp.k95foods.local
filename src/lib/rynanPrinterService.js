@@ -541,6 +541,13 @@ export async function checkTemplateExists(printer, templateName, maxRetries = 3)
  *   podValues: { POD1: "val", POD2: "val", ... } — sent in each DATA command
  * @returns {{ success, sentCount, failedAt, lastCommandRecord, lastMiddlewareJobId, errorMessage }}
  */
+/**
+ * sendStarCommand
+ *
+ * @param {number} quantity - How many NEW labels to print (NOT total planned)
+ *   For demo: pass 2 (send 2 DATA commands)
+ *   For bulk: pass (job.quantity_bottles_planned - job.current_printed_qty)
+ */
 export async function sendStarCommand(printer, templateName, quantity = 1, { jobId, commandType = 'demo', user, podValues = {} } = {}) {
   if (!jobId) {
     jobId = `JOB-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
