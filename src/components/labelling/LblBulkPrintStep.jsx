@@ -11,20 +11,24 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { logLabellingEvent } from '@/lib/labellingEventLogger';
 import { sendStarCommand } from '@/lib/rynanPrinterService';
+import { usePrinterPollStatus } from '@/hooks/usePrinterPollStatus';
 import { toast } from '@/components/ui/use-toast';
 import { Loader2, Play, Pause, RotateCcw, Printer, AlertTriangle } from 'lucide-react';
 
 export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
-  const [printedQty, setPrintedQty]   = useState(job.current_printed_qty || 0);
   const [printerId, setPrinterId]     = useState('');
   const [acting, setActing]           = useState(false);
   const [sendingPrint, setSendingPrint] = useState(false);
 
+  // Real-time printer polling — automatically updates printed count
+  const shouldPoll = job.status === 'bulk_printing' || job.status === 'paused';
+  usePrinterPollStatus(job, selectedPrinter, shouldPoll, 2000);
+
+  const printedQty = job.current_printed_qty || 0;
   const remaining = (job.quantity_bottles_planned || 0) - printedQty;
   const progress  = job.quantity_bottles_planned
     ? Math.min(100, (printedQty / job.quantity_bottles_planned) * 100)
@@ -163,11 +167,7 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
     setActing(false);
   };
 
-  const handleUpdateQty = async () => {
-    await base44.entities.LabellingJob.update(job.id, { current_printed_qty: printedQty });
-    toast({ title: 'Printed Quantity Updated' });
-    onComplete?.();
-  };
+
 
   // ── START mode — shown before bulk printing begins ──
   if (mode === 'start') {
@@ -269,19 +269,9 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
         </div>
       </div>
 
-      {/* Manual printed count update */}
-      <div className="flex gap-2 items-end">
-        <div className="flex-1 space-y-1">
-          <Label className="text-xs font-medium text-slate-700">Current Printed Count</Label>
-          <Input
-            type="number"
-            value={printedQty}
-            onChange={e => setPrintedQty(Number(e.target.value))}
-            className="h-11 md:h-9"
-            min="0"
-          />
-        </div>
-        <Button variant="outline" className="h-11 md:h-9" onClick={handleUpdateQty}>Update</Button>
+      {/* Printed count is auto-updated from printer via RQLP polling */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-700">
+        ℹ Print count is automatically updated from the printer every 2 seconds using RQLP status command.
       </div>
 
       <div className="flex flex-col md:flex-row gap-3">
