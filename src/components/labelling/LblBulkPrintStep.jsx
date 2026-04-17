@@ -61,11 +61,42 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
   const shouldPoll = job.status === 'bulk_printing' || job.status === 'paused';
   usePrinterPollStatus(job, selectedPrinter, shouldPoll, 2000);
 
+  // Auto-fetch active printer from latest print command for CONTROL mode
+  const { data: activePrintCommand } = useQuery({
+    queryKey: ['bulk-print-command', job.id],
+    queryFn: async () => {
+      const commands = await base44.entities.LblPrintCommand.filter(
+        { job_id: job.id, command_type: 'bulk_start' },
+        '-created_date',
+        1
+      );
+      return commands?.[0] || null;
+    },
+    enabled: job.status === 'bulk_printing' || job.status === 'paused',
+  });
+
   const printedQty = job.current_printed_qty || 0;
   const remaining = (job.quantity_bottles_planned || 0) - printedQty;
   const progress  = job.quantity_bottles_planned
     ? Math.min(100, (printedQty / job.quantity_bottles_planned) * 100)
     : 0;
+
+  // Auto-fetch active printer from latest print command (MUST be at component level, not inside conditionals)
+  const { data: activePrintCommand } = useQuery({
+    queryKey: ['bulk-print-command', job.id],
+    queryFn: async () => {
+      const commands = await base44.entities.LblPrintCommand.filter(
+        { job_id: job.id, command_type: 'bulk_start' },
+        '-created_date',
+        1
+      );
+      return commands?.[0] || null;
+    },
+    enabled: job.status === 'bulk_printing' || job.status === 'paused',
+  });
+
+  const activePrinterId = activePrintCommand?.printer_id;
+  const activeSelectedPrinter = printers.find(p => p.printer_id === activePrinterId) || selectedPrinter;
 
   // ── Start bulk print: send actual commands to Rynan middleware ──
   const handleStartBulkPrint = async () => {
@@ -327,24 +358,6 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
       </div>
     );
   }
-
-  // Auto-fetch active printer from latest print command for this job
-  const { data: activePrintCommand } = useQuery({
-    queryKey: ['bulk-print-command', job.id],
-    queryFn: async () => {
-      const commands = await base44.entities.LblPrintCommand.filter(
-        { job_id: job.id, command_type: 'bulk_start' },
-        '-created_date',
-        1
-      );
-      return commands?.[0] || null;
-    },
-    enabled: job.status === 'bulk_printing' || job.status === 'paused',
-  });
-
-  // Auto-select printer from active command (no re-selection needed in CONTROL mode)
-  const activePrinterId = activePrintCommand?.printer_id;
-  const activeSelectedPrinter = printers.find(p => p.printer_id === activePrinterId) || selectedPrinter;
 
   // Update handlers to use active printer automatically
   const handleStopPrinting_Auto = async () => {
