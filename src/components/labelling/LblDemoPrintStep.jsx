@@ -14,7 +14,6 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { toast } from '@/components/ui/use-toast';
 import { computeLabelFields } from '@/lib/labelFieldComputer';
-import { resolveDemoPrintLabelData } from '@/lib/buildRynanLabelData';
 import { sendStarCommand } from '@/lib/rynanPrinterService';
 import { logLabellingEvent } from '@/lib/labellingEventLogger';
 import LblPrinterStatusPanel from './LblPrinterStatusPanel';
@@ -167,69 +166,16 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
 
     const qty = Number(demoQty);
 
-    // Compute label fields for audit log only (not sent to middleware — template handles data on printer side)
-    const { computedFields: podFields } = resolveDemoPrintLabelData({
-      job,
-      productMaster,
-      labelInputs: {
-        mrp:      labelData.mrp,
-        mfg_date: labelData.mfg_date,
-        batch_no: labelData.batch_no,
-      },
-      skuPodMappings: [],
-    });
-
     if (!jobTemplate) {
       toast({ title: 'No Template Configured', description: 'This job has no print template assigned. Ensure a template was selected during plan creation.', variant: 'destructive' });
       setSending(false);
       return;
     }
 
-    // Build POD values from template field mappings to send via DATA command
-    // Each key is a POD field (POD1, POD2...) mapped to its resolved ERP value
-    const erpValueMap = {
-      batch_no:             computed.batchNo,
-      mfg_date:             computed.mfgDate,
-      manufacturing_date:   computed.mfgDate,
-      expiry_date:          computed.expiryDate,
-      mrp:                  computed.mrp,
-      mrp_with_usp:         computed.mrpWithUsp,
-      usp:                  computed.usp,
-      usp_with_unit:        computed.uspWithUnit,
-      mrp_and_usp:          computed.mrpAndUsp,
-      tax_line:             computed.taxLine,
-      net_weight:           computed.netWeight,
-      mfg_date_offset:      computed.mfgDateOffset,
-      expiry_date_offset:   computed.expiryDateOffset,
-      sku_code:             job.sku_code,
-      product_name:         job.product_name || computed.productName,
-      bottle_type:          job.bottle_type || productMaster?.bottle_type || '',
-      brand_name:           productMaster?.brand_name || '',
-      flavour:              productMaster?.flavour || '',
-      ml_per_bottle:        productMaster?.ml_per_bottle ? String(productMaster.ml_per_bottle) : '',
-      bottles_per_box:      productMaster?.bottles_per_box ? String(productMaster.bottles_per_box) : '',
-      fssai_no:             productMaster?.fssai_no || '',
-      manufacturer_name:    productMaster?.manufacturer_name || '',
-      manufacturer_address: [productMaster?.address_1, productMaster?.address_2].filter(Boolean).join(', '),
-      customer_care_phone:  productMaster?.customer_care_phone || '',
-      customer_care_email:  productMaster?.customer_care_email || '',
-      hsn_code:             productMaster?.hsn_code || '',
-      product_barcode:      productMaster?.product_barcode || '',
-      box_barcode:          productMaster?.box_barcode || '',
-      line_id:              job.line_id || '',
-      shift_type:           job.shift_type || '',
-      labelling_date:       job.labelling_date || '',
-    };
+    // Use exactly the same POD values shown in the preview modal — no rebuilding
+    const podValues = previewPodValues || {};
 
-    // Build { POD1: "value", POD2: "value", ... } from template mappings
-    const podValues = {};
-    if (jobTemplate?.field_mappings?.length > 0) {
-      jobTemplate.field_mappings.forEach(mapping => {
-        podValues[mapping.pod_field] = erpValueMap[mapping.erp_source] ?? '';
-      });
-    }
-
-    // Send qty labels — each label: STOP → STAR (retry) → MON (verify) → DATA (print with POD values)
+    // Send qty labels — STOP → STAR (once) → MON (verify once) → DATA × qty
     const result = await sendStarCommand(
       printer,
       templateName,
@@ -277,7 +223,7 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
       action_type: 'demo_print_sent',
       job_id: job.id,
       plan_id: job.plan_id,
-      description: `Demo print of ${qty} label(s) sent to ${printer.name} using template "${templateName}". Batch: ${podFields.batchNo}, MFG: ${podFields.mfgDate}, EXP: ${podFields.expiryDate}, MRP: ₹${podFields.mrp}. Middleware job: ${result.lastMiddlewareJobId || 'N/A'}.`,
+      description: `Demo print of ${qty} label(s) sent to ${printer.name} using template "${templateName}". PODs: ${JSON.stringify(podValues)}. Middleware job: ${result.lastMiddlewareJobId || 'N/A'}.`,
       user,
     });
 
