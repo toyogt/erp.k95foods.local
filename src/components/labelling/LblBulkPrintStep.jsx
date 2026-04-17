@@ -345,29 +345,107 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
     );
   }
 
-  // Update handlers to use active printer automatically
+  // ── Stop: Use active printer from latest print command ──
   const handleStopPrinting_Auto = async () => {
     if (!activeSelectedPrinter) {
       toast({ title: 'No active printer found', variant: 'destructive' });
       return;
     }
-    // Delegate to existing handler with auto-fetched printer
-    const originalPrinter = selectedPrinter;
-    setPrinterId(activeSelectedPrinter.printer_id);
-    // Call original handler which now has the printer
-    await new Promise(r => setTimeout(r, 100)); // Let state update
-    return handleStopPrinting();
+
+    setActing(true);
+
+    const { postToMiddleware, buildHeaders, getPrinterBase, MIDDLEWARE_ENDPOINTS, PRINTER_COMMANDS } = await import('@/lib/rynanPrinterService');
+
+    const stopPayload = {
+      printer_id: activeSelectedPrinter.printer_id,
+      printer: { ip: activeSelectedPrinter.ip_address, port: activeSelectedPrinter.port },
+      command: { command: PRINTER_COMMANDS.STOP },
+    };
+
+    const base = getPrinterBase(activeSelectedPrinter);
+    const headers = buildHeaders(activeSelectedPrinter);
+    const { error: transportError, body } = await postToMiddleware(
+      `${base}${MIDDLEWARE_ENDPOINTS.PRINT}`,
+      stopPayload,
+      headers,
+      activeSelectedPrinter.request_timeout_ms || 15000
+    );
+
+    if (transportError && !body) {
+      toast({
+        title: 'Failed to Stop Printer',
+        description: transportError,
+        variant: 'destructive',
+      });
+      setActing(false);
+      return;
+    }
+
+    await base44.entities.LabellingJob.update(job.id, { status: 'paused' });
+    await logLabellingEvent({
+      action_type: 'bulk_print_stopped',
+      job_id: job.id,
+      plan_id: job.plan_id,
+      description: `Bulk print stopped at ${printedQty} bottles (of ${job.quantity_bottles_planned} target).`,
+      user,
+    });
+
+    toast({ title: 'Printing Stopped', description: 'Printer queue cleared. Ready to resume.' });
+    onComplete?.();
+    setActing(false);
   };
 
+  // ── Resume: Use active printer from latest print command ──
   const handleResumePrinting_Auto = async () => {
     if (!activeSelectedPrinter) {
       toast({ title: 'No active printer found', variant: 'destructive' });
       return;
     }
-    const originalPrinter = selectedPrinter;
-    setPrinterId(activeSelectedPrinter.printer_id);
-    await new Promise(r => setTimeout(r, 100));
-    return handleResumePrinting();
+    if (!templateName) {
+      toast({ title: 'No print template assigned', variant: 'destructive' });
+      return;
+    }
+
+    setActing(true);
+    const qty = job.quantity_bottles_planned || 0;
+    const alreadyPrinted = printedQty;
+    const remaining = qty - alreadyPrinted;
+
+    if (remaining <= 0) {
+      toast({ title: 'All bottles already printed' });
+      setActing(false);
+      return;
+    }
+
+    const result = await sendStarCommand(
+      activeSelectedPrinter,
+      templateName,
+      remaining,
+      { jobId: job.id, commandType: 'bulk_resume', user, podValues: sentPodValues }
+    );
+
+    if (!result.success) {
+      toast({
+        title: 'Resume Failed',
+        description: result.errorMessage || 'Could not resume printing',
+        variant: 'destructive',
+      });
+      setActing(false);
+      return;
+    }
+
+    await base44.entities.LabellingJob.update(job.id, { status: 'bulk_printing' });
+    await logLabellingEvent({
+      action_type: 'bulk_print_resumed',
+      job_id: job.id,
+      plan_id: job.plan_id,
+      description: `Bulk print resumed. Sending ${remaining} more DATA commands to ${activeSelectedPrinter.name}.`,
+      user,
+    });
+
+    toast({ title: 'Printing Resumed', description: `${remaining} labels queued to printer.` });
+    onComplete?.();
+    setActing(false);
   };
 
   // ── CONTROL mode — shown once bulk_printing is active ──
