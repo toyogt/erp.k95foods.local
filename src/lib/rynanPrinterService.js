@@ -139,10 +139,16 @@ export function buildPurgePayload(printer) {
 // LAYER 3 — TRANSPORT UTILITIES (HTTP + audit)
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Strip trailing /print or / from base URL then append a path */
+/** Strip trailing slash (and optional /print suffix) from base URL then append a path */
 function buildUrl(baseUrl, path) {
   const base = (baseUrl || '').replace(/\/print\/?$/, '').replace(/\/$/, '');
   return `${base}${path}`;
+}
+
+/** Get the clean base URL from printer config — always prefer register_app_link */
+function getPrinterBase(printer) {
+  const raw = printer.register_app_link || printer.api_endpoint || '';
+  return raw.replace(/\/print\/?$/, '').replace(/\/$/, '');
 }
 
 /** Build auth + content-type headers from printer config */
@@ -298,7 +304,7 @@ export async function sendStarCommand(printer, templateName, quantity = 1, { job
     jobId = `JOB-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   }
 
-  const endpointUrl = buildUrl(printer.register_app_link || printer.api_endpoint || '', MIDDLEWARE_ENDPOINTS.PRINT);
+  const endpointUrl = `${getPrinterBase(printer)}${MIDDLEWARE_ENDPOINTS.PRINT}`;
   const headers     = buildHeaders(printer);
   const priority    = printer.default_priority || PRINT_PRIORITY.NORMAL;
   const timeoutMs   = printer.request_timeout_ms || 15000;
@@ -421,7 +427,7 @@ export async function sendRynanTestCommand(printer, user) {
  * Endpoint: POST /print
  */
 export async function sendPurgeCommand(printer, user) {
-  const endpointUrl = buildUrl(printer.register_app_link || printer.api_endpoint || '', MIDDLEWARE_ENDPOINTS.PRINT);
+  const endpointUrl = `${getPrinterBase(printer)}${MIDDLEWARE_ENDPOINTS.PRINT}`;
   const headers     = buildHeaders(printer);
   const payload     = buildPurgePayload(printer);
 
@@ -475,7 +481,7 @@ export async function sendPurgeCommand(printer, user) {
  * }}
  */
 export async function checkAndSyncPrinterConfig(printer, templateName = null) {
-  const base    = (printer.register_app_link || printer.api_endpoint || '').replace(/\/print\/?$/, '').replace(/\/$/, '');
+  const base          = getPrinterBase(printer);
   const headers       = buildHeaders(printer, false);
   const jsonHeaders   = buildHeaders(printer, true);
   const timeoutMs     = printer.request_timeout_ms || 10000;
@@ -668,7 +674,7 @@ export async function checkAndSyncPrinterConfig(printer, templateName = null) {
  * @returns {{ found: bool, availableTemplates: string[], error: string|null }}
  */
 export async function checkTemplateExists(printer, templateName) {
-  const base      = (printer.register_app_link || printer.api_endpoint || '').replace(/\/print\/?$/, '').replace(/\/$/, '');
+  const base      = getPrinterBase(printer);
   const headers   = buildHeaders(printer, true);
   const timeoutMs = printer.request_timeout_ms || 10000;
 
@@ -785,7 +791,7 @@ export async function getPrinterStatus(printer) {
  * Used by the Rynan Printer Center diagnostics page.
  */
 export async function getRynanMiddlewareSnapshot(printer) {
-  const base    = (printer.register_app_link || printer.api_endpoint || '').replace(/\/print\/?$/, '').replace(/\/$/, '');
+  const base    = getPrinterBase(printer);
   const headers = buildHeaders(printer, false);
 
   const fetchJson = async (path) => {
@@ -817,7 +823,7 @@ export async function getRynanMiddlewareSnapshot(printer) {
  * Endpoint: GET /job/{middlewareJobId}
  */
 export async function fetchRynanMiddlewareJobStatus({ printer, middlewareJobId }) {
-  const base    = (printer.register_app_link || printer.api_endpoint || '').replace(/\/print\/?$/, '').replace(/\/$/, '');
+  const base    = getPrinterBase(printer);
   const headers = buildHeaders(printer, false);
 
   const res = await fetch(`${base}${MIDDLEWARE_ENDPOINTS.JOB_STATUS}/${middlewareJobId}`, { headers });
