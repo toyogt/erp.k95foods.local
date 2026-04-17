@@ -653,56 +653,84 @@ export async function sendStarCommand(printer, templateName, quantity = 1, { job
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // PHASE 2: Data loop — send DATA command N times (one per label)
-  // Template is already loaded and verified above — no need to repeat setup.
+  // PHASE 2: Data loop — send DATA commands in concurrent batches
+  //
+  // Instead of sending one at a time (serial), we send BATCH_SIZE commands
+  // in parallel using Promise.all. Each batch waits for all in-flight
+  // requests to resolve before sending the next batch.
+  //
+  // BATCH_SIZE of 10 means 10 concurrent fetch calls at once — reduces
+  // wall-clock time by ~10x vs serial for large quantities.
+  //
+  // DB audit persistence is deferred: we write ONE summary record after
+  // the entire batch completes instead of N individual records.
   // ─────────────────────────────────────────────────────────────────────────
 
-  for (let i = 0; i < quantity; i++) {
-    const commandId = genCommandId();
-    const dataPayload = buildDataPayload(printer, podValues);
+  const BATCH_SIZE = 10;
+  const dataPayload = buildDataPayload(printer, podValues); // same payload for all labels
+  let failedAt = null;
+  let failedError = null;
 
-    console.log(`[DATA] Sending label ${i + 1}/${quantity} — PODs:`, podValues);
-    const dataResult = await postToMiddleware(endpointUrl, dataPayload, headers, timeoutMs, 1);
+  for (let batchStart = 0; batchStart < quantity; batchStart += BATCH_SIZE) {
+    const batchEnd = Math.min(batchStart + BATCH_SIZE, quantity);
+    const batchSize = batchEnd - batchStart;
 
-    if (isDataAckResponse(dataResult.body)) {
-      lastMiddlewareJobId = jobIdFromStar || dataResult.body?.job_id || null;
-      console.log(`[DATA] Label ${i + 1} acknowledged — printed.`);
+    console.log(`[DATA] Sending batch ${batchStart + 1}–${batchEnd} of ${quantity}`);
 
-      const record = await persistCommand({
-        commandId, jobId, middlewareJobId: lastMiddlewareJobId,
-        printerId: printer.printer_id, endpointUrl,
-        commandType, quantity: 1,
-        status: 'acknowledged',
-        requestPayload: dataPayload, responsePayload: dataResult.body,
-        responseStatusCode: dataResult.statusCode || 200,
-        errorMessage: null,
-        sentBy: user?.email,
-      });
-      lastCommandRecord = record;
-      sentCount++;
-    } else {
-      const dataError = dataResult.error || extractErrorMessage(dataResult.body);
-      console.warn(`[DATA] Label ${i + 1} not acknowledged: ${dataError}`);
+    // Fire batchSize DATA commands concurrently
+    const batchResults = await Promise.all(
+      Array.from({ length: batchSize }, () =>
+        postToMiddleware(endpointUrl, dataPayload, headers, timeoutMs, 1)
+      )
+    );
 
-      const record = await persistCommand({
-        commandId, jobId,
-        printerId: printer.printer_id, endpointUrl,
-        commandType, quantity: 1,
-        status: 'failed',
-        requestPayload: dataPayload, responsePayload: dataResult.body,
-        responseStatusCode: dataResult.statusCode,
-        errorMessage: dataError,
-        sentBy: user?.email,
-      });
+    // Check each result in the batch
+    for (let j = 0; j < batchResults.length; j++) {
+      const dataResult = batchResults[j];
+      const labelIndex = batchStart + j + 1;
 
-      return {
-        success: false, sentCount, failedAt: i + 1,
-        lastCommandRecord: record, lastMiddlewareJobId,
-        errorMessage: `Label ${i + 1} failed: ${dataError}`,
-        templateNotOnPrinter: false,
-        templateExistsButFailed: false,
-      };
+      if (isDataAckResponse(dataResult.body)) {
+        lastMiddlewareJobId = jobIdFromStar || dataResult.body?.job_id || lastMiddlewareJobId;
+        sentCount++;
+      } else {
+        const dataError = dataResult.error || extractErrorMessage(dataResult.body);
+        console.warn(`[DATA] Label ${labelIndex} not acknowledged: ${dataError}`);
+        failedAt    = labelIndex;
+        failedError = dataError;
+        break;
+      }
     }
+
+    if (failedAt !== null) break;
+  }
+
+  // ── Single DB audit record for the whole bulk run (much faster than per-label) ──
+  const summaryStatus = failedAt !== null ? 'failed' : 'acknowledged';
+  const summaryRecord = await persistCommand({
+    commandId:           genCommandId(),
+    jobId,
+    middlewareJobId:     lastMiddlewareJobId,
+    printerId:           printer.printer_id,
+    endpointUrl,
+    commandType,
+    quantity:            sentCount,
+    status:              summaryStatus,
+    requestPayload:      dataPayload,
+    responsePayload:     { sentCount, failedAt, totalRequested: quantity },
+    responseStatusCode:  200,
+    errorMessage:        failedError,
+    sentBy:              user?.email,
+  });
+  lastCommandRecord = summaryRecord;
+
+  if (failedAt !== null) {
+    return {
+      success: false, sentCount, failedAt,
+      lastCommandRecord, lastMiddlewareJobId,
+      errorMessage: `Label ${failedAt} failed: ${failedError}`,
+      templateNotOnPrinter: false,
+      templateExistsButFailed: false,
+    };
   }
 
   return {
