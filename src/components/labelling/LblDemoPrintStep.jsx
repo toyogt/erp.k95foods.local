@@ -19,6 +19,7 @@ import { sendStarCommand } from '@/lib/rynanPrinterService';
 import { logLabellingEvent } from '@/lib/labellingEventLogger';
 import LblPrinterStatusPanel from './LblPrinterStatusPanel';
 import LblPrintPreviewModal from './LblPrintPreviewModal';
+import { Link } from 'react-router-dom';
 import { Loader2, Printer, AlertTriangle } from 'lucide-react';
 
 export default function LblDemoPrintStep({ job, user, onComplete }) {
@@ -236,7 +237,7 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
         <p className="text-slate-600 col-span-2">
           <span className="font-medium">Selected Template:</span>{' '}
           {jobTemplate
-            ? <span className="font-mono text-purple-700">{jobTemplate.name} [{templateName}]</span>
+            ? <Link to="/LblPrintTemplateManager" className="font-mono text-purple-700 hover:text-purple-900 underline underline-offset-2">{jobTemplate.name} [{templateName}]</Link>
             : <span className="text-amber-600">⚠ No template assigned — select during plan creation</span>
           }
         </p>
