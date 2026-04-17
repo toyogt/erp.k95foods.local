@@ -1009,6 +1009,73 @@ export async function getRynanMiddlewareSnapshot(printer) {
 }
 
 /**
+ * fetchRynanPodStatus
+ *
+ * Sends RQLP command to the printer to query the last printed label's POD data.
+ * The printer responds with RSFP: { value: "1/5", data: { col1, col2, ... } }
+ *   - value "X/Y" → X = labels printed so far, Y = total labels in the job
+ *   - data colN → maps to PODN sent in the DATA command
+ *
+ * @param {object} printer       - LblPrinterConfig record
+ * @returns {{
+ *   success: bool,
+ *   printedCount: number,
+ *   totalCount: number,
+ *   allPrinted: bool,
+ *   printerPodData: object,  // { col1: "...", col2: "...", ... }
+ *   raw: object,
+ *   errorMessage: string|null
+ * }}
+ */
+export async function fetchRynanPodStatus(printer) {
+  const base      = getPrinterBase(printer);
+  const headers   = buildHeaders(printer, true);
+  const timeoutMs = printer.request_timeout_ms || 15000;
+
+  const rqlpPayload = {
+    printer_id: printer.printer_id,
+    printer:    { ip: printer.ip_address, port: printer.port },
+    command:    { command: 'RQLP' },
+  };
+
+  const { statusCode, body, error: transportError } = await postToMiddleware(
+    `${base}${MIDDLEWARE_ENDPOINTS.PRINT}`,
+    rqlpPayload,
+    headers,
+    timeoutMs
+  );
+
+  if (transportError && !body) {
+    return { success: false, printedCount: 0, totalCount: 0, allPrinted: false, printerPodData: {}, raw: null, errorMessage: transportError };
+  }
+
+  if (!body?.success) {
+    return { success: false, printedCount: 0, totalCount: 0, allPrinted: false, printerPodData: {}, raw: body, errorMessage: body?.error || `HTTP ${statusCode}` };
+  }
+
+  // Parse value "X/Y"
+  const valueStr = body?.printer_response_payload?.value || body?.response?.response?.value || '';
+  const [printedStr, totalStr] = valueStr.split('/');
+  const printedCount = parseInt(printedStr, 10) || 0;
+  const totalCount   = parseInt(totalStr, 10)   || 0;
+
+  // Extract col data
+  const printerPodData = body?.printer_response_payload?.data
+    || body?.response?.response?.data
+    || {};
+
+  return {
+    success:       true,
+    printedCount,
+    totalCount,
+    allPrinted:    totalCount > 0 && printedCount >= totalCount,
+    printerPodData,
+    raw:           body,
+    errorMessage:  null,
+  };
+}
+
+/**
  * fetchRynanMiddlewareJobStatus
  * Checks the status of a specific middleware print job by ID.
  */
