@@ -328,10 +328,61 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
     );
   }
 
+  // Auto-fetch active printer from latest print command for this job
+  const { data: activePrintCommand } = useQuery({
+    queryKey: ['bulk-print-command', job.id],
+    queryFn: async () => {
+      const commands = await base44.entities.LblPrintCommand.filter(
+        { job_id: job.id, command_type: 'bulk_start' },
+        '-created_date',
+        1
+      );
+      return commands?.[0] || null;
+    },
+    enabled: job.status === 'bulk_printing' || job.status === 'paused',
+  });
+
+  // Auto-select printer from active command (no re-selection needed in CONTROL mode)
+  const activePrinterId = activePrintCommand?.printer_id;
+  const activeSelectedPrinter = printers.find(p => p.printer_id === activePrinterId) || selectedPrinter;
+
+  // Update handlers to use active printer automatically
+  const handleStopPrinting_Auto = async () => {
+    if (!activeSelectedPrinter) {
+      toast({ title: 'No active printer found', variant: 'destructive' });
+      return;
+    }
+    // Delegate to existing handler with auto-fetched printer
+    const originalPrinter = selectedPrinter;
+    setPrinterId(activeSelectedPrinter.printer_id);
+    // Call original handler which now has the printer
+    await new Promise(r => setTimeout(r, 100)); // Let state update
+    return handleStopPrinting();
+  };
+
+  const handleResumePrinting_Auto = async () => {
+    if (!activeSelectedPrinter) {
+      toast({ title: 'No active printer found', variant: 'destructive' });
+      return;
+    }
+    const originalPrinter = selectedPrinter;
+    setPrinterId(activeSelectedPrinter.printer_id);
+    await new Promise(r => setTimeout(r, 100));
+    return handleResumePrinting();
+  };
+
   // ── CONTROL mode — shown once bulk_printing is active ──
   return (
     <div className="bg-white border border-slate-200 rounded-lg p-4 space-y-4">
       <h2 className="text-base font-semibold text-slate-900">Bulk Print Control</h2>
+
+      {/* Show active printer info */}
+      {activeSelectedPrinter && (
+        <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3 text-sm text-indigo-700">
+          <p className="font-medium">Printer: {activeSelectedPrinter.name}</p>
+          <p className="text-indigo-600">{activeSelectedPrinter.printer_id}</p>
+        </div>
+      )}
 
       <div className="space-y-2">
         <div className="flex justify-between text-sm">
@@ -370,8 +421,8 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
           <Button
             variant="outline"
             className="h-11 flex-1 gap-2 border-orange-300 text-orange-600 hover:bg-orange-50"
-            onClick={handleStopPrinting}
-            disabled={acting}
+            onClick={handleStopPrinting_Auto}
+            disabled={acting || !activeSelectedPrinter}
           >
             {acting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Pause className="w-4 h-4" />}
             Stop Printing
@@ -380,8 +431,8 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
         {job.status === 'paused' && (
           <Button
             className="h-11 flex-1 gap-2 bg-indigo-600 hover:bg-indigo-700"
-            onClick={handleResumePrinting}
-            disabled={acting}
+            onClick={handleResumePrinting_Auto}
+            disabled={acting || !activeSelectedPrinter}
           >
             {acting ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
             Resume Printing
