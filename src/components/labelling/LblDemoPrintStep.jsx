@@ -194,7 +194,29 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
     );
 
     if (!result.success) {
-      toast({ title: 'Demo Print Failed', description: result.errorMessage || 'Middleware returned an error', variant: 'destructive' });
+      // Show specific popup based on MON template check result
+      if (result.templateNotOnPrinter) {
+        toast({
+          title: 'Template Not Found on Printer',
+          description: `Unable to print — the template "${templateName}" does not exist on the printer. Please load the template onto the printer before printing.`,
+          variant: 'destructive',
+          duration: 8000,
+        });
+      } else if (result.templateExistsButFailed) {
+        toast({
+          title: 'Template Cannot Be Activated',
+          description: `The template "${templateName}" exists on the printer but could not be set as the active template after ${5} attempts. Contact your administrator.`,
+          variant: 'destructive',
+          duration: 8000,
+        });
+      } else {
+        toast({
+          title: 'Demo Print Failed',
+          description: result.errorMessage || 'Middleware returned an error. Please check printer connection.',
+          variant: 'destructive',
+          duration: 6000,
+        });
+      }
       await logLabellingEvent({ action_type: 'printer_command_failed', job_id: job.id, plan_id: job.plan_id, description: `Demo print failed after ${result.sentCount} of ${qty} label(s): ${result.errorMessage}`, user });
       setSending(false);
       return;
