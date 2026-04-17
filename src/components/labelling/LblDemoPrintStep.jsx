@@ -100,44 +100,52 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
     if (!labelData.mrp) { toast({ title: 'MRP is required', variant: 'destructive' }); return; }
 
     // Build POD values for preview using template field mappings
-    // Full lookup table covering all ERP source keys defined in LblPrintTemplateManager
+    // Full lookup table — snake_case erp_source keys → resolved values
+    // Uses `computed` from computeLabelFields for all derived/formatted values
     const erpValueMap = {
-      // Batch & Dates
-      batch_no:            labelData.batch_no,
-      mfg_date:            labelData.mfg_date,
-      manufacturing_date:  labelData.mfg_date,
-      expiry_date:         computed.expiryDate,
-      // Pricing
-      mrp:                 labelData.mrp,
-      mrp_with_usp:        labelData.mrp ? `₹${labelData.mrp}` : '',
-      usp:                 computed.uspWithUnit?.split(' ')[0] || '',
-      // Product info (from job)
-      sku_code:            job.sku_code,
-      product_name:        job.product_name,
-      bottle_type:         job.bottle_type || productMaster?.bottle_type || '',
-      brand_name:          productMaster?.brand_name || '',
-      flavour:             productMaster?.flavour || '',
+      // Batch & Dates (use computed for formatted values)
+      batch_no:             computed.batchNo,
+      mfg_date:             computed.mfgDate,
+      manufacturing_date:   computed.mfgDate,
+      expiry_date:          computed.expiryDate,
+      shelf_life:           productMaster?.shelf_life_days ? `${productMaster.shelf_life_days} ${productMaster.shelf_life_unit || 'months'}` : '',
+      batch_seq:            job.batch_seq ? String(job.batch_seq) : '',
+      // Pricing (use computed for USP-derived values)
+      mrp:                  computed.mrp,
+      mrp_with_usp:         computed.mrpWithUsp,
+      usp:                  computed.usp,
+      usp_with_unit:        computed.uspWithUnit,
+      mrp_and_usp:          computed.mrpAndUsp,
+      tax_line:             computed.taxLine,
+      net_weight:           computed.netWeight,
+      // Offset dates for variant SKUs
+      mfg_date_offset:      computed.mfgDateOffset,
+      expiry_date_offset:   computed.expiryDateOffset,
+      // Product info (from job + product master)
+      sku_code:             job.sku_code,
+      product_name:         job.product_name || computed.productName,
+      bottle_type:          job.bottle_type || productMaster?.bottle_type || '',
+      brand_name:           productMaster?.brand_name || '',
+      flavour:              productMaster?.flavour || '',
       // Volume & quantity
-      ml_per_bottle:       productMaster?.ml_per_bottle ? String(productMaster.ml_per_bottle) : '',
-      bottles_per_box:     productMaster?.bottles_per_box ? String(productMaster.bottles_per_box) : '',
-      quantity_bottles:    job.quantity_bottles_planned ? String(job.quantity_bottles_planned) : '',
-      quantity_cases:      job.quantity_cases_planned ? String(job.quantity_cases_planned) : '',
+      ml_per_bottle:        productMaster?.ml_per_bottle ? String(productMaster.ml_per_bottle) : '',
+      bottles_per_box:      productMaster?.bottles_per_box ? String(productMaster.bottles_per_box) : '',
+      quantity_bottles:     job.quantity_bottles_planned ? String(job.quantity_bottles_planned) : '',
+      quantity_cases:       job.quantity_cases_planned ? String(job.quantity_cases_planned) : '',
       // Regulatory
-      fssai_no:            productMaster?.fssai_no || '',
-      manufacturer_name:   productMaster?.manufacturer_name || '',
+      fssai_no:             productMaster?.fssai_no || '',
+      manufacturer_name:    productMaster?.manufacturer_name || '',
       manufacturer_address: [productMaster?.address_1, productMaster?.address_2].filter(Boolean).join(', '),
-      customer_care_phone: productMaster?.customer_care_phone || '',
-      customer_care_email: productMaster?.customer_care_email || '',
-      hsn_code:            productMaster?.hsn_code || '',
+      customer_care_phone:  productMaster?.customer_care_phone || '',
+      customer_care_email:  productMaster?.customer_care_email || '',
+      hsn_code:             productMaster?.hsn_code || '',
       // Barcodes
-      product_barcode:     productMaster?.product_barcode || '',
-      box_barcode:         productMaster?.box_barcode || '',
+      product_barcode:      productMaster?.product_barcode || '',
+      box_barcode:          productMaster?.box_barcode || '',
       // Line/shift
-      line_id:             job.line_id || '',
-      shift_type:          job.shift_type || '',
-      labelling_date:      job.labelling_date || '',
-      shelf_life:          productMaster?.shelf_life_days ? `${productMaster.shelf_life_days} ${productMaster.shelf_life_unit || 'months'}` : '',
-      batch_seq:           job.batch_seq ? String(job.batch_seq) : '',
+      line_id:              job.line_id || '',
+      shift_type:           job.shift_type || '',
+      labelling_date:       job.labelling_date || '',
     };
 
     const podMap = {};
