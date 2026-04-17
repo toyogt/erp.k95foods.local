@@ -1101,79 +1101,247 @@ export async function getRynanMiddlewareSnapshot(printer) {
  *   errorMessage: string|null
  * }}
  */
-export async function fetchRynanPodStatus(printer) {
-   const base      = getPrinterBase(printer);
-   const headers   = buildHeaders(printer, true);
-   const timeoutMs = printer.request_timeout_ms || 15000;
+/**
+ * extractPrintedCountFromRqlpResponse
+ *
+ * Robust extraction of "X/Y" printed count from RQLP response.
+ * Checks all known response locations in priority order and validates the format.
+ *
+ * @param {object} body - Middleware response body
+ * @returns {{ valueStr: string|null, podData: object }}
+ */
+function extractPrintedCountFromRqlpResponse(body) {
+  if (!body) return { valueStr: null, podData: {} };
 
-   const rqlpPayload = {
-     printer_id: printer.printer_id,
-     printer:    { ip: printer.ip_address, port: printer.port },
-     command:    { command: 'RQLP' },
-   };
+  // Priority 1: printer_response_payload.value (most common in real responses)
+  if (body?.printer_response_payload?.value) {
+    const val = body.printer_response_payload.value;
+    // Validate format "X/Y"
+    if (typeof val === 'string' && val.includes('/')) {
+      return {
+        valueStr: val,
+        podData: body.printer_response_payload.data || {},
+      };
+    }
+  }
 
-   const { statusCode, body, error: transportError } = await postToMiddleware(
-     `${base}${MIDDLEWARE_ENDPOINTS.PRINT}`,
-     rqlpPayload,
-     headers,
-     timeoutMs
-   );
+  // Priority 2: response.response.value
+  if (body?.response?.response?.value) {
+    const val = body.response.response.value;
+    if (typeof val === 'string' && val.includes('/')) {
+      return {
+        valueStr: val,
+        podData: body.response.response.data || {},
+      };
+    }
+  }
 
-   if (transportError && !body) {
-     console.error('[RQLP] Transport error:', transportError);
-     return { success: false, printedCount: 0, totalCount: 0, allPrinted: false, printerPodData: {}, raw: null, errorMessage: transportError };
-   }
+  // Priority 3: response.details.response.value
+  if (body?.response?.details?.response?.value) {
+    const val = body.response.details.response.value;
+    if (typeof val === 'string' && val.includes('/')) {
+      return {
+        valueStr: val,
+        podData: body.response.details.response.data || {},
+      };
+    }
+  }
 
-   if (!body?.success) {
-     console.error('[RQLP] Request failed. Status:', body?.status, 'Error:', body?.error);
-     return { success: false, printedCount: 0, totalCount: 0, allPrinted: false, printerPodData: {}, raw: body, errorMessage: body?.error || `HTTP ${statusCode}` };
-   }
+  // Priority 4: Top-level value (fallback)
+  if (body?.value && typeof body.value === 'string' && body.value.includes('/')) {
+    return {
+      valueStr: body.value,
+      podData: body.data || {},
+    };
+  }
 
-   // Parse value "X/Y" from multiple possible locations
-   // Priority: printer_response_payload → response.response → response.details.response
-   let valueStr = '';
-   let podData = {};
+  return { valueStr: null, podData: {} };
+}
 
-   // Try printer_response_payload first (most reliable)
-   if (body?.printer_response_payload?.value) {
-     valueStr = body.printer_response_payload.value;
-     podData = body.printer_response_payload.data || {};
-     console.log('[RQLP] Using printer_response_payload — value:', valueStr);
-   }
-   // Fallback to nested response
-   else if (body?.response?.response?.value) {
-     valueStr = body.response.response.value;
-     podData = body.response.response.data || {};
-     console.log('[RQLP] Using response.response — value:', valueStr);
-   }
-   // Fallback to details.response
-   else if (body?.response?.details?.response?.value) {
-     valueStr = body.response.details.response.value;
-     podData = body.response.details.response.data || {};
-     console.log('[RQLP] Using response.details.response — value:', valueStr);
-   }
-   else {
-     console.warn('[RQLP] Could not find value in any expected location');
-     return { success: false, printedCount: 0, totalCount: 0, allPrinted: false, printerPodData: {}, raw: body, errorMessage: 'Could not parse printed count from response' };
-   }
+/**
+ * fetchRynanPodStatus
+ *
+ * Sends RQLP command to the printer to query real-time print progress.
+ * Includes built-in retry logic (up to 3 attempts) with exponential backoff.
+ * Parses printer response to extract: "X/Y" (printed/total) and POD data.
+ *
+ * Protocol:
+ *   POST /print { command: { command: "RQLP" } }
+ *   Printer responds: { command: "RSFP", value: "X/Y", data: { col1, col2, ... } }
+ *
+ * @param {object} printer - LblPrinterConfig record
+ * @param {number} [maxRetries=3] - How many times to retry on failure
+ * @returns {{
+ *   success: bool,
+ *   printedCount: number,
+ *   totalCount: number,
+ *   allPrinted: bool,
+ *   printerPodData: object,
+ *   raw: object|null,
+ *   errorMessage: string|null,
+ *   attempts: number,
+ *   lastError: string|null
+ * }}
+ */
+export async function fetchRynanPodStatus(printer, maxRetries = 3) {
+  const base      = getPrinterBase(printer);
+  const headers   = buildHeaders(printer, true);
+  const timeoutMs = printer.request_timeout_ms || 15000;
 
-   // Parse "X/Y"
-   const [printedStr, totalStr] = valueStr.split('/');
-   const printedCount = parseInt(printedStr?.trim(), 10) || 0;
-   const totalCount   = parseInt(totalStr?.trim(), 10)   || 0;
+  let lastError = null;
+  let lastBody = null;
 
-   console.log(`[RQLP] Parsed: printed=${printedCount}, total=${totalCount}`);
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    const rqlpPayload = {
+      printer_id: printer.printer_id,
+      printer:    { ip: printer.ip_address, port: printer.port },
+      command:    { command: 'RQLP' },
+    };
 
-   return {
-     success:       true,
-     printedCount,
-     totalCount,
-     allPrinted:    totalCount > 0 && printedCount >= totalCount,
-     printerPodData: podData,
-     raw:           body,
-     errorMessage:  null,
-   };
- }
+    console.log(`[RQLP] Attempt ${attempt}/${maxRetries} — querying print progress`);
+
+    const { statusCode, body, error: transportError } = await postToMiddleware(
+      `${base}${MIDDLEWARE_ENDPOINTS.PRINT}`,
+      rqlpPayload,
+      headers,
+      timeoutMs
+    );
+
+    lastBody = body;
+
+    // Handle transport errors (network, timeout)
+    if (transportError && !body) {
+      lastError = `Transport error: ${transportError}`;
+      console.warn(`[RQLP] Attempt ${attempt}: ${lastError}`);
+      
+      if (attempt < maxRetries) {
+        const backoff = 500 * attempt; // Exponential backoff: 500ms, 1s, 1.5s
+        await new Promise(r => setTimeout(r, backoff));
+        continue;
+      }
+
+      return {
+        success: false,
+        printedCount: 0,
+        totalCount: 0,
+        allPrinted: false,
+        printerPodData: {},
+        raw: null,
+        errorMessage: lastError,
+        attempts: maxRetries,
+        lastError,
+      };
+    }
+
+    // Handle middleware rejection
+    if (!body?.success) {
+      lastError = body?.error || `HTTP ${statusCode}`;
+      console.warn(`[RQLP] Attempt ${attempt}: Request rejected — ${lastError}`);
+      
+      if (attempt < maxRetries) {
+        const backoff = 500 * attempt;
+        await new Promise(r => setTimeout(r, backoff));
+        continue;
+      }
+
+      return {
+        success: false,
+        printedCount: 0,
+        totalCount: 0,
+        allPrinted: false,
+        printerPodData: {},
+        raw: body,
+        errorMessage: lastError,
+        attempts: maxRetries,
+        lastError,
+      };
+    }
+
+    // Extract value and POD data
+    const { valueStr, podData } = extractPrintedCountFromRqlpResponse(body);
+
+    if (!valueStr) {
+      lastError = 'Could not parse printed count from response';
+      console.warn(`[RQLP] Attempt ${attempt}: ${lastError}. Response structure unknown.`);
+      
+      if (attempt < maxRetries) {
+        const backoff = 500 * attempt;
+        await new Promise(r => setTimeout(r, backoff));
+        continue;
+      }
+
+      return {
+        success: false,
+        printedCount: 0,
+        totalCount: 0,
+        allPrinted: false,
+        printerPodData: {},
+        raw: body,
+        errorMessage: lastError,
+        attempts: maxRetries,
+        lastError,
+      };
+    }
+
+    // Parse "X/Y" value
+    const [printedStr, totalStr] = valueStr.split('/').map(s => s?.trim());
+    const printedCount = parseInt(printedStr, 10);
+    const totalCount   = parseInt(totalStr, 10);
+
+    // Validate numeric parsing
+    if (isNaN(printedCount) || isNaN(totalCount)) {
+      lastError = `Invalid count format: "${valueStr}" (expected "X/Y")`;
+      console.warn(`[RQLP] Attempt ${attempt}: ${lastError}`);
+      
+      if (attempt < maxRetries) {
+        const backoff = 500 * attempt;
+        await new Promise(r => setTimeout(r, backoff));
+        continue;
+      }
+
+      return {
+        success: false,
+        printedCount: 0,
+        totalCount: 0,
+        allPrinted: false,
+        printerPodData: {},
+        raw: body,
+        errorMessage: lastError,
+        attempts: maxRetries,
+        lastError,
+      };
+    }
+
+    // Success!
+    console.log(`[RQLP] Attempt ${attempt}: SUCCESS — printed=${printedCount}, total=${totalCount}`);
+
+    return {
+      success: true,
+      printedCount,
+      totalCount,
+      allPrinted: totalCount > 0 && printedCount >= totalCount,
+      printerPodData: podData,
+      raw: body,
+      errorMessage: null,
+      attempts: attempt,
+      lastError: null,
+    };
+  }
+
+  // Exhausted all retries
+  console.error(`[RQLP] Failed after ${maxRetries} attempts: ${lastError}`);
+  return {
+    success: false,
+    printedCount: 0,
+    totalCount: 0,
+    allPrinted: false,
+    printerPodData: {},
+    raw: lastBody,
+    errorMessage: `RQLP failed after ${maxRetries} attempts: ${lastError}`,
+    attempts: maxRetries,
+    lastError,
+  };
+}
 
 /**
  * fetchRynanMiddlewareJobStatus
