@@ -17,12 +17,14 @@
  *   sendStarCommand()    — sends N STAR commands (one per label), saves audit records
  *
  * LAYER 4 — HIGH-LEVEL EXPORTS
- *   sendRynanPrintCommand()    — called by Demo/Bulk print steps
- *   sendRynanTestCommand()     — test ping
- *   sendPurgeCommand()         — purge printer heads
- *   getPrinterStatus()         — cartridge / ink check
- *   getRynanMiddlewareSnapshot()— health + printers + metrics
+ *   sendRynanPrintCommand()         — called by Demo/Bulk print steps
+ *   sendRynanTestCommand()          — test ping
+ *   sendPurgeCommand()              — purge printer heads
+ *   getPrinterStatus()              — cartridge / ink check
+ *   getRynanMiddlewareSnapshot()    — health + printers + metrics
  *   fetchRynanMiddlewareJobStatus() — job status by ID
+ *   fetchPrinterTemplateList()      — RQLI: get all templates on printer (retries up to 3)
+ *   checkTemplateExists()           — check one template name against RQLI list (retries up to 3)
  */
 
 import { base44 } from '@/api/base44Client';
@@ -31,76 +33,40 @@ import { base44 } from '@/api/base44Client';
 // LAYER 1 — CONSTANTS
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * All middleware REST endpoint paths.
- * Usage: MIDDLEWARE_ENDPOINTS.PRINT → "/print"
- */
 export const MIDDLEWARE_ENDPOINTS = {
-  PRINT:          '/print',           // POST — send STAR/MON command to printer
-  PURGE:          '/purge',           // POST — purge print heads
-  PRINTER_STATUS: '/printer-status',  // GET  — legacy cartridge + ink check
-  HEALTH:         '/health',          // GET  — middleware health check
-  PRINTERS:       '/printers',        // GET  — list all registered printers
-                                      // POST — register new printer { printer_id, printer: {ip, port} }
-                                      // PUT  — /printers/{id} update existing printer IP/port
-  METRICS:        '/metrics',         // GET  — job counts, error stats
-  JOB_STATUS:     '/job',             // GET  — job status by ID: /job/{middlewareJobId}
+  PRINT:          '/print',
+  PURGE:          '/purge',
+  PRINTER_STATUS: '/printer-status',
+  HEALTH:         '/health',
+  PRINTERS:       '/printers',
+  METRICS:        '/metrics',
+  JOB_STATUS:     '/job',
 };
 
-/**
- * Printer command strings accepted by the Rynan middleware.
- * Only STAR is used for label printing. Others are for reference / future use.
- */
 export const PRINTER_COMMANDS = {
-  STAR:  'STAR',   // Trigger label print using a pre-loaded template
-  MON:   'MON',    // Query printer monitor status (ink, cartridge)
-  PURGE: 'PURGE',  // Purge print heads — sent via /print endpoint
+  STAR:  'STAR',
+  MON:   'MON',
+  RQLI:  'RQLI',   // Query template list — printer responds with RSLI
+  PURGE: 'PURGE',
 };
 
-/**
- * Priority levels accepted by the /print endpoint.
- */
 export const PRINT_PRIORITY = {
   NORMAL: 'normal',
   HIGH:   'high',
 };
 
-/**
- * Printer protocol error codes that indicate a hard (non-retryable) failure.
- */
 const HARD_FAILURE_CODES = ['NYES', 'RSAL', 'RSMPOD', 'SYSN', 'FAILED', 'ERROR', 'FULL', 'NOK'];
 
 // ─────────────────────────────────────────────────────────────────────────────
-// LAYER 2 — JSON BUILDERS (pure functions — no HTTP, no DB)
+// LAYER 2 — JSON BUILDERS
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * buildStarCommand
- *
- * Builds the exact JSON payload that must be sent to POST /print
- * to trigger one label to print using the STAR command.
- *
- * The Rynan middleware contract:
- *   - command.command    : always "STAR"
- *   - command.templatename : the template name pre-configured on the middleware
- *   - printer_id / printer.ip / printer.port : identify the physical printer
- *   - priority : "normal" | "high"
- *
- * ⚠️ DO NOT add label_data, quantity, batch_no, mrp etc. here.
- *    Label variables live inside the template on the middleware side.
- *    One call to /print = one label printed.
- *
- * @param {object} printer      - LblPrinterConfig record
- * @param {string} templateName - Middleware template name (e.g. "Default-1")
- * @param {string} [priority]   - "normal" | "high"
- * @returns {object} JSON payload ready to POST to /print
- */
 export function buildStarCommand(printer, templateName, priority = PRINT_PRIORITY.NORMAL) {
   return {
     printer_id: printer.printer_id,
     printer: {
       ip:   printer.ip_address,
-      port: printer.port,          // always from LblPrinterConfig — never hardcoded
+      port: printer.port,
     },
     command: {
       command:      PRINTER_COMMANDS.STAR,
@@ -113,21 +79,12 @@ export function buildStarCommand(printer, templateName, priority = PRINT_PRIORIT
   };
 }
 
-/**
- * buildPurgePayload
- *
- * Builds the JSON payload for POST /print.
- * Purge clears dried ink from print heads — maintenance only.
- *
- * @param {object} printer - LblPrinterConfig record
- * @returns {object} JSON payload ready to POST to /print
- */
 export function buildPurgePayload(printer) {
   return {
     printer_id: printer.printer_id,
     printer: {
       ip:   printer.ip_address,
-      port: printer.port,          // always from LblPrinterConfig — never hardcoded
+      port: printer.port,
     },
     command: {
       command: PRINTER_COMMANDS.PURGE,
@@ -136,22 +93,14 @@ export function buildPurgePayload(printer) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// LAYER 3 — TRANSPORT UTILITIES (HTTP + audit)
+// LAYER 3 — TRANSPORT UTILITIES
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Strip trailing slash (and optional /print suffix) from base URL then append a path */
-function buildUrl(baseUrl, path) {
-  const base = (baseUrl || '').replace(/\/print\/?$/, '').replace(/\/$/, '');
-  return `${base}${path}`;
-}
-
-/** Get the clean base URL from printer config — always prefer register_app_link */
 function getPrinterBase(printer) {
   const raw = printer.register_app_link || printer.api_endpoint || '';
   return raw.replace(/\/print\/?$/, '').replace(/\/$/, '');
 }
 
-/** Build auth + content-type headers from printer config */
 function buildHeaders(printer, includeContentType = true) {
   const headers = {};
   if (includeContentType) headers['Content-Type'] = 'application/json';
@@ -161,12 +110,10 @@ function buildHeaders(printer, includeContentType = true) {
   return headers;
 }
 
-/** Generate a unique command ID */
 function genCommandId() {
   return `CMD-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 }
 
-/** Persist an LblPrintCommand audit record */
 async function persistCommand({ commandId, jobId, middlewareJobId, printerId, endpointUrl, commandType, quantity, status, requestPayload, responsePayload, responseStatusCode, errorMessage, sentBy }) {
   return base44.entities.LblPrintCommand.create({
     command_id:           commandId,
@@ -186,11 +133,9 @@ async function persistCommand({ commandId, jobId, middlewareJobId, printerId, en
   });
 }
 
-/** Check if a middleware response body indicates a genuine success */
 function isResponseSuccess(body) {
   if (!body) return false;
   if (body.success !== true) return false;
-  // job_id may be absent on some middleware versions — do not block on it
   if (body.status === 'failed') return false;
   if (body.printer_ok === false) return false;
   const code = (body.printer_protocol_error_code || '').toUpperCase();
@@ -198,7 +143,6 @@ function isResponseSuccess(body) {
   return true;
 }
 
-/** Extract a human-readable error message from a middleware response */
 function extractErrorMessage(body) {
   return (
     body?.error ||
@@ -209,29 +153,15 @@ function extractErrorMessage(body) {
   );
 }
 
-/** Is this failure retryable (network/timeout) vs hard failure? */
 function isRetryableError(error, responseBody) {
   if (responseBody) {
     const code = (responseBody.printer_protocol_error_code || responseBody.printer_response_status || '').toUpperCase();
     if (HARD_FAILURE_CODES.some(f => code.includes(f))) return false;
   }
-  if (error instanceof TypeError) return true; // fetch network failure
+  if (error instanceof TypeError) return true;
   return false;
 }
 
-/**
- * postToMiddleware
- *
- * Raw HTTP POST to a middleware endpoint with timeout + retry support.
- * Returns { statusCode, body } — does NOT persist to DB.
- *
- * @param {string} url          - Full middleware URL
- * @param {object} payload      - JSON payload to POST
- * @param {object} headers      - HTTP headers
- * @param {number} timeoutMs    - Abort timeout in ms
- * @param {number} maxRetries   - How many attempts before giving up
- * @returns {{ statusCode, body, error }}
- */
 async function postToMiddleware(url, payload, headers, timeoutMs = 15000, maxRetries = 1) {
   let lastError = null;
   let lastBody = null;
@@ -254,7 +184,6 @@ async function postToMiddleware(url, payload, headers, timeoutMs = 15000, maxRet
       const body = await res.json().catch(() => null);
       lastBody = body;
 
-      // Non-retryable HTTP errors
       if (res.status === 400 || res.status === 415) {
         return { statusCode: res.status, body, error: `HTTP ${res.status}: payload error` };
       }
@@ -276,30 +205,224 @@ async function postToMiddleware(url, payload, headers, timeoutMs = 15000, maxRet
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// TEMPLATE LIST EXTRACTION HELPERS
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * extractTemplateList
+ *
+ * Parses the raw RQLI middleware response body and returns a clean string[]
+ * of template names registered on the physical printer.
+ *
+ * The middleware response to RQLI has the printer's RSLI data in multiple
+ * locations. We check all known locations in priority order:
+ *
+ * Priority order (from real middleware RQLI response):
+ *   1. body.printer_response_payload.template      — parsed object ✅ PRIMARY
+ *   2. body.response.response.template             — nested response object
+ *   3. body.response.details.response.template     — deeper nesting
+ *   4. body.printer_raw_response                   — JSON string (parse it)
+ *   5. body.template / body.templates              — flat fallbacks
+ */
+function extractTemplateList(body) {
+  if (!body) return [];
+
+  const fromObj = (obj) => {
+    if (!obj) return null;
+    if (Array.isArray(obj.template) && obj.template.length > 0) return obj.template.map(String);
+    if (Array.isArray(obj.templates) && obj.templates.length > 0) return obj.templates.map(String);
+    return null;
+  };
+
+  const fromJsonStr = (str) => {
+    if (typeof str !== 'string') return null;
+    try {
+      const parsed = JSON.parse(str);
+      return fromObj(parsed);
+    } catch (_) { return null; }
+  };
+
+  // 1. printer_response_payload.template
+  const r1 = fromObj(body.printer_response_payload);
+  if (r1) return r1;
+
+  // 2. body.response.response.template
+  const r2 = fromObj(body?.response?.response);
+  if (r2) return r2;
+
+  // 3. body.response.details.response.template
+  const r3 = fromObj(body?.response?.details?.response);
+  if (r3) return r3;
+
+  // 4. printer_raw_response as JSON string
+  const r4 = fromJsonStr(body.printer_raw_response);
+  if (r4) return r4;
+
+  // 5. printer_response_payload as JSON string
+  const r5 = fromJsonStr(body.printer_response_payload);
+  if (r5) return r5;
+
+  // 6. Flat fallbacks on body itself
+  const r6 = fromObj(body);
+  if (r6) return r6;
+
+  return [];
+}
+
+/**
+ * isRsliResponse
+ *
+ * Returns true if the middleware response indicates that the printer
+ * responded with an RSLI command (template list response).
+ */
+function isRsliResponse(body) {
+  if (!body) return false;
+  if (body.printer_response_command === 'RSLI') return true;
+  if (body?.response?.response_command === 'RSLI') return true;
+  if (body?.response?.response?.command === 'RSLI') return true;
+  if (body?.response?.details?.response_command === 'RSLI') return true;
+  return false;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // LAYER 4 — HIGH-LEVEL EXPORTS
 // ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * fetchPrinterTemplateList
+ *
+ * Sends a RQLI command to the printer and returns the full list of template
+ * names loaded on the physical printer. Retries up to maxRetries times,
+ * checking each time that the printer responded with an RSLI command.
+ *
+ * Protocol:
+ *   POST /print { command: { command: "RQLI" } }
+ *   Printer responds: { command: "RSLI", template: ["Default-1", ...] }
+ *
+ * @param {object} printer       - LblPrinterConfig record
+ * @param {number} [maxRetries=3]- Max RQLI attempts before giving up
+ * @returns {{ templates: string[], error: string|null, unavailable: bool }}
+ */
+export async function fetchPrinterTemplateList(printer, maxRetries = 3) {
+  const base      = getPrinterBase(printer);
+  const headers   = buildHeaders(printer, true);
+  const timeoutMs = printer.request_timeout_ms || 10000;
+
+  const rqliPayload = {
+    printer_id: printer.printer_id,
+    printer:    { ip: printer.ip_address, port: printer.port },
+    command:    { command: PRINTER_COMMANDS.RQLI },
+  };
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    console.log(`[RQLI] Attempt ${attempt}/${maxRetries} — sending RQLI to ${base}`);
+
+    const { body, error: transportError } = await postToMiddleware(
+      `${base}${MIDDLEWARE_ENDPOINTS.PRINT}`,
+      rqliPayload,
+      headers,
+      timeoutMs
+    );
+
+    // Transport failure (network down, timeout)
+    if (transportError && !body) {
+      console.warn(`[RQLI] Attempt ${attempt}: transport error — ${transportError}`);
+      if (attempt < maxRetries) {
+        await new Promise(r => setTimeout(r, 1000 * attempt));
+        continue;
+      }
+      return {
+        templates:   [],
+        error:       `Cannot reach middleware after ${maxRetries} attempts: ${transportError}`,
+        unavailable: true,
+      };
+    }
+
+    // Check if printer responded with RSLI
+    if (!isRsliResponse(body)) {
+      console.warn(`[RQLI] Attempt ${attempt}: printer did not respond with RSLI. Got command: ${body?.printer_response_command || 'N/A'}`);
+      if (attempt < maxRetries) {
+        await new Promise(r => setTimeout(r, 1000 * attempt));
+        continue;
+      }
+    }
+
+    // Extract template list
+    const templates = extractTemplateList(body);
+    if (templates.length > 0) {
+      console.log(`[RQLI] Attempt ${attempt}: success — found ${templates.length} templates`, templates);
+      return { templates, error: null, unavailable: false };
+    }
+
+    console.warn(`[RQLI] Attempt ${attempt}: RSLI received but template array is empty.`);
+    if (attempt < maxRetries) {
+      await new Promise(r => setTimeout(r, 1000 * attempt));
+    }
+  }
+
+  return {
+    templates:   [],
+    error:       `Printer returned no templates after ${maxRetries} attempts. Template list unavailable.`,
+    unavailable: true,
+  };
+}
+
+/**
+ * checkTemplateExists
+ *
+ * Fetches the template list from the printer via RQLI (up to 3 retries)
+ * and checks if the given templateName is present (case-insensitive).
+ *
+ * Returns:
+ *   found                — true if template name is in the list
+ *   availableTemplates   — full list of templates on the printer
+ *   error                — error string if list could not be retrieved
+ *   templateListUnavailable — true if RQLI failed to get any list
+ *
+ * @param {object} printer       - LblPrinterConfig record
+ * @param {string} templateName  - Template name to find (e.g. "TK-EXPE-LS-GLS-330")
+ * @param {number} [maxRetries=3]
+ * @returns {{ found: bool, availableTemplates: string[], error: string|null, templateListUnavailable: bool }}
+ */
+export async function checkTemplateExists(printer, templateName, maxRetries = 3) {
+  const { templates, error, unavailable } = await fetchPrinterTemplateList(printer, maxRetries);
+
+  if (unavailable || templates.length === 0) {
+    return {
+      found:                false,
+      availableTemplates:   templates,
+      error:                error || 'Could not read template list from printer',
+      templateListUnavailable: true,
+    };
+  }
+
+  const normalizedTarget = templateName.trim().toLowerCase();
+  const found = templates.some(t => String(t).trim().toLowerCase() === normalizedTarget);
+
+  console.log(`[RQLI] Template check: "${templateName}" → ${found ? 'FOUND ✓' : 'NOT FOUND ✗'}`);
+  console.log(`[RQLI] Available templates (${templates.length}):`, templates);
+
+  return {
+    found,
+    availableTemplates:   templates,
+    error:                null,
+    templateListUnavailable: false,
+  };
+}
 
 /**
  * sendStarCommand
  *
  * Core print function. Sends N STAR commands to the middleware — one per label.
- * Each call to /print triggers exactly one label to be printed by the physical printer.
- *
- * Flow for each label (repeated `quantity` times):
- *   1. Build STAR JSON payload via buildStarCommand()
- *   2. POST to {middleware_base_url}/print
- *   3. Parse response — check success criteria
- *   4. Persist LblPrintCommand audit record
- *   5. If any call fails → stop loop, return failure
+ * Each call to /print triggers exactly one label to be printed.
  *
  * @param {object} printer       - LblPrinterConfig record
  * @param {string} templateName  - Middleware template name (e.g. "Default-1")
- * @param {number} quantity      - How many labels to print (sends this many POST calls)
+ * @param {number} quantity      - How many labels to print
  * @param {object} context       - { jobId, commandType, user }
  * @returns {{ success, sentCount, failedAt, lastCommandRecord, lastMiddlewareJobId, errorMessage }}
  */
 export async function sendStarCommand(printer, templateName, quantity = 1, { jobId, commandType = 'demo', user } = {}) {
-  // Ensure jobId is always a valid string
   if (!jobId) {
     jobId = `JOB-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   }
@@ -310,7 +433,6 @@ export async function sendStarCommand(printer, templateName, quantity = 1, { job
   const timeoutMs   = printer.request_timeout_ms || 15000;
   const maxRetries  = printer.send_retries || 1;
 
-  // Build the payload once — it's identical for every label of this template
   const payload = buildStarCommand(printer, templateName, priority);
 
   let sentCount = 0;
@@ -324,7 +446,6 @@ export async function sendStarCommand(printer, templateName, quantity = 1, { job
       endpointUrl, payload, headers, timeoutMs, maxRetries
     );
 
-    // Transport / HTTP error (network down, timeout, 400, etc.)
     if (transportError && !body) {
       const record = await persistCommand({
         commandId, jobId, printerId: printer.printer_id, endpointUrl,
@@ -356,8 +477,8 @@ export async function sendStarCommand(printer, templateName, quantity = 1, { job
       sentBy: user?.email,
     });
 
-    lastCommandRecord    = record;
-    lastMiddlewareJobId  = middlewareJobId;
+    lastCommandRecord   = record;
+    lastMiddlewareJobId = middlewareJobId;
 
     if (!ok) {
       return {
@@ -379,52 +500,32 @@ export async function sendStarCommand(printer, templateName, quantity = 1, { job
 
 /**
  * sendRynanPrintCommand
- *
- * Backward-compatible wrapper used by LblDemoPrintStep and other callers.
- * Delegates to sendStarCommand() with quantity = 1.
- *
- * @param {object} printer   - LblPrinterConfig record
- * @param {object} options   - { templateName, commandString (ignored — always STAR), priority }
- * @param {object} context   - { jobId, commandType, quantity (ignored — always 1 per call), user }
+ * Backward-compatible wrapper — delegates to sendStarCommand() with quantity = 1.
  */
 export async function sendRynanPrintCommand(printer, { templateName, priority } = {}, { jobId, commandType, user } = {}) {
-  const result = await sendStarCommand(
-    printer,
-    templateName || '',
-    1,
-    { jobId, commandType, user }
-  );
-  // Map to legacy return shape
+  const result = await sendStarCommand(printer, templateName || '', 1, { jobId, commandType, user });
   return {
-    success:          result.success,
-    commandRecord:    result.lastCommandRecord,
-    responseBody:     result.lastCommandRecord?.response_payload || null,
-    errorMessage:     result.errorMessage,
-    middlewareJobId:  result.lastMiddlewareJobId,
+    success:         result.success,
+    commandRecord:   result.lastCommandRecord,
+    responseBody:    result.lastCommandRecord?.response_payload || null,
+    errorMessage:    result.errorMessage,
+    middlewareJobId: result.lastMiddlewareJobId,
   };
 }
 
 /**
  * sendRynanTestCommand
- *
  * Sends a single STAR command using the printer's demo or default template.
- * Used for connectivity checks from the Printer Center page.
  */
 export async function sendRynanTestCommand(printer, user) {
   const templateName = printer.demo_template || printer.default_template || '';
   const testJobId = `TEST-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  return sendRynanPrintCommand(
-    printer,
-    { templateName },
-    { jobId: testJobId, commandType: 'test_ping', user }
-  );
+  return sendRynanPrintCommand(printer, { templateName }, { jobId: testJobId, commandType: 'test_ping', user });
 }
 
 /**
  * sendPurgeCommand
- *
- * Sends a purge command to clean the printer heads.
- * Endpoint: POST /print
+ * Sends a purge command to clean the printer heads. Endpoint: POST /print
  */
 export async function sendPurgeCommand(printer, user) {
   const endpointUrl = `${getPrinterBase(printer)}${MIDDLEWARE_ENDPOINTS.PRINT}`;
@@ -443,7 +544,7 @@ export async function sendPurgeCommand(printer, user) {
     job_id:               `MAINTENANCE-${commandId}`,
     printer_id:           printer.printer_id,
     endpoint_url:         endpointUrl,
-    command_type:         'test_ping', // closest available type for maintenance ops
+    command_type:         'test_ping',
     status:               ok ? 'sent' : 'failed',
     request_payload:      payload,
     response_payload:     body || null,
@@ -459,47 +560,38 @@ export async function sendPurgeCommand(printer, user) {
 /**
  * checkAndSyncPrinterConfig
  *
- * Implements the full 5-step printer validation flow:
- *
- * Step 1 — GET /printers → check if printer_id exists and IP/port match
- * Step 2 — If missing → POST /printers to register it
- *           If exists but IP/port mismatch → PUT /printers/{id} to update
- * Step 3 — POST /print with { command: "MON" } → live connection test
- * Step 4 — Parse MON response for cartridge/ink status (RSAL error codes)
- *
- * Returns a structured result object used by LblPrinterStatusPanel.
+ * Full 5-step printer validation flow:
+ *   Step 1 — GET /printers → check if printer_id exists and IP/port match
+ *   Step 2 — Auto-fix: POST /printers (register) or PUT /printers/{id} (update IP/port)
+ *   Step 3 — POST /print { command: "MON" } → live connection + cartridge check
+ *   Step 4 — Parse MON response for cartridge/ink status (RSAL error codes)
+ *   Step 5 — POST /print { command: "RQLI" } → fetch template list, check if our template exists
+ *             (retries up to 3 times, verifies RSLI response command)
  *
  * @param {object} printer       - LblPrinterConfig record
- * @param {string} [templateName] - Optional: if provided, also checks template exists on printer via RQLI
- * @returns {{
- *   configOk: bool,        configAction: 'found'|'created'|'updated'|'error', configError: string|null,
- *   connectionOk: bool,    connectionError: string|null,
- *   has_cartridge: bool,   ink_level: number|null,
- *   cartridgeError: string|null,
- *   templateFound: bool|null,  availableTemplates: string[],  templateError: string|null,
- *   mon_raw: object|null,  printers_raw: object|null
- * }}
+ * @param {string} [templateName] - If provided, runs Step 5 RQLI template check
  */
 export async function checkAndSyncPrinterConfig(printer, templateName = null) {
-  const base          = getPrinterBase(printer);
-  const headers       = buildHeaders(printer, false);
-  const jsonHeaders   = buildHeaders(printer, true);
-  const timeoutMs     = printer.request_timeout_ms || 10000;
+  const base        = getPrinterBase(printer);
+  const headers     = buildHeaders(printer, false);
+  const jsonHeaders = buildHeaders(printer, true);
+  const timeoutMs   = printer.request_timeout_ms || 10000;
 
   const result = {
-    configOk:           false,
-    configAction:       null,   // 'found' | 'created' | 'updated' | 'error'
-    configError:        null,
-    connectionOk:       false,
-    connectionError:    null,
-    has_cartridge:      false,
-    ink_level:          null,
-    cartridgeError:     null,
-    templateFound:      null,   // null = not checked, true/false = result
-    availableTemplates: [],
-    templateError:      null,
-    mon_raw:            null,
-    printers_raw:       null,
+    configOk:              false,
+    configAction:          null,
+    configError:           null,
+    connectionOk:          false,
+    connectionError:       null,
+    has_cartridge:         false,
+    ink_level:             null,
+    cartridgeError:        null,
+    templateFound:         null,
+    availableTemplates:    [],
+    templateError:         null,
+    templateListUnavailable: false,
+    mon_raw:               null,
+    printers_raw:          null,
   };
 
   // ── STEP 1: GET /printers ─────────────────────────────────────────────────
@@ -513,29 +605,25 @@ export async function checkAndSyncPrinterConfig(printer, templateName = null) {
     printersData = await res.json();
     result.printers_raw = printersData;
   } catch (err) {
-    result.configOk    = false;
+    result.configOk     = false;
     result.configAction = 'error';
     result.configError  = `Cannot reach middleware: ${err.message}`;
-    return result; // Can't proceed without middleware
+    return result;
   }
 
   const existingEntry = printersData?.[printer.printer_id];
   const expectedIp    = printer.ip_address;
-  const expectedPort  = printer.port;          // always from LblPrinterConfig — never hardcoded
+  const expectedPort  = printer.port;
 
   // ── STEP 2: Register or update printer config if needed ───────────────────
   if (!existingEntry) {
-    // Printer ID not registered — POST /printers
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), timeoutMs);
       const res = await fetch(`${base}${MIDDLEWARE_ENDPOINTS.PRINTERS}`, {
         method: 'POST',
         headers: jsonHeaders,
-        body: JSON.stringify({
-          printer_id: printer.printer_id,
-          printer: { ip: expectedIp, port: expectedPort },
-        }),
+        body: JSON.stringify({ printer_id: printer.printer_id, printer: { ip: expectedIp, port: expectedPort } }),
         signal: controller.signal,
       });
       clearTimeout(timer);
@@ -552,7 +640,6 @@ export async function checkAndSyncPrinterConfig(printer, templateName = null) {
     const portMatch = existingEntry.port === expectedPort;
 
     if (!ipMatch || !portMatch) {
-      // IP or port mismatch — PUT /printers/{id}
       try {
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -577,7 +664,7 @@ export async function checkAndSyncPrinterConfig(printer, templateName = null) {
     }
   }
 
-  // ── STEP 3 + 4: POST /print with MON command — live connection + cartridge ─
+  // ── STEP 3 + 4: MON command — live connection + cartridge check ───────────
   const monPayload = {
     printer_id: printer.printer_id,
     printer:    { ip: expectedIp, port: expectedPort },
@@ -608,34 +695,30 @@ export async function checkAndSyncPrinterConfig(printer, templateName = null) {
       result.connectionError = body?.printer_reason || body?.printer_protocol_error_description || body?.error || `MON returned status: ${body?.status}`;
     }
 
-    // ── STEP 4: Parse cartridge/ink from MON response ──────────────────────
-    // Check RSAL error codes from firmware
-    const errorCode = (body?.printer_protocol_error_code || '').toUpperCase();
-    const rawPayload = body?.printer_response_payload || body?.printer_raw_response || {};
+    // Parse cartridge/ink from MON response (RSAL error codes)
+    const errorCode  = (body?.printer_protocol_error_code || '').toUpperCase();
+    const rawPayload = body?.printer_response_payload || {};
 
-    // RSAL 004 = no cartridge, 005 = invalid cartridge, 007 = ink out, 008 = ink low
-    const noCartridgeCodes = ['RSAL 004', 'RSAL004', 'RSAL 005', 'RSAL005'];
-    const inkOutCodes      = ['RSAL 007', 'RSAL007'];
-    const inkLowCodes      = ['RSAL 008', 'RSAL008'];
+    const noCartridgeCodes = ['RSAL004', 'RSAL005'];
+    const inkOutCodes      = ['RSAL007'];
+    const inkLowCodes      = ['RSAL008'];
 
-    if (noCartridgeCodes.some(c => errorCode.includes(c.replace(' ', '')))) {
+    if (noCartridgeCodes.some(c => errorCode.replace(' ', '').includes(c))) {
       result.has_cartridge  = false;
       result.cartridgeError = errorCode.includes('004') ? 'No cartridge installed' : 'Invalid cartridge detected';
-    } else if (inkOutCodes.some(c => errorCode.includes(c.replace(' ', '')))) {
+    } else if (inkOutCodes.some(c => errorCode.replace(' ', '').includes(c))) {
       result.has_cartridge  = true;
       result.ink_level      = 0;
       result.cartridgeError = 'Ink is empty — replace cartridge';
-    } else if (inkLowCodes.some(c => errorCode.includes(c.replace(' ', '')))) {
+    } else if (inkLowCodes.some(c => errorCode.replace(' ', '').includes(c))) {
       result.has_cartridge  = true;
       result.cartridgeError = 'Ink level is low';
       result.ink_level      = rawPayload?.inkVolume ?? 10;
     } else if (monSuccess) {
-      // Success + no error code = cartridge OK
       result.has_cartridge  = rawPayload?.printHeadStatus !== 'error' && rawPayload?.printHeadStatus !== 'missing';
       result.ink_level      = rawPayload?.inkVolume ?? null;
       result.cartridgeError = null;
     } else {
-      // Failed MON — could be connection issue rather than cartridge
       result.has_cartridge  = false;
       result.cartridgeError = result.connectionError;
     }
@@ -645,178 +728,43 @@ export async function checkAndSyncPrinterConfig(printer, templateName = null) {
     result.connectionError = err.message;
   }
 
-  // ── STEP 5: Template check ────────────────────────────────────────────────
-  // This middleware returns an RSLI (template list) response for ANY command
-  // (MON, PURGE, RQLI, STAR etc.). So we first try to extract the template
-  // list from the MON response already received in Step 3+4.
-  // Only fall back to a dedicated RQLI call if MON gave us nothing.
+  // ── STEP 5: RQLI Template Check (always dedicated RQLI, never MON fallback) ─
+  // We ALWAYS use a dedicated RQLI command for template checking.
+  // MON does NOT reliably return the full template list.
+  // RQLI is the correct command — printer responds with RSLI + full template array.
+  // We retry up to 3 times and verify the response command is RSLI before accepting.
   if (templateName) {
-    // Try extracting from already-received MON response
-    const templatesFromMon = extractTemplateList(result.mon_raw);
-    if (templatesFromMon.length > 0) {
-      const normalizedTarget = templateName.trim().toLowerCase();
-      const found = templatesFromMon.some(t => String(t).trim().toLowerCase() === normalizedTarget);
-      result.templateFound          = found;
-      result.availableTemplates     = templatesFromMon;
-      result.templateError          = null;
-      result.templateListUnavailable = false;
-      console.log('[STEP5] Template list from MON response:', templatesFromMon, '| Looking for:', templateName, '| Found:', found);
-    } else {
-      // MON didn't carry template list — send dedicated RQLI
-      const tplCheck = await checkTemplateExists(printer, templateName);
-      result.templateFound          = tplCheck.found;
-      result.availableTemplates     = tplCheck.availableTemplates;
-      result.templateError          = tplCheck.error;
-      result.templateListUnavailable = tplCheck.templateListUnavailable;
-      console.log('[STEP5] Template check via RQLI:', { templateName, found: tplCheck.found, total: tplCheck.availableTemplates.length });
-    }
+    console.log(`[STEP5] Running RQLI template check for: "${templateName}"`);
+    const tplCheck = await checkTemplateExists(printer, templateName, 3);
+    result.templateFound          = tplCheck.found;
+    result.availableTemplates     = tplCheck.availableTemplates;
+    result.templateError          = tplCheck.error;
+    result.templateListUnavailable = tplCheck.templateListUnavailable;
+    console.log(`[STEP5] RQLI result: found=${tplCheck.found}, total=${tplCheck.availableTemplates.length}, unavailable=${tplCheck.templateListUnavailable}`);
   }
 
   return result;
 }
 
 /**
- * checkTemplateExists
- *
- * Uses the RQLI command to fetch the list of templates registered on the printer.
- * Protocol: POST /print with { command: "RQLI" }
- * Middleware returns the printer's response: { command: "RSLI", template: ["Default-1", "Default-2"] }
- *
- * Then checks if the given templateName is in that list.
- *
- * @param {object} printer       - LblPrinterConfig record
- * @param {string} templateName  - Template name to verify (e.g. "Default-1")
- * @returns {{ found: bool, availableTemplates: string[], error: string|null }}
- */
-export async function checkTemplateExists(printer, templateName) {
-  const base      = getPrinterBase(printer);
-  const headers   = buildHeaders(printer, true);
-  const timeoutMs = printer.request_timeout_ms || 10000;
-
-  const rqliPayload = {
-    printer_id: printer.printer_id,
-    printer:    { ip: printer.ip_address, port: printer.port },
-    command:    { command: 'RQLI' },
-  };
-
-  const { body, error: transportError } = await postToMiddleware(
-    `${base}${MIDDLEWARE_ENDPOINTS.PRINT}`,
-    rqliPayload,
-    headers,
-    timeoutMs
-  );
-
-  if (transportError && !body) {
-    return { found: false, availableTemplates: [], error: `Cannot reach middleware: ${transportError}` };
-  }
-
-  // Extract template list from the middleware response.
-  // The actual response structure (confirmed from real middleware):
-  //   body.printer_response_payload.template  → array of template name strings  ✅ PRIMARY
-  //   body.response.response.template          → same array, nested deeper
-  //   body.printer_raw_response               → JSON string — parse as fallback
-  const templates = extractTemplateList(body);
-
-  console.log('[RQLI] Templates on printer:', templates, '| Looking for:', templateName);
-
-  // Case-insensitive + trimmed match
-  const normalizedTarget = templateName.trim().toLowerCase();
-  const found = templates.some(t => String(t).trim().toLowerCase() === normalizedTarget);
-
-  return {
-    found,
-    availableTemplates: templates,
-    // Only set error if we got no templates at all (couldn't read list)
-    // If we got templates but didn't find the name → found=false, error=null (template genuinely missing)
-    error: templates.length === 0 ? 'Could not read template list from printer response' : null,
-    // templateListUnavailable helps the UI distinguish "list unreadable" vs "template not on printer"
-    templateListUnavailable: templates.length === 0,
-  };
-}
-
-/**
- * extractTemplateList
- *
- * Parses the raw RQLI middleware response and returns a clean string[]
- * of template names registered on the physical printer.
- *
- * Priority order (matches confirmed real response structure):
- * 1. body.printer_response_payload.template      — already parsed array  ✅ most reliable
- * 2. body.response.response.template             — nested response object
- * 3. body.response.details.response.template     — even deeper nesting
- * 4. body.printer_raw_response                   — JSON string — parse and extract
- * 5. body.template / body.templates              — flat fallbacks
- */
-function extractTemplateList(body) {
-  if (!body) return [];
-
-  // Helper: extract template array from any parsed object
-  const fromObj = (obj) => {
-    if (!obj) return null;
-    if (Array.isArray(obj.template) && obj.template.length > 0) return obj.template.map(String);
-    if (Array.isArray(obj.templates) && obj.templates.length > 0) return obj.templates.map(String);
-    return null;
-  };
-
-  // Helper: try to parse a JSON string and extract templates
-  const fromJsonStr = (str) => {
-    if (typeof str !== 'string') return null;
-    try {
-      const parsed = JSON.parse(str);
-      return fromObj(parsed);
-    } catch (_) { return null; }
-  };
-
-  // 1. printer_response_payload.template
-  const r = fromObj(body.printer_response_payload);
-  if (r) return r;
-
-  // 2. body.response.response.template
-  const r1 = fromObj(body?.response?.response);
-  if (r1) return r1;
-
-  // 3. body.response.details.response.template
-  const r2 = fromObj(body?.response?.details?.response);
-  if (r2) return r2;
-
-  // 4. printer_raw_response as JSON string
-  const r3 = fromJsonStr(body.printer_raw_response);
-  if (r3) return r3;
-
-  // 5. printer_response_payload as JSON string (some middleware versions stringify it)
-  const r4 = fromJsonStr(body.printer_response_payload);
-  if (r4) return r4;
-
-  // 6. Flat fallbacks on body itself
-  const r5 = fromObj(body);
-  if (r5) return r5;
-
-  return [];
-}
-
-/**
  * getPrinterStatus
- *
- * Legacy wrapper — kept for backward compatibility.
- * Internally calls checkAndSyncPrinterConfig() and maps to old return shape.
+ * Legacy wrapper — calls checkAndSyncPrinterConfig() and maps to old return shape.
  */
 export async function getPrinterStatus(printer) {
   const full = await checkAndSyncPrinterConfig(printer);
   return {
-    success:      full.configOk,
+    success:       full.configOk,
     has_cartridge: full.has_cartridge,
-    ink_level:    full.ink_level,
-    mon_output:   full.mon_raw ? JSON.stringify(full.mon_raw).substring(0, 200) : null,
-    raw:          full,
-    errorMessage: full.configError || full.connectionError || full.cartridgeError || null,
+    ink_level:     full.ink_level,
+    mon_output:    full.mon_raw ? JSON.stringify(full.mon_raw).substring(0, 200) : null,
+    raw:           full,
+    errorMessage:  full.configError || full.connectionError || full.cartridgeError || null,
   };
 }
 
 /**
  * getRynanMiddlewareSnapshot
- *
  * Fetches health, connected printers, and metrics in parallel.
- * Used by the Rynan Printer Center diagnostics page.
  */
 export async function getRynanMiddlewareSnapshot(printer) {
   const base    = getPrinterBase(printer);
@@ -835,20 +783,18 @@ export async function getRynanMiddlewareSnapshot(printer) {
   ]);
 
   return {
-    health:         health.status === 'fulfilled'   ? health.value          : null,
-    healthError:    health.status === 'rejected'    ? health.reason?.message : null,
-    printers:       printers.status === 'fulfilled' ? printers.value        : null,
-    printersError:  printers.status === 'rejected'  ? printers.reason?.message : null,
-    metrics:        metrics.status === 'fulfilled'  ? metrics.value         : null,
-    metricsError:   metrics.status === 'rejected'   ? metrics.reason?.message : null,
+    health:        health.status === 'fulfilled'   ? health.value            : null,
+    healthError:   health.status === 'rejected'    ? health.reason?.message  : null,
+    printers:      printers.status === 'fulfilled' ? printers.value          : null,
+    printersError: printers.status === 'rejected'  ? printers.reason?.message : null,
+    metrics:       metrics.status === 'fulfilled'  ? metrics.value           : null,
+    metricsError:  metrics.status === 'rejected'   ? metrics.reason?.message : null,
   };
 }
 
 /**
  * fetchRynanMiddlewareJobStatus
- *
  * Checks the status of a specific middleware print job by ID.
- * Endpoint: GET /job/{middlewareJobId}
  */
 export async function fetchRynanMiddlewareJobStatus({ printer, middlewareJobId }) {
   const base    = getPrinterBase(printer);
