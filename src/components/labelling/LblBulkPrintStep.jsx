@@ -463,7 +463,7 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
       {isPrinting && (
         <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-700">
           <Clock className="w-4 h-4 shrink-0 animate-pulse" />
-          Print count is automatically updated every 2 seconds via RQLP status from the printer.
+          Print count is automatically updated every 200ms via RQLP status from the printer.
         </div>
       )}
 
