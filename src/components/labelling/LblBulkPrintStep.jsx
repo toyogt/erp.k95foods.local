@@ -39,7 +39,15 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
   const [acting, setActing]               = useState(false);
   const [sendingPrint, setSendingPrint]   = useState(false);
   const [showResumePreview, setShowResumePreview] = useState(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState(job.printer_template_id || null);
+  const [savingTemplate, setSavingTemplate] = useState(false);
   const queryClient                       = useQueryClient();
+
+  // ── All available templates ──
+  const { data: availableTemplates = [] } = useQuery({
+    queryKey: ['lbl-print-templates-all'],
+    queryFn:  () => base44.entities.LblPrintTemplate.filter({ is_active: true }),
+  });
 
   // ── Active printers — auto-resolve by line_id ──
   const { data: printers = [], isLoading: printersLoading } = useQuery({
@@ -64,17 +72,33 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
     || null;
   const sentPodValues = dataCommand?.request_payload?.command?.data || {};
 
-  // ── Job's print template — sourced directly from job.printer_template_id ──
-  // This field is persisted on the LabellingJob when the demo print is sent.
+  // ── Job's print template — sourced directly from selectedTemplateId ──
   const { data: jobTemplate, isLoading: templateLoading } = useQuery({
-    queryKey: ['lbl-job-print-template', job.printer_template_id],
+    queryKey: ['lbl-job-print-template', selectedTemplateId],
     queryFn:  async () => {
-      if (!job.printer_template_id) return null;
-      const all = await base44.entities.LblPrintTemplate.filter({ is_active: true });
-      return all.find(t => t.id === job.printer_template_id) || null;
+      if (!selectedTemplateId) return null;
+      return availableTemplates.find(t => t.id === selectedTemplateId) || null;
     },
-    enabled: !!job.printer_template_id,
+    enabled: !!selectedTemplateId && availableTemplates.length > 0,
   });
+
+  const handleSelectTemplate = async (templateId) => {
+    if (!templateId) return;
+    setSelectedTemplateId(templateId);
+    
+    // If job doesn't have a printer_template_id, save it now
+    if (!job.printer_template_id) {
+      setSavingTemplate(true);
+      try {
+        await base44.entities.LabellingJob.update(job.id, { printer_template_id: templateId });
+      } catch (error) {
+        toast({ title: 'Failed to Save Template', description: error.message, variant: 'destructive' });
+        setSelectedTemplateId(null);
+      } finally {
+        setSavingTemplate(false);
+      }
+    }
+  };
 
   const templateName     = jobTemplate?.middleware_template_name || '';
   const templateResolved = !templateLoading;
@@ -406,6 +430,26 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
     <div className="bg-white border border-slate-200 rounded-lg p-4 space-y-4">
       <h2 className="text-base font-semibold text-slate-900">Bulk Print Control</h2>
 
+      {/* Template Selection (if missing) */}
+      {!selectedTemplateId && availableTemplates.length > 0 && (
+        <div className="border border-amber-200 bg-amber-50 rounded-lg p-4 space-y-3">
+          <p className="text-sm font-medium text-amber-900">⚠ Print Template Required</p>
+          <p className="text-sm text-amber-700">Select a print template to proceed:</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {availableTemplates.map(template => (
+              <button
+                key={template.id}
+                onClick={() => handleSelectTemplate(template.id)}
+                disabled={savingTemplate}
+                className="h-11 px-3 py-2 text-left border border-amber-300 rounded-lg hover:bg-amber-100 active:bg-amber-200 disabled:opacity-50 transition-colors text-sm font-medium text-amber-900"
+              >
+                {savingTemplate ? '...' : `${template.name} [${template.middleware_template_name}]`}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <NoPrinterWarning />
       <PrinterBadge />
 
@@ -496,7 +540,7 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
           <Button
             className="h-11 flex-1 gap-2 bg-indigo-600 hover:bg-indigo-700"
             onClick={() => setShowResumePreview(true)}
-            disabled={acting || !selectedPrinter || remaining <= 0 || !templateName}
+            disabled={acting || !selectedTemplateId || !selectedPrinter || remaining <= 0 || !templateName}
           >
             {acting
               ? <><Loader2 className="w-4 h-4 animate-spin" /> Sending {remaining.toLocaleString()} labels…</>
