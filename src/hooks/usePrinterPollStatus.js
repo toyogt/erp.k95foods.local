@@ -24,6 +24,7 @@ export function usePrinterPollStatus(job, printer, enabled = false, pollInterval
   const [isPolling, setIsPolling]               = useState(false);
 
   const pollIntervalRef         = useRef(null);
+  const baselinePrintedCountRef = useRef(job?.current_printed_qty || 0);  // Baseline for this polling session
   const lastDbWrittenCountRef   = useRef(job?.current_printed_qty || 0);
   const jobPlannedQtyReachedRef = useRef(false);
   const isCompletingRef         = useRef(false);
@@ -47,7 +48,8 @@ export function usePrinterPollStatus(job, printer, enabled = false, pollInterval
       return;
     }
 
-    // Reset on new poll session
+    // Reset on new poll session — capture baseline from current job state
+    baselinePrintedCountRef.current = job?.current_printed_qty || 0;  // Offset for this session
     jobPlannedQtyReachedRef.current = false;
     isCompletingRef.current         = false;
     lastDbWrittenCountRef.current   = job?.current_printed_qty || 0;
@@ -89,7 +91,9 @@ export function usePrinterPollStatus(job, printer, enabled = false, pollInterval
 
       const { printedCount, totalCount } = result;
       const planned          = job.quantity_bottles_planned || 0;
-      const safePrintedCount = Math.min(printedCount, planned);
+      // Add the printer's count (relative to current printing segment) to the baseline from before this session started
+      const cumulativePrintedCount = baselinePrintedCountRef.current + printedCount;
+      const safePrintedCount = Math.min(cumulativePrintedCount, planned);
 
       // ── PHASE 2: Printer reset to 0/0 after Phase 1 completion ──
       if (jobPlannedQtyReachedRef.current && printedCount === 0 && totalCount === 0) {
