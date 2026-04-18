@@ -133,12 +133,12 @@ export function buildPurgePayload(printer) {
 // LAYER 3 — TRANSPORT UTILITIES
 // ─────────────────────────────────────────────────────────────────────────────
 
-function getPrinterBase(printer) {
+export function getPrinterBase(printer) {
   const raw = printer.register_app_link || printer.api_endpoint || '';
   return raw.replace(/\/print\/?$/, '').replace(/\/$/, '');
 }
 
-function buildHeaders(printer, includeContentType = true) {
+export function buildHeaders(printer, includeContentType = true) {
   const headers = {};
   if (includeContentType) headers['Content-Type'] = 'application/json';
   if (printer.auth_header_key && printer.auth_header_value) {
@@ -271,7 +271,7 @@ function isRetryableError(error, responseBody) {
   return false;
 }
 
-async function postToMiddleware(url, payload, headers, timeoutMs = 15000, maxRetries = 1) {
+export async function postToMiddleware(url, payload, headers, timeoutMs = 15000, maxRetries = 1) {
   let lastError = null;
   let lastBody = null;
   let lastStatusCode = null;

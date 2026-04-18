@@ -11,7 +11,6 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { toast } from '@/components/ui/use-toast';
 import { computeLabelFields } from '@/lib/labelFieldComputer';
 import { sendStarCommand } from '@/lib/rynanPrinterService';
@@ -23,7 +22,6 @@ import { Loader2, Printer, AlertTriangle } from 'lucide-react';
 
 export default function LblDemoPrintStep({ job, user, onComplete }) {
   const [demoQty, setDemoQty] = useState('2');
-  const [printerId, setPrinterId] = useState('');
   const [sending, setSending] = useState(false);
   const [printerStatus, setPrinterStatus] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
@@ -37,6 +35,7 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
     mrp: job.mrp || '',
   });
 
+  // Auto-fetch printers and resolve by line_id from the job
   const { data: printers = [] } = useQuery({
     queryKey: ['lbl-printers-active'],
     queryFn: () => base44.entities.LblPrinterConfig.filter({ is_active: true }),
@@ -80,8 +79,10 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
     productName: job.product_name,
   });
 
-  const selectedPrinter = printers.find(p => p.printer_id === printerId) || null;
+  // Auto-resolve printer from job's line_id — no manual selection needed
+  const selectedPrinter = printers.find(p => p.line_id === job.line_id) || null;
   const noPrinters = printers.length === 0;
+  const noLinePrinter = printers.length > 0 && !selectedPrinter;
   const hasCartridge = printerStatus?.has_cartridge === true;
   // Only block if we confirmed the template is definitely NOT there (list was readable but name absent)
   const templateMissing = printerStatus?.templateFound === false && !printerStatus?.templateListUnavailable;
@@ -92,7 +93,7 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
 
   const handlePreviewPrint = () => {
     if (!demoQty || Number(demoQty) <= 0) { toast({ title: 'Invalid Quantity', variant: 'destructive' }); return; }
-    if (!printerId) { toast({ title: 'Select a printer first', variant: 'destructive' }); return; }
+    if (!selectedPrinter) { toast({ title: 'No printer assigned to this line', description: `Assign a printer to ${job.line_name || job.line_id} in Printer Settings.`, variant: 'destructive' }); return; }
     if (!statusChecked) { toast({ title: 'Check Printer Status First', description: 'Click "Check Status" to verify cartridge before printing.', variant: 'destructive' }); return; }
     if (!hasCartridge) { toast({ title: 'No Cartridge Detected', description: 'Cannot send demo print — please install a cartridge and check status again.', variant: 'destructive' }); return; }
     if (templateMissing) { toast({ title: 'Template Not Found on Printer', description: `Template "${templateName}" is not loaded on the printer. Contact your middleware administrator.`, variant: 'destructive' }); return; }
@@ -256,31 +257,28 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
         </p>
       </div>
 
+      {/* Auto-resolved printer from line */}
       {noPrinters && (
         <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg p-3">
           <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
           <p className="text-sm text-amber-700">No active printers configured. Please configure a printer in Lines &amp; Printers settings.</p>
         </div>
       )}
-
-      {/* Printer Selection */}
-      <div className="space-y-1">
-        <Label className="text-xs font-medium text-slate-700">Select Printer <span className="text-red-500">*</span></Label>
-        {noPrinters ? (
-          <div className="h-11 md:h-9 flex items-center px-3 bg-slate-50 border border-slate-200 rounded-md text-slate-500 text-sm">
-            No printers available
+      {noLinePrinter && (
+        <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg p-3">
+          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+          <p className="text-sm text-amber-700">No printer is assigned to <strong>{job.line_name || job.line_id}</strong>. Please assign a printer to this line in Printer Settings.</p>
+        </div>
+      )}
+      {selectedPrinter && (
+        <div className="flex items-center gap-2 bg-indigo-50 border border-indigo-200 rounded-lg p-3">
+          <Printer className="w-4 h-4 text-indigo-600 shrink-0" />
+          <div>
+            <p className="text-sm font-medium text-indigo-800">{selectedPrinter.name} <span className="font-normal text-indigo-600">({selectedPrinter.printer_id})</span></p>
+            <p className="text-xs text-indigo-600">Auto-selected from {job.line_name || job.line_id}</p>
           </div>
-        ) : (
-          <Select value={printerId} onValueChange={(v) => { setPrinterId(v); setPrinterStatus(null); }}>
-            <SelectTrigger className="h-11 md:h-9"><SelectValue placeholder="Select printer" /></SelectTrigger>
-            <SelectContent>
-              {printers.map(p => (
-                <SelectItem key={p.printer_id} value={p.printer_id}>{p.name} ({p.printer_id}) — {p.line_name || 'No line'}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Printer Status Panel — shown once a printer is selected */}
       {selectedPrinter && (
@@ -392,13 +390,13 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
             <p className="text-sm text-red-700 font-medium">No cartridge detected — cannot send demo print.</p>
           </div>
         )}
-        {!statusChecked && printerId && (
+        {!statusChecked && selectedPrinter && (
           <p className="text-xs text-amber-600 mb-2">⚠ Check printer status above before sending.</p>
         )}
         <Button
           className="h-11 w-full md:w-auto gap-2 bg-purple-600 hover:bg-purple-700"
           onClick={handlePreviewPrint}
-          disabled={sending || noPrinters || !printerId || (statusChecked && !hasCartridge) || (statusChecked && templateMissing)}
+          disabled={sending || !selectedPrinter || (statusChecked && !hasCartridge) || (statusChecked && templateMissing)}
         >
           {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
           Send Demo Print
