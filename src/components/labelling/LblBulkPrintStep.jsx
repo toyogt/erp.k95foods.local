@@ -328,7 +328,7 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
       title:       'Printing Resumed',
       description: `${toResume.toLocaleString()} label commands sent. Monitoring progress…`,
     });
-    queryClient.invalidateQueries({ queryKey: ['labelling-job', job.id] });
+    await queryClient.refetchQueries({ queryKey: ['labelling-job', job.id] });
     onComplete?.();
     setActing(false);
   };
