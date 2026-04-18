@@ -71,7 +71,7 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
   // job.printer_template_id stores the DB record id (UUID).
   // Falls back to matching by middleware_template_name extracted from demo STAR command
   // for jobs that were paused before the printer_template_id fix was applied.
-  const { data: jobTemplate } = useQuery({
+  const { data: jobTemplate, isLoading: templateLoading } = useQuery({
     queryKey: ['lbl-job-print-template', job.printer_template_id, demoTemplateName],
     queryFn:  async () => {
       const all = await base44.entities.LblPrintTemplate.filter({ is_active: true });
@@ -84,11 +84,13 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
       }
       return null;
     },
-    // Always run: either we have printer_template_id or we try fallback via demo commands
     enabled: !demoLoading && (!!job.printer_template_id || demoCommands.length > 0),
   });
 
+  // Use jobTemplate if available, otherwise fall back directly to demoTemplateName
+  // so the Resume button is not blocked while jobTemplate query is still resolving
   const templateName = jobTemplate?.middleware_template_name || demoTemplateName || '';
+  const templateResolved = !demoLoading && !templateLoading;
 
   // ── Real-time printer polling ──
   // Poll when actively printing OR awaiting the final printer idle reset
@@ -506,7 +508,7 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
           <Button
             className="h-11 flex-1 gap-2 bg-indigo-600 hover:bg-indigo-700"
             onClick={handleResumePrinting}
-            disabled={acting || !selectedPrinter || remaining <= 0 || demoLoading || !templateName}
+            disabled={acting || !selectedPrinter || remaining <= 0 || !templateResolved || !templateName}
           >
             {acting
               ? <><Loader2 className="w-4 h-4 animate-spin" /> Sending {remaining.toLocaleString()} labels…</>
