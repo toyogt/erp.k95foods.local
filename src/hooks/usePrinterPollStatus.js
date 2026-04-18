@@ -1,42 +1,40 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { fetchRynanPodStatus } from '@/lib/rynanPrinterService';
 import { logLabellingEvent } from '@/lib/labellingEventLogger';
 
-const MILESTONE_INCREMENT = 100; // Log every 100 bottles
-const MAX_LOG_RECORDS = 1000;    // Max records per job
+const MILESTONE_INCREMENT = 100; // Write to DB every 100 bottles
+const MAX_LOG_RECORDS = 1000;    // Max poll log records per job
 
 /**
  * usePrinterPollStatus
  *
- * Continuously polls the printer using RQLP command to get real-time
- * print progress and auto-updates the job's current_printed_qty.
+ * Polls the printer via RQLP every pollIntervalMs milliseconds.
+ * Live count is kept in LOCAL React state for instant UI updates — 
+ * DB writes only happen at milestones and phase transitions (like demo hook).
  *
  * TWO-PHASE COMPLETION:
- *   Phase 1 — Printer reports printedCount >= planned quantity
- *             → Update job status to 'bulk_printing_awaiting_printer_reset'
- *             → Continue polling, waiting for printer to go idle
- *   Phase 2 — Printer reports 0/0 (idle reset after Phase 1)
- *             → Update job status to 'completed'
- *             → Stop all polling
+ *   Phase 1 — printedCount >= planned → status = 'bulk_printing_awaiting_printer_reset'
+ *   Phase 2 — printer reports 0/0     → status = 'completed'
  *
- * PAUSE:  Polling stops when job.status === 'paused'
- * RESUME: Polling resumes when job.status === 'bulk_printing'
- *
- * @param {object} job            - LabellingJob record
- * @param {object} printer        - LblPrinterConfig record
- * @param {boolean} enabled       - Start/stop polling
- * @param {number} pollIntervalMs - How often to poll (default 2s)
+ * @returns {{ livePrintedCount: number, isPolling: boolean }}
  */
-export function usePrinterPollStatus(job, printer, enabled = false, pollIntervalMs = 2000) {
-  const pollIntervalRef             = useRef(null);
-  const lastPrintedCountRef         = useRef(job?.current_printed_qty || 0);
-  const jobPlannedQtyReachedRef     = useRef(false); // Phase 1 flag
-  const printerIdleAfterCompleteRef = useRef(false); // Phase 2 flag
-  const isCompletingRef             = useRef(false);  // Prevent duplicate completion writes
+export function usePrinterPollStatus(job, printer, enabled = false, pollIntervalMs = 200) {
+  const [livePrintedCount, setLivePrintedCount] = useState(job?.current_printed_qty || 0);
+  const [isPolling, setIsPolling]               = useState(false);
+
+  const pollIntervalRef         = useRef(null);
+  const lastDbWrittenCountRef   = useRef(job?.current_printed_qty || 0);
+  const jobPlannedQtyReachedRef = useRef(false);
+  const isCompletingRef         = useRef(false);
+  const isMountedRef            = useRef(true);
 
   useEffect(() => {
-    // Stop polling if disabled, no job/printer, already in terminal states, or paused
+    isMountedRef.current = true;
+    return () => { isMountedRef.current = false; };
+  }, []);
+
+  useEffect(() => {
     if (
       !enabled ||
       !job?.id ||
@@ -45,32 +43,32 @@ export function usePrinterPollStatus(job, printer, enabled = false, pollInterval
       job?.status === 'paused'
     ) {
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      setIsPolling(false);
       return;
     }
 
-    // Reset phase flags when a new job starts
-    jobPlannedQtyReachedRef.current     = false;
-    printerIdleAfterCompleteRef.current = false;
-    isCompletingRef.current             = false;
-    lastPrintedCountRef.current         = job?.current_printed_qty || 0;
+    // Reset on new poll session
+    jobPlannedQtyReachedRef.current = false;
+    isCompletingRef.current         = false;
+    lastDbWrittenCountRef.current   = job?.current_printed_qty || 0;
+    setLivePrintedCount(job?.current_printed_qty || 0);
 
     const logPrinterStatusToDB = async (jobId, logType, printedQty, errorMsg) => {
       try {
         const recordCount = await base44.entities.LblPrintCommand.filter({ job_id: jobId });
         if (recordCount.length >= MAX_LOG_RECORDS) return;
-
         await base44.entities.LblPrintCommand.create({
-          command_id:      `POLL-${jobId}-${Date.now()}`,
-          job_id:          jobId,
-          printer_id:      printer.printer_id,
-          endpoint_url:    `${printer.register_app_link || printer.api_endpoint}/print`,
-          command_type:    'bulk_status_poll',
-          status:          logType === 'error' ? 'failed' : 'acknowledged',
-          quantity:        printedQty || 0,
-          request_payload: { command: 'RQLP' },
+          command_id:       `POLL-${jobId}-${Date.now()}`,
+          job_id:           jobId,
+          printer_id:       printer.printer_id,
+          endpoint_url:     `${printer.register_app_link || printer.api_endpoint}/print`,
+          command_type:     'bulk_status_poll',
+          status:           logType === 'error' ? 'failed' : 'acknowledged',
+          quantity:         printedQty || 0,
+          request_payload:  { command: 'RQLP' },
           response_payload: { log_type: logType, printed_qty: printedQty },
-          error_message:   errorMsg || null,
-          sent_at:         new Date().toISOString(),
+          error_message:    errorMsg || null,
+          sent_at:          new Date().toISOString(),
         });
       } catch (err) {
         console.error('[POLL] Failed to log status:', err.message);
@@ -78,24 +76,14 @@ export function usePrinterPollStatus(job, printer, enabled = false, pollInterval
     };
 
     const poll = async () => {
-      let result   = null;
-      let attempts = 0;
-      const maxRetries = 3;
+      if (!isMountedRef.current) return;
 
-      while (attempts < maxRetries) {
-        attempts++;
-        result = await fetchRynanPodStatus(printer);
-        if (result.success) {
-          console.log(`[POLL] RQLP success on attempt ${attempts}`);
-          break;
-        }
-        console.warn(`[POLL] RQLP attempt ${attempts}/${maxRetries} failed:`, result.errorMessage);
-        if (attempts < maxRetries) await new Promise(r => setTimeout(r, 500));
-      }
+      const result = await fetchRynanPodStatus(printer);
+
+      if (!isMountedRef.current) return;
 
       if (!result.success) {
-        console.error(`[POLL] RQLP failed after ${maxRetries} attempts:`, result.errorMessage);
-        await logPrinterStatusToDB(job.id, 'error', null, result.errorMessage);
+        console.warn('[POLL] RQLP failed:', result.errorMessage);
         return;
       }
 
@@ -103,37 +91,32 @@ export function usePrinterPollStatus(job, printer, enabled = false, pollInterval
       const planned          = job.quantity_bottles_planned || 0;
       const safePrintedCount = Math.min(printedCount, planned);
 
-      // ─────────────────────────────────────────────────────────────────
-      // PHASE 2: Printer reset to 0/0 AFTER all labels were reported done
-      // ─────────────────────────────────────────────────────────────────
+      // ── PHASE 2: Printer reset to 0/0 after Phase 1 completion ──
       if (jobPlannedQtyReachedRef.current && printedCount === 0 && totalCount === 0) {
         if (!isCompletingRef.current) {
           isCompletingRef.current = true;
-          console.log('[POLL] Phase 2: Printer reset to 0/0 — marking job as completed.');
-
+          console.log('[POLL] Phase 2: Printer idle — marking job completed.');
           if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+          if (isMountedRef.current) setIsPolling(false);
 
           await base44.entities.LabellingJob.update(job.id, { status: 'completed' });
           await logLabellingEvent({
-            action_type:  'job_completed',
-            job_id:       job.id,
-            plan_id:      job.plan_id,
-            description:  `Bulk print job completed. All ${planned.toLocaleString()} labels physically printed and printer confirmed idle.`,
-            user:         null,
+            action_type: 'job_completed',
+            job_id:      job.id,
+            plan_id:     job.plan_id,
+            description: `Bulk print completed. All ${planned.toLocaleString()} labels printed and printer confirmed idle.`,
+            user:        null,
           });
           await logPrinterStatusToDB(job.id, 'completed', planned, null);
         }
         return;
       }
 
-      // ─────────────────────────────────────────────────────────────────
-      // PHASE 1: Planned quantity reached — wait for printer idle
-      // ─────────────────────────────────────────────────────────────────
-      const isFinal = safePrintedCount >= planned && planned > 0;
-
-      if (isFinal && !jobPlannedQtyReachedRef.current) {
+      // ── PHASE 1: All labels printed — transition status ──
+      if (safePrintedCount >= planned && planned > 0 && !jobPlannedQtyReachedRef.current) {
         jobPlannedQtyReachedRef.current = true;
-        console.log(`[POLL] Phase 1: All ${planned} labels reached. Awaiting printer 0/0 reset.`);
+        console.log(`[POLL] Phase 1: ${planned} labels reached. Awaiting printer idle.`);
+        if (isMountedRef.current) setLivePrintedCount(planned);
 
         await base44.entities.LabellingJob.update(job.id, {
           current_printed_qty: planned,
@@ -143,28 +126,27 @@ export function usePrinterPollStatus(job, printer, enabled = false, pollInterval
         return;
       }
 
-      // Skip if we're already in the "awaiting reset" phase — don't overwrite status
+      // Skip updates during awaiting-reset phase
       if (jobPlannedQtyReachedRef.current) return;
 
-      // ─────────────────────────────────────────────────────────────────
-      // NORMAL: Update printed count if it changed
-      // ─────────────────────────────────────────────────────────────────
-      if (safePrintedCount > lastPrintedCountRef.current) {
-        lastPrintedCountRef.current = safePrintedCount;
+      // ── NORMAL: Update live state immediately, DB only at milestones ──
+      if (safePrintedCount > lastDbWrittenCountRef.current) {
+        // Always update UI instantly (no DB round-trip)
+        if (isMountedRef.current) setLivePrintedCount(safePrintedCount);
 
         const isMilestone = safePrintedCount % MILESTONE_INCREMENT === 0;
         if (isMilestone) {
-          console.log(`[POLL] Milestone: ${safePrintedCount}/${planned} bottles`);
+          lastDbWrittenCountRef.current = safePrintedCount;
+          console.log(`[POLL] Milestone DB write: ${safePrintedCount}/${planned}`);
           await logPrinterStatusToDB(job.id, 'milestone', safePrintedCount, null);
+          await base44.entities.LabellingJob.update(job.id, {
+            current_printed_qty: safePrintedCount,
+          });
         }
-
-        await base44.entities.LabellingJob.update(job.id, {
-          current_printed_qty: safePrintedCount,
-          status: 'bulk_printing',
-        });
       }
     };
 
+    setIsPolling(true);
     poll();
     pollIntervalRef.current = setInterval(poll, pollIntervalMs);
 
@@ -172,4 +154,6 @@ export function usePrinterPollStatus(job, printer, enabled = false, pollInterval
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
     };
   }, [enabled, job?.id, job?.status, printer?.printer_id, pollIntervalMs]);
+
+  return { livePrintedCount, isPolling };
 }

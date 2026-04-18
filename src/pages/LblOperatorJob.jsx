@@ -23,14 +23,10 @@ export default function LblOperatorJob() {
 
   useEffect(() => { base44.auth.me().then(setUser); }, []);
 
-  const isActivelyPrinting = (status) =>
-    status === 'bulk_printing' || status === 'bulk_printing_awaiting_printer_reset';
-
   const { data: job, isLoading } = useQuery({
     queryKey: ['labelling-job', jobId],
     queryFn: async () => { const j = await base44.entities.LabellingJob.filter({ id: jobId }); return j[0] || null; },
     enabled: !!jobId,
-    refetchInterval: (data) => isActivelyPrinting(data?.status) ? 200 : false,
   });
   const refreshJob = () => queryClient.invalidateQueries({ queryKey: ['labelling-job', jobId] });
 
