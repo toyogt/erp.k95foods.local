@@ -20,6 +20,7 @@ import { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { logLabellingEvent } from '@/lib/labellingEventLogger';
+import LblPrintPreviewModal from './LblPrintPreviewModal';
 import {
   sendStarCommand,
   postToMiddleware,
@@ -35,9 +36,10 @@ import {
 } from 'lucide-react';
 
 export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
-  const [acting, setActing]             = useState(false);
-  const [sendingPrint, setSendingPrint] = useState(false);
-  const queryClient                     = useQueryClient();
+  const [acting, setActing]               = useState(false);
+  const [sendingPrint, setSendingPrint]   = useState(false);
+  const [showResumePreview, setShowResumePreview] = useState(false);
+  const queryClient                       = useQueryClient();
 
   // ── Active printers — auto-resolve by line_id ──
   const { data: printers = [], isLoading: printersLoading } = useQuery({
@@ -235,7 +237,7 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
   // Calculates remaining = planned - current_printed_qty
   // Sends: STOP → STAR (reload template) → MON (verify) → DATA × remaining
   // ──────────────────────────────────────────────────────────────────────
-  const handleResumePrinting = async () => {
+  const handleResumePrinting = async (podValues) => {
     if (!selectedPrinter) {
       toast({ title: 'No printer found for this line', variant: 'destructive' });
       return;
@@ -253,6 +255,7 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
       return;
     }
 
+    setShowResumePreview(false);
     setActing(true);
 
     toast({
@@ -265,7 +268,7 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
       selectedPrinter,
       templateName,
       toResume,
-      { jobId: job.id, commandType: 'bulk_resume', user, podValues: sentPodValues }
+      { jobId: job.id, commandType: 'bulk_resume', user, podValues: podValues || sentPodValues }
     );
 
     if (!result.success) {
@@ -492,7 +495,7 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
         {isPaused && (
           <Button
             className="h-11 flex-1 gap-2 bg-indigo-600 hover:bg-indigo-700"
-            onClick={handleResumePrinting}
+            onClick={() => setShowResumePreview(true)}
             disabled={acting || !selectedPrinter || remaining <= 0 || !templateName}
           >
             {acting
@@ -509,6 +512,19 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
           </div>
         )}
       </div>
+
+      {/* Resume Preview Modal — same confirm flow as demo print */}
+      <LblPrintPreviewModal
+        open={showResumePreview}
+        onOpenChange={setShowResumePreview}
+        podValues={sentPodValues}
+        printerName={selectedPrinter?.name}
+        templateName={templateName}
+        quantity={remaining}
+        title="Confirm Resume Print"
+        onConfirm={(podValues) => handleResumePrinting(podValues)}
+        isLoading={acting}
+      />
     </div>
   );
 }

@@ -6,14 +6,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { AlertCircle } from 'lucide-react';
 
-export default function LblPrintPreviewModal({ open, onOpenChange, podValues, printerName, templateName, quantity, onConfirm, isLoading }) {
+export default function LblPrintPreviewModal({ open, onOpenChange, podValues, printerName, templateName, quantity, onConfirm, isLoading, title }) {
   if (!podValues) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Confirm Demo Print</DialogTitle>
+          <DialogTitle>{title || 'Confirm Print'}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -54,7 +54,7 @@ export default function LblPrintPreviewModal({ open, onOpenChange, podValues, pr
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>Cancel</Button>
-          <Button onClick={onConfirm} disabled={isLoading} className="gap-2 bg-purple-600 hover:bg-purple-700">
+          <Button onClick={() => onConfirm(podValues)} disabled={isLoading} className="gap-2 bg-purple-600 hover:bg-purple-700">
             {isLoading ? '⏳ Sending...' : '✓ Confirm & Send'}
           </Button>
         </DialogFooter>

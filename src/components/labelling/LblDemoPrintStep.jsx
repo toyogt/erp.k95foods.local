@@ -413,6 +413,7 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
         printerName={selectedPrinter?.name}
         templateName={templateName}
         quantity={Number(demoQty)}
+        title="Confirm Demo Print"
         onConfirm={handleConfirmPrint}
         isLoading={sending}
       />
