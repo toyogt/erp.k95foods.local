@@ -11,8 +11,9 @@ import LblDemoPrintVerificationStep from '@/components/labelling/LblDemoPrintVer
 import LblChecklistStep from '@/components/labelling/LblChecklistStep';
 import LblBulkPrintStep from '@/components/labelling/LblBulkPrintStep';
 import LblCompletionStep from '@/components/labelling/LblCompletionStep';
+import LblStopJobModal from '@/components/labelling/LblStopJobModal';
 import { toast } from '@/components/ui/use-toast';
-import { ArrowLeft, Loader2, Play, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Loader2, Play, RotateCcw, Square } from 'lucide-react';
 
 export default function LblOperatorJob() {
   const navigate = useNavigate();
@@ -20,6 +21,7 @@ export default function LblOperatorJob() {
   const jobId = new URLSearchParams(window.location.search).get('jobId');
   const [user, setUser] = useState(null);
   const [acting, setActing] = useState(false);
+  const [stopModalOpen, setStopModalOpen] = useState(false);
 
   useEffect(() => { base44.auth.me().then(setUser); }, []);
 
@@ -37,6 +39,32 @@ export default function LblOperatorJob() {
     toast({ title: 'Job Started' });
     refreshJob();
     setActing(false);
+  };
+
+  const handleStopAndNext = async (newStatus, remarks) => {
+    setActing(true);
+    try {
+      const response = await base44.functions.invoke('stopJobAndActivateNext', {
+        job_id: job.id,
+        new_status: newStatus,
+        remarks,
+      });
+
+      if (response.data.success) {
+        toast({
+          title: 'Job Stopped',
+          description: response.data.message,
+        });
+        setStopModalOpen(false);
+        navigate('/LblOperatorQueue');
+      } else {
+        toast({ title: 'Error', description: response.data.error, variant: 'destructive' });
+      }
+    } catch (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setActing(false);
+    }
   };
 
   if (isLoading) return <div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>;
@@ -108,6 +136,29 @@ export default function LblOperatorJob() {
       {job.status === 'demo_approved' && <LblBulkPrintStep job={job} user={user} onComplete={refreshJob} mode="start" />}
       {(job.status === 'bulk_printing' || job.status === 'paused') && <LblBulkPrintStep job={job} user={user} onComplete={refreshJob} mode="control" />}
       {job.status === 'completed' && <LblCompletionStep job={job} />}
+
+      {(['active', 'stock_transferred', 'demo_print_sent', 'demo_print_verified', 'demo_pending_approval', 'demo_approved', 'bulk_printing', 'paused'].includes(job.status) && user?.role === 'supervisor') && (
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            className="h-11 flex-1 md:flex-none gap-2 border-red-300 text-red-700 hover:bg-red-50"
+            onClick={() => setStopModalOpen(true)}
+            disabled={acting}
+          >
+            <Square className="w-4 h-4" />
+            Stop & Next
+          </Button>
+        </div>
+      )}
+
+      <LblStopJobModal
+        open={stopModalOpen}
+        onOpenChange={setStopModalOpen}
+        job={job}
+        onConfirm={handleStopAndNext}
+        isLoading={acting}
+      />
+
       {(job.status === 'bulk_printing' || job.status === 'paused') && job.current_printed_qty >= job.quantity_bottles_planned && (
         <div className="bg-white border border-slate-200 rounded-lg p-6 text-center space-y-4">
           <h2 className="text-lg font-semibold text-green-700">Bulk Printing Complete</h2>
