@@ -72,15 +72,20 @@ export default function LblDemoPrintVerificationStep({ job, user, onComplete }) 
   const hasSentPods = Object.keys(sentPodValues).length > 0;
 
   // ── Continuous polling via RQLP every 2 seconds ──
-  const { printedCount, totalCount, allPrinted, printerPodData, isPolling, error: pollError } =
+  const { printedCount, totalCount, allPrinted, printerPodData, isPolling, error: pollError, pollingComplete, frozenPodData } =
     useDemoPrintPollStatus(printer, !!printer, 2000);
 
-  // Compare sent vs printed POD values
-  const podComparison = hasSentPods ? comparePodData(sentPodValues, printerPodData) : [];
+  // Once allPrinted is confirmed, freeze the POD table using frozenPodData snapshot.
+  // After pollingComplete (0/0 reset), we continue showing the frozen snapshot.
+  const activePodData = (allPrinted && frozenPodData) ? frozenPodData : printerPodData;
+
+  // Compare sent vs printed POD values — use frozen data once job is complete
+  const podComparison = hasSentPods ? comparePodData(sentPodValues, activePodData) : [];
   const allPodsMatch = podComparison.length === 0 || podComparison.every(r => r.match);
 
-  // All three conditions must be met
-  const canConfirm = physicalConfirmed && allPrinted && allPodsMatch && !pollError;
+  // Confirm button enabled only when ALL demo labels are printed (allPrinted=true)
+  // Physical confirmation is also required. POD match is NOT a hard blocker — operator can override.
+  const canConfirm = physicalConfirmed && allPrinted && !pollError;
 
   // Roll back to stock_transferred — operator can re-send demo print
   const handleResetDemoPrint = async () => {
@@ -140,9 +145,15 @@ export default function LblDemoPrintVerificationStep({ job, user, onComplete }) 
         </div>
         {/* Live polling indicator */}
         <div className="flex items-center gap-1.5">
-          <Radio className={`w-3.5 h-3.5 ${isPolling && !pollError ? 'text-green-500 animate-pulse' : 'text-slate-300'}`} />
-          <span className={`text-xs font-medium ${isPolling && !pollError ? 'text-green-600' : 'text-slate-400'}`}>
-            {printer ? (isPolling ? 'Live' : 'Connecting…') : 'No printer found'}
+          <Radio className={`w-3.5 h-3.5 ${
+            pollingComplete ? 'text-green-500' :
+            isPolling && !pollError ? 'text-green-500 animate-pulse' : 'text-slate-300'
+          }`} />
+          <span className={`text-xs font-medium ${
+            pollingComplete ? 'text-green-600' :
+            isPolling && !pollError ? 'text-green-600' : 'text-slate-400'
+          }`}>
+            {pollingComplete ? 'Complete' : printer ? (isPolling ? 'Live' : 'Connecting…') : 'No printer found'}
           </span>
         </div>
       </div>
@@ -191,13 +202,20 @@ export default function LblDemoPrintVerificationStep({ job, user, onComplete }) 
                 : <Loader2 className="w-4 h-4 shrink-0 animate-spin text-slate-400" />
               }
               <span>
-                Labels Printed: <span className="font-bold">{printedCount}</span> of <span className="font-bold">{totalCount}</span>
-                {!allPrinted && totalCount > 0 && ` — ${totalCount - printedCount} remaining`}
-                {totalCount === 0 && ' — Waiting for printer response…'}
+                {allPrinted
+                  ? <>Labels Printed: <span className="font-bold">{job.demo_print_qty || totalCount}</span> of <span className="font-bold">{job.demo_print_qty || totalCount}</span> — All demo labels printed ✓</>
+                  : <>Labels Printed: <span className="font-bold">{printedCount}</span> of <span className="font-bold">{totalCount}</span>
+                      {totalCount > 0 && ` — ${totalCount - printedCount} remaining`}
+                      {totalCount === 0 && ' — Waiting for printer response…'}
+                    </>
+                }
               </span>
+              {pollingComplete && (
+                <span className="ml-auto text-xs text-green-600 font-medium bg-green-100 px-2 py-0.5 rounded-full">Verified</span>
+              )}
             </div>
 
-            {/* POD comparison table */}
+            {/* POD comparison table — frozen after job completion, not updated further */}
             {podComparison.length > 0 && (
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
