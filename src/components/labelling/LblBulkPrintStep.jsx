@@ -74,13 +74,6 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
   const sentPodValues = dataCommand?.request_payload?.command?.data || {};
   const templateName  = jobTemplate?.middleware_template_name || '';
 
-  const planned    = job.quantity_bottles_planned || 0;
-  // Use livePrintedCount from hook for instant UI updates (no DB round-trip)
-  // Fall back to job.current_printed_qty when not polling (paused / idle)
-  const printedQty = shouldPoll ? livePrintedCount : (job.current_printed_qty || 0);
-  const remaining  = Math.max(0, planned - printedQty);
-  const progress   = planned ? Math.min(100, (printedQty / planned) * 100) : 0;
-
   // ── Real-time printer polling ──
   // Poll when actively printing OR awaiting the final printer idle reset
   const shouldPoll =
@@ -88,6 +81,13 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
     job.status === 'bulk_printing_awaiting_printer_reset';
 
   const { livePrintedCount } = usePrinterPollStatus(job, selectedPrinter, shouldPoll, 200);
+
+  const planned    = job.quantity_bottles_planned || 0;
+  // Use livePrintedCount from hook for instant UI updates (no DB round-trip)
+  // Fall back to job.current_printed_qty when not polling (paused / idle)
+  const printedQty = shouldPoll ? livePrintedCount : (job.current_printed_qty || 0);
+  const remaining  = Math.max(0, planned - printedQty);
+  const progress   = planned ? Math.min(100, (printedQty / planned) * 100) : 0;
 
   // ──────────────────────────────────────────────────────────────────────
   // START BULK PRINT
