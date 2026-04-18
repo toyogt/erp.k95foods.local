@@ -21,7 +21,30 @@ export default function LblPlanningDashboard() {
     queryFn: () => base44.entities.LabellingShiftPlan.list('-created_date', 200),
   });
 
-  const filtered = plans.filter(p => {
+  // Fetch all jobs for the listed plans — compute completed/total live
+  const planIds = plans.map(p => p.plan_id);
+  const { data: allJobs = [] } = useQuery({
+    queryKey: ['labelling-jobs-for-plans', planIds.join(',')],
+    queryFn:  () => base44.entities.LabellingJob.list('-created_date', 1000),
+    enabled:  plans.length > 0,
+  });
+
+  // Build a lookup: plan_id → { total, completed }
+  const jobCountsByPlan = allJobs.reduce((acc, job) => {
+    if (!acc[job.plan_id]) acc[job.plan_id] = { total: 0, completed: 0 };
+    acc[job.plan_id].total++;
+    if (job.status === 'completed') acc[job.plan_id].completed++;
+    return acc;
+  }, {});
+
+  // Enrich plans with live job counts
+  const enrichedPlans = plans.map(p => ({
+    ...p,
+    total_jobs:     jobCountsByPlan[p.plan_id]?.total     ?? p.total_jobs     ?? 0,
+    completed_jobs: jobCountsByPlan[p.plan_id]?.completed ?? p.completed_jobs ?? 0,
+  }));
+
+  const filtered = enrichedPlans.filter(p => {
     if (shiftFilter !== 'all' && p.shift_type !== shiftFilter) return false;
     if (statusFilter !== 'all' && p.status !== statusFilter) return false;
     if (dateFilter) {
