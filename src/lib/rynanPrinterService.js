@@ -522,17 +522,20 @@ export async function checkTemplateExists(printer, templateName, maxRetries = 3)
 /**
  * sendStarCommand
  *
- * Core print function. Correct protocol:
+ * Sends print commands to the Rynan middleware as INDIVIDUAL sequential requests.
+ * The middleware only accepts ONE command per request — no batch arrays.
  *
- *   PHASE 1 — One-time printer setup (runs ONCE per batch):
+ * Protocol (each step is a separate HTTP POST):
+ *   PHASE 1 — One-time printer setup:
  *     1. STOP  — clear any previous running job
  *     2. STAR  — load the desired template (retry up to MAX_STAR_READY_ATTEMPTS)
  *     3. MON   — verify the active template on the printer matches what we sent
  *
- *   PHASE 2 — Data loop (runs N times = quantity):
+ *   PHASE 2 — Data loop (N separate requests):
  *     4. DATA  — send POD field values → triggers exactly 1 physical label print
+ *                Repeated N times (once per label)
  *
- * This is efficient: template setup happens once, DATA is streamed N times.
+ * Only returns success=true after ALL DATA commands are confirmed sent.
  *
  * @param {object} printer       - LblPrinterConfig record
  * @param {string} templateName  - Middleware template name (e.g. "TK-EXPE-LS-GLS-330")
@@ -540,13 +543,6 @@ export async function checkTemplateExists(printer, templateName, maxRetries = 3)
  * @param {object} context       - { jobId, commandType, user, podValues }
  *   podValues: { POD1: "val", POD2: "val", ... } — sent in each DATA command
  * @returns {{ success, sentCount, failedAt, lastCommandRecord, lastMiddlewareJobId, errorMessage }}
- */
-/**
- * sendStarCommand
- *
- * @param {number} quantity - How many NEW labels to print (NOT total planned)
- *   For demo: pass 2 (send 2 DATA commands)
- *   For bulk: pass (job.quantity_bottles_planned - job.current_printed_qty)
  */
 export async function sendStarCommand(printer, templateName, quantity = 1, { jobId, commandType = 'demo', user, podValues = {} } = {}) {
   if (!jobId) {
@@ -576,14 +572,15 @@ export async function sendStarCommand(printer, templateName, quantity = 1, { job
   let lastMiddlewareJobId = null;
 
   // ─────────────────────────────────────────────────────────────────────────
-  // PHASE 1: One-time printer setup — STOP → STAR (retry) → MON (verify)
+  // PHASE 1 — Step 1: STOP — clear previous job state (individual request)
   // ─────────────────────────────────────────────────────────────────────────
-
-  // Step 1: STOP — clear previous job state
   const stopResult = await postToMiddleware(endpointUrl, stopPayload, headers, timeoutMs, 1);
   console.log(`[STOP] ok=${isStopReadyResponse(stopResult.body)}, error=${stopResult.error || 'none'}`);
 
-  // Step 2: STAR — load template, retry up to MAX_STAR_READY_ATTEMPTS
+  // ─────────────────────────────────────────────────────────────────────────
+  // PHASE 1 — Step 2: STAR — load template, retry up to MAX_STAR_READY_ATTEMPTS
+  //           Each retry is a separate individual HTTP request
+  // ─────────────────────────────────────────────────────────────────────────
   let starReady = false;
   let jobIdFromStar = null;
   const starAttemptResponses = [];
@@ -609,7 +606,9 @@ export async function sendStarCommand(printer, templateName, quantity = 1, { job
     }
   }
 
-  // Step 3: MON — verify active template matches
+  // ─────────────────────────────────────────────────────────────────────────
+  // PHASE 1 — Step 3: MON — verify active template matches (individual request)
+  // ─────────────────────────────────────────────────────────────────────────
   let templateConfirmed = false;
   if (starReady) {
     const monResult = await postToMiddleware(endpointUrl, monPayload, headers, timeoutMs, 1);
@@ -660,105 +659,106 @@ export async function sendStarCommand(printer, templateName, quantity = 1, { job
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // PHASE 2: Send all commands (STOP, STAR, MON, DATA×quantity) in ONE request
+  // PHASE 2: Send N individual DATA commands — one per label
   //
-  // The Rynan middleware supports batching multiple commands in a single
-  // POST using the `commands` array format. This reduces 1000+ HTTP requests
-  // to just ONE, dramatically improving throughput:
-  //   - Old (serial):     1000 labels = 1000 HTTP requests ≈ 3+ minutes
-  //   - Old (concurrent): 1000 labels = 100 HTTP requests ≈ 30 seconds
-  //   - New (batch):      1000 labels = 1 HTTP request ≈ 2-5 seconds
-  //
-  // Payload format:
-  //   { printer_id, printer, commands: [...], await_response, continue_on_error }
+  // Each DATA command is sent as a SEPARATE HTTP POST request.
+  // The middleware only accepts one command per request.
+  // This loop sends exactly `quantity` requests, each printing 1 label.
   // ─────────────────────────────────────────────────────────────────────────
 
-  const commands = [];
+  console.log(`[DATA] Starting data loop — sending ${quantity} individual DATA command(s)`);
 
-  // Build STOP command
-  commands.push({ command: PRINTER_COMMANDS.STOP });
+  let lastDataBody = null;
+  let lastDataStatusCode = null;
 
-  // Build STAR command
-  const starCmd = buildStarCommand(printer, templateName, priority);
-  commands.push({
-    command: starCmd.command.command,
-    templatename: starCmd.command.templatename,
-    priority: starCmd.priority,
-  });
-
-  // Build MON command (verify template was loaded)
-  commands.push({ command: PRINTER_COMMANDS.MON, priority });
-
-  // Build N × DATA commands (one per label)
-  const dataSample = buildDataPayload(printer, podValues);
   for (let i = 0; i < quantity; i++) {
-    commands.push({
-      command: dataSample.command.command,
-      data: dataSample.command.data,
-    });
-  }
+    const dataPayload = buildDataPayload(printer, podValues);
 
-  // Send all commands in one batch request
-  const batchPayload = {
-    printer_id: printer.printer_id,
-    printer: { ip: printer.ip_address, port: printer.port },
-    commands,
-    await_response: false, // Fire and forget — printer queues internally
-    continue_on_error: true, // Continue printing remaining labels if one fails
-  };
+    console.log(`[DATA] Sending label ${i + 1}/${quantity}`);
 
-  console.log(
-    `[BATCH] Sending ${commands.length} commands (STOP, STAR, MON, DATA×${quantity}) in single request`
-  );
-
-  const { statusCode, body, error: transportError } = await postToMiddleware(
-    endpointUrl,
-    batchPayload,
-    headers,
-    printer.request_timeout_ms || 30000, // Longer timeout for large batches
-    1
-  );
-
-  if (transportError && !body) {
-    const errorMsg = `Cannot reach middleware: ${transportError}`;
-    console.error(`[BATCH] Transport error: ${errorMsg}`);
-
-    const record = await persistCommand({
-      commandId: genCommandId(),
-      jobId,
-      printerId: printer.printer_id,
+    const { statusCode, body, error: transportError } = await postToMiddleware(
       endpointUrl,
-      commandType,
-      quantity: 0,
-      status: 'failed',
-      requestPayload: batchPayload,
-      responsePayload: null,
-      responseStatusCode: null,
-      errorMessage: errorMsg,
-      sentBy: user?.email,
-    });
+      dataPayload,
+      headers,
+      timeoutMs,
+      1
+    );
 
-    return {
-      success: false,
-      sentCount: 0,
-      failedAt: 0,
-      lastCommandRecord: record,
-      lastMiddlewareJobId: null,
-      errorMessage: errorMsg,
-      templateNotOnPrinter: false,
-      templateExistsButFailed: false,
-    };
+    if (transportError && !body) {
+      const errorMsg = `Cannot reach middleware on DATA command ${i + 1}/${quantity}: ${transportError}`;
+      console.error(`[DATA] ${errorMsg}`);
+
+      const record = await persistCommand({
+        commandId: genCommandId(),
+        jobId,
+        printerId: printer.printer_id,
+        endpointUrl,
+        commandType,
+        quantity: sentCount,
+        status: 'failed',
+        requestPayload: dataPayload,
+        responsePayload: null,
+        responseStatusCode: null,
+        errorMessage: errorMsg,
+        sentBy: user?.email,
+      });
+
+      return {
+        success: false,
+        sentCount,
+        failedAt: i + 1,
+        lastCommandRecord: record,
+        lastMiddlewareJobId: lastMiddlewareJobId || jobIdFromStar || null,
+        errorMessage: errorMsg,
+        templateNotOnPrinter: false,
+        templateExistsButFailed: false,
+      };
+    }
+
+    if (!isDataAckResponse(body)) {
+      const errorMsg = extractErrorMessage(body) || `DATA command ${i + 1}/${quantity} was rejected by middleware`;
+      console.warn(`[DATA] Label ${i + 1} rejected: ${errorMsg}`);
+
+      const record = await persistCommand({
+        commandId: genCommandId(),
+        jobId,
+        printerId: printer.printer_id,
+        endpointUrl,
+        commandType,
+        quantity: sentCount,
+        status: 'failed',
+        requestPayload: dataPayload,
+        responsePayload: body,
+        responseStatusCode: statusCode,
+        errorMessage: errorMsg,
+        sentBy: user?.email,
+      });
+
+      return {
+        success: false,
+        sentCount,
+        failedAt: i + 1,
+        lastCommandRecord: record,
+        lastMiddlewareJobId: lastMiddlewareJobId || jobIdFromStar || null,
+        errorMessage: errorMsg,
+        templateNotOnPrinter: false,
+        templateExistsButFailed: false,
+      };
+    }
+
+    sentCount++;
+    lastDataBody = body;
+    lastDataStatusCode = statusCode;
+    lastMiddlewareJobId = body?.job_id || lastMiddlewareJobId || jobIdFromStar || null;
+
+    console.log(`[DATA] Label ${i + 1}/${quantity} acknowledged. Job ID: ${lastMiddlewareJobId || 'N/A'}`);
   }
 
-  // Batch was submitted successfully
-  sentCount = quantity;
-  lastMiddlewareJobId = body?.job_id || jobIdFromStar || null;
+  // ─────────────────────────────────────────────────────────────────────────
+  // All DATA commands sent successfully — create single audit record
+  // ─────────────────────────────────────────────────────────────────────────
+  console.log(`[DATA] All ${sentCount}/${quantity} labels successfully sent to printer.`);
 
-  console.log(
-    `[BATCH] Submitted: ${quantity} DATA commands. Middleware job ID: ${lastMiddlewareJobId || 'N/A'}`
-  );
-
-  // Single audit record for entire batch
   const record = await persistCommand({
     commandId: genCommandId(),
     jobId,
@@ -768,9 +768,9 @@ export async function sendStarCommand(printer, templateName, quantity = 1, { job
     commandType,
     quantity: sentCount,
     status: 'acknowledged',
-    requestPayload: batchPayload,
-    responsePayload: body,
-    responseStatusCode: statusCode || 200,
+    requestPayload: buildDataPayload(printer, podValues), // sample of last DATA payload
+    responsePayload: lastDataBody,
+    responseStatusCode: lastDataStatusCode || 200,
     errorMessage: null,
     sentBy: user?.email,
   });
