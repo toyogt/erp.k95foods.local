@@ -1,45 +1,61 @@
 /**
  * LblBulkPrintStep
  *
- * Wires up actual Rynan printer communication for bulk printing.
+ * Manages Rynan printer communication for bulk label printing.
  * Printer is auto-resolved from job.line_id — no manual selection needed.
  *
- *   STOP → STAR (load template) → MON (verify) → DATA × quantity_bottles_planned
+ * PRINT SEQUENCE: STOP → STAR (load template) → MON (verify) → DATA × quantity
  *
- * POD values are re-used from the approved demo DATA command (same label data).
+ * PAUSE:  Sends STOP to printer, saves current_printed_qty, sets status = 'paused'
+ * RESUME: Calculates remaining = planned - current_printed_qty
+ *         Sends STOP → STAR → MON → DATA × remaining to printer
+ *
+ * COMPLETION (two-phase via usePrinterPollStatus):
+ *   Phase 1: Printer reports all labels done → status = 'bulk_printing_awaiting_printer_reset'
+ *   Phase 2: Printer reports 0/0 (idle)      → status = 'completed'
  */
-import { useQuery } from '@tanstack/react-query';
+
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { logLabellingEvent } from '@/lib/labellingEventLogger';
-import { sendStarCommand, postToMiddleware, buildHeaders, getPrinterBase, MIDDLEWARE_ENDPOINTS, PRINTER_COMMANDS } from '@/lib/rynanPrinterService';
+import {
+  sendStarCommand,
+  postToMiddleware,
+  buildHeaders,
+  getPrinterBase,
+  MIDDLEWARE_ENDPOINTS,
+  PRINTER_COMMANDS,
+} from '@/lib/rynanPrinterService';
 import { usePrinterPollStatus } from '@/hooks/usePrinterPollStatus';
 import { toast } from '@/components/ui/use-toast';
-import { Loader2, Play, Pause, RotateCcw, Printer, AlertTriangle } from 'lucide-react';
+import {
+  Loader2, Play, Pause, RotateCcw, Printer, AlertTriangle, CheckCircle2, Clock
+} from 'lucide-react';
 
 export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
-  const [acting, setActing]           = useState(false);
+  const [acting, setActing]             = useState(false);
   const [sendingPrint, setSendingPrint] = useState(false);
+  const queryClient                     = useQueryClient();
 
-  // All active printers — auto-resolve by line_id
+  // ── Active printers — auto-resolve by line_id ──
   const { data: printers = [] } = useQuery({
     queryKey: ['lbl-printers-active'],
     queryFn:  () => base44.entities.LblPrinterConfig.filter({ is_active: true }),
   });
 
-  // Auto-resolve printer from job's line_id
   const selectedPrinter = printers.find(p => p.line_id === job.line_id) || null;
-  const noLinePrinter = printers.length > 0 && !selectedPrinter;
+  const noLinePrinter   = printers.length > 0 && !selectedPrinter;
 
-  // All demo print commands for this job — to find the DATA command with POD values
+  // ── Demo print commands — to extract POD values ──
   const { data: demoCommands = [] } = useQuery({
     queryKey: ['demo-commands-job', job.id],
     queryFn:  () => base44.entities.LblPrintCommand.filter({ job_id: job.id, command_type: 'demo' }),
     enabled:  !!job.id,
   });
 
-  // Job's print template
+  // ── Job's print template ──
   const { data: jobTemplate } = useQuery({
     queryKey: ['lbl-job-print-template', job.printer_template_id],
     queryFn:  async () => {
@@ -50,37 +66,45 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
     enabled: !!job.printer_template_id,
   });
 
-  // Extract POD values from the approved DATA command (same values used for demo)
-  const dataCommand = demoCommands.find(c => c.request_payload?.command?.command === 'DATA')
+  // Extract POD values from the approved DATA command
+  const dataCommand   = demoCommands.find(c => c.request_payload?.command?.command === 'DATA')
     || demoCommands.find(c => c.request_payload?.command?.data)
     || demoCommands[0]
     || null;
   const sentPodValues = dataCommand?.request_payload?.command?.data || {};
   const templateName  = jobTemplate?.middleware_template_name || '';
 
+  const planned    = job.quantity_bottles_planned || 0;
   const printedQty = job.current_printed_qty || 0;
-  const remaining  = (job.quantity_bottles_planned || 0) - printedQty;
-  const progress   = job.quantity_bottles_planned
-    ? Math.min(100, (printedQty / job.quantity_bottles_planned) * 100)
-    : 0;
+  const remaining  = Math.max(0, planned - printedQty);
+  const progress   = planned ? Math.min(100, (printedQty / planned) * 100) : 0;
 
-  // Real-time printer polling — automatically updates printed count
-  const shouldPoll = job.status === 'bulk_printing' || job.status === 'paused';
-  usePrinterPollStatus(job, selectedPrinter, shouldPoll, 500);
+  // ── Real-time printer polling ──
+  // Poll when actively printing OR awaiting the final printer idle reset
+  const shouldPoll =
+    job.status === 'bulk_printing' ||
+    job.status === 'bulk_printing_awaiting_printer_reset';
 
-  // ── Start bulk print ──
+  usePrinterPollStatus(job, selectedPrinter, shouldPoll, 2000);
+
+  // ──────────────────────────────────────────────────────────────────────
+  // START BULK PRINT
+  // Sends: STOP → STAR → MON → DATA × (planned - already_printed)
+  // ──────────────────────────────────────────────────────────────────────
   const handleStartBulkPrint = async () => {
     if (!selectedPrinter) {
-      toast({ title: 'No printer assigned to this line', description: `Assign a printer to ${job.line_name || job.line_id} in Printer Settings.`, variant: 'destructive' });
+      toast({
+        title: 'No printer assigned to this line',
+        description: `Assign a printer to ${job.line_name || job.line_id} in Printer Settings.`,
+        variant: 'destructive',
+      });
       return;
     }
     if (!templateName) {
       toast({ title: 'No print template assigned to this job', variant: 'destructive' });
       return;
     }
-
-    const qty = job.quantity_bottles_planned || 0;
-    if (qty <= 0) {
+    if (planned <= 0) {
       toast({ title: 'Invalid quantity — cannot start bulk print', variant: 'destructive' });
       return;
     }
@@ -88,10 +112,10 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
     setSendingPrint(true);
 
     const alreadyPrinted = job.current_printed_qty || 0;
-    const toPrint = qty - alreadyPrinted;
+    const toPrint        = planned - alreadyPrinted;
 
     if (toPrint <= 0) {
-      toast({ title: 'All bottles already printed', description: 'This job is complete or has been fully printed.' });
+      toast({ title: 'All labels already printed', description: 'This job has already been fully printed.' });
       setSendingPrint(false);
       return;
     }
@@ -112,96 +136,198 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
         variant: 'destructive',
         duration: 8000,
       });
-      await logLabellingEvent({ action_type: 'printer_command_failed', job_id: job.id, plan_id: job.plan_id, description: `Bulk print failed: ${result.errorMessage}`, user });
+      await logLabellingEvent({
+        action_type:  'printer_command_failed',
+        job_id:       job.id,
+        plan_id:      job.plan_id,
+        description:  `Bulk print failed: ${result.errorMessage}`,
+        user,
+      });
       setSendingPrint(false);
       return;
     }
 
-    const newPrintedQty = alreadyPrinted + result.sentCount;
+    // All DATA commands sent — set to bulk_printing so RQLP polling starts
     await base44.entities.LabellingJob.update(job.id, {
-      status: newPrintedQty >= qty ? 'completed' : 'bulk_printing',
-      current_printed_qty: newPrintedQty,
+      status:              'bulk_printing',
+      current_printed_qty: alreadyPrinted, // don't pre-fill — let RQLP track actual count
     });
-    await logLabellingEvent({ action_type: 'bulk_print_started', job_id: job.id, plan_id: job.plan_id, description: `Bulk print started — ${result.sentCount} of ${qty} labels sent to ${selectedPrinter.name} using template "${templateName}".`, user });
+    await logLabellingEvent({
+      action_type:  'bulk_print_started',
+      job_id:       job.id,
+      plan_id:      job.plan_id,
+      description:  `Bulk print started — ${toPrint.toLocaleString()} DATA commands sent to ${selectedPrinter.name} using template "${templateName}". Label data: ${JSON.stringify(sentPodValues)}`,
+      user,
+    });
 
-    toast({ title: 'Bulk Print Started', description: `${result.sentCount.toLocaleString()} labels sent to printer successfully.` });
+    toast({
+      title: 'Bulk Print Started',
+      description: `${toPrint.toLocaleString()} label commands sent to printer. Monitoring progress…`,
+    });
+    queryClient.invalidateQueries({ queryKey: ['labelling-job', job.id] });
     onComplete?.();
     setSendingPrint(false);
   };
 
-  // ── Stop printing ──
-  const handleStopPrinting = async () => {
-    if (!selectedPrinter) { toast({ title: 'No printer found for this line', variant: 'destructive' }); return; }
+  // ──────────────────────────────────────────────────────────────────────
+  // PAUSE PRINTING
+  // Sends STOP to clear printer buffer, saves current_printed_qty from
+  // last RQLP reading, sets job status to 'paused'
+  // ──────────────────────────────────────────────────────────────────────
+  const handlePausePrinting = async () => {
+    if (!selectedPrinter) {
+      toast({ title: 'No printer found for this line', variant: 'destructive' });
+      return;
+    }
     setActing(true);
 
+    // Send STOP to clear any remaining queued labels on the printer
     const stopPayload = {
       printer_id: selectedPrinter.printer_id,
-      printer: { ip: selectedPrinter.ip_address, port: selectedPrinter.port },
-      command: { command: PRINTER_COMMANDS.STOP },
+      printer:    { ip: selectedPrinter.ip_address, port: selectedPrinter.port },
+      command:    { command: PRINTER_COMMANDS.STOP },
     };
-    const base = getPrinterBase(selectedPrinter);
+    const base    = getPrinterBase(selectedPrinter);
     const headers = buildHeaders(selectedPrinter);
-    const { error: transportError, body } = await postToMiddleware(`${base}${MIDDLEWARE_ENDPOINTS.PRINT}`, stopPayload, headers, selectedPrinter.request_timeout_ms || 15000);
+
+    const { error: transportError, body } = await postToMiddleware(
+      `${base}${MIDDLEWARE_ENDPOINTS.PRINT}`,
+      stopPayload,
+      headers,
+      selectedPrinter.request_timeout_ms || 15000
+    );
 
     if (transportError && !body) {
-      toast({ title: 'Failed to Stop Printer', description: transportError, variant: 'destructive' });
+      toast({ title: 'Failed to Pause Printer', description: transportError, variant: 'destructive' });
       setActing(false);
       return;
     }
 
-    await base44.entities.LabellingJob.update(job.id, { status: 'paused' });
-    await logLabellingEvent({ action_type: 'bulk_print_stopped', job_id: job.id, plan_id: job.plan_id, description: `Bulk print stopped at ${printedQty} bottles (of ${job.quantity_bottles_planned} target).`, user });
-    toast({ title: 'Printing Stopped', description: 'Printer queue cleared. Ready to resume.' });
+    // Save the last known printed count (from job record, updated by RQLP polling)
+    await base44.entities.LabellingJob.update(job.id, {
+      status: 'paused',
+      // current_printed_qty is already up-to-date from RQLP polling
+    });
+    await logLabellingEvent({
+      action_type:  'bulk_print_stopped',
+      job_id:       job.id,
+      plan_id:      job.plan_id,
+      description:  `Bulk print paused at ${printedQty.toLocaleString()} labels printed (of ${planned.toLocaleString()} target). ${remaining.toLocaleString()} labels remaining.`,
+      user,
+    });
+
+    toast({
+      title: 'Printing Paused',
+      description: `Paused at ${printedQty.toLocaleString()} labels. ${remaining.toLocaleString()} remaining when resumed.`,
+    });
+    queryClient.invalidateQueries({ queryKey: ['labelling-job', job.id] });
     onComplete?.();
     setActing(false);
   };
 
-  // ── Resume printing ──
+  // ──────────────────────────────────────────────────────────────────────
+  // RESUME PRINTING
+  // Calculates remaining = planned - current_printed_qty
+  // Sends: STOP → STAR (reload template) → MON (verify) → DATA × remaining
+  // ──────────────────────────────────────────────────────────────────────
   const handleResumePrinting = async () => {
-    if (!selectedPrinter) { toast({ title: 'No printer found for this line', variant: 'destructive' }); return; }
-    if (!templateName) { toast({ title: 'No print template assigned', variant: 'destructive' }); return; }
+    if (!selectedPrinter) {
+      toast({ title: 'No printer found for this line', variant: 'destructive' });
+      return;
+    }
+    if (!templateName) {
+      toast({ title: 'No print template assigned', variant: 'destructive' });
+      return;
+    }
+
+    const currentPrinted = job.current_printed_qty || 0;
+    const toResume       = planned - currentPrinted;
+
+    if (toResume <= 0) {
+      toast({ title: 'All labels already printed', description: 'Nothing remaining to resume.' });
+      return;
+    }
 
     setActing(true);
-    const qty = job.quantity_bottles_planned || 0;
-    const toPrint = qty - printedQty;
 
-    if (toPrint <= 0) { toast({ title: 'All bottles already printed' }); setActing(false); return; }
+    toast({
+      title: 'Resuming Print…',
+      description: `Sending ${toResume.toLocaleString()} remaining labels to printer. Please wait.`,
+    });
 
-    const result = await sendStarCommand(selectedPrinter, templateName, toPrint, { jobId: job.id, commandType: 'bulk_resume', user, podValues: sentPodValues });
+    // sendStarCommand internally handles: STOP → STAR → MON → DATA × toResume
+    const result = await sendStarCommand(
+      selectedPrinter,
+      templateName,
+      toResume,
+      { jobId: job.id, commandType: 'bulk_resume', user, podValues: sentPodValues }
+    );
 
     if (!result.success) {
-      toast({ title: 'Resume Failed', description: result.errorMessage || 'Could not resume printing', variant: 'destructive' });
+      toast({
+        title:       'Resume Failed',
+        description: result.templateNotOnPrinter
+          ? `Template "${templateName}" not found on printer. Load it first and retry.`
+          : result.errorMessage || 'Could not resume printing.',
+        variant: 'destructive',
+      });
+      await logLabellingEvent({
+        action_type:  'printer_command_failed',
+        job_id:       job.id,
+        plan_id:      job.plan_id,
+        description:  `Resume failed: ${result.errorMessage}`,
+        user,
+      });
       setActing(false);
       return;
     }
 
+    // Resume successful — set back to bulk_printing so RQLP polling restarts
     await base44.entities.LabellingJob.update(job.id, { status: 'bulk_printing' });
-    await logLabellingEvent({ action_type: 'bulk_print_resumed', job_id: job.id, plan_id: job.plan_id, description: `Bulk print resumed. Sending ${toPrint} more labels to ${selectedPrinter.name}.`, user });
-    toast({ title: 'Printing Resumed', description: `${toPrint} labels queued to printer.` });
+    await logLabellingEvent({
+      action_type:  'bulk_print_resumed',
+      job_id:       job.id,
+      plan_id:      job.plan_id,
+      description:  `Bulk print resumed. Sent ${toResume.toLocaleString()} remaining label commands to ${selectedPrinter.name} (already printed: ${currentPrinted.toLocaleString()}, target: ${planned.toLocaleString()}).`,
+      user,
+    });
+
+    toast({
+      title:       'Printing Resumed',
+      description: `${toResume.toLocaleString()} label commands sent. Monitoring progress…`,
+    });
+    queryClient.invalidateQueries({ queryKey: ['labelling-job', job.id] });
     onComplete?.();
     setActing(false);
   };
 
-  // ── No printer warning (shared) ──
+  // ── Shared sub-components ──
   const NoPrinterWarning = () => noLinePrinter ? (
     <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg p-3">
       <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-      <p className="text-sm text-amber-700">No printer assigned to <strong>{job.line_name || job.line_id}</strong>. Assign a printer to this line in Printer Settings.</p>
+      <p className="text-sm text-amber-700">
+        No printer assigned to <strong>{job.line_name || job.line_id}</strong>.
+        Assign a printer to this line in Printer Settings.
+      </p>
     </div>
   ) : null;
 
-  // ── Printer info badge (shared) ──
   const PrinterBadge = () => selectedPrinter ? (
     <div className="flex items-center gap-2 bg-indigo-50 border border-indigo-200 rounded-lg p-3">
       <Printer className="w-4 h-4 text-indigo-600 shrink-0" />
       <div>
-        <p className="text-sm font-medium text-indigo-800">{selectedPrinter.name} <span className="font-normal text-indigo-600">({selectedPrinter.printer_id})</span></p>
+        <p className="text-sm font-medium text-indigo-800">
+          {selectedPrinter.name}{' '}
+          <span className="font-normal text-indigo-600">({selectedPrinter.printer_id})</span>
+        </p>
         <p className="text-xs text-indigo-600">Auto-selected from {job.line_name || job.line_id}</p>
       </div>
     </div>
   ) : null;
 
-  // ── START mode — shown before bulk printing begins ──
+  // ──────────────────────────────────────────────────────────────────────
+  // START MODE — before bulk printing begins
+  // ──────────────────────────────────────────────────────────────────────
   if (mode === 'start') {
     const noPodValues = Object.keys(sentPodValues).length === 0;
 
@@ -217,18 +343,23 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
         </div>
 
         <div className="bg-slate-50 rounded-lg p-3 text-sm space-y-1">
-          <p><span className="font-medium">Target:</span> {job.quantity_bottles_planned?.toLocaleString()} bottles</p>
+          <p><span className="font-medium">Target:</span> {planned.toLocaleString()} labels</p>
           <p><span className="font-medium">Product:</span> {job.product_name}</p>
-          <p><span className="font-medium">Template:</span> <span className="font-mono text-indigo-700">{templateName || '—'}</span></p>
+          <p><span className="font-medium">Template:</span>{' '}
+            <span className="font-mono text-indigo-700">{templateName || '—'}</span>
+          </p>
           {Object.keys(sentPodValues).length > 0 && (
-            <p><span className="font-medium">Label Data (POD):</span> {Object.entries(sentPodValues).map(([k, v]) => `${k}: ${v}`).join(' | ')}</p>
+            <p className="text-slate-600">
+              <span className="font-medium">Label Data:</span>{' '}
+              {Object.entries(sentPodValues).map(([k, v]) => `${k}: ${v}`).join(' | ')}
+            </p>
           )}
         </div>
 
         {noPodValues && (
           <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
             <AlertTriangle className="w-4 h-4 shrink-0" />
-            No POD data found from demo print. The label may print with empty fields. Confirm before proceeding.
+            No label data (POD) found from demo print. Labels may print with empty fields. Confirm before proceeding.
           </div>
         )}
 
@@ -241,21 +372,28 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
           disabled={sendingPrint || !selectedPrinter || !templateName}
         >
           {sendingPrint
-            ? <><Loader2 className="w-4 h-4 animate-spin" /> Sending {job.quantity_bottles_planned?.toLocaleString()} labels to printer…</>
+            ? <><Loader2 className="w-4 h-4 animate-spin" /> Sending {planned.toLocaleString()} labels to printer…</>
             : <><Play className="w-4 h-4" /> Start Bulk Print</>
           }
         </Button>
 
         {sendingPrint && (
           <p className="text-xs text-center text-slate-500">
-            Sending {job.quantity_bottles_planned?.toLocaleString()} DATA commands to the printer — this may take a while. Do not close this page.
+            Sending {planned.toLocaleString()} DATA commands to the printer — this may take a while. Do not close this page.
           </p>
         )}
       </div>
     );
   }
 
-  // ── CONTROL mode — shown once bulk_printing is active ──
+  // ──────────────────────────────────────────────────────────────────────
+  // CONTROL MODE — once bulk_printing is active
+  // ──────────────────────────────────────────────────────────────────────
+
+  const isAwaitingReset = job.status === 'bulk_printing_awaiting_printer_reset';
+  const isPaused        = job.status === 'paused';
+  const isPrinting      = job.status === 'bulk_printing';
+
   return (
     <div className="bg-white border border-slate-200 rounded-lg p-4 space-y-4">
       <h2 className="text-base font-semibold text-slate-900">Bulk Print Control</h2>
@@ -263,6 +401,7 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
       <NoPrinterWarning />
       <PrinterBadge />
 
+      {/* Progress section */}
       <div className="space-y-2">
         <div className="flex justify-between text-sm">
           <span className="text-slate-600">Progress</span>
@@ -270,51 +409,99 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
         </div>
         <div className="w-full h-3 bg-slate-200 rounded-full overflow-hidden">
           <div
-            className={`h-full rounded-full transition-all ${job.status === 'paused' ? 'bg-orange-500' : 'bg-indigo-500'}`}
+            className={`h-full rounded-full transition-all ${
+              isAwaitingReset ? 'bg-green-500 animate-pulse' :
+              isPaused        ? 'bg-orange-500' :
+              'bg-indigo-500'
+            }`}
             style={{ width: `${progress}%` }}
           />
         </div>
+
+        {/* Counters */}
         <div className="grid grid-cols-3 gap-3 text-center">
           <div className="bg-slate-50 rounded-lg p-2">
             <p className="text-xs text-slate-500">Target</p>
-            <p className="text-lg font-bold text-slate-900">{job.quantity_bottles_planned?.toLocaleString()}</p>
+            <p className="text-lg font-bold text-slate-900">{planned.toLocaleString()}</p>
           </div>
           <div className="bg-indigo-50 rounded-lg p-2">
             <p className="text-xs text-indigo-500">Printed</p>
             <p className="text-lg font-bold text-indigo-700">{printedQty.toLocaleString()}</p>
           </div>
-          <div className="bg-slate-50 rounded-lg p-2">
-            <p className="text-xs text-slate-500">Remaining</p>
-            <p className="text-lg font-bold text-slate-900">{Math.max(0, remaining).toLocaleString()}</p>
+          <div className={`rounded-lg p-2 ${isPaused ? 'bg-orange-50' : 'bg-slate-50'}`}>
+            <p className={`text-xs ${isPaused ? 'text-orange-500' : 'text-slate-500'}`}>Remaining</p>
+            <p className={`text-lg font-bold ${isPaused ? 'text-orange-700' : 'text-slate-900'}`}>
+              {remaining.toLocaleString()}
+            </p>
           </div>
         </div>
       </div>
 
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-700">
-        ℹ Print count is automatically updated from the printer every 2 seconds using RQLP status command.
-      </div>
+      {/* Status banners */}
+      {isAwaitingReset && (
+        <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg p-3">
+          <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
+          <div>
+            <p className="text-sm font-medium text-green-800">All labels sent — Waiting for printer to finish</p>
+            <p className="text-xs text-green-700">All {planned.toLocaleString()} labels have been sent. Monitoring printer for physical completion…</p>
+          </div>
+        </div>
+      )}
 
+      {isPaused && (
+        <div className="flex items-center gap-2 bg-orange-50 border border-orange-200 rounded-lg p-3">
+          <Pause className="w-4 h-4 text-orange-600 shrink-0" />
+          <div>
+            <p className="text-sm font-medium text-orange-800">Printing Paused</p>
+            <p className="text-xs text-orange-700">
+              {printedQty.toLocaleString()} labels printed. {remaining.toLocaleString()} labels will be sent when you resume.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {isPrinting && (
+        <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-700">
+          <Clock className="w-4 h-4 shrink-0 animate-pulse" />
+          Print count is automatically updated every 2 seconds via RQLP status from the printer.
+        </div>
+      )}
+
+      {/* Action buttons */}
       <div className="flex flex-col md:flex-row gap-3">
-        {job.status === 'bulk_printing' && (
+        {isPrinting && (
           <Button
             variant="outline"
-            className="h-11 flex-1 gap-2 border-orange-300 text-orange-600 hover:bg-orange-50"
-            onClick={handleStopPrinting}
+            className="h-11 flex-1 gap-2 border-orange-300 text-orange-700 hover:bg-orange-50"
+            onClick={handlePausePrinting}
             disabled={acting || !selectedPrinter}
           >
-            {acting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Pause className="w-4 h-4" />}
-            Stop Printing
+            {acting
+              ? <Loader2 className="w-4 h-4 animate-spin" />
+              : <Pause className="w-4 h-4" />
+            }
+            Pause Printing
           </Button>
         )}
-        {job.status === 'paused' && (
+
+        {isPaused && (
           <Button
             className="h-11 flex-1 gap-2 bg-indigo-600 hover:bg-indigo-700"
             onClick={handleResumePrinting}
-            disabled={acting || !selectedPrinter}
+            disabled={acting || !selectedPrinter || remaining <= 0}
           >
-            {acting ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
-            Resume Printing
+            {acting
+              ? <><Loader2 className="w-4 h-4 animate-spin" /> Sending {remaining.toLocaleString()} labels…</>
+              : <><RotateCcw className="w-4 h-4" /> Resume Printing ({remaining.toLocaleString()} remaining)</>
+            }
           </Button>
+        )}
+
+        {isAwaitingReset && (
+          <div className="h-11 flex-1 flex items-center justify-center gap-2 bg-green-50 border border-green-200 rounded-lg text-sm font-medium text-green-700">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Awaiting printer completion…
+          </div>
         )}
       </div>
     </div>

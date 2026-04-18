@@ -121,6 +121,7 @@
         "demo_rejected",
         "bulk_printing",
         "paused",
+        "bulk_printing_awaiting_printer_reset",
         "completed",
         "cancelled"
       ],
