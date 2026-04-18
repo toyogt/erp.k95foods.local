@@ -55,30 +55,16 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
     enabled:  !!job.id,
   });
 
-  // ── All active templates + SKU mapping fallback ──
-  const { data: allTemplates = [] } = useQuery({
-    queryKey: ['lbl-print-templates-active'],
-    queryFn:  () => base44.entities.LblPrintTemplate.filter({ is_active: true }),
+  // ── Job's print template ──
+  const { data: jobTemplate } = useQuery({
+    queryKey: ['lbl-job-print-template', job.printer_template_id],
+    queryFn:  async () => {
+      if (!job.printer_template_id) return null;
+      const templates = await base44.entities.LblPrintTemplate.filter({ is_active: true });
+      return templates.find(t => t.id === job.printer_template_id) || null;
+    },
+    enabled: !!job.printer_template_id,
   });
-
-  const { data: skuMappings = [] } = useQuery({
-    queryKey: ['sku-print-mapping-for-job', job.sku_code],
-    queryFn:  () => base44.entities.SKUPrintMapping.filter({ sku_code: job.sku_code, is_active: true }),
-    enabled:  !!job.sku_code,
-  });
-
-  // Resolve template: job.printer_template_id → SKU default mapping → first SKU mapping
-  const jobTemplate = (() => {
-    if (job.printer_template_id) {
-      const byJobId = allTemplates.find(t => t.id === job.printer_template_id);
-      if (byJobId) return byJobId;
-    }
-    const defaultMapping = skuMappings.find(m => m.is_default) || skuMappings[0];
-    if (defaultMapping) {
-      return allTemplates.find(t => t.id === defaultMapping.template_id) || null;
-    }
-    return null;
-  })();
 
   // Extract POD values from the approved DATA command
   const dataCommand   = demoCommands.find(c => c.request_payload?.command?.command === 'DATA')

@@ -12,7 +12,6 @@ import LblChecklistStep from '@/components/labelling/LblChecklistStep';
 import LblBulkPrintStep from '@/components/labelling/LblBulkPrintStep';
 import LblCompletionStep from '@/components/labelling/LblCompletionStep';
 import { toast } from '@/components/ui/use-toast';
-import LblBoxLabelPrint from '@/components/labelling/LblBoxLabelPrint';
 import { ArrowLeft, Loader2, Play, RotateCcw } from 'lucide-react';
 
 export default function LblOperatorJob() {
@@ -77,12 +76,7 @@ export default function LblOperatorJob() {
         </div>
       )}
       {job.status === 'active' && <LblStockTransferStep job={job} user={user} onComplete={refreshJob} />}
-      {job.status === 'stock_transferred' && (
-        <>
-          <LblDemoPrintStep job={job} user={user} onComplete={refreshJob} />
-          {job.batch_no && <LblBoxLabelPrint job={job} />}
-        </>
-      )}
+      {job.status === 'stock_transferred' && <LblDemoPrintStep job={job} user={user} onComplete={refreshJob} />}
       {job.status === 'demo_print_sent' && <LblDemoPrintVerificationStep job={job} user={user} onComplete={refreshJob} />}
       {(job.status === 'demo_print_verified' || job.status === 'demo_rejected') && <LblChecklistStep job={job} user={user} onComplete={refreshJob} />}
       {job.status === 'demo_pending_approval' && (
@@ -108,9 +102,9 @@ export default function LblOperatorJob() {
         </div>
       )}
       {job.status === 'demo_approved' && <LblBulkPrintStep job={job} user={user} onComplete={refreshJob} mode="start" />}
-      {(job.status === 'bulk_printing' || job.status === 'paused' || job.status === 'bulk_printing_awaiting_printer_reset') && <LblBulkPrintStep job={job} user={user} onComplete={refreshJob} mode="control" />}
+      {(job.status === 'bulk_printing' || job.status === 'paused') && <LblBulkPrintStep job={job} user={user} onComplete={refreshJob} mode="control" />}
       {job.status === 'completed' && <LblCompletionStep job={job} />}
-      {(job.status === 'bulk_printing' || job.status === 'paused') && job.current_printed_qty >= job.quantity_bottles_planned && job.status !== 'bulk_printing_awaiting_printer_reset' && (
+      {(job.status === 'bulk_printing' || job.status === 'paused') && job.current_printed_qty >= job.quantity_bottles_planned && (
         <div className="bg-white border border-slate-200 rounded-lg p-6 text-center space-y-4">
           <h2 className="text-lg font-semibold text-green-700">Bulk Printing Complete</h2>
           <p className="text-sm text-slate-500">All {job.quantity_bottles_planned?.toLocaleString()} labels have been printed successfully.</p>

@@ -10,7 +10,6 @@ import { toast } from '@/components/ui/use-toast';
 import { generateBatchNumber, BATCH_SCHEMES } from '@/lib/batchNumberGenerator';
 import { Loader2, Package, RefreshCw, Info } from 'lucide-react';
 import LblLabelPreviewCard from '@/components/labelling/LblLabelPreviewCard';
-import LblBoxLabelPrint from '@/components/labelling/LblBoxLabelPrint';
 import moment from 'moment';
 
 export default function LblStockTransferStep({ job, user, onComplete }) {
@@ -211,11 +210,6 @@ export default function LblStockTransferStep({ job, user, onComplete }) {
         {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Package className="w-4 h-4" />}
         Submit Stock Transfer
       </Button>
-
-      {/* Box Label — shown only after stock transfer is submitted (batch + dates are set) */}
-      {job.status === 'stock_transferred' && job.batch_no && (
-        <LblBoxLabelPrint job={job} />
-      )}
     </div>
   );
 }

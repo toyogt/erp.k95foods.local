@@ -126,7 +126,6 @@ import LblMasterData from './pages/LblMasterData';
 import LblDocTypePermissions from './pages/LblDocTypePermissions';
 import RynanPrinterCenter from './pages/RynanPrinterCenter';
 import LblPrintTemplateManager from './pages/LblPrintTemplateManager';
-import PrintFormatBuilder from './pages/PrintFormatBuilder';
 
 // Page component lookup table
 const PAGE_COMPONENTS = {
@@ -154,8 +153,6 @@ const PAGE_COMPONENTS = {
   LblMasterData,
   LblDocTypePermissions,
   RynanPrinterCenter,
-  LblPrintTemplateManager,
-  PrintFormatBuilder,
 };
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -200,7 +197,6 @@ const AuthenticatedApp = () => {
       
       {/* Labelling Department */}
       <Route path="/LblPrintTemplateManager" element={<LayoutWrapper currentPageName="LblPrintTemplateManager"><LblPrintTemplateManager /></LayoutWrapper>} />
-      <Route path="/PrintFormatBuilder" element={<LayoutWrapper currentPageName="PrintFormatBuilder"><PrintFormatBuilder /></LayoutWrapper>} />
 
       {/* Explicit route for Audit Log Viewer */}
       <Route
