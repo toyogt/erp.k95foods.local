@@ -56,12 +56,13 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
   });
 
   // ── Job's print template ──
+  // job.printer_template_id stores the template_id field (e.g. "Default-1"), not the DB record id
   const { data: jobTemplate } = useQuery({
     queryKey: ['lbl-job-print-template', job.printer_template_id],
     queryFn:  async () => {
       if (!job.printer_template_id) return null;
-      const templates = await base44.entities.LblPrintTemplate.filter({ is_active: true });
-      return templates.find(t => t.id === job.printer_template_id) || null;
+      const templates = await base44.entities.LblPrintTemplate.filter({ template_id: job.printer_template_id });
+      return templates[0] || null;
     },
     enabled: !!job.printer_template_id,
   });
