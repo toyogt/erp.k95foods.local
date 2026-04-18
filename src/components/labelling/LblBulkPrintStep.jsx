@@ -63,8 +63,9 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
   const sentPodValues = dataCommand?.request_payload?.command?.data || {};
 
   // Template name used in the STAR command during demo — stored in request_payload
+  // Note: the STAR payload uses key "templatename" (not "template_name")
   const starCommand        = demoCommands.find(c => c.request_payload?.command?.command === 'STAR');
-  const demoTemplateName   = starCommand?.request_payload?.command?.template_name || '';
+  const demoTemplateName   = starCommand?.request_payload?.command?.templatename || '';
 
   // ── Job's print template ──
   // job.printer_template_id stores the DB record id (UUID).
