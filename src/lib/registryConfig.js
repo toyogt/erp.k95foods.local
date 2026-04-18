@@ -18,7 +18,7 @@ import {
   Archive, FileText, ClipboardList, Shield, Zap as ZapIcon,
   Activity, BarChart4, AlertCircle, AlertTriangle,
   Store, MapPin, QrCode, ArrowLeftRight, TrendingDown,
-  RotateCcw, SlidersHorizontal, CalendarDays, Eye, Layout,
+  RotateCcw, SlidersHorizontal, CalendarDays, Eye, LayoutTemplate,
 } from 'lucide-react';
 
 /**
@@ -66,7 +66,7 @@ export const pageRegistry = [
   { pageKey: 'LblDocTypePermissions', title: 'Document Permissions', moduleKey: 'LBL_DEPT', icon: ShieldCheck, roles: ['admin'], adminOnly: true, sortOrder: 13 },
   { pageKey: 'RynanPrinterCenter', title: 'Rynan Printer Center', moduleKey: 'LBL_DEPT', icon: Printer, roles: ['admin', 'lbl_supervisor', 'production_manager'], sortOrder: 14 },
   { pageKey: 'LblPrintTemplateManager', title: 'Template Manager', moduleKey: 'LBL_DEPT', icon: FileText, roles: ['admin', 'lbl_supervisor', 'production_manager'], sortOrder: 15 },
-  { pageKey: 'PrintFormatBuilder', title: 'Print Format Builder', moduleKey: 'LBL_DEPT', icon: Layout, roles: ['admin', 'lbl_supervisor', 'production_manager'], sortOrder: 16 },
+  { pageKey: 'PrintFormatBuilder', title: 'Print Format Builder', moduleKey: 'LBL_DEPT', icon: LayoutTemplate, roles: ['admin', 'lbl_supervisor', 'production_manager'], sortOrder: 16 },
 
   // ─── WAREHOUSE & FG ───
   { pageKey: 'TransferReceiving', title: 'Transfer / Receiving', moduleKey: 'WAREHOUSE', icon: Truck, roles: ['admin', 'labelling_receiver', 'labelling_supervisor', 'warehouse_ops', 'user'] },
