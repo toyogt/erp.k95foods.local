@@ -85,7 +85,7 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
     job.status === 'bulk_printing' ||
     job.status === 'bulk_printing_awaiting_printer_reset';
 
-  usePrinterPollStatus(job, selectedPrinter, shouldPoll, 2000);
+  usePrinterPollStatus(job, selectedPrinter, shouldPoll, 200);
 
   // ──────────────────────────────────────────────────────────────────────
   // START BULK PRINT
