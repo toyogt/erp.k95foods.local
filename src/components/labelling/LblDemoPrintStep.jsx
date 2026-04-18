@@ -218,6 +218,8 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
       demo_print_qty: qty,
       demo_print_command_id: result.lastCommandRecord?.command_id || null,
       demo_print_middleware_job_id: result.lastMiddlewareJobId || null,
+      // Ensure printer_template_id is persisted so bulk print can resolve the template
+      printer_template_id: jobTemplate?.id || job.printer_template_id || null,
     });
 
     await logLabellingEvent({
