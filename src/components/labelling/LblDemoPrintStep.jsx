@@ -26,6 +26,8 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
   const [printerStatus, setPrinterStatus] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
   const [previewPodValues, setPreviewPodValues] = useState(null);
+  const [selectedTemplateId, setSelectedTemplateId] = useState(job.printer_template_id || null);
+  const [savingTemplate, setSavingTemplate] = useState(false);
 
   // Label data fields — pre-filled from job/product, all editable
   const [labelData, setLabelData] = useState({
@@ -41,15 +43,20 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
     queryFn: () => base44.entities.LblPrinterConfig.filter({ is_active: true }),
   });
 
-  // Load the selected template (assigned at plan creation)
+  // Load all available templates for selection
+  const { data: availableTemplates = [] } = useQuery({
+    queryKey: ['lbl-print-templates-all'],
+    queryFn: () => base44.entities.LblPrintTemplate.filter({ is_active: true }),
+  });
+
+  // Load the selected template (assigned at plan creation or selected by user)
   const { data: jobTemplate } = useQuery({
-    queryKey: ['lbl-job-print-template', job.printer_template_id],
+    queryKey: ['lbl-job-print-template', selectedTemplateId],
     queryFn: async () => {
-      if (!job.printer_template_id) return null;
-      const templates = await base44.entities.LblPrintTemplate.filter({ is_active: true });
-      return templates.find(t => t.id === job.printer_template_id) || null;
+      if (!selectedTemplateId) return null;
+      return availableTemplates.find(t => t.id === selectedTemplateId) || null;
     },
-    enabled: !!job.printer_template_id,
+    enabled: !!selectedTemplateId && availableTemplates.length > 0,
   });
 
   // Fetch product master to get MRP and shelf life
@@ -91,7 +98,27 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
 
   const setField = (key, val) => setLabelData(prev => ({ ...prev, [key]: val }));
 
+  const handleSelectTemplate = async (templateId) => {
+    if (!templateId) return;
+    setSelectedTemplateId(templateId);
+    
+    // If job doesn't have a printer_template_id, save it now
+    if (!job.printer_template_id) {
+      setSavingTemplate(true);
+      try {
+        await base44.entities.LabellingJob.update(job.id, { printer_template_id: templateId });
+        toast({ title: 'Template Selected', description: 'Print template has been assigned to this job.' });
+      } catch (error) {
+        toast({ title: 'Failed to Save Template', description: error.message, variant: 'destructive' });
+        setSelectedTemplateId(null);
+      } finally {
+        setSavingTemplate(false);
+      }
+    }
+  };
+
   const handlePreviewPrint = () => {
+    if (!selectedTemplateId) { toast({ title: 'Template Not Selected', description: 'Please select a print template before proceeding.', variant: 'destructive' }); return; }
     if (!demoQty || Number(demoQty) <= 0) { toast({ title: 'Invalid Quantity', variant: 'destructive' }); return; }
     if (!selectedPrinter) { toast({ title: 'No printer assigned to this line', description: `Assign a printer to ${job.line_name || job.line_id} in Printer Settings.`, variant: 'destructive' }); return; }
     if (!statusChecked) { toast({ title: 'Check Printer Status First', description: 'Click "Check Status" to verify cartridge before printing.', variant: 'destructive' }); return; }
@@ -250,14 +277,37 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
         <p className="text-slate-600"><span className="font-medium">Product Code:</span> {job.sku_code}</p>
         <p className="text-slate-600"><span className="font-medium">Planned:</span> {job.quantity_bottles_planned?.toLocaleString()} bottles</p>
         <p className="text-slate-600"><span className="font-medium">Stock Transferred:</span> {job.stock_transfer_qty?.toLocaleString()} bottles</p>
-        <p className="text-slate-600 col-span-2">
-          <span className="font-medium">Selected Template:</span>{' '}
-          {jobTemplate
-            ? <Link to="/LblPrintTemplateManager" className="font-mono text-purple-700 hover:text-purple-900 underline underline-offset-2">{jobTemplate.name} [{templateName}]</Link>
-            : <span className="text-amber-600">⚠ No template assigned — select during plan creation</span>
-          }
-        </p>
       </div>
+
+      {/* Template Selection (if missing) */}
+      {!selectedTemplateId && availableTemplates.length > 0 && (
+        <div className="border border-amber-200 bg-amber-50 rounded-lg p-4 space-y-3">
+          <p className="text-sm font-medium text-amber-900">⚠ Print Template Required</p>
+          <p className="text-sm text-amber-700">This job does not have a print template assigned. Please select one to proceed:</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {availableTemplates.map(template => (
+              <button
+                key={template.id}
+                onClick={() => handleSelectTemplate(template.id)}
+                disabled={savingTemplate}
+                className="h-11 px-3 py-2 text-left border border-amber-300 rounded-lg hover:bg-amber-100 active:bg-amber-200 disabled:opacity-50 transition-colors text-sm font-medium text-amber-900"
+              >
+                {savingTemplate ? '...' : `${template.name} [${template.middleware_template_name}]`}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Selected Template Display */}
+      {selectedTemplateId && jobTemplate && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+          <p className="text-sm text-green-800">
+            <span className="font-medium">Selected Template:</span>{' '}
+            <Link to="/LblPrintTemplateManager" className="font-mono text-green-700 hover:text-green-900 underline underline-offset-2">{jobTemplate.name} [{templateName}]</Link>
+          </p>
+        </div>
+      )}
 
       {/* Auto-resolved printer from line */}
       {noPrinters && (
@@ -398,7 +448,7 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
         <Button
           className="h-11 w-full md:w-auto gap-2 bg-purple-600 hover:bg-purple-700"
           onClick={handlePreviewPrint}
-          disabled={sending || !selectedPrinter || (statusChecked && !hasCartridge) || (statusChecked && templateMissing)}
+          disabled={sending || !selectedTemplateId || !selectedPrinter || (statusChecked && !hasCartridge) || (statusChecked && templateMissing)}
         >
           {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
           Send Demo Print
