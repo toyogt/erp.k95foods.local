@@ -126,7 +126,7 @@ import LblMasterData from './pages/LblMasterData';
 import LblDocTypePermissions from './pages/LblDocTypePermissions';
 import RynanPrinterCenter from './pages/RynanPrinterCenter';
 import LblPrintTemplateManager from './pages/LblPrintTemplateManager';
-import PrintFormatBuilder from './pages/PrintFormatBuilder';
+import PrintFormatBuilder from './pages/PrintFormatBuilder.jsx';
 
 // Page component lookup table
 const PAGE_COMPONENTS = {
