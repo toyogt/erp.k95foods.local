@@ -234,10 +234,10 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
       return;
     }
 
-    // Save the last known printed count (from job record, updated by RQLP polling)
+    // Save the exact live printed count to the database
     await base44.entities.LabellingJob.update(job.id, {
       status: 'paused',
-      // current_printed_qty is already up-to-date from RQLP polling
+      current_printed_qty: printedQty,
     });
     await logLabellingEvent({
       action_type:  'bulk_print_stopped',
@@ -251,7 +251,7 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
       title: 'Printing Paused',
       description: `Paused at ${printedQty.toLocaleString()} labels. ${remaining.toLocaleString()} remaining when resumed.`,
     });
-    queryClient.invalidateQueries({ queryKey: ['labelling-job', job.id] });
+    await queryClient.refetchQueries({ queryKey: ['labelling-job', job.id] });
     onComplete?.();
     setActing(false);
   };
