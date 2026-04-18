@@ -90,21 +90,21 @@ export default function LblPlanCreate() {
       return;
     }
 
-    // Check for duplicate plan (same date + shift + line)
-    const jobsWithBatch = jobs.filter(j => j.sku_code && j.batch_no);
-    if (jobsWithBatch.length > 0) {
-      const allDayJobs = await base44.entities.LabellingJob.filter({ plan_date: fd });
-      const activeJobs = allDayJobs.filter(j => j.status !== 'cancelled');
-      const duplicates = [];
-      for (const j of jobsWithBatch) {
-        const match = activeJobs.find(ej => ej.sku_code === j.sku_code && ej.batch_no === j.batch_no);
-        if (match) duplicates.push(`${j.product_name || j.sku_code} / Batch ${j.batch_no} (already in job ${match.job_id})`);
-      }
-      if (duplicates.length > 0) {
-        toast({ title: 'Duplicate Product + Batch', description: `These product-batch combinations already exist today: ${duplicates.join('; ')}`, variant: 'destructive' });
-        return;
-      }
-    }
+    // [DISABLED] Check for duplicate plan (same date + shift + line)
+    // const jobsWithBatch = jobs.filter(j => j.sku_code && j.batch_no);
+    // if (jobsWithBatch.length > 0) {
+    //   const allDayJobs = await base44.entities.LabellingJob.filter({ plan_date: fd });
+    //   const activeJobs = allDayJobs.filter(j => j.status !== 'cancelled');
+    //   const duplicates = [];
+    //   for (const j of jobsWithBatch) {
+    //     const match = activeJobs.find(ej => ej.sku_code === j.sku_code && ej.batch_no === j.batch_no);
+    //     if (match) duplicates.push(`${j.product_name || j.sku_code} / Batch ${j.batch_no} (already in job ${match.job_id})`);
+    //   }
+    //   if (duplicates.length > 0) {
+    //     toast({ title: 'Duplicate Product + Batch', description: `These product-batch combinations already exist today: ${duplicates.join('; ')}`, variant: 'destructive' });
+    //     return;
+    //   }
+    // }
     // Block if a plan already exists for same date + shift + line
     const existingPlans = await base44.entities.LabellingShiftPlan.filter({ plan_date: fd, shift_type: shiftType, line_id: lineId });
     const activePlan = existingPlans.find(p => p.status !== 'cancelled');
