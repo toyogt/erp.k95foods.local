@@ -41,16 +41,32 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
     queryFn: () => base44.entities.LblPrinterConfig.filter({ is_active: true }),
   });
 
-  // Load the selected template (assigned at plan creation)
-  const { data: jobTemplate } = useQuery({
-    queryKey: ['lbl-job-print-template', job.printer_template_id],
-    queryFn: async () => {
-      if (!job.printer_template_id) return null;
-      const templates = await base44.entities.LblPrintTemplate.filter({ is_active: true });
-      return templates.find(t => t.id === job.printer_template_id) || null;
-    },
-    enabled: !!job.printer_template_id,
+  // Load all active templates once
+  const { data: allTemplates = [] } = useQuery({
+    queryKey: ['lbl-print-templates-active'],
+    queryFn: () => base44.entities.LblPrintTemplate.filter({ is_active: true }),
   });
+
+  // Load SKU → template mapping for this job's SKU (fallback when job has no template set)
+  const { data: skuMappings = [] } = useQuery({
+    queryKey: ['sku-print-mapping-for-job', job.sku_code],
+    queryFn: () => base44.entities.SKUPrintMapping.filter({ sku_code: job.sku_code, is_active: true }),
+    enabled: !!job.sku_code,
+  });
+
+  // Resolve template: job.printer_template_id → SKU default mapping → first SKU mapping
+  const jobTemplate = (() => {
+    if (job.printer_template_id) {
+      const byJobId = allTemplates.find(t => t.id === job.printer_template_id);
+      if (byJobId) return byJobId;
+    }
+    // Fallback: use the SKU's default (or first active) template mapping
+    const defaultMapping = skuMappings.find(m => m.is_default) || skuMappings[0];
+    if (defaultMapping) {
+      return allTemplates.find(t => t.id === defaultMapping.template_id) || null;
+    }
+    return null;
+  })();
 
   // Fetch product master to get MRP and shelf life
   const { data: productMaster } = useQuery({
@@ -251,8 +267,11 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
         <p className="text-slate-600 col-span-2">
           <span className="font-medium">Selected Template:</span>{' '}
           {jobTemplate
-            ? <Link to="/LblPrintTemplateManager" className="font-mono text-purple-700 hover:text-purple-900 underline underline-offset-2">{jobTemplate.name} [{templateName}]</Link>
-            : <span className="text-amber-600">⚠ No template assigned — select during plan creation</span>
+            ? <>
+                <Link to="/LblPrintTemplateManager" className="font-mono text-purple-700 hover:text-purple-900 underline underline-offset-2">{jobTemplate.name} [{templateName}]</Link>
+                {!job.printer_template_id && <span className="ml-2 text-xs text-slate-400">(from SKU mapping)</span>}
+              </>
+            : <span className="text-amber-600">⚠ No template assigned — configure in SKU Setup or plan creation</span>
           }
         </p>
       </div>
