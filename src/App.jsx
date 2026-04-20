@@ -124,6 +124,7 @@ import LblChecklistBuilder from './pages/LblChecklistBuilder';
 import LblEventLogPage from './pages/LblEventLogPage';
 import LblMasterData from './pages/LblMasterData';
 import LblDocTypePermissions from './pages/LblDocTypePermissions';
+import StoreItemCreator from './pages/StoreItemCreator';
 
 // Page component lookup table
 const PAGE_COMPONENTS = {
@@ -150,6 +151,7 @@ const PAGE_COMPONENTS = {
   LblSupervisorApprovals, LblMonitorDashboard, LblChecklistBuilder, LblEventLogPage,
   LblMasterData,
   LblDocTypePermissions,
+  StoreItemCreator,
 };
 
 const { Pages, Layout, mainPage } = pagesConfig;
