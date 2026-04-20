@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import MaterialPhotoUpload from '@/components/store/MaterialPhotoUpload';
+import CreatableUOMSelect from '@/components/store/CreatableUOMSelect';
 import { Loader2 } from 'lucide-react';
 
 const CATEGORIES = [
@@ -32,15 +33,7 @@ const EMPTY_FORM = {
 export default function StoreItemForm({ onSaved, onCancel }) {
   const [form, setForm] = useState({ ...EMPTY_FORM });
   const [saving, setSaving] = useState(false);
-  const [uomOptions, setUomOptions] = useState([]);
-  const [uomLoading, setUomLoading] = useState(true);
   const [error, setError] = useState('');
-
-  useEffect(() => {
-    base44.entities.UOMMaster.filter({ is_active: true }, 'uom_name', 200)
-      .then(d => { setUomOptions(d); setUomLoading(false); })
-      .catch(() => setUomLoading(false));
-  }, []);
 
   function setField(k, v) {
     setForm(prev => ({ ...prev, [k]: v }));
@@ -107,23 +100,10 @@ export default function StoreItemForm({ onSaved, onCancel }) {
           </select>
         </div>
         <div>
-          <label className="text-xs font-medium text-slate-700">Unit of Measure</label>
-          <select
-            className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm mt-1 h-9 bg-white"
+          <CreatableUOMSelect
             value={form.uom}
-            onChange={e => setField('uom', e.target.value)}
-          >
-            <option value="">Select Unit of Measure</option>
-            {uomLoading ? (
-              <option disabled>Loading...</option>
-            ) : uomOptions.length === 0 ? (
-              <option disabled>No units found</option>
-            ) : (
-              uomOptions.map(u => (
-                <option key={u.id} value={u.uom_code}>{u.uom_name} ({u.uom_code})</option>
-              ))
-            )}
-          </select>
+            onChange={v => setField('uom', v)}
+          />
         </div>
       </div>
 

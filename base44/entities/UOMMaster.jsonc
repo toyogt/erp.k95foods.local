@@ -1,0 +1,38 @@
+{
+  "name": "UOMMaster",
+  "type": "object",
+  "title": "UOM Master",
+  "properties": {
+    "uom_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50,
+      "description": "Unique UOM identifier (auto-generated)"
+    },
+    "uom_code": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 20,
+      "description": "Short code e.g. KG, G, L, ML, PCS"
+    },
+    "uom_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "description": "Full name e.g. Kilogram, Gram, Litre"
+    },
+    "must_be_whole_number": {
+      "type": "boolean",
+      "default": false,
+      "description": "If true, only whole number quantities allowed for this UOM"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "uom_code",
+    "uom_name"
+  ]
+}
