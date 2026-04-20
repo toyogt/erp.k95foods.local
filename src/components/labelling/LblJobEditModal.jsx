@@ -83,7 +83,7 @@ export default function LblJobEditModal({ open, onClose, job, products, planDate
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-2xl w-full">
         <DialogHeader>
           <DialogTitle>{isAdd ? 'Add Product to Plan' : 'Edit Job'}</DialogTitle>
         </DialogHeader>
