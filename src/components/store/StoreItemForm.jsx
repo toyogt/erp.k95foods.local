@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import MaterialPhotoUpload from '@/components/store/MaterialPhotoUpload';
 import CreatableUOMSelect from '@/components/store/CreatableUOMSelect';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Sparkles, RefreshCw, Check } from 'lucide-react';
 
 const CATEGORIES = [
   { value: 'ingredient', label: 'Ingredient' },
@@ -19,6 +19,7 @@ const CATEGORIES = [
 
 const EMPTY_FORM = {
   item_name: '',
+  item_code: '',
   item_category: 'other',
   uom: '',
   material_photo: '',
@@ -34,10 +35,29 @@ export default function StoreItemForm({ onSaved, onCancel }) {
   const [form, setForm] = useState({ ...EMPTY_FORM });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [generatingCode, setGeneratingCode] = useState(false);
+  const [aiAlternatives, setAiAlternatives] = useState([]);
 
   function setField(k, v) {
     setForm(prev => ({ ...prev, [k]: v }));
     if (error) setError('');
+  }
+
+  async function generateItemCode() {
+    if (!form.item_name?.trim()) {
+      setError('Enter item name first to generate code');
+      return;
+    }
+    setGeneratingCode(true);
+    setAiAlternatives([]);
+    const res = await base44.functions.invoke('generateItemCode', {
+      item_name: form.item_name.trim(),
+      item_category: form.item_category,
+    });
+    const { item_code, alternatives } = res.data;
+    setForm(prev => ({ ...prev, item_code: item_code }));
+    setAiAlternatives(alternatives || []);
+    setGeneratingCode(false);
   }
 
   async function handleSave() {
@@ -50,9 +70,21 @@ export default function StoreItemForm({ onSaved, onCancel }) {
       return;
     }
     setSaving(true);
+
+    // Auto-generate item code if not set
+    let itemCode = form.item_code?.trim();
+    if (!itemCode) {
+      const res = await base44.functions.invoke('generateItemCode', {
+        item_name: form.item_name.trim(),
+        item_category: form.item_category,
+      });
+      itemCode = res.data.item_code;
+    }
+
     const data = {
       ...form,
       item_name: form.item_name.trim(),
+      item_code: itemCode,
       opening_stock: form.opening_stock !== '' ? Number(form.opening_stock) : 0,
     };
     await base44.entities.StoreItemMaster.create(data);
@@ -77,6 +109,66 @@ export default function StoreItemForm({ onSaved, onCancel }) {
           onChange={e => setField('item_name', e.target.value)}
           placeholder="Enter item name"
         />
+      </div>
+
+      {/* AI Item Code */}
+      <div className="border border-slate-100 rounded-xl p-4 space-y-2 bg-slate-50/50">
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-medium text-slate-700">Item Code</label>
+          <button
+            type="button"
+            onClick={generateItemCode}
+            disabled={generatingCode || !form.item_name?.trim()}
+            className="flex items-center gap-1.5 text-xs font-medium text-teal-700 hover:text-teal-800 disabled:text-slate-400 disabled:cursor-not-allowed transition-colors"
+          >
+            {generatingCode ? (
+              <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Generating…</>
+            ) : (
+              <><Sparkles className="w-3.5 h-3.5" /> Generate with AI</>
+            )}
+          </button>
+        </div>
+        <div className="flex gap-2">
+          <Input
+            className="h-9 text-sm font-mono tracking-wide uppercase flex-1"
+            value={form.item_code || ''}
+            onChange={e => {
+              setField('item_code', e.target.value.toUpperCase());
+              setAiAlternatives([]);
+            }}
+            placeholder="e.g. ING-SGR"
+          />
+          {form.item_code && (
+            <button
+              type="button"
+              onClick={generateItemCode}
+              disabled={generatingCode}
+              className="w-9 h-9 flex items-center justify-center rounded-md border border-slate-200 hover:bg-slate-100 text-slate-500 transition-colors"
+              title="Regenerate"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${generatingCode ? 'animate-spin' : ''}`} />
+            </button>
+          )}
+        </div>
+        {aiAlternatives.length > 0 && (
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-xs text-slate-500">Alternatives:</span>
+            {aiAlternatives.map(alt => (
+              <button
+                key={alt}
+                type="button"
+                onClick={() => {
+                  setField('item_code', alt);
+                  setAiAlternatives(prev => prev.filter(a => a !== alt));
+                }}
+                className="px-2 py-0.5 text-xs font-mono bg-white border border-slate-200 rounded-md hover:bg-teal-50 hover:border-teal-300 text-slate-700 transition-colors"
+              >
+                {alt}
+              </button>
+            ))}
+          </div>
+        )}
+        <p className="text-xs text-slate-400">AI generates a short, meaningful code. You can edit it manually.</p>
       </div>
 
       {/* Photo */}

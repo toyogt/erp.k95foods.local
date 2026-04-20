@@ -51,7 +51,8 @@ export default function StoreItemList({ items, loading, search, onSearchChange, 
             <table className="w-full text-sm">
               <thead className="bg-slate-100 text-slate-700 text-xs">
                 <tr>
-                  <th className="text-left px-4 py-3 font-medium">Item Name</th>
+                  <th className="text-left px-4 py-3 font-medium">Item</th>
+                  <th className="text-left px-4 py-3 font-medium hidden sm:table-cell">Item Code</th>
                   <th className="text-left px-4 py-3 font-medium hidden md:table-cell">Category</th>
                   <th className="text-left px-4 py-3 font-medium hidden md:table-cell">Unit</th>
                   <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">Rules</th>
@@ -77,6 +78,13 @@ export default function StoreItemList({ items, loading, search, onSearchChange, 
                           )}
                         </div>
                       </div>
+                    </td>
+                    <td className="px-4 py-3 hidden sm:table-cell">
+                      {item.item_code ? (
+                        <span className="font-mono text-xs bg-slate-100 text-slate-700 px-2 py-1 rounded tracking-wide">{item.item_code}</span>
+                      ) : (
+                        <span className="text-xs text-slate-300">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 hidden md:table-cell">
                       <span className="capitalize text-slate-600">{item.item_category?.replace(/_/g, ' ')}</span>
