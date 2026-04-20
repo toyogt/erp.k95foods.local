@@ -4,17 +4,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import MaterialPhotoUpload from '@/components/store/MaterialPhotoUpload';
 import CreatableUOMSelect from '@/components/store/CreatableUOMSelect';
-import { Loader2, Sparkles, RefreshCw, Check } from 'lucide-react';
+import { Loader2, Sparkles, RefreshCw, AlertCircle } from 'lucide-react';
 
 const CATEGORIES = [
-  { value: 'ingredient', label: 'Ingredient' },
-  { value: 'box_type', label: 'Box Type' },
-  { value: 'cap_type', label: 'Cap Type' },
-  { value: 'container', label: 'Container / Bottle' },
-  { value: 'flavour', label: 'Flavour' },
-  { value: 'label_artwork', label: 'Label Artwork' },
-  { value: 'packaging', label: 'Packaging' },
-  { value: 'other', label: 'Other' },
+  { value: 'ingredient', label: 'Ingredient', systemEntity: 'IngredientMaster' },
+  { value: 'box_type', label: 'Box Type', systemEntity: 'BoxType' },
+  { value: 'cap_type', label: 'Cap Type', systemEntity: 'CapType' },
+  { value: 'container', label: 'Container / Bottle', systemEntity: 'ContainerType' },
+  { value: 'flavour', label: 'Flavour', systemEntity: 'FlavourMaster' },
+  { value: 'label_artwork', label: 'Label Artwork', systemEntity: 'LabelArtwork' },
+  { value: 'packaging', label: 'Packaging', systemEntity: null },
+  { value: 'other', label: 'Other', systemEntity: null },
 ];
 
 const EMPTY_FORM = {
@@ -30,6 +30,121 @@ const EMPTY_FORM = {
   storage_notes: '',
   is_active: true,
 };
+
+/**
+ * Creates the item in the appropriate System Master entity first,
+ * then creates a linked StoreItemMaster record.
+ * For categories without a system master (packaging, other), creates directly in StoreItemMaster.
+ */
+async function createInSystemMaster(category, form, itemCode) {
+  const catConfig = CATEGORIES.find(c => c.value === category);
+  
+  if (!catConfig?.systemEntity) {
+    // No system master — create directly in StoreItemMaster
+    return { source_entity: null, source_id: null };
+  }
+
+  const entityName = catConfig.systemEntity;
+  let systemRecord;
+
+  switch (entityName) {
+    case 'IngredientMaster': {
+      // Generate a unique ingredient_id
+      const existing = await base44.entities.IngredientMaster.list('ingredient_id', 1000);
+      const maxNum = existing.reduce((max, i) => {
+        const match = i.ingredient_id?.match(/^ING-(\d+)$/);
+        return match ? Math.max(max, parseInt(match[1])) : max;
+      }, 0);
+      const ingredientId = `ING-${String(maxNum + 1).padStart(5, '0')}`;
+
+      // Find a default group_id (first active group) or use 'GEN'
+      const groups = await base44.entities.IngredientGroup.list('group_name', 10);
+      const defaultGroup = groups[0]?.group_id || 'GEN';
+
+      systemRecord = await base44.entities.IngredientMaster.create({
+        ingredient_id: ingredientId,
+        ingredient_name: form.item_name.trim(),
+        normalized_name: form.item_name.trim().toLowerCase().replace(/[^a-z0-9\s]/g, ''),
+        group_id: defaultGroup,
+        uom_id: form.uom || 'KG',
+        is_active: true,
+      });
+      break;
+    }
+    case 'BoxType': {
+      const existing = await base44.entities.BoxType.list('box_type_id', 1000);
+      const maxNum = existing.reduce((max, b) => {
+        const match = b.box_type_id?.match(/^BOX-(\d+)$/);
+        return match ? Math.max(max, parseInt(match[1])) : max;
+      }, 0);
+      const boxTypeId = `BOX-${String(maxNum + 1).padStart(6, '0')}`;
+
+      systemRecord = await base44.entities.BoxType.create({
+        box_type_id: boxTypeId,
+        box_name: form.item_name.trim(),
+        bottles_per_box: 1,
+        is_active: true,
+      });
+      break;
+    }
+    case 'CapType': {
+      const capCode = itemCode || `CAP-${Date.now().toString(36).toUpperCase()}`;
+      systemRecord = await base44.entities.CapType.create({
+        cap_sku_code: capCode,
+        cap_name: form.item_name.trim(),
+        cap_type: 'Standard',
+        cap_colour: 'Not Specified',
+        cap_photo_url: form.material_photo || 'https://placehold.co/100x100?text=Cap',
+        is_active: true,
+      });
+      break;
+    }
+    case 'ContainerType': {
+      const containerCode = itemCode || `CTN-${Date.now().toString(36).toUpperCase()}`;
+      systemRecord = await base44.entities.ContainerType.create({
+        container_code: containerCode,
+        auto_generated_name: form.item_name.trim(),
+        container_type: 'Glass Bottle',
+        ml_per_container: 1,
+        colour: 'Transparent',
+        vendor_nickname: form.item_name.trim(),
+        bottles_per_crate: 1,
+      });
+      break;
+    }
+    case 'FlavourMaster': {
+      systemRecord = await base44.entities.FlavourMaster.create({
+        brand_name: 'General',
+        family_name: 'General',
+        flavour_name: form.item_name.trim(),
+        is_active: true,
+      });
+      break;
+    }
+    case 'LabelArtwork': {
+      const existing = await base44.entities.LabelArtwork.list('artwork_id', 1000);
+      const maxNum = existing.reduce((max, a) => {
+        const match = a.artwork_id?.match(/^ART-(\d+)$/);
+        return match ? Math.max(max, parseInt(match[1])) : max;
+      }, 0);
+      const artworkId = `ART-${String(maxNum + 1).padStart(5, '0')}`;
+
+      systemRecord = await base44.entities.LabelArtwork.create({
+        artwork_id: artworkId,
+        artwork_name: form.item_name.trim(),
+        is_active: true,
+      });
+      break;
+    }
+    default:
+      return { source_entity: null, source_id: null };
+  }
+
+  return {
+    source_entity: entityName,
+    source_id: systemRecord.id,
+  };
+}
 
 export default function StoreItemForm({ onSaved, onCancel }) {
   const [form, setForm] = useState({ ...EMPTY_FORM });
@@ -60,6 +175,13 @@ export default function StoreItemForm({ onSaved, onCancel }) {
     setGeneratingCode(false);
   }
 
+  async function checkDuplicateName(name) {
+    const normalized = name.trim().toLowerCase();
+    if (!normalized) return false;
+    const existing = await base44.entities.StoreItemMaster.list('item_name', 500);
+    return existing.some(i => i.item_name?.trim().toLowerCase() === normalized);
+  }
+
   async function handleSave() {
     if (!form.item_name?.trim()) {
       setError('Item name is required');
@@ -69,7 +191,17 @@ export default function StoreItemForm({ onSaved, onCancel }) {
       setError('Category is required');
       return;
     }
+
     setSaving(true);
+    setError('');
+
+    // Check for duplicate item name
+    const isDuplicate = await checkDuplicateName(form.item_name);
+    if (isDuplicate) {
+      setError(`An item with the name "${form.item_name.trim()}" already exists. Please use a different name.`);
+      setSaving(false);
+      return;
+    }
 
     // Auto-generate item code if not set
     let itemCode = form.item_code?.trim();
@@ -81,22 +213,52 @@ export default function StoreItemForm({ onSaved, onCancel }) {
       itemCode = res.data.item_code;
     }
 
-    const data = {
-      ...form,
+    // Step 1: Create in System Master (for categories that have one)
+    const { source_entity, source_id } = await createInSystemMaster(
+      form.item_category,
+      form,
+      itemCode
+    );
+
+    // Step 2: Create linked StoreItemMaster record
+    const storeData = {
       item_name: form.item_name.trim(),
       item_code: itemCode,
+      item_category: form.item_category,
+      uom: form.uom || 'Nos',
+      material_photo: form.material_photo || '',
+      batch_required: !!form.batch_required,
+      expiry_required: !!form.expiry_required,
+      mfg_date_required: !!form.mfg_date_required,
       opening_stock: form.opening_stock !== '' ? Number(form.opening_stock) : 0,
+      storage_notes: form.storage_notes || '',
+      is_active: form.is_active,
+      ...(source_entity && { source_entity }),
+      ...(source_id && { source_id }),
     };
-    await base44.entities.StoreItemMaster.create(data);
+
+    await base44.entities.StoreItemMaster.create(storeData);
+
     setSaving(false);
     if (onSaved) onSaved();
   }
 
+  const selectedCat = CATEGORIES.find(c => c.value === form.item_category);
+  const hasSystemMaster = !!selectedCat?.systemEntity;
+
   return (
     <div className="space-y-4">
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-2.5 text-sm text-red-700">
-          {error}
+        <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-2.5 text-sm text-red-700 flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {/* System Master Info Banner */}
+      {hasSystemMaster && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2.5 text-sm text-blue-700">
+          This item will be created in <strong>{selectedCat.systemEntity}</strong> (System Master) first, then automatically linked to Store Item Master.
         </div>
       )}
 
@@ -190,6 +352,9 @@ export default function StoreItemForm({ onSaved, onCancel }) {
               <option key={c.value} value={c.value}>{c.label}</option>
             ))}
           </select>
+          {hasSystemMaster && (
+            <p className="text-xs text-blue-500 mt-0.5">Creates in {selectedCat.systemEntity}</p>
+          )}
         </div>
         <div>
           <CreatableUOMSelect
@@ -269,7 +434,7 @@ export default function StoreItemForm({ onSaved, onCancel }) {
           className="flex-1 h-11 bg-slate-900 text-sm gap-2"
         >
           {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-          {saving ? 'Saving…' : 'Create Item'}
+          {saving ? 'Creating…' : 'Create Item'}
         </Button>
       </div>
     </div>

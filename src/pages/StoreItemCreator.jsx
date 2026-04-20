@@ -43,7 +43,7 @@ export default function StoreItemCreator() {
               Store Item Creator
             </h1>
             <p className="text-xs text-slate-500 mt-0.5">
-              Create new items directly into the Store Item Master
+              Creates items in System Master first, then links to Store Item Master automatically
             </p>
           </div>
           <Button
