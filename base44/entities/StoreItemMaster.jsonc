@@ -7,7 +7,7 @@
     "item_code": {
       "type": "string",
       "maxLength": 100,
-      "description": "AI-generated meaningful code e.g. ING-SBNZT, BOX-CB128, CAP-HDCB28"
+      "description": "Auto-generated sequential code e.g. ITEM-0001"
     },
     "item_name": {
       "type": "string",
