@@ -179,8 +179,9 @@ export default function LblLineJobQueue({ line, jobs, products, canManage }) {
   const [addingJob, setAddingJob] = useState(false);
   const [deletingJob, setDeletingJob] = useState(null);
 
+  // Jobs store line_id as the Machine record's `id` (not machine_id field)
   const lineJobs = jobs
-    .filter(j => j.line_id === line.machine_id)
+    .filter(j => j.line_id === line.id || j.line_id === line.machine_id)
     .sort((a, b) => (a.priority_order || 999) - (b.priority_order || 999));
 
   const reorderAndSave = async (reordered) => {
@@ -219,7 +220,7 @@ export default function LblLineJobQueue({ line, jobs, products, canManage }) {
     await base44.entities.LabellingJob.create({
       job_id: generateJobId(),
       plan_id: `LINE-${line.machine_id}`,
-      line_id: line.machine_id,
+      line_id: line.id,
       line_name: line.display_name,
       status: 'pending',
       priority_order: nextPriority,
