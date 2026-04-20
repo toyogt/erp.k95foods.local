@@ -181,10 +181,21 @@ export default function ImportSystemItemsModal({ existingItems, onClose, onImpor
         skipped++;
         continue;
       }
+
+      // Generate AI item code for each item
+      let itemCode = si.item_code || '';
+      if (!itemCode) {
+        const codeRes = await base44.functions.invoke('generateItemCode', {
+          item_name: si.item_name,
+          item_category: si.item_category,
+        });
+        itemCode = codeRes.data.item_code || '';
+      }
+
       const rules = rulesMap[i] || {};
       await base44.entities.StoreItemMaster.create({
         item_name: si.item_name,
-        item_code: si.item_code || '',
+        item_code: itemCode,
         item_category: si.item_category,
         source_entity: si.source_entity,
         source_id: si.source_id,

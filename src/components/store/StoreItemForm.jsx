@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import MaterialPhotoUpload from '@/components/store/MaterialPhotoUpload';
 import CreatableUOMSelect from '@/components/store/CreatableUOMSelect';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Sparkles } from 'lucide-react';
 
 const CATEGORIES = [
   { value: 'ingredient', label: 'Ingredient' },
@@ -50,9 +50,17 @@ export default function StoreItemForm({ onSaved, onCancel }) {
       return;
     }
     setSaving(true);
+
+    // Generate AI-powered item code
+    const codeRes = await base44.functions.invoke('generateItemCode', {
+      item_name: form.item_name.trim(),
+      item_category: form.item_category,
+    });
+
     const data = {
       ...form,
       item_name: form.item_name.trim(),
+      item_code: codeRes.data.item_code,
       opening_stock: form.opening_stock !== '' ? Number(form.opening_stock) : 0,
     };
     await base44.entities.StoreItemMaster.create(data);
@@ -177,7 +185,7 @@ export default function StoreItemForm({ onSaved, onCancel }) {
           className="flex-1 h-11 bg-slate-900 text-sm gap-2"
         >
           {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-          {saving ? 'Saving…' : 'Create Item'}
+          {saving ? 'Generating Code & Saving…' : <><Sparkles className="w-4 h-4" /> Create Item</>}
         </Button>
       </div>
     </div>
