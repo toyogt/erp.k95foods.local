@@ -1,89 +1,120 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { PLAN_STATUSES, SHIFT_TYPES } from '@/lib/labellingHelpers';
-import LblPlanTable from '@/components/labelling/LblPlanTable';
-import { Plus, Search, Calendar } from 'lucide-react';
-import moment from 'moment';
+import { canManagePlans, JOB_STATUSES } from '@/lib/labellingHelpers';
+import LblLineJobQueue from '@/components/labelling/LblLineJobQueue';
+import { Search, Loader2 } from 'lucide-react';
 
 export default function LblPlanningDashboard() {
   const [search, setSearch] = useState('');
-  const [shiftFilter, setShiftFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [dateFilter, setDateFilter] = useState(moment().format('YYYY-MM-DD'));
+  const [user, setUser] = useState(null);
 
-  const { data: plans = [], isLoading } = useQuery({
-    queryKey: ['labelling-plans'],
-    queryFn: () => base44.entities.LabellingShiftPlan.list('-created_date', 200),
+  // Load current user for permission check
+  useState(() => {
+    base44.auth.me().then(setUser).catch(() => {});
   });
 
-  // Fetch all jobs for the listed plans — compute completed/total live
-  const planIds = plans.map(p => p.plan_id);
-  const { data: allJobs = [] } = useQuery({
-    queryKey: ['labelling-jobs-for-plans', planIds.join(',')],
-    queryFn:  () => base44.entities.LabellingJob.list('-created_date', 1000),
-    enabled:  plans.length > 0,
+  // Fetch all label lines (machines of type LABEL-LINE)
+  const { data: lines = [], isLoading: linesLoading } = useQuery({
+    queryKey: ['label-lines'],
+    queryFn: () => base44.entities.Machine.filter({ machine_type: 'LABEL-LINE', is_active: true }),
   });
 
-  // Build a lookup: plan_id → { total, completed }
-  const jobCountsByPlan = allJobs.reduce((acc, job) => {
-    if (!acc[job.plan_id]) acc[job.plan_id] = { total: 0, completed: 0 };
-    acc[job.plan_id].total++;
-    if (job.status === 'completed') acc[job.plan_id].completed++;
-    return acc;
-  }, {});
-
-  // Enrich plans with live job counts
-  const enrichedPlans = plans.map(p => ({
-    ...p,
-    total_jobs:     jobCountsByPlan[p.plan_id]?.total     ?? p.total_jobs     ?? 0,
-    completed_jobs: jobCountsByPlan[p.plan_id]?.completed ?? p.completed_jobs ?? 0,
-  }));
-
-  const filtered = enrichedPlans.filter(p => {
-    if (shiftFilter !== 'all' && p.shift_type !== shiftFilter) return false;
-    if (statusFilter !== 'all' && p.status !== statusFilter) return false;
-    if (dateFilter) {
-      const pd = moment(p.plan_date, 'DD/MM/YYYY').format('YYYY-MM-DD');
-      if (pd !== dateFilter) return false;
-    }
-    if (search) {
-      const q = search.toLowerCase();
-      if (!p.plan_id?.toLowerCase().includes(q) && !p.line_name?.toLowerCase().includes(q) && !p.supervisor_name?.toLowerCase().includes(q)) return false;
-    }
-    return true;
+  // Fetch all labelling jobs (not cancelled/completed filters — show all active queue)
+  const { data: allJobs = [], isLoading: jobsLoading } = useQuery({
+    queryKey: ['lbl-all-jobs'],
+    queryFn: () => base44.entities.LabellingJob.list('priority_order', 500),
   });
 
-  const counts = { draft: 0, locked: 0, in_progress: 0, completed: 0 };
-  filtered.forEach(p => { if (counts[p.status] !== undefined) counts[p.status]++; });
+  // Fetch products for the add/edit modal
+  const { data: products = [] } = useQuery({
+    queryKey: ['products-active'],
+    queryFn: () => base44.entities.ProductMaster.filter({ is_active: true }),
+  });
+
+  const canManage = canManagePlans(user?.role);
+
+  // Filter lines by search
+  const filteredLines = lines.filter(line =>
+    !search || line.display_name?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  // Global stats
+  const stats = {
+    total: allJobs.length,
+    pending: allJobs.filter(j => j.status === 'pending').length,
+    active: allJobs.filter(j => !['pending', 'completed', 'cancelled', 'on_hold'].includes(j.status)).length,
+    completed: allJobs.filter(j => j.status === 'completed').length,
+  };
+
+  const isLoading = linesLoading || jobsLoading;
 
   return (
     <div className="p-3 md:p-4 lg:p-6 space-y-4">
+      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold text-slate-900">Labelling Planning</h1>
-          <p className="text-sm text-slate-500">Create and manage shift plans for labelling lines</p>
+          <h1 className="text-xl md:text-2xl font-bold text-slate-900">Labelling Job Queue</h1>
+          <p className="text-sm text-slate-500">Manage and prioritise labelling jobs across all production lines</p>
         </div>
-        <Link to="/LblPlanCreate">
-          <Button className="h-11 md:h-9 gap-2 w-full md:w-auto"><Plus className="w-4 h-4" /> Create Plan</Button>
-        </Link>
       </div>
+
+      {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {Object.entries(counts).map(([key, val]) => (
-          <div key={key} className="bg-white border border-slate-200 rounded-lg p-3"><p className="text-xs text-slate-500">{PLAN_STATUSES[key]?.label}</p><p className="text-2xl font-bold text-slate-900">{val}</p></div>
+        {[
+          { label: 'Total Jobs', value: stats.total, color: 'text-slate-900' },
+          { label: 'Pending', value: stats.pending, color: 'text-slate-700' },
+          { label: 'In Progress', value: stats.active, color: 'text-blue-700' },
+          { label: 'Completed', value: stats.completed, color: 'text-green-700' },
+        ].map(stat => (
+          <div key={stat.label} className="bg-white border border-slate-200 rounded-lg p-3">
+            <p className="text-xs text-slate-500">{stat.label}</p>
+            <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
+          </div>
         ))}
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-        <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" /><Input placeholder="Search plans..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 h-11 md:h-9" /></div>
-        <div className="relative"><Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 z-10" /><Input type="date" value={dateFilter} onChange={e => setDateFilter(e.target.value)} className="pl-9 h-11 md:h-9" /></div>
-        <Select value={shiftFilter} onValueChange={setShiftFilter}><SelectTrigger className="h-11 md:h-9"><SelectValue placeholder="Shift" /></SelectTrigger><SelectContent><SelectItem value="all">All Shifts</SelectItem>{SHIFT_TYPES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent></Select>
-        <Select value={statusFilter} onValueChange={setStatusFilter}><SelectTrigger className="h-11 md:h-9"><SelectValue placeholder="Status" /></SelectTrigger><SelectContent><SelectItem value="all">All Statuses</SelectItem>{Object.entries(PLAN_STATUSES).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}</SelectContent></Select>
+
+      {/* Search */}
+      <div className="relative max-w-sm">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+        <Input
+          placeholder="Search lines..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="pl-9 h-11 md:h-9"
+        />
       </div>
-      <LblPlanTable plans={filtered} isLoading={isLoading} />
+
+      {/* Loading */}
+      {isLoading && (
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="w-7 h-7 animate-spin text-slate-400" />
+        </div>
+      )}
+
+      {/* No lines configured */}
+      {!isLoading && lines.length === 0 && (
+        <div className="text-center py-16 text-slate-500">
+          <p className="font-medium">No label lines configured.</p>
+          <p className="text-sm mt-1">Add machines with type "Label Line" in Master Data.</p>
+        </div>
+      )}
+
+      {/* Line Queue Columns */}
+      {!isLoading && filteredLines.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {filteredLines.map(line => (
+            <LblLineJobQueue
+              key={line.id}
+              line={line}
+              jobs={allJobs}
+              products={products}
+              canManage={canManage}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
