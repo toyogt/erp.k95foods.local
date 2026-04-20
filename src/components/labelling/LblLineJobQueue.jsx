@@ -5,7 +5,11 @@ import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Button } from '@/components/ui/button';
 import { JOB_STATUSES, generateJobId } from '@/lib/labellingHelpers';
 import LblJobEditModal from '@/components/labelling/LblJobEditModal';
-import { GripVertical, Plus, Pencil, Trash2, ChevronRight } from 'lucide-react';
+import {
+  GripVertical, Plus, Pencil, Trash2, ChevronRight,
+  ArrowUp, ArrowDown, ExternalLink, CheckCircle2,
+  Clock, Pause, XCircle, PlayCircle
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
@@ -14,6 +18,159 @@ import {
 } from '@/components/ui/alert-dialog';
 
 const TERMINAL_STATUSES = ['completed', 'cancelled', 'on_hold'];
+const IN_PROGRESS_STATUSES = ['active', 'stock_transferred', 'demo_print_sent', 'demo_print_verified',
+  'checklist_submitted', 'demo_pending_approval', 'demo_approved', 'bulk_printing', 'paused',
+  'bulk_printing_awaiting_printer_reset'];
+
+function StatusIcon({ status }) {
+  if (status === 'completed') return <CheckCircle2 className="w-4 h-4 text-green-500" />;
+  if (status === 'cancelled') return <XCircle className="w-4 h-4 text-slate-400" />;
+  if (status === 'on_hold') return <Pause className="w-4 h-4 text-amber-500" />;
+  if (status === 'pending') return <Clock className="w-4 h-4 text-slate-400" />;
+  return <PlayCircle className="w-4 h-4 text-blue-500" />;
+}
+
+function JobCard({ job, idx, totalJobs, canManage, isDragging, dragHandleProps, draggableProps, innerRef, onEdit, onDelete, onMoveUp, onMoveDown, onOpen }) {
+  const st = JOB_STATUSES[job.status] || JOB_STATUSES.pending;
+  const isTerminal = TERMINAL_STATUSES.includes(job.status);
+  const isInProgress = IN_PROGRESS_STATUSES.includes(job.status);
+  const isDraggable = canManage && !isTerminal;
+
+  const cardBg =
+    job.status === 'completed' ? 'border-green-200 bg-green-50/40' :
+    job.status === 'cancelled' ? 'border-slate-200 bg-slate-50 opacity-60' :
+    job.status === 'on_hold' ? 'border-amber-200 bg-amber-50/40' :
+    isInProgress ? 'border-blue-300 bg-blue-50/40 shadow-sm' :
+    'border-slate-200 bg-white';
+
+  return (
+    <div
+      ref={innerRef}
+      {...draggableProps}
+      className={`rounded-xl border transition-all ${cardBg} ${isDragging ? 'shadow-xl ring-2 ring-slate-300 scale-[1.02]' : ''}`}
+    >
+      {/* Top row: drag + priority + status + actions */}
+      <div className="flex items-center gap-2 px-3 pt-3 pb-1">
+        {/* Drag handle */}
+        <div
+          {...dragHandleProps}
+          className={`shrink-0 p-1 rounded ${isDraggable ? 'cursor-grab active:cursor-grabbing hover:bg-slate-100 text-slate-400 hover:text-slate-600' : 'opacity-20 cursor-not-allowed text-slate-300'}`}
+          title={isDraggable ? 'Drag to reorder' : 'Cannot reorder'}
+        >
+          <GripVertical className="w-4 h-4" />
+        </div>
+
+        {/* Priority number */}
+        <span className="w-7 h-7 rounded-full bg-slate-100 text-slate-600 text-xs font-bold flex items-center justify-center shrink-0">
+          {idx + 1}
+        </span>
+
+        {/* Status icon + badge */}
+        <StatusIcon status={job.status} />
+        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${st.color}`}>{st.label}</span>
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* Action buttons */}
+        <div className="flex items-center gap-1 shrink-0">
+          {/* Move up/down for priority */}
+          {canManage && !isTerminal && (
+            <>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-8 w-8 text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+                onClick={() => onMoveUp(idx)}
+                disabled={idx === 0}
+                title="Move up (higher priority)"
+              >
+                <ArrowUp className="w-3.5 h-3.5" />
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-8 w-8 text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+                onClick={() => onMoveDown(idx)}
+                disabled={idx === totalJobs - 1}
+                title="Move down (lower priority)"
+              >
+                <ArrowDown className="w-3.5 h-3.5" />
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-8 w-8 text-slate-400 hover:text-blue-600 hover:bg-blue-50"
+                onClick={() => onEdit(job)}
+                title="Edit job"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-red-50"
+                onClick={() => onDelete(job)}
+                title="Remove job"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </Button>
+            </>
+          )}
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-8 w-8 text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+            onClick={() => onOpen(job)}
+            title="Open job"
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Job details */}
+      <div className="px-4 pb-3">
+        <p className="font-semibold text-sm text-slate-900 leading-tight">{job.product_name}</p>
+        <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1">
+          <span className="text-xs text-slate-500">Code: <span className="font-medium text-slate-700">{job.sku_code}</span></span>
+          <span className="text-xs text-slate-500">Planned: <span className="font-medium text-slate-700">{job.quantity_bottles_planned?.toLocaleString()} bottles</span></span>
+          {job.manufacturing_date && (
+            <span className="text-xs text-slate-500">Manufactured: <span className="font-medium text-slate-700">{job.manufacturing_date}</span></span>
+          )}
+          {job.batch_no && (
+            <span className="text-xs text-slate-500">Batch: <span className="font-mono font-medium text-slate-700">{job.batch_no}</span></span>
+          )}
+        </div>
+
+        {/* Progress bar for in-progress jobs */}
+        {(isInProgress || job.status === 'completed') && job.quantity_bottles_planned > 0 && (
+          <div className="mt-2">
+            <div className="flex justify-between text-xs text-slate-500 mb-1">
+              <span>Printed: {(job.current_printed_qty || 0).toLocaleString()}</span>
+              <span>{Math.min(100, Math.round(((job.current_printed_qty || 0) / job.quantity_bottles_planned) * 100))}%</span>
+            </div>
+            <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all ${job.status === 'completed' ? 'bg-green-500' : 'bg-blue-500'}`}
+                style={{ width: `${Math.min(100, ((job.current_printed_qty || 0) / job.quantity_bottles_planned) * 100)}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Open button row for mobile — full width tap target */}
+        <Button
+          className="mt-2 w-full h-9 text-sm gap-1.5 bg-slate-900 hover:bg-slate-700 text-white"
+          onClick={() => onOpen(job)}
+        >
+          {isInProgress ? 'Continue Job' : isTerminal ? 'View Job' : 'Open Job'}
+          <ChevronRight className="w-4 h-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 export default function LblLineJobQueue({ line, jobs, products, canManage }) {
   const queryClient = useQueryClient();
@@ -26,18 +183,35 @@ export default function LblLineJobQueue({ line, jobs, products, canManage }) {
     .filter(j => j.line_id === line.machine_id)
     .sort((a, b) => (a.priority_order || 999) - (b.priority_order || 999));
 
-  const handleDragEnd = async (result) => {
-    if (!result.destination || result.source.index === result.destination.index) return;
-    const reordered = Array.from(lineJobs);
-    const [moved] = reordered.splice(result.source.index, 1);
-    reordered.splice(result.destination.index, 0, moved);
-    // Persist new priority_order
+  const reorderAndSave = async (reordered) => {
     await Promise.all(
       reordered.map((job, idx) =>
         base44.entities.LabellingJob.update(job.id, { priority_order: idx + 1 })
       )
     );
     queryClient.invalidateQueries({ queryKey: ['lbl-all-jobs'] });
+  };
+
+  const handleDragEnd = async (result) => {
+    if (!result.destination || result.source.index === result.destination.index) return;
+    const reordered = Array.from(lineJobs);
+    const [moved] = reordered.splice(result.source.index, 1);
+    reordered.splice(result.destination.index, 0, moved);
+    await reorderAndSave(reordered);
+  };
+
+  const handleMoveUp = async (idx) => {
+    if (idx === 0) return;
+    const reordered = Array.from(lineJobs);
+    [reordered[idx - 1], reordered[idx]] = [reordered[idx], reordered[idx - 1]];
+    await reorderAndSave(reordered);
+  };
+
+  const handleMoveDown = async (idx) => {
+    if (idx === lineJobs.length - 1) return;
+    const reordered = Array.from(lineJobs);
+    [reordered[idx], reordered[idx + 1]] = [reordered[idx + 1], reordered[idx]];
+    await reorderAndSave(reordered);
   };
 
   const handleAddJob = async (form) => {
@@ -65,27 +239,28 @@ export default function LblLineJobQueue({ line, jobs, products, canManage }) {
     queryClient.invalidateQueries({ queryKey: ['lbl-all-jobs'] });
   };
 
-  const activeJob = lineJobs.find(j => !TERMINAL_STATUSES.includes(j.status) && j.status !== 'pending');
+  const activeJob = lineJobs.find(j => IN_PROGRESS_STATUSES.includes(j.status));
   const pendingCount = lineJobs.filter(j => j.status === 'pending').length;
   const completedCount = lineJobs.filter(j => j.status === 'completed').length;
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
       {/* Line Header */}
       <div className="bg-slate-900 text-white px-4 py-3 flex items-center justify-between gap-3">
         <div>
           <h2 className="font-bold text-base">{line.display_name}</h2>
           <div className="flex gap-3 mt-0.5 text-xs text-slate-300">
-            <span>{lineJobs.length} jobs total</span>
+            <span>{lineJobs.length} total</span>
+            <span className="text-slate-400">·</span>
             <span>{pendingCount} pending</span>
-            <span>{completedCount} completed</span>
+            <span className="text-slate-400">·</span>
+            <span className="text-green-400">{completedCount} completed</span>
           </div>
         </div>
         {canManage && (
           <Button
             size="sm"
-            variant="outline"
-            className="h-9 gap-1.5 bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white text-sm"
+            className="h-11 md:h-9 gap-1.5 bg-white text-slate-900 hover:bg-slate-100 font-semibold text-sm px-4"
             onClick={() => setAddingJob(true)}
           >
             <Plus className="w-4 h-4" /> Add Job
@@ -93,32 +268,39 @@ export default function LblLineJobQueue({ line, jobs, products, canManage }) {
         )}
       </div>
 
-      {/* Active job indicator */}
+      {/* Active job banner */}
       {activeJob && (
-        <div className="bg-blue-50 border-b border-blue-200 px-4 py-2 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse shrink-0" />
-            <span className="text-sm font-medium text-blue-800">Active: {activeJob.product_name}</span>
-            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${JOB_STATUSES[activeJob.status]?.color}`}>
-              {JOB_STATUSES[activeJob.status]?.label}
-            </span>
+        <div className="bg-blue-600 text-white px-4 py-2.5 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="w-2 h-2 rounded-full bg-white animate-pulse shrink-0" />
+            <div className="min-w-0">
+              <span className="text-sm font-semibold truncate block">{activeJob.product_name}</span>
+              <span className="text-xs text-blue-200">{JOB_STATUSES[activeJob.status]?.label}</span>
+            </div>
           </div>
           <Button
             size="sm"
-            variant="ghost"
-            className="h-8 text-blue-700 hover:bg-blue-100 text-xs"
+            className="h-9 bg-white text-blue-700 hover:bg-blue-50 font-semibold text-sm gap-1 shrink-0"
             onClick={() => navigate(`/LblOperatorJob?jobId=${activeJob.id}`)}
           >
-            View <ChevronRight className="w-3.5 h-3.5" />
+            Continue <ChevronRight className="w-3.5 h-3.5" />
           </Button>
         </div>
       )}
 
       {/* Job Queue */}
-      <div className="p-3 space-y-1">
+      <div className="p-3">
         {lineJobs.length === 0 && (
-          <div className="text-center py-8 text-slate-400 text-sm">
-            No jobs in this queue. {canManage && 'Click "Add Job" to add one.'}
+          <div className="text-center py-12 text-slate-400">
+            <p className="font-medium text-sm">Queue is empty</p>
+            {canManage && (
+              <Button
+                className="mt-3 h-11 gap-2 bg-slate-900 text-white"
+                onClick={() => setAddingJob(true)}
+              >
+                <Plus className="w-4 h-4" /> Add First Job
+              </Button>
+            )}
           </div>
         )}
 
@@ -127,90 +309,26 @@ export default function LblLineJobQueue({ line, jobs, products, canManage }) {
             {(provided) => (
               <div ref={provided.innerRef} {...provided.droppableProps} className="space-y-2">
                 {lineJobs.map((job, idx) => {
-                  const st = JOB_STATUSES[job.status] || JOB_STATUSES.pending;
                   const isTerminal = TERMINAL_STATUSES.includes(job.status);
                   const isDraggable = canManage && !isTerminal;
                   return (
                     <Draggable key={job.id} draggableId={job.id} index={idx} isDragDisabled={!isDraggable}>
                       {(provided, snapshot) => (
-                        <div
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          className={`flex items-center gap-2 rounded-lg border px-3 py-2.5 transition-all ${
-                            snapshot.isDragging ? 'shadow-lg opacity-90' : ''
-                          } ${
-                            job.status === 'completed' ? 'border-green-200 bg-green-50/40' :
-                            job.status === 'cancelled' ? 'border-slate-200 bg-slate-50 opacity-60' :
-                            job.status === 'on_hold' ? 'border-amber-200 bg-amber-50/30' :
-                            job.status === 'pending' ? 'border-slate-200 bg-white' :
-                            'border-blue-200 bg-blue-50/30'
-                          }`}
-                        >
-                          {/* Drag handle */}
-                          <div
-                            {...provided.dragHandleProps}
-                            className={`shrink-0 ${isDraggable ? 'cursor-grab active:cursor-grabbing' : 'opacity-20 cursor-not-allowed'}`}
-                          >
-                            <GripVertical className="w-4 h-4 text-slate-400" />
-                          </div>
-
-                          {/* Priority badge */}
-                          <span className="text-xs font-bold text-slate-400 w-5 text-center shrink-0">#{idx + 1}</span>
-
-                          {/* Job info */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-medium text-sm text-slate-900 truncate">{job.product_name}</span>
-                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium shrink-0 ${st.color}`}>{st.label}</span>
-                            </div>
-                            <div className="text-xs text-slate-500 mt-0.5 flex flex-wrap gap-3">
-                              <span>Code: {job.sku_code}</span>
-                              <span>{job.quantity_bottles_planned?.toLocaleString()} bottles</span>
-                              {job.manufacturing_date && <span>Manufactured: {job.manufacturing_date}</span>}
-                              {job.batch_no && <span>Batch: {job.batch_no}</span>}
-                            </div>
-                          </div>
-
-                          {/* Actions */}
-                          {canManage && !isTerminal && (
-                            <div className="flex items-center gap-1 shrink-0">
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-8 w-8 text-slate-400 hover:text-slate-700"
-                                onClick={() => setEditingJob(job)}
-                              >
-                                <Pencil className="w-3.5 h-3.5" />
-                              </Button>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-8 w-8 text-slate-400 hover:text-red-600"
-                                onClick={() => setDeletingJob(job)}
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-8 text-blue-600 hover:bg-blue-50 text-xs px-2"
-                                onClick={() => navigate(`/LblOperatorJob?jobId=${job.id}`)}
-                              >
-                                Open <ChevronRight className="w-3 h-3" />
-                              </Button>
-                            </div>
-                          )}
-                          {isTerminal && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-8 text-slate-500 hover:bg-slate-50 text-xs px-2 shrink-0"
-                              onClick={() => navigate(`/LblOperatorJob?jobId=${job.id}`)}
-                            >
-                              View <ChevronRight className="w-3 h-3" />
-                            </Button>
-                          )}
-                        </div>
+                        <JobCard
+                          job={job}
+                          idx={idx}
+                          totalJobs={lineJobs.filter(j => !TERMINAL_STATUSES.includes(j.status)).length}
+                          canManage={canManage}
+                          isDragging={snapshot.isDragging}
+                          dragHandleProps={provided.dragHandleProps}
+                          draggableProps={provided.draggableProps}
+                          innerRef={provided.innerRef}
+                          onEdit={setEditingJob}
+                          onDelete={setDeletingJob}
+                          onMoveUp={handleMoveUp}
+                          onMoveDown={handleMoveDown}
+                          onOpen={(j) => navigate(`/LblOperatorJob?jobId=${j.id}`)}
+                        />
                       )}
                     </Draggable>
                   );
