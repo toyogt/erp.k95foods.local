@@ -184,6 +184,16 @@ export default function LblDemoPrintStep({ job, user, onComplete }) {
       });
     }
 
+    if (Object.keys(podMap).length === 0) {
+      toast({
+        title: 'Template Has No Field Mappings',
+        description: `The template "${jobTemplate.name}" has no POD field mappings configured. Go to Print Template Manager and add field mappings (e.g. POD1 → batch_no, POD2 → mrp) before printing.`,
+        variant: 'destructive',
+        duration: 10000,
+      });
+      return;
+    }
+
     setPreviewPodValues(podMap);
     setShowPreview(true);
   };
