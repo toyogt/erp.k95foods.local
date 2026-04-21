@@ -65,8 +65,10 @@ export default function VoiceShortcutGuide() {
                 <li>• <strong>URL:</strong> Your function URL (Dashboard → Code → Functions → voiceCreateTask)</li>
                 <li>• <strong>Method:</strong> POST</li>
                 <li>• <strong>Request Body:</strong> Form</li>
-                <li>• Add field — Key: <strong>audio</strong>, Type: <strong>File</strong>, Value: <strong>Recorded Audio</strong> (select from previous step)</li>
-                <li>• <strong>Headers:</strong> Add your auth token header</li>
+                <li>• Add field — Key: <strong>audio</strong>, Type: <strong>File</strong>, Value: <strong>Recorded Audio</strong> (from previous step)</li>
+                <li>• <strong>Headers:</strong></li>
+                <li className="ml-3">→ <strong>x-api-key</strong> = your VOICE_TASK_API_KEY (the secret you set in Dashboard → Settings)</li>
+                <li className="ml-3">→ <strong>x-director-email</strong> = your email address (e.g. director@company.com)</li>
               </ul>
             </div>
           </li>
@@ -85,11 +87,16 @@ export default function VoiceShortcutGuide() {
         </ol>
       </div>
 
-      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-2">
         <p className="text-sm font-medium text-amber-800">Important</p>
-        <p className="text-xs text-amber-700 mt-1">
-          The function URL and authentication token are in your dashboard under Code → Functions → voiceCreateTask. 
-          You need to add the auth token as a header for the shortcut to work. The AI handles transcription — no need for Apple's "Dictate Text" action.
+        <p className="text-xs text-amber-700">
+          <strong>Function URL:</strong> Go to Dashboard → Code → Functions → voiceCreateTask to find it.
+        </p>
+        <p className="text-xs text-amber-700">
+          <strong>API Key:</strong> Use the VOICE_TASK_API_KEY you set in Dashboard → Settings → Secrets. This key never expires — no need to refresh it.
+        </p>
+        <p className="text-xs text-amber-700">
+          <strong>Director Email:</strong> Use your login email address so the system knows who is creating the task.
         </p>
       </div>
 
