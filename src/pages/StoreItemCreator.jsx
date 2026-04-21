@@ -10,6 +10,8 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 export default function StoreItemCreator() {
+  const [user, setUser] = useState(null);
+  useEffect(() => { base44.auth.me().then(setUser).catch(() => {}); }, []);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -43,7 +45,9 @@ export default function StoreItemCreator() {
               Store Item Creator
             </h1>
             <p className="text-xs text-slate-500 mt-0.5">
-              Creates items in System Master first, then links to Store Item Master automatically
+              {user?.role === 'store_manager'
+                ? 'Create new items in the Store Item Master'
+                : 'Creates items in System Master first, then links to Store Item Master automatically'}
             </p>
           </div>
           <Button
@@ -69,6 +73,7 @@ export default function StoreItemCreator() {
             <StoreItemForm
               onSaved={handleSaved}
               onCancel={() => setShowForm(false)}
+              userRole={user?.role}
             />
           </div>
         ) : (

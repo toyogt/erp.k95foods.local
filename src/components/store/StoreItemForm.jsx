@@ -12,7 +12,7 @@ import FlavourFields, { validateFlavourFields } from '@/components/store/categor
 import LabelArtworkFields, { validateLabelArtworkFields } from '@/components/store/categoryFields/LabelArtworkFields';
 import { Loader2, Sparkles, RefreshCw, AlertCircle } from 'lucide-react';
 
-const CATEGORIES = [
+const ALL_CATEGORIES = [
   { value: 'ingredient', label: 'Ingredient', systemEntity: 'IngredientMaster' },
   { value: 'box_type', label: 'Box Type', systemEntity: 'BoxType' },
   { value: 'cap_type', label: 'Cap Type', systemEntity: 'CapType' },
@@ -49,7 +49,7 @@ const EMPTY_FORM = {
 /* ──────────────────────────────── System Master Creation ─────────────────────────────── */
 
 async function createInSystemMaster(category, form, itemCode) {
-  const catConfig = CATEGORIES.find(c => c.value === category);
+  const catConfig = ALL_CATEGORIES.find(c => c.value === category);
   if (!catConfig?.systemEntity) return { source_entity: null, source_id: null };
 
   let systemRecord;
@@ -155,7 +155,12 @@ async function createInSystemMaster(category, form, itemCode) {
 
 /* ──────────────────────────────── Component ─────────────────────────────── */
 
-export default function StoreItemForm({ onSaved, onCancel }) {
+export default function StoreItemForm({ onSaved, onCancel, userRole }) {
+  const isStoreManager = userRole === 'store_manager';
+  const CATEGORIES = isStoreManager
+    ? ALL_CATEGORIES.filter(c => !c.systemEntity)
+    : ALL_CATEGORIES;
+
   const [form, setForm] = useState({ ...EMPTY_FORM });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -257,7 +262,7 @@ export default function StoreItemForm({ onSaved, onCancel }) {
         </div>
       )}
 
-      {hasSystemMaster && (
+      {!isStoreManager && hasSystemMaster && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2.5 text-sm text-blue-700">
           This item will be created in <strong>{selectedCat.systemEntity}</strong> first, then linked to Store Item Master.
         </div>
@@ -282,7 +287,7 @@ export default function StoreItemForm({ onSaved, onCancel }) {
               <option key={c.value} value={c.value}>{c.label}</option>
             ))}
           </select>
-          {hasSystemMaster && (
+          {!isStoreManager && hasSystemMaster && (
             <p className="text-xs text-blue-500 mt-0.5">Creates in {selectedCat.systemEntity}</p>
           )}
         </div>
@@ -291,13 +296,17 @@ export default function StoreItemForm({ onSaved, onCancel }) {
         </div>
       </div>
 
-      {/* ── Dynamic Category-Specific Fields ── */}
-      {form.item_category === 'ingredient' && <IngredientFields form={form} setField={setField} />}
-      {form.item_category === 'box_type' && <BoxTypeFields form={form} setField={setField} />}
-      {form.item_category === 'cap_type' && <CapTypeFields form={form} setField={setField} />}
-      {form.item_category === 'container' && <ContainerFields form={form} setField={setField} />}
-      {form.item_category === 'flavour' && <FlavourFields form={form} setField={setField} />}
-      {form.item_category === 'label_artwork' && <LabelArtworkFields form={form} setField={setField} />}
+      {/* ── Dynamic Category-Specific Fields (hidden for store managers) ── */}
+      {!isStoreManager && (
+        <>
+          {form.item_category === 'ingredient' && <IngredientFields form={form} setField={setField} />}
+          {form.item_category === 'box_type' && <BoxTypeFields form={form} setField={setField} />}
+          {form.item_category === 'cap_type' && <CapTypeFields form={form} setField={setField} />}
+          {form.item_category === 'container' && <ContainerFields form={form} setField={setField} />}
+          {form.item_category === 'flavour' && <FlavourFields form={form} setField={setField} />}
+          {form.item_category === 'label_artwork' && <LabelArtworkFields form={form} setField={setField} />}
+        </>
+      )}
 
       {/* AI Item Code */}
       <div className="border border-slate-100 rounded-xl p-4 space-y-2 bg-slate-50/50">
