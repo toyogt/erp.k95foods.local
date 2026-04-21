@@ -19,6 +19,7 @@ import { Label } from '@/components/ui/label';
 import { logLabellingEvent } from '@/lib/labellingEventLogger';
 import { useDemoPrintPollStatus } from '@/hooks/useDemoPrintPollStatus';
 import { toast } from '@/components/ui/use-toast';
+import LblPrinterDiagnosticPanel from '@/components/labelling/LblPrinterDiagnosticPanel';
 import {
   Loader2, CheckCircle2, XCircle, ShieldCheck,
   RotateCcw, AlertTriangle, Printer, ListChecks, Radio
@@ -185,12 +186,13 @@ export default function LblDemoPrintVerificationStep({ job, user, onComplete }) 
           </div>
         )}
 
-        {/* Poll error — non-blocking, physical confirmation is sufficient */}
+        {/* Poll error — intelligent diagnosis panel replaces simple amber banner */}
         {pollError && printer && (
-          <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg p-2 text-sm text-amber-700">
-            <AlertTriangle className="w-4 h-4 shrink-0" />
-            <span>Live printer count unavailable ({pollError}). Proceed by physically confirming the labels below.</span>
-          </div>
+          <LblPrinterDiagnosticPanel
+            jobId={job.id}
+            pollError={pollError}
+            user={user}
+          />
         )}
 
         {/* Live label count */}
