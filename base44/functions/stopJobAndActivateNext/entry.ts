@@ -31,10 +31,81 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Job not found' }, { status: 404 });
     }
 
+    // ── Send STOP command to printer (best-effort) ──────────────────────
+    // Only attempt if the job is in a state where the printer might be running.
+    // We don't block the status change on printer reachability.
+    let printerStopResult = { attempted: false, success: false, error: null };
+    const PRINTING_STATUSES = [
+      'bulk_printing',
+      'bulk_printing_awaiting_printer_reset',
+      'paused',
+      'demo_print_sent',
+    ];
+    if (PRINTING_STATUSES.includes(currentJob.status) && currentJob.line_id) {
+      printerStopResult.attempted = true;
+      try {
+        const printers = await base44.asServiceRole.entities.LblPrinterConfig.filter({
+          line_id: currentJob.line_id,
+          is_active: true,
+        });
+        const printer = printers?.[0];
+        if (printer?.ip_address && printer?.port) {
+          const base = (printer.middleware_base_url || '').replace(/\/$/, '');
+          const endpoint = `${base}/print`;
+          const headers = { 'Content-Type': 'application/json' };
+          if (printer.auth_token) headers['Authorization'] = `Bearer ${printer.auth_token}`;
+
+          const stopPayload = {
+            printer_id: printer.printer_id,
+            printer: { ip: printer.ip_address, port: printer.port },
+            command: { command: 'STOP' },
+          };
+
+          const controller = new AbortController();
+          const timeoutMs = printer.request_timeout_ms || 15000;
+          const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(stopPayload),
+            signal: controller.signal,
+          });
+          clearTimeout(timeoutId);
+
+          printerStopResult.success = response.ok;
+          if (!response.ok) {
+            printerStopResult.error = `Middleware returned ${response.status}`;
+          }
+
+          // Log the printer command for audit
+          await base44.asServiceRole.entities.LblPrintCommand.create({
+            command_id: `CMD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            job_id: currentJob.job_id,
+            printer_id: printer.printer_id,
+            endpoint_url: endpoint,
+            command_type: 'bulk_stop',
+            status: response.ok ? 'sent' : 'failed',
+            request_payload: stopPayload,
+            response_status_code: response.status,
+            error_message: response.ok ? null : `Stop command failed: ${response.status}`,
+            sent_at: new Date().toISOString(),
+            sent_by: user.email,
+          });
+        } else {
+          printerStopResult.error = 'No active printer configured for this line';
+        }
+      } catch (printerErr) {
+        printerStopResult.error = printerErr.message || 'Unknown printer error';
+        console.error('Printer STOP command failed:', printerErr);
+      }
+    }
+
     // Update current job status
     await base44.entities.LabellingJob.update(job_id, {
       status: new_status,
       rejection_reason: remarks,
+      current_printed_qty: currentJob.current_printed_qty || 0,
     });
 
     // Log the action
@@ -47,7 +118,7 @@ Deno.serve(async (req) => {
       performed_by_email: user.email,
       performed_by_name: user.full_name,
       timestamp: new Date().toISOString(),
-      details_json: { old_status: currentJob.status, new_status, remarks },
+      details_json: { old_status: currentJob.status, new_status, remarks, printer_stop: printerStopResult },
     });
 
     // Find next pending job in the same plan with higher priority order
@@ -82,11 +153,16 @@ Deno.serve(async (req) => {
       activatedJob = nextJob;
     }
 
+    const printerMsg = printerStopResult.attempted
+      ? (printerStopResult.success ? ' Printer stopped.' : ` Printer stop failed: ${printerStopResult.error}.`)
+      : '';
+
     return Response.json({
       success: true,
       stoppedJob: currentJob,
       activatedJob,
-      message: `Job ${currentJob.job_id} marked as ${new_status}${activatedJob ? `. Next job ${activatedJob.job_id} activated.` : '. No pending jobs found.'}`,
+      printerStopResult,
+      message: `Job ${currentJob.job_id} marked as ${new_status}.${printerMsg}${activatedJob ? ` Next job ${activatedJob.job_id} activated.` : ' No pending jobs found.'}`,
     });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
