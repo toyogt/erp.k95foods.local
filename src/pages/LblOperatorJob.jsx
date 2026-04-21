@@ -12,8 +12,9 @@ import LblChecklistStep from '@/components/labelling/LblChecklistStep';
 import LblBulkPrintStep from '@/components/labelling/LblBulkPrintStep';
 import LblCompletionStep from '@/components/labelling/LblCompletionStep';
 import LblStopJobModal from '@/components/labelling/LblStopJobModal';
+import LblResumeJobModal from '@/components/labelling/LblResumeJobModal';
 import { toast } from '@/components/ui/use-toast';
-import { ArrowLeft, Loader2, Play, RotateCcw, Square } from 'lucide-react';
+import { ArrowLeft, Loader2, Play, RotateCcw, Square, PlayCircle } from 'lucide-react';
 
 export default function LblOperatorJob() {
   const navigate = useNavigate();
@@ -22,6 +23,7 @@ export default function LblOperatorJob() {
   const [user, setUser] = useState(null);
   const [acting, setActing] = useState(false);
   const [stopModalOpen, setStopModalOpen] = useState(false);
+  const [resumeModalOpen, setResumeModalOpen] = useState(false);
 
   useEffect(() => { base44.auth.me().then(setUser); }, []);
 
@@ -39,6 +41,27 @@ export default function LblOperatorJob() {
     toast({ title: 'Job Started' });
     refreshJob();
     setActing(false);
+  };
+
+  const handleResumeJob = async (resume_reason) => {
+    setActing(true);
+    try {
+      const response = await base44.functions.invoke('resumeLabellingJob', {
+        job_id: job.id,
+        resume_reason,
+      });
+      if (response.data.success) {
+        toast({ title: 'Job Resumed', description: response.data.message });
+        setResumeModalOpen(false);
+        refreshJob();
+      } else {
+        toast({ title: 'Error', description: response.data.error, variant: 'destructive' });
+      }
+    } catch (error) {
+      toast({ title: 'Error', description: error?.response?.data?.error || error.message, variant: 'destructive' });
+    } finally {
+      setActing(false);
+    }
   };
 
   const handleStopAndNext = async (newStatus, remarks) => {
@@ -137,6 +160,38 @@ export default function LblOperatorJob() {
       {(job.status === 'bulk_printing' || job.status === 'paused' || job.status === 'bulk_printing_awaiting_printer_reset') && <LblBulkPrintStep job={job} user={user} onComplete={refreshJob} mode="control" />}
       {job.status === 'completed' && <LblCompletionStep job={job} />}
 
+      {job.status === 'on_hold' && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-6 text-center space-y-4">
+          <div className="flex items-center justify-center gap-2">
+            <PlayCircle className="w-6 h-6 text-amber-600" />
+            <h2 className="text-lg font-semibold text-amber-800">Job is On Hold</h2>
+          </div>
+          {job.rejection_reason && (
+            <div className="bg-white border border-amber-200 rounded-lg p-3 text-left">
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Hold Reason</p>
+              <p className="text-sm text-slate-700">{job.rejection_reason}</p>
+            </div>
+          )}
+          {job.previous_status && (
+            <p className="text-xs text-amber-700">
+              Will resume at step: <span className="font-mono font-semibold">{job.previous_status}</span>
+            </p>
+          )}
+          {(user?.role === 'supervisor' || user?.role === 'admin') ? (
+            <Button
+              className="h-11 gap-2 w-full md:w-auto bg-green-600 hover:bg-green-700"
+              onClick={() => setResumeModalOpen(true)}
+              disabled={acting}
+            >
+              <PlayCircle className="w-4 h-4" />
+              Resume Job
+            </Button>
+          ) : (
+            <p className="text-sm text-amber-600">Only a supervisor or admin can resume this job.</p>
+          )}
+        </div>
+      )}
+
       {(['active', 'stock_transferred', 'demo_print_sent', 'demo_print_verified', 'demo_pending_approval', 'demo_approved', 'bulk_printing', 'paused'].includes(job.status) && (user?.role === 'supervisor' || user?.role === 'admin')) && (
         <div className="flex gap-2">
           <Button
@@ -156,6 +211,14 @@ export default function LblOperatorJob() {
         onOpenChange={setStopModalOpen}
         job={job}
         onConfirm={handleStopAndNext}
+        isLoading={acting}
+      />
+
+      <LblResumeJobModal
+        open={resumeModalOpen}
+        onOpenChange={setResumeModalOpen}
+        job={job}
+        onConfirm={handleResumeJob}
         isLoading={acting}
       />
 

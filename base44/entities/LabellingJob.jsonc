@@ -128,6 +128,11 @@
       ],
       "default": "pending"
     },
+    "previous_status": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Status the job was in before being put on hold \u2014 used to restore the correct workflow step on resume"
+    },
     "stock_transfer_qty": {
       "type": "number",
       "minimum": 0,

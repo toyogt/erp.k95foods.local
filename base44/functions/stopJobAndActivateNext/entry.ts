@@ -101,9 +101,10 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Update current job status
+    // Update current job status — save previous_status so on_hold jobs can be resumed
     await base44.entities.LabellingJob.update(job_id, {
       status: new_status,
+      previous_status: currentJob.status,
       rejection_reason: remarks,
       current_printed_qty: currentJob.current_printed_qty || 0,
     });
