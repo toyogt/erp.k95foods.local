@@ -26,7 +26,9 @@ export const JOB_STATUSES = {
   demo_approved: { label: 'Demo Approved', color: 'bg-green-100 text-green-700', step: 7 },
   demo_rejected: { label: 'Demo Rejected', color: 'bg-red-100 text-red-700', step: -1 },
   bulk_printing: { label: 'Bulk Printing', color: 'bg-indigo-100 text-indigo-700', step: 8 },
+  bulk_printing_awaiting_printer_reset: { label: 'Awaiting Printer Reset', color: 'bg-indigo-100 text-indigo-700', step: 8 },
   paused: { label: 'Paused', color: 'bg-orange-100 text-orange-700', step: 8 },
+  on_hold: { label: 'On Hold', color: 'bg-amber-100 text-amber-700', step: -1 },
   completed: { label: 'Completed', color: 'bg-green-100 text-green-700', step: 9 },
   cancelled: { label: 'Cancelled', color: 'bg-red-100 text-red-700', step: -2 },
 };

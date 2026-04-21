@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { JOB_STATUSES } from '@/lib/labellingHelpers';
+import { JOB_STATUSES, canManagePlans } from '@/lib/labellingHelpers';
 import { logLabellingEvent } from '@/lib/labellingEventLogger';
 import LblStockTransferStep from '@/components/labelling/LblStockTransferStep';
 import LblDemoPrintStep from '@/components/labelling/LblDemoPrintStep';
@@ -177,7 +177,7 @@ export default function LblOperatorJob() {
               Will resume at step: <span className="font-mono font-semibold">{job.previous_status}</span>
             </p>
           )}
-          {(user?.role === 'supervisor' || user?.role === 'admin') ? (
+          {canManagePlans(user?.role) ? (
             <Button
               className="h-11 gap-2 w-full md:w-auto bg-green-600 hover:bg-green-700"
               onClick={() => setResumeModalOpen(true)}
@@ -192,7 +192,7 @@ export default function LblOperatorJob() {
         </div>
       )}
 
-      {(['active', 'stock_transferred', 'demo_print_sent', 'demo_print_verified', 'demo_pending_approval', 'demo_approved', 'bulk_printing', 'paused'].includes(job.status) && (user?.role === 'supervisor' || user?.role === 'admin')) && (
+      {(['active', 'stock_transferred', 'demo_print_sent', 'demo_print_verified', 'demo_pending_approval', 'demo_approved', 'bulk_printing', 'paused'].includes(job.status) && canManagePlans(user?.role)) && (
         <div className="flex gap-2">
           <Button
             variant="outline"
