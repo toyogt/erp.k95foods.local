@@ -6,10 +6,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Loader2, Plus, Search, ClipboardList, AlertTriangle,
-  CheckCircle2, Clock, User, XCircle
+  CheckCircle2, Clock, User, XCircle, Smartphone
 } from 'lucide-react';
 import CreateDirectorTaskModal from '@/components/tasks/CreateDirectorTaskModal';
 import DirectorTaskCard from '@/components/tasks/DirectorTaskCard';
+import VoiceShortcutGuide from '@/components/tasks/VoiceShortcutGuide';
 import { isTaskOverdue } from '@/lib/directorTaskHelpers';
 
 export default function DirectorDashboard() {
@@ -19,6 +20,7 @@ export default function DirectorDashboard() {
   const [search, setSearch] = useState('');
   const [assigneeFilter, setAssigneeFilter] = useState('all');
   const [showCreate, setShowCreate] = useState(false);
+  const [showVoiceGuide, setShowVoiceGuide] = useState(false);
   const [tab, setTab] = useState('open');
 
   const load = useCallback(async () => {
@@ -76,10 +78,22 @@ export default function DirectorDashboard() {
             All tasks you have assigned — track status, approvals, and deadlines
           </p>
         </div>
-        <Button onClick={() => setShowCreate(true)} className="h-11 px-4 gap-2">
-          <Plus className="w-4 h-4" /> Assign New Task
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setShowVoiceGuide(v => !v)} className="h-11 px-3 gap-2">
+            <Smartphone className="w-4 h-4" /> Voice Shortcut
+          </Button>
+          <Button onClick={() => setShowCreate(true)} className="h-11 px-4 gap-2">
+            <Plus className="w-4 h-4" /> Assign New Task
+          </Button>
+        </div>
       </div>
+
+      {/* Voice Shortcut Guide */}
+      {showVoiceGuide && (
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 lg:p-6">
+          <VoiceShortcutGuide />
+        </div>
+      )}
 
       {loading ? (
         <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>
