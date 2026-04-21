@@ -22,7 +22,6 @@ import { Button } from '@/components/ui/button';
 import { logLabellingEvent } from '@/lib/labellingEventLogger';
 import LblPrintPreviewModal from './LblPrintPreviewModal';
 import {
-  sendStarCommand,
   postToMiddleware,
   buildHeaders,
   getPrinterBase,
@@ -119,8 +118,10 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
   const progress   = planned ? Math.min(100, (printedQty / planned) * 100) : 0;
 
   // ──────────────────────────────────────────────────────────────────────
-  // START BULK PRINT
-  // Sends: STOP → STAR → MON → DATA × (planned - already_printed)
+  // START BULK PRINT — delegates entirely to backend function (non-blocking)
+  // Frontend makes ONE call; backend runs STOP → STAR → MON → DATA × N
+  // Job status is set to 'bulk_printing' by the backend before the DATA loop
+  // so the UI transitions immediately after the call returns.
   // ──────────────────────────────────────────────────────────────────────
   const handleStartBulkPrint = async () => {
     if (!selectedPrinter) {
@@ -141,59 +142,35 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
     }
 
     setSendingPrint(true);
+    toast({
+      title: 'Starting Bulk Print…',
+      description: 'Connecting to printer and sending label commands in the background.',
+    });
 
-    const alreadyPrinted = job.current_printed_qty || 0;
-    const toPrint        = planned - alreadyPrinted;
+    const response = await base44.functions.invoke('triggerBulkPrintJob', {
+      job_id:       job.id,
+      command_type: 'bulk_start',
+    });
 
-    if (toPrint <= 0) {
-      toast({ title: 'All labels already printed', description: 'This job has already been fully printed.' });
-      setSendingPrint(false);
-      return;
-    }
+    const result = response?.data;
 
-    const result = await sendStarCommand(
-      selectedPrinter,
-      templateName,
-      toPrint,
-      { jobId: job.id, commandType: 'bulk_start', user, podValues: sentPodValues }
-    );
-
-    if (!result.success) {
+    if (!result?.success) {
+      const errMsg = result?.error || 'Bulk print failed — check printer connection.';
       toast({
-        title: result.templateNotOnPrinter ? 'Template Not Found on Printer' : 'Bulk Print Failed',
-        description: result.templateNotOnPrinter
+        title: result?.templateNotOnPrinter ? 'Template Not Found on Printer' : 'Bulk Print Failed',
+        description: result?.templateNotOnPrinter
           ? `Template "${templateName}" is not loaded on the printer. Load it first then retry.`
-          : result.errorMessage || 'Middleware returned an error.',
+          : errMsg,
         variant: 'destructive',
         duration: 8000,
       });
-      await logLabellingEvent({
-        action_type:  'printer_command_failed',
-        job_id:       job.id,
-        plan_id:      job.plan_id,
-        description:  `Bulk print failed: ${result.errorMessage}`,
-        user,
-      });
       setSendingPrint(false);
       return;
     }
 
-    // All DATA commands sent — set to bulk_printing so RQLP polling starts
-    await base44.entities.LabellingJob.update(job.id, {
-      status:              'bulk_printing',
-      current_printed_qty: alreadyPrinted, // don't pre-fill — let RQLP track actual count
-    });
-    await logLabellingEvent({
-      action_type:  'bulk_print_started',
-      job_id:       job.id,
-      plan_id:      job.plan_id,
-      description:  `Bulk print started — ${toPrint.toLocaleString()} DATA commands sent to ${selectedPrinter.name} using template "${templateName}". Label data: ${JSON.stringify(sentPodValues)}`,
-      user,
-    });
-
     toast({
       title: 'Bulk Print Started',
-      description: `${toPrint.toLocaleString()} label commands sent to printer. Monitoring progress…`,
+      description: `${result.sentCount?.toLocaleString()} label commands sent to printer. Monitoring progress…`,
     });
     queryClient.invalidateQueries({ queryKey: ['labelling-job', job.id] });
     onComplete?.();
@@ -257,11 +234,11 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
   };
 
   // ──────────────────────────────────────────────────────────────────────
-  // RESUME PRINTING
-  // Calculates remaining = planned - current_printed_qty
-  // Sends: STOP → STAR (reload template) → MON (verify) → DATA × remaining
+  // RESUME PRINTING — delegates to backend function (non-blocking)
+  // Backend calculates remaining = planned - current_printed_qty
+  // and runs STOP → STAR → MON → DATA × remaining
   // ──────────────────────────────────────────────────────────────────────
-  const handleResumePrinting = async (podValues) => {
+  const handleResumePrinting = async () => {
     if (!selectedPrinter) {
       toast({ title: 'No printer found for this line', variant: 'destructive' });
       return;
@@ -271,62 +248,37 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
       return;
     }
 
-    const currentPrinted = job.current_printed_qty || 0;
-    const toResume       = planned - currentPrinted;
-
-    if (toResume <= 0) {
-      toast({ title: 'All labels already printed', description: 'Nothing remaining to resume.' });
-      return;
-    }
-
     setShowResumePreview(false);
     setActing(true);
 
     toast({
       title: 'Resuming Print…',
-      description: `Sending ${toResume.toLocaleString()} remaining labels to printer. Please wait.`,
+      description: 'Sending remaining labels to printer in the background.',
     });
 
-    // sendStarCommand internally handles: STOP → STAR → MON → DATA × toResume
-    const result = await sendStarCommand(
-      selectedPrinter,
-      templateName,
-      toResume,
-      { jobId: job.id, commandType: 'bulk_resume', user, podValues: podValues || sentPodValues }
-    );
+    const response = await base44.functions.invoke('triggerBulkPrintJob', {
+      job_id:       job.id,
+      command_type: 'bulk_resume',
+    });
 
-    if (!result.success) {
+    const result = response?.data;
+
+    if (!result?.success) {
+      const errMsg = result?.error || 'Could not resume printing.';
       toast({
         title:       'Resume Failed',
-        description: result.templateNotOnPrinter
+        description: result?.templateNotOnPrinter
           ? `Template "${templateName}" not found on printer. Load it first and retry.`
-          : result.errorMessage || 'Could not resume printing.',
+          : errMsg,
         variant: 'destructive',
-      });
-      await logLabellingEvent({
-        action_type:  'printer_command_failed',
-        job_id:       job.id,
-        plan_id:      job.plan_id,
-        description:  `Resume failed: ${result.errorMessage}`,
-        user,
       });
       setActing(false);
       return;
     }
 
-    // Resume successful — set back to bulk_printing so RQLP polling restarts
-    await base44.entities.LabellingJob.update(job.id, { status: 'bulk_printing' });
-    await logLabellingEvent({
-      action_type:  'bulk_print_resumed',
-      job_id:       job.id,
-      plan_id:      job.plan_id,
-      description:  `Bulk print resumed. Sent ${toResume.toLocaleString()} remaining label commands to ${selectedPrinter.name} (already printed: ${currentPrinted.toLocaleString()}, target: ${planned.toLocaleString()}).`,
-      user,
-    });
-
     toast({
       title:       'Printing Resumed',
-      description: `${toResume.toLocaleString()} label commands sent. Monitoring progress…`,
+      description: `${result.sentCount?.toLocaleString()} label commands sent. Monitoring progress…`,
     });
     await queryClient.refetchQueries({ queryKey: ['labelling-job', job.id] });
     onComplete?.();
@@ -566,7 +518,7 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
         templateName={templateName}
         quantity={remaining}
         title="Confirm Resume Print"
-        onConfirm={(podValues) => handleResumePrinting(podValues)}
+        onConfirm={() => handleResumePrinting()}
         isLoading={acting}
       />
     </div>
