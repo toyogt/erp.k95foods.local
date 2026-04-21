@@ -141,12 +141,17 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
       description: `Loading template "${templateName}" and initialising print sequence.`,
     });
 
-    const response = await base44.functions.invoke('triggerBulkPrintJob', {
-      job_id:       job.id,
-      command_type: 'bulk_start',
-    });
-
-    const result = response?.data;
+    let result = null;
+    try {
+      const response = await base44.functions.invoke('triggerBulkPrintJob', {
+        job_id:       job.id,
+        command_type: 'bulk_start',
+      });
+      result = response?.data;
+    } catch (err) {
+      // Extract error detail from Axios error response body if available
+      result = err?.response?.data || { success: false, error: err?.message || 'Bulk print failed — check printer connection.' };
+    }
 
     if (!result?.success) {
       const errMsg = result?.error || 'Bulk print failed — check printer connection.';
@@ -231,12 +236,16 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
       description: `Sending ${remaining.toLocaleString()} remaining labels to printer in background.`,
     });
 
-    const response = await base44.functions.invoke('triggerBulkPrintJob', {
-      job_id:       job.id,
-      command_type: 'bulk_resume',
-    });
-
-    const result = response?.data;
+    let result = null;
+    try {
+      const response = await base44.functions.invoke('triggerBulkPrintJob', {
+        job_id:       job.id,
+        command_type: 'bulk_resume',
+      });
+      result = response?.data;
+    } catch (err) {
+      result = err?.response?.data || { success: false, error: err?.message || 'Could not resume printing.' };
+    }
 
     if (!result?.success) {
       toast({
