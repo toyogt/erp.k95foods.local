@@ -139,12 +139,25 @@ Deno.serve(async (req) => {
     }
 
     // ── Load POD values from demo print command ───────────────────────────────
-    const demoCmds = await base44.entities.LblPrintCommand.filter({ job_id: job.job_id, command_type: 'demo' });
+    // Try both job.id (DB record ID) and job.job_id (string field) since demo
+    // commands may be stored with either depending on which sendStarCommand path was used.
+    let demoCmds = await base44.entities.LblPrintCommand.filter({ job_id: job.id, command_type: 'demo' });
+    if (!demoCmds || demoCmds.length === 0) {
+      demoCmds = await base44.entities.LblPrintCommand.filter({ job_id: job.job_id, command_type: 'demo' });
+    }
     const dataCmd  = demoCmds.find(c => c.request_payload?.command?.command === 'DATA')
       || demoCmds.find(c => c.request_payload?.command?.data)
       || demoCmds[0]
       || null;
     const podValues = dataCmd?.request_payload?.command?.data || {};
+
+    if (Object.keys(podValues).length === 0) {
+      return Response.json({
+        success: false,
+        error: 'No label data (POD values) found from the demo print. Please re-send the demo print before starting bulk printing.',
+        missingPodData: true,
+      }, { status: 422 });
+    }
 
     const base     = getPrinterBase(printer);
     const headers  = buildHeaders(printer);

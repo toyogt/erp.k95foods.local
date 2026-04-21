@@ -155,14 +155,17 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
 
     if (!result?.success) {
       const errMsg = result?.error || 'Bulk print failed — check printer connection.';
-      toast({
-        title: result?.templateNotOnPrinter ? 'Template Not Found on Printer' : 'Bulk Print Failed',
-        description: result?.templateNotOnPrinter
-          ? `Template "${templateName}" is not loaded. Load it on the printer first.`
-          : errMsg,
-        variant: 'destructive',
-        duration: 8000,
-      });
+      const title = result?.templateNotOnPrinter
+        ? 'Template Not Found on Printer'
+        : result?.missingPodData
+          ? 'Label Data Missing'
+          : 'Bulk Print Failed';
+      const description = result?.templateNotOnPrinter
+        ? `Template "${templateName}" is not loaded. Load it on the printer first.`
+        : result?.missingPodData
+          ? 'No label data found from demo print. Please go back and re-send the demo print to capture the label values.'
+          : errMsg;
+      toast({ title, description, variant: 'destructive', duration: 8000 });
       setSendingPrint(false);
       return;
     }
