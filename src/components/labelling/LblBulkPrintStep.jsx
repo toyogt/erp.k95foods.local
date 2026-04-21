@@ -114,10 +114,12 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
   const isPrinting      = job.status === 'bulk_printing';
 
   // ──────────────────────────────────────────────────────────────────────
-  // START BULK PRINT — non-blocking
-  // 1. Instantly show "in progress" toast
-  // 2. Fire backend call (returns quickly after job status = bulk_printing)
-  // 3. Polling starts automatically via usePrinterPollStatus
+  // START BULK PRINT — fully non-blocking
+  // 1. Call backend (STOP → STAR → MON only — returns immediately)
+  // 2. Backend sets job status = 'bulk_printing' before returning
+  // 3. Frontend receives response, shows dashboard instantly
+  // 4. DATA commands continue in background via EdgeRuntime.waitUntil
+  // 5. Polling starts automatically via usePrinterPollStatus
   // ──────────────────────────────────────────────────────────────────────
   const handleStartBulkPrint = async () => {
     if (!selectedPrinter) {
@@ -134,11 +136,9 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
     }
 
     setSendingPrint(true);
-
-    // Optimistic UI: immediately set job status locally via query invalidation trigger
     toast({
-      title: '⚡ Bulk Print Initiated',
-      description: `Connecting to printer "${selectedPrinter.name}" and loading template…`,
+      title: '⚡ Connecting to Printer…',
+      description: `Loading template "${templateName}" and initialising print sequence.`,
     });
 
     const response = await base44.functions.invoke('triggerBulkPrintJob', {
@@ -162,13 +162,16 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
       return;
     }
 
+    // ── SUCCESS: backend has set status = 'bulk_printing' and returned ────────
+    // DATA commands are now streaming to the printer in the background.
+    // Show the live dashboard immediately — polling starts via usePrinterPollStatus.
     toast({
       title: '✅ Printing Started',
-      description: `${result.sentCount?.toLocaleString()} label commands sent. Live counter updating…`,
+      description: `${result.toPrint?.toLocaleString()} label commands dispatching in background. Live counter updating every 200 ms.`,
     });
 
-    // Invalidate to pick up new status from backend (status = 'bulk_printing')
-    queryClient.invalidateQueries({ queryKey: ['labelling-job', job.id] });
+    // Refetch job to pick up status = 'bulk_printing' and show dashboard
+    await queryClient.refetchQueries({ queryKey: ['labelling-job', job.id] });
     onComplete?.();
     setSendingPrint(false);
   };
@@ -249,7 +252,7 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
 
     toast({
       title:       '✅ Printing Resumed',
-      description: `${result.sentCount?.toLocaleString()} label commands sent. Live counter updating…`,
+      description: `${result.toPrint?.toLocaleString()} label commands dispatching in background. Live counter updating every 200 ms.`,
     });
     await queryClient.refetchQueries({ queryKey: ['labelling-job', job.id] });
     onComplete?.();
@@ -334,7 +337,7 @@ export default function LblBulkPrintStep({ job, user, onComplete, mode }) {
 
         {sendingPrint && (
           <p className="text-xs text-center text-slate-500 animate-pulse">
-            Running STOP → STAR → MON → DATA sequence on the printer server…
+            Running STOP → STAR → MON on printer… Dashboard will appear immediately after template is confirmed.
           </p>
         )}
       </div>

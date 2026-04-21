@@ -210,86 +210,99 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ── PHASE 2 — DATA loop ──────────────────────────────────────────────────
-    // Set job to bulk_printing BEFORE the loop so the frontend can transition immediately
+    // ── PHASE 2 — Update DB status & return IMMEDIATELY to unblock frontend ─
     await base44.entities.LabellingJob.update(job.id, { status: 'bulk_printing' });
 
-    // Log bulk_print_started event
     await base44.entities.LblEventLog.create({
-      event_id:          `EVT-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
-      job_id:            job.job_id,
-      plan_id:           job.plan_id,
-      action_type:       'bulk_print_started',
-      description:       `Bulk print started (background) — ${toPrint.toLocaleString()} DATA commands to printer "${printer.name}" using template "${templateName}". Label data: ${JSON.stringify(podValues)}`,
+      event_id:           `EVT-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
+      job_id:             job.job_id,
+      plan_id:            job.plan_id,
+      action_type:        'bulk_print_started',
+      description:        `Bulk print started — ${toPrint.toLocaleString()} DATA commands queued for printer "${printer.printer_id}" using template "${templateName}".`,
       performed_by_email: user.email,
       performed_by_name:  user.full_name || user.email,
-      timestamp:         new Date().toISOString(),
+      timestamp:          new Date().toISOString(),
     });
 
-    let sentCount  = 0;
-    let lastBody   = null;
-    let lastStatus = null;
+    // ── BACKGROUND DATA LOOP — runs after response is sent to frontend ────────
+    // We use EdgeRuntime.waitUntil so the DATA loop continues even after
+    // the HTTP response is returned. The frontend receives the dashboard signal
+    // instantly and the printer receives DATA commands in the background.
+    const dataLoop = async () => {
+      let sentCount  = 0;
+      let lastBody   = null;
+      let lastStatus = null;
 
-    for (let i = 0; i < toPrint; i++) {
-      const dataPayload = {
-        printer_id: printer.printer_id,
-        printer: { ip: printer.ip_address, port: printer.port },
-        command: { command: PRINTER_COMMANDS.DATA, data: podValues },
-      };
+      for (let i = 0; i < toPrint; i++) {
+        const dataPayload = {
+          printer_id: printer.printer_id,
+          printer: { ip: printer.ip_address, port: printer.port },
+          command: { command: PRINTER_COMMANDS.DATA, data: podValues },
+        };
 
-      const { statusCode, body, error: transportError } = await post(endpoint, dataPayload, headers, timeout);
+        const { statusCode, body, error: transportError } = await post(endpoint, dataPayload, headers, timeout);
 
-      if (transportError && !body) {
-        const errMsg = `Network error at label ${i + 1}/${toPrint}: ${transportError}`;
-        await base44.entities.LblPrintCommand.create({
-          command_id: genCommandId(), job_id: job.job_id,
-          printer_id: printer.printer_id, endpoint_url: endpoint,
-          command_type, quantity: sentCount, status: 'failed',
-          request_payload: dataPayload, error_message: errMsg,
-          sent_at: new Date().toISOString(), sent_by: user.email,
-        });
-        return Response.json({ success: false, sentCount, error: errMsg }, { status: 500 });
+        if (transportError && !body) {
+          const errMsg = `Network error at label ${i + 1}/${toPrint}: ${transportError}`;
+          await base44.entities.LblPrintCommand.create({
+            command_id: genCommandId(), job_id: job.job_id,
+            printer_id: printer.printer_id, endpoint_url: endpoint,
+            command_type, quantity: sentCount, status: 'failed',
+            request_payload: dataPayload, error_message: errMsg,
+            sent_at: new Date().toISOString(), sent_by: user.email,
+          });
+          return;
+        }
+
+        if (!isDataAck(body)) {
+          const errMsg = body?.error || body?.printer_reason || `DATA command ${i + 1}/${toPrint} rejected by printer`;
+          await base44.entities.LblPrintCommand.create({
+            command_id: genCommandId(), job_id: job.job_id,
+            printer_id: printer.printer_id, endpoint_url: endpoint,
+            command_type, quantity: sentCount, status: 'failed',
+            request_payload: dataPayload, response_payload: body,
+            response_status_code: statusCode, error_message: errMsg,
+            sent_at: new Date().toISOString(), sent_by: user.email,
+          });
+          return;
+        }
+
+        sentCount++;
+        lastBody   = body;
+        lastStatus = statusCode;
       }
 
-      if (!isDataAck(body)) {
-        const errMsg = body?.error || body?.printer_reason || `DATA command ${i + 1}/${toPrint} rejected by printer`;
-        await base44.entities.LblPrintCommand.create({
-          command_id: genCommandId(), job_id: job.job_id,
-          printer_id: printer.printer_id, endpoint_url: endpoint,
-          command_type, quantity: sentCount, status: 'failed',
-          request_payload: dataPayload, response_payload: body,
-          response_status_code: statusCode, error_message: errMsg,
-          sent_at: new Date().toISOString(), sent_by: user.email,
-        });
-        return Response.json({ success: false, sentCount, error: errMsg }, { status: 500 });
-      }
+      // Persist single audit record for entire DATA run
+      await base44.entities.LblPrintCommand.create({
+        command_id:           genCommandId(),
+        job_id:               job.job_id,
+        printer_id:           printer.printer_id,
+        endpoint_url:         endpoint,
+        command_type,
+        quantity:             sentCount,
+        status:               'acknowledged',
+        request_payload:      { command: { command: 'DATA', data: podValues } },
+        response_payload:     lastBody,
+        response_status_code: lastStatus || 200,
+        sent_at:              new Date().toISOString(),
+        sent_by:              user.email,
+      });
+    };
 
-      sentCount++;
-      lastBody   = body;
-      lastStatus = statusCode;
+    // Fire the DATA loop in background — do NOT await it
+    try {
+      EdgeRuntime.waitUntil(dataLoop());
+    } catch (_e) {
+      // EdgeRuntime not available in all envs — fall back to un-awaited promise
+      dataLoop().catch(() => {});
     }
 
-    // ── Persist single audit record for entire DATA run ───────────────────────
-    await base44.entities.LblPrintCommand.create({
-      command_id:          genCommandId(),
-      job_id:              job.job_id,
-      printer_id:          printer.printer_id,
-      endpoint_url:        endpoint,
-      command_type,
-      quantity:            sentCount,
-      status:              'acknowledged',
-      request_payload:     { command: { command: 'DATA', data: podValues } },
-      response_payload:    lastBody,
-      response_status_code: lastStatus || 200,
-      sent_at:             new Date().toISOString(),
-      sent_by:             user.email,
-    });
-
+    // ── Return immediately — frontend can show dashboard now ─────────────────
     return Response.json({
-      success:    true,
-      sentCount,
+      success:   true,
       toPrint,
-      message:    `${sentCount} label commands sent to printer successfully.`,
+      message:   `Printer initialised. ${toPrint.toLocaleString()} label commands dispatching in background.`,
+      immediate: true,
     });
 
   } catch (error) {
