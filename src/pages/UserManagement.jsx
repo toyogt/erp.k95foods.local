@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Users, Loader2, UserPlus, Mail, Search } from 'lucide-react';
 import { auditUserInvited, auditUserRoleChanged } from '@/lib/auditAdminActions';
 import EADirectorMappingPanel from '@/components/admin/EADirectorMappingPanel';
+import TelegramConfigPanel from '@/components/admin/TelegramConfigPanel';
 
 export default function UserManagement() {
   const [user, setUser] = useState(null);
@@ -188,6 +189,13 @@ export default function UserManagement() {
       {!loading && (
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
           <EADirectorMappingPanel />
+        </div>
+      )}
+
+      {/* Telegram Configuration */}
+      {!loading && (
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+          <TelegramConfigPanel users={users} onReload={load} />
         </div>
       )}
 

@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { TASK_STATUS_CONFIG, isTaskOverdue, getTaskUrgency, logTaskAction, formatTaskDate } from '@/lib/directorTaskHelpers';
 import DirectorTaskLogPanel from '@/components/tasks/DirectorTaskLogPanel';
+import DatePickerField from '@/components/tasks/DatePickerField';
 
 export default function DirectorTaskCard({ task, user, viewMode, onRefresh }) {
   const [expanded, setExpanded] = useState(false);
@@ -303,11 +304,13 @@ export default function DirectorTaskCard({ task, user, viewMode, onRefresh }) {
               <div className="text-xs text-slate-500 bg-slate-50 rounded-lg p-2">
                 Current deadline: <strong>{formatTaskDate(task.end_date, task.end_time)}</strong>
               </div>
-              <div>
-                <label className="text-xs font-medium text-slate-700">New End Date <span className="text-red-500">*</span></label>
-                <Input type="text" value={newDate} onChange={e => setNewDate(e.target.value)}
-                  placeholder="DD/MM/YYYY" className="mt-1 h-11 md:h-9" />
-              </div>
+              <DatePickerField
+                label="New End Date"
+                required
+                value={newDate}
+                onChange={setNewDate}
+                placeholder="Select new date"
+              />
               <div>
                 <label className="text-xs font-medium text-slate-700">New End Time</label>
                 <Input type="time" value={newTime} onChange={e => setNewTime(e.target.value)}

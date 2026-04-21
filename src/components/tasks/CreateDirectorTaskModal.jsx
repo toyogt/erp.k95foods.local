@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { generateTaskNumber, logTaskAction, getEAsForDirector } from '@/lib/directorTaskHelpers';
+import DatePickerField from '@/components/tasks/DatePickerField';
 
 export default function CreateDirectorTaskModal({ open, onClose, user, directorEmail, directorName, onCreated }) {
   const [users, setUsers] = useState([]);
@@ -141,12 +142,12 @@ export default function CreateDirectorTaskModal({ open, onClose, user, directorE
 
             {/* Date fields */}
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs font-medium text-slate-700">Start Date</Label>
-                <Input type="text" value={form.start_date} onChange={e => setField('start_date', e.target.value)}
-                  placeholder="DD/MM/YYYY" className="mt-1 h-11 md:h-9 md:text-sm" />
-                <p className="text-xs text-slate-400 mt-0.5">Optional</p>
-              </div>
+              <DatePickerField
+                label="Start Date"
+                value={form.start_date}
+                onChange={v => setField('start_date', v)}
+                placeholder="Select start date"
+              />
               <div>
                 <Label className="text-xs font-medium text-slate-700">Start Time</Label>
                 <Input type="time" value={form.start_time} onChange={e => setField('start_time', e.target.value)}
@@ -156,11 +157,13 @@ export default function CreateDirectorTaskModal({ open, onClose, user, directorE
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs font-medium text-slate-700">End Date <span className="text-red-500">*</span></Label>
-                <Input type="text" value={form.end_date} onChange={e => setField('end_date', e.target.value)}
-                  placeholder="DD/MM/YYYY" className="mt-1 h-11 md:h-9 md:text-sm" />
-              </div>
+              <DatePickerField
+                label="End Date"
+                required
+                value={form.end_date}
+                onChange={v => setField('end_date', v)}
+                placeholder="Select end date"
+              />
               <div>
                 <Label className="text-xs font-medium text-slate-700">End Time</Label>
                 <Input type="time" value={form.end_time} onChange={e => setField('end_time', e.target.value)}

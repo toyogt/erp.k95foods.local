@@ -2,14 +2,12 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 /**
  * Scheduled automation: Check for overdue important director tasks
- * and send email notifications to the Director + EAs.
- * Runs daily — checks tasks whose end_date + notification_time has passed.
+ * and send Telegram notifications to the Director + EAs.
  */
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
 
-    // This is a scheduled task — use service role
     const openTasks = await base44.asServiceRole.entities.DirectorTask.filter({
       status: 'open',
       is_important: true,
@@ -18,6 +16,16 @@ Deno.serve(async (req) => {
 
     const now = new Date();
     const notified = [];
+    const token = Deno.env.get('TELEGRAM_BOT_TOKEN');
+
+    if (!token) {
+      return Response.json({ error: 'TELEGRAM_BOT_TOKEN not configured' }, { status: 500 });
+    }
+
+    // Pre-load all users for chat ID lookup
+    const allUsers = await base44.asServiceRole.entities.User.list();
+    const userMap = {};
+    allUsers.forEach(u => { if (u.email) userMap[u.email] = u; });
 
     for (const task of openTasks) {
       if (!task.end_date) continue;
@@ -33,53 +41,39 @@ Deno.serve(async (req) => {
       const [h, m] = timeStr.split(':').map(Number);
       endDate.setHours(h || 16, m || 0, 0, 0);
 
-      // Check if past the notification deadline
       if (now < endDate) continue;
 
-      // Task is overdue — send notifications
-      const recipients = [];
-      
-      // Director
-      if (task.director_email) {
-        recipients.push(task.director_email);
-      }
-
-      // EAs
+      // Task is overdue — collect recipient emails
+      const recipientEmails = [];
+      if (task.director_email) recipientEmails.push(task.director_email);
       if (task.ea_emails?.length > 0) {
         task.ea_emails.forEach(e => {
-          if (e && !recipients.includes(e)) recipients.push(e);
+          if (e && !recipientEmails.includes(e)) recipientEmails.push(e);
         });
       }
 
-      const subject = `⚠️ OVERDUE: Important Task "${task.task_name}" (${task.task_number})`;
-      const body = `
-<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-  <div style="background: #FEF2F2; border-left: 4px solid #EF4444; padding: 16px; border-radius: 8px;">
-    <h2 style="color: #DC2626; margin: 0 0 8px 0;">⚠️ Important Task Overdue</h2>
-    <p style="color: #7F1D1D; margin: 0;">This task has not been completed by the deadline.</p>
-  </div>
-  
-  <div style="padding: 20px 0;">
-    <table style="width: 100%; border-collapse: collapse;">
-      <tr><td style="padding: 8px 0; color: #64748B; width: 120px;">Task Number</td><td style="font-weight: 600;">${task.task_number}</td></tr>
-      <tr><td style="padding: 8px 0; color: #64748B;">Task Name</td><td style="font-weight: 600;">${task.task_name}</td></tr>
-      <tr><td style="padding: 8px 0; color: #64748B;">Assigned To</td><td>${task.assigned_to_name || task.assigned_to_email}</td></tr>
-      <tr><td style="padding: 8px 0; color: #64748B;">Deadline</td><td style="color: #DC2626; font-weight: 600;">${task.end_date} ${task.end_time || ''}</td></tr>
-      <tr><td style="padding: 8px 0; color: #64748B;">Director</td><td>${task.director_name || task.director_email}</td></tr>
-    </table>
-    ${task.task_details ? `<div style="margin-top: 12px; background: #F8FAFC; padding: 12px; border-radius: 6px;"><p style="color: #64748B; font-size: 12px; margin: 0 0 4px;">Details:</p><p style="margin: 0; color: #334155;">${task.task_details}</p></div>` : ''}
-  </div>
-  
-  <p style="color: #94A3B8; font-size: 12px;">This is an automated notification from K95 ERP Task Management.</p>
-</div>`;
+      // Build Telegram message
+      const text = `⚠️ <b>OVERDUE: Important Task</b>\n\n` +
+        `<b>Task:</b> ${task.task_name} (${task.task_number})\n` +
+        `<b>Assigned To:</b> ${task.assigned_to_name || task.assigned_to_email}\n` +
+        `<b>Deadline:</b> ${task.end_date} ${task.end_time || ''}\n` +
+        `<b>Director:</b> ${task.director_name || task.director_email}\n` +
+        (task.task_details ? `\n<b>Details:</b> ${task.task_details.substring(0, 200)}` : '') +
+        `\n\n<i>K95 ERP Task Management</i>`;
 
-      for (const to of recipients) {
-        await base44.asServiceRole.integrations.Core.SendEmail({
-          to,
-          subject,
-          body,
-          from_name: 'K95 Task Manager',
+      const sentTo = [];
+      for (const email of recipientEmails) {
+        const userRecord = userMap[email];
+        const chatId = userRecord?.telegram_chat_id;
+        if (!chatId) continue;
+
+        const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML' }),
         });
+        const data = await res.json();
+        if (data.ok) sentTo.push(email);
       }
 
       // Mark as notified
@@ -94,7 +88,7 @@ Deno.serve(async (req) => {
         action: 'overdue_notification_sent',
         performed_by_email: 'system',
         performed_by_name: 'System',
-        details: `Overdue notification sent to: ${recipients.join(', ')}`,
+        details: `Telegram notification sent to: ${sentTo.length > 0 ? sentTo.join(', ') : 'No users with Telegram configured'}`,
         timestamp: new Date().toISOString(),
       });
 

@@ -34,7 +34,8 @@
         "process_controller",
         "sales_manager",
         "sales_user",
-        "distributor"
+        "distributor",
+        "executive_assistant"
       ],
       "default": "user"
     },
@@ -44,6 +45,14 @@
         "type": "string"
       },
       "description": "Store module page keys this user can access"
+    },
+    "telegram_chat_id": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Telegram chat ID for receiving notifications"
     }
-  }
+  },
+  "required": [
+    "store_page_access"
+  ]
 }

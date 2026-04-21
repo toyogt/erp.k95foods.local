@@ -126,6 +126,7 @@ import LblMasterData from './pages/LblMasterData';
 import LblDocTypePermissions from './pages/LblDocTypePermissions';
 import StoreItemCreator from './pages/StoreItemCreator';
 import EADashboard from './pages/EADashboard';
+import DirectorDashboard from './pages/DirectorDashboard';
 
 // Page component lookup table
 const PAGE_COMPONENTS = {
@@ -154,6 +155,7 @@ const PAGE_COMPONENTS = {
   LblDocTypePermissions,
   StoreItemCreator,
   EADashboard,
+  DirectorDashboard,
 };
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -327,6 +329,9 @@ const AuthenticatedApp = () => {
 
       {/* EA Dashboard */}
       <Route path="/EADashboard" element={<LayoutWrapper currentPageName="EADashboard"><EADashboard /></LayoutWrapper>} />
+      
+      {/* Director Dashboard */}
+      <Route path="/DirectorDashboard" element={<LayoutWrapper currentPageName="DirectorDashboard"><DirectorDashboard /></LayoutWrapper>} />
 
       {/* Store Management System Routes */}
       {[
