@@ -3,14 +3,11 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 /**
  * Voice-to-Task API for Apple Shortcuts
  * 
- * Accepts transcribed voice text, uses AI to extract task details,
- * and creates a DirectorTask automatically.
+ * Accepts EITHER:
+ *  - Audio file via multipart form-data (field name "audio") — AI transcribes + parses
+ *  - JSON body with { voice_text: "..." } — AI parses text directly
  * 
- * Payload: { voice_text: "Ask Ramesh to prepare the quarterly report by 25th April" }
- * 
- * The AI will extract:
- * - task_name, task_details, assigned_to (name match from user list)
- * - end_date (DD/MM/YYYY), is_important
+ * The Shortcut flow: Record Audio → Send file to this endpoint → AI does everything
  */
 Deno.serve(async (req) => {
   try {
@@ -20,9 +17,28 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { voice_text } = await req.json();
-    if (!voice_text || !voice_text.trim()) {
-      return Response.json({ error: 'Missing voice_text' }, { status: 400 });
+    let voiceText = null;
+    let audioFileUrl = null;
+
+    const contentType = req.headers.get('content-type') || '';
+
+    if (contentType.includes('multipart/form-data')) {
+      // Audio file upload from Shortcut
+      const formData = await req.formData();
+      const audioFile = formData.get('audio');
+      if (!audioFile) {
+        return Response.json({ error: 'Missing audio file. Send as form field named "audio".' }, { status: 400 });
+      }
+      // Upload audio to Base44 storage
+      const uploadResult = await base44.integrations.Core.UploadFile({ file: audioFile });
+      audioFileUrl = uploadResult.file_url;
+    } else {
+      // JSON fallback — text already transcribed
+      const body = await req.json();
+      voiceText = body.voice_text;
+      if (!voiceText || !voiceText.trim()) {
+        return Response.json({ error: 'Missing voice_text or audio file' }, { status: 400 });
+      }
     }
 
     // Get all users for name matching
@@ -43,27 +59,30 @@ Deno.serve(async (req) => {
     const now = new Date();
     const todayStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
 
-    // Use AI to parse the voice text
-    const aiResult = await base44.integrations.Core.InvokeLLM({
-      prompt: `You are a task extraction assistant for a Director in a company.
-The Director just spoke this voice command to create a task:
-
-"${voice_text}"
-
+    // Build prompt — same for both audio and text
+    const basePrompt = `You are a task extraction assistant for a Director in a company.
 Today's date is: ${todayStr}
 
 Here is the list of people in the company:
 ${userListStr}
 
-Extract the following from the voice command:
+${audioFileUrl 
+  ? 'The Director has recorded an audio voice command to create a task. Listen to the attached audio file carefully and extract the task details from it.'
+  : `The Director spoke this voice command to create a task:\n\n"${voiceText}"`}
+
+Extract the following:
 1. task_name: A clear, concise title for the task
 2. task_details: Any additional details mentioned (if none, leave empty)
 3. assigned_to_email: Match the person's name mentioned to the closest user from the list above. If no specific person mentioned, leave empty.
-4. end_date: The deadline in DD/MM/YYYY format. If "today" → use ${todayStr}. If "tomorrow" → calculate. If "next week" → add 7 days. If a specific date mentioned like "25th April" → convert to DD/MM/YYYY. If no date mentioned, default to 3 days from today.
+4. end_date: The deadline in DD/MM/YYYY format. If "today" → use ${todayStr}. If "tomorrow" → calculate. If "next week" → add 7 days. If a specific date mentioned like "25th April" → convert to DD/MM/YYYY using year ${now.getFullYear()}. If no date mentioned, default to 3 days from today.
 5. end_time: Time if mentioned (HH:MM 24h format), otherwise empty
 6. is_important: true if the voice mentions words like "urgent", "important", "critical", "ASAP", "priority", otherwise false
+7. transcription: The full text of what was said (transcribe the audio exactly if audio was provided, or repeat voice_text if text)
 
-IMPORTANT: For assigned_to_email, you MUST pick from the user list above. Try to match by first name, last name, or nickname. If you can't find a match, leave it empty.`,
+IMPORTANT: For assigned_to_email, you MUST pick from the user list above. Try to match by first name, last name, or nickname. If you can't find a match, leave it empty.`;
+
+    const llmParams = {
+      prompt: basePrompt,
       response_json_schema: {
         type: 'object',
         properties: {
@@ -73,14 +92,23 @@ IMPORTANT: For assigned_to_email, you MUST pick from the user list above. Try to
           end_date: { type: 'string' },
           end_time: { type: 'string' },
           is_important: { type: 'boolean' },
+          transcription: { type: 'string' },
         },
       },
-    });
+    };
+
+    // If audio file, attach it for the AI to transcribe
+    if (audioFileUrl) {
+      llmParams.file_urls = [audioFileUrl];
+    }
+
+    const aiResult = await base44.integrations.Core.InvokeLLM(llmParams);
 
     if (!aiResult.task_name) {
       return Response.json({
         success: false,
         error: 'Could not understand the voice command. Please try again with a clearer instruction.',
+        transcription: aiResult.transcription || null,
       }, { status: 400 });
     }
 
@@ -91,10 +119,10 @@ IMPORTANT: For assigned_to_email, you MUST pick from the user list above. Try to
     }
 
     if (!assignee) {
-      // If AI couldn't match, return what we parsed so they can fix
       return Response.json({
         success: false,
         error: `Could not find the person to assign this task to. Parsed: "${aiResult.assigned_to_email || 'no name detected'}"`,
+        transcription: aiResult.transcription || null,
         parsed: aiResult,
       }, { status: 400 });
     }
@@ -127,17 +155,18 @@ IMPORTANT: For assigned_to_email, you MUST pick from the user list above. Try to
     });
 
     // Audit log
+    const sourceText = aiResult.transcription || voiceText || '(audio)';
     await base44.entities.DirectorTaskLog.create({
       task_id: task.id,
       task_number: taskNumber,
       action: 'created',
       performed_by_email: user.email,
       performed_by_name: user.full_name,
-      details: `Task created via voice command: "${voice_text}"`,
+      details: `Task created via voice command: "${sourceText}"`,
       timestamp: new Date().toISOString(),
     });
 
-    // Send Telegram notification to assignee if they have chat ID
+    // Send Telegram notification to assignee
     const assigneeRecord = allUsers.find(u => u.email === assignee.email);
     if (assigneeRecord?.telegram_chat_id) {
       const token = Deno.env.get('TELEGRAM_BOT_TOKEN');
@@ -168,6 +197,7 @@ IMPORTANT: For assigned_to_email, you MUST pick from the user list above. Try to
       assigned_to: assignee.full_name || assignee.email,
       end_date: aiResult.end_date,
       is_important: aiResult.is_important,
+      transcription: aiResult.transcription || voiceText,
       message: `Task ${taskNumber} created: "${aiResult.task_name}" assigned to ${assignee.full_name || assignee.email}, due ${aiResult.end_date}`,
     });
   } catch (error) {

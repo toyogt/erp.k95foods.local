@@ -1,16 +1,6 @@
-import { Smartphone, Mic, Zap, Copy, CheckCircle2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useState } from 'react';
+import { Smartphone, Mic, Zap } from 'lucide-react';
 
-export default function VoiceShortcutGuide({ functionUrl }) {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = (text) => {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
+export default function VoiceShortcutGuide() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
@@ -19,7 +9,7 @@ export default function VoiceShortcutGuide({ functionUrl }) {
         </div>
         <div>
           <h3 className="font-semibold text-slate-800 text-lg">Voice Task Creation — iPhone Shortcut</h3>
-          <p className="text-sm text-slate-500">Create tasks by speaking to your phone</p>
+          <p className="text-sm text-slate-500">Record audio → AI transcribes & creates task automatically</p>
         </div>
       </div>
 
@@ -30,18 +20,18 @@ export default function VoiceShortcutGuide({ functionUrl }) {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
           <div className="bg-white rounded-lg p-3 border border-slate-100">
             <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm mb-2">1</div>
-            <p className="font-medium text-slate-700">Speak</p>
-            <p className="text-slate-500 text-xs mt-0.5">Tap the shortcut and say your task, e.g. "Ask Ramesh to prepare MIS report by Friday, urgent"</p>
+            <p className="font-medium text-slate-700">Record</p>
+            <p className="text-slate-500 text-xs mt-0.5">Tap the shortcut and speak your task, e.g. "Ask Ramesh to prepare MIS report by Friday, urgent"</p>
           </div>
           <div className="bg-white rounded-lg p-3 border border-slate-100">
             <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 font-bold text-sm mb-2">2</div>
-            <p className="font-medium text-slate-700">AI Parses</p>
-            <p className="text-slate-500 text-xs mt-0.5">AI extracts the task name, assignee, deadline, and priority from your voice</p>
+            <p className="font-medium text-slate-700">AI Transcribes & Parses</p>
+            <p className="text-slate-500 text-xs mt-0.5">Audio is sent to the server. AI transcribes it, extracts task name, assignee, deadline, and priority — all in one step</p>
           </div>
           <div className="bg-white rounded-lg p-3 border border-slate-100">
             <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-600 font-bold text-sm mb-2">3</div>
             <p className="font-medium text-slate-700">Task Created</p>
-            <p className="text-slate-500 text-xs mt-0.5">Task is created and the assignee gets a Telegram notification instantly</p>
+            <p className="text-slate-500 text-xs mt-0.5">Task is created instantly and the assignee gets a Telegram notification</p>
           </div>
         </div>
       </div>
@@ -61,30 +51,36 @@ export default function VoiceShortcutGuide({ functionUrl }) {
           </li>
           <li className="flex gap-3">
             <span className="font-bold text-slate-400 shrink-0">3.</span>
-            <span>Add action: <strong>"Dictate Text"</strong> — this records your voice and converts to text</span>
+            <span>Add action: <strong>"Record Audio"</strong> — this records your voice as an audio file</span>
           </li>
           <li className="flex gap-3">
             <span className="font-bold text-slate-400 shrink-0">4.</span>
-            <span>Add action: <strong>"Get Contents of URL"</strong> (this is the API call)</span>
+            <span>Add action: <strong>"Get Contents of URL"</strong> (this sends the audio to the server)</span>
           </li>
           <li className="flex gap-3">
             <span className="font-bold text-slate-400 shrink-0">5.</span>
             <div>
               <span>Configure the URL action:</span>
-              <ul className="mt-1.5 space-y-1 text-xs text-slate-500">
+              <ul className="mt-1.5 space-y-1.5 text-xs text-slate-500">
+                <li>• <strong>URL:</strong> Your function URL (Dashboard → Code → Functions → voiceCreateTask)</li>
                 <li>• <strong>Method:</strong> POST</li>
-                <li>• <strong>Headers:</strong> Add "Content-Type" = "application/json"</li>
-                <li>• <strong>Request Body:</strong> JSON — add key "voice_text" with value = Dictated Text</li>
+                <li>• <strong>Request Body:</strong> Form</li>
+                <li>• Add field — Key: <strong>audio</strong>, Type: <strong>File</strong>, Value: <strong>Recorded Audio</strong> (select from previous step)</li>
+                <li>• <strong>Headers:</strong> Add your auth token header</li>
               </ul>
             </div>
           </li>
           <li className="flex gap-3">
             <span className="font-bold text-slate-400 shrink-0">6.</span>
-            <span>Add action: <strong>"Show Result"</strong> to see the response</span>
+            <span>Add action: <strong>"Get Dictionary Value"</strong> — get key <strong>message</strong> from the response</span>
           </li>
           <li className="flex gap-3">
             <span className="font-bold text-slate-400 shrink-0">7.</span>
-            <span>Name the shortcut <strong>"Create Task"</strong> — you can also add it to Home Screen or trigger via Siri</span>
+            <span>Add action: <strong>"Show Result"</strong> — displays the confirmation message</span>
+          </li>
+          <li className="flex gap-3">
+            <span className="font-bold text-slate-400 shrink-0">8.</span>
+            <span>Name it <strong>"Create Task"</strong> — add to Home Screen or trigger via Siri: "Hey Siri, Create Task"</span>
           </li>
         </ol>
       </div>
@@ -92,8 +88,8 @@ export default function VoiceShortcutGuide({ functionUrl }) {
       <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
         <p className="text-sm font-medium text-amber-800">Important</p>
         <p className="text-xs text-amber-700 mt-1">
-          The function URL and authentication token can be found in your dashboard under Code → Functions → voiceCreateTask. 
-          You'll need to add your auth token as a header for the shortcut to work.
+          The function URL and authentication token are in your dashboard under Code → Functions → voiceCreateTask. 
+          You need to add the auth token as a header for the shortcut to work. The AI handles transcription — no need for Apple's "Dictate Text" action.
         </p>
       </div>
 
