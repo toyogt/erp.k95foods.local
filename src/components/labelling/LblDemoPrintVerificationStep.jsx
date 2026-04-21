@@ -83,9 +83,11 @@ export default function LblDemoPrintVerificationStep({ job, user, onComplete }) 
   const podComparison = hasSentPods ? comparePodData(sentPodValues, activePodData) : [];
   const allPodsMatch = podComparison.length === 0 || podComparison.every(r => r.match);
 
-  // Confirm button enabled only when ALL demo labels are printed (allPrinted=true)
-  // Physical confirmation is also required. POD match is NOT a hard blocker — operator can override.
-  const canConfirm = physicalConfirmed && allPrinted && !pollError;
+  // Confirm button enabled when:
+  //   - Physical confirmation ticked, AND
+  //   - Either: all labels confirmed printed by RQLP, OR: RQLP is unavailable (parse error) — physical check is sufficient fallback
+  const liveCheckUnavailable = !!pollError;
+  const canConfirm = physicalConfirmed && (allPrinted || liveCheckUnavailable);
 
   // Roll back to stock_transferred — operator can re-send demo print
   const handleResetDemoPrint = async () => {
@@ -183,11 +185,11 @@ export default function LblDemoPrintVerificationStep({ job, user, onComplete }) 
           </div>
         )}
 
-        {/* Poll error */}
+        {/* Poll error — non-blocking, physical confirmation is sufficient */}
         {pollError && printer && (
-          <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg p-2 text-sm text-red-700">
-            <XCircle className="w-4 h-4 shrink-0" />
-            <span>{pollError}</span>
+          <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg p-2 text-sm text-amber-700">
+            <AlertTriangle className="w-4 h-4 shrink-0" />
+            <span>Live printer count unavailable ({pollError}). Proceed by physically confirming the labels below.</span>
           </div>
         )}
 
@@ -308,8 +310,7 @@ export default function LblDemoPrintVerificationStep({ job, user, onComplete }) 
       {/* Helper hints */}
       {!canConfirm && (
         <div className="text-xs text-center text-slate-500 space-y-0.5">
-          {!allPrinted && printer && <p>Waiting for all demo labels to finish printing…</p>}
-          {allPrinted && !allPodsMatch && <p>POD data mismatch detected — check the table above.</p>}
+          {!allPrinted && !liveCheckUnavailable && printer && <p>Waiting for all demo labels to finish printing…</p>}
           {!physicalConfirmed && <p>Tick the physical confirmation checkbox above to proceed.</p>}
         </div>
       )}
