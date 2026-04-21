@@ -267,6 +267,8 @@ export default function FMSMyTasks() {
   const overdue = tasks.filter(t => getTATStatus(t.deadline) === 'overdue');
   const atRisk = tasks.filter(t => getTATStatus(t.deadline) === 'at_risk');
   const onTime = tasks.filter(t => getTATStatus(t.deadline) === 'on_time');
+  const dtOverdue = directorTasks.filter(t => isTaskOverdue(t));
+  const totalPending = tasks.length + scheduledTasks.length + directorTasks.length;
 
   return (
     <>
@@ -288,9 +290,13 @@ export default function FMSMyTasks() {
           </div>
         ) : (
           <div className="space-y-6">
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-4 gap-3">
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center">
+                <p className="text-2xl font-bold text-slate-700">{totalPending}</p>
+                <p className="text-xs text-slate-400 font-medium mt-0.5">Total Pending</p>
+              </div>
               <div className="bg-red-50 border border-red-100 rounded-xl p-3 text-center">
-                <p className="text-2xl font-bold text-red-600">{overdue.length}</p>
+                <p className="text-2xl font-bold text-red-600">{overdue.length + dtOverdue.length}</p>
                 <p className="text-xs text-red-400 font-medium mt-0.5">Overdue</p>
               </div>
               <div className="bg-yellow-50 border border-yellow-100 rounded-xl p-3 text-center">

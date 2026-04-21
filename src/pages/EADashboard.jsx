@@ -83,6 +83,7 @@ export default function EADashboard() {
   const pendingTasks = filtered.filter(t => ['open', 'date_change_requested'].includes(t.status));
   const verificationTasks = filtered.filter(t => t.status === 'pending_verification');
   const completedTasks = filtered.filter(t => t.status === 'completed');
+  const cancelledTasks = filtered.filter(t => t.status === 'cancelled');
   const overdueTasks = pendingTasks.filter(t => isTaskOverdue(t));
   const importantOpen = pendingTasks.filter(t => t.is_important && t.status !== 'completed');
 
@@ -161,18 +162,21 @@ export default function EADashboard() {
 
           {/* Tabs */}
           <Tabs value={tab} onValueChange={setTab}>
-            <TabsList className="grid grid-cols-3 w-full">
-              <TabsTrigger value="pending" className="gap-1.5">
-                <ClipboardList className="w-3.5 h-3.5" />
+            <TabsList className="grid grid-cols-4 w-full">
+              <TabsTrigger value="pending" className="gap-1.5 text-xs sm:text-sm">
+                <ClipboardList className="w-3.5 h-3.5 hidden sm:block" />
                 Open ({pendingTasks.length})
               </TabsTrigger>
-              <TabsTrigger value="verification" className="gap-1.5">
-                <Clock className="w-3.5 h-3.5" />
+              <TabsTrigger value="verification" className="gap-1.5 text-xs sm:text-sm">
+                <Clock className="w-3.5 h-3.5 hidden sm:block" />
                 Verify ({verificationTasks.length})
               </TabsTrigger>
-              <TabsTrigger value="completed" className="gap-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5" />
+              <TabsTrigger value="completed" className="gap-1.5 text-xs sm:text-sm">
+                <CheckCircle2 className="w-3.5 h-3.5 hidden sm:block" />
                 Done ({completedTasks.length})
+              </TabsTrigger>
+              <TabsTrigger value="cancelled" className="gap-1.5 text-xs sm:text-sm">
+                Cancelled ({cancelledTasks.length})
               </TabsTrigger>
             </TabsList>
 
@@ -192,6 +196,9 @@ export default function EADashboard() {
             </TabsContent>
             <TabsContent value="completed" className="mt-4">
               <TaskList tasks={completedTasks} user={user} viewMode="ea" onRefresh={load} />
+            </TabsContent>
+            <TabsContent value="cancelled" className="mt-4">
+              <TaskList tasks={cancelledTasks} user={user} viewMode="ea" onRefresh={load} />
             </TabsContent>
           </Tabs>
         </>

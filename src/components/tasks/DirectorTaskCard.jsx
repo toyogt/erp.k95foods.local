@@ -7,14 +7,16 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   CheckCircle2, AlertTriangle, Clock, Calendar, User,
-  Loader2, ChevronDown, ChevronUp, CalendarClock, MessageSquare
+  Loader2, ChevronDown, ChevronUp, CalendarClock, MessageSquare, ScrollText, XCircle
 } from 'lucide-react';
 import { TASK_STATUS_CONFIG, isTaskOverdue, getTaskUrgency, logTaskAction, formatTaskDate } from '@/lib/directorTaskHelpers';
+import DirectorTaskLogPanel from '@/components/tasks/DirectorTaskLogPanel';
 
 export default function DirectorTaskCard({ task, user, viewMode, onRefresh }) {
   const [expanded, setExpanded] = useState(false);
   const [acting, setActing] = useState(false);
   const [showDateChange, setShowDateChange] = useState(false);
+  const [showLog, setShowLog] = useState(false);
   const [dateChangeReason, setDateChangeReason] = useState('');
   const [newDate, setNewDate] = useState('');
   const [newTime, setNewTime] = useState('');
@@ -126,6 +128,15 @@ export default function DirectorTaskCard({ task, user, viewMode, onRefresh }) {
     onRefresh?.();
   };
 
+  // EA/Director cancels task
+  const handleCancel = async () => {
+    setActing(true);
+    await base44.entities.DirectorTask.update(task.id, { status: 'cancelled' });
+    await logTaskAction(task, 'cancelled', user, `Task cancelled by ${user.full_name}`);
+    setActing(false);
+    onRefresh?.();
+  };
+
   const isAssignee = user?.email === task.assigned_to_email;
   const isEAOrDirector = viewMode === 'ea' || viewMode === 'director';
 
@@ -231,12 +242,26 @@ export default function DirectorTaskCard({ task, user, viewMode, onRefresh }) {
                 </div>
               )}
 
-              {/* Expand toggle */}
-              <button onClick={() => setExpanded(e => !e)}
-                className="text-slate-400 hover:text-slate-600 flex items-center gap-1 text-xs min-h-[36px] px-2">
-                {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                {expanded ? 'Less' : 'Details'}
-              </button>
+              {/* Cancel — only for EA/Director on open tasks */}
+              {isEAOrDirector && (task.status === 'open' || task.status === 'date_change_requested') && (
+                <Button size="sm" variant="ghost" onClick={handleCancel} disabled={acting}
+                  className="gap-1 text-xs text-red-500 hover:text-red-700 hover:bg-red-50 min-h-[32px]">
+                  <XCircle className="w-3.5 h-3.5" /> Cancel
+                </Button>
+              )}
+
+              {/* Toggle buttons row */}
+              <div className="flex gap-1">
+                <button onClick={() => setExpanded(e => !e)}
+                  className="text-slate-400 hover:text-slate-600 flex items-center gap-1 text-xs min-h-[36px] px-2">
+                  {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  {expanded ? 'Less' : 'Details'}
+                </button>
+                <button onClick={() => setShowLog(e => !e)}
+                  className="text-slate-400 hover:text-slate-600 flex items-center gap-1 text-xs min-h-[36px] px-2">
+                  <ScrollText className="w-3.5 h-3.5" /> Log
+                </button>
+              </div>
             </div>
           </div>
 
@@ -255,6 +280,13 @@ export default function DirectorTaskCard({ task, user, viewMode, onRefresh }) {
                 <div>Assigned by: {task.assigned_by_name || task.assigned_by_email}</div>
                 {task.verified_by_name && <div>Verified by: {task.verified_by_name}</div>}
               </div>
+            </div>
+          )}
+
+          {/* Activity Log */}
+          {showLog && (
+            <div className="mt-3 pt-3 border-t border-slate-100">
+              <DirectorTaskLogPanel taskId={task.id} />
             </div>
           )}
         </div>
