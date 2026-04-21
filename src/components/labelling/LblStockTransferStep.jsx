@@ -13,16 +13,14 @@ import LblLabelPreviewCard from '@/components/labelling/LblLabelPreviewCard';
 import moment from 'moment';
 
 export default function LblStockTransferStep({ job, user, onComplete }) {
-  const [qty, setQty] = useState('');
+  // Transfer quantity is frozen to the planned quantity from the shift plan
+  const [qty] = useState(job?.quantity_bottles_planned || '');
   // Start empty — the useEffect below will auto-generate from product config + MFG date.
   // job.batch_no is intentionally NOT used as initial value to avoid stale/wrong batch carryover.
   const [batchNo, setBatchNo] = useState('');
   const [batchSeq, setBatchSeq] = useState(1);
-  const [labellingDate, setLabellingDate] = useState(
-    job?.labelling_date
-      ? moment(job.labelling_date, 'DD/MM/YYYY').format('YYYY-MM-DD')
-      : moment().format('YYYY-MM-DD')
-  );
+  // Labelling date is always today — read-only
+  const [labellingDate] = useState(moment().format('YYYY-MM-DD'));
   const [remarks, setRemarks] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -102,13 +100,14 @@ export default function LblStockTransferStep({ job, user, onComplete }) {
       {/* Transfer + Labelling Date */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div className="space-y-1">
-          <Label className="text-xs font-medium text-slate-700">Transfer Quantity (Bottles) <span className="text-red-500">*</span></Label>
-          <Input type="number" value={qty} onChange={e => setQty(e.target.value)} placeholder="Enter quantity" className="h-11 md:h-9" />
+          <Label className="text-xs font-medium text-slate-700">Transfer Quantity (Bottles)</Label>
+          <Input type="number" value={qty} readOnly className="h-11 md:h-9 bg-slate-50 text-slate-700 cursor-not-allowed" />
+          <p className="text-xs text-slate-500">Fixed as per shift plan</p>
         </div>
         <div className="space-y-1">
-          <Label className="text-xs font-medium text-slate-700">Labelling Start Date <span className="text-red-500">*</span></Label>
-          <Input type="date" value={labellingDate} onChange={e => setLabellingDate(e.target.value)} className="h-11 md:h-9" />
-          <p className="text-xs text-slate-500">Date labelling begins (today by default)</p>
+          <Label className="text-xs font-medium text-slate-700">Labelling Start Date</Label>
+          <Input type="date" value={labellingDate} readOnly className="h-11 md:h-9 bg-slate-50 text-slate-700 cursor-not-allowed" />
+          <p className="text-xs text-slate-500">Locked to today's date</p>
         </div>
       </div>
 
