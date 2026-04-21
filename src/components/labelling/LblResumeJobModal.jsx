@@ -1,16 +1,33 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { PlayCircle, Loader2 } from 'lucide-react';
+import { canManagePlans } from '@/lib/labellingHelpers';
 
-export default function LblResumeJobModal({ open, onOpenChange, job, onConfirm, isLoading }) {
+export default function LblResumeJobModal({ open, onOpenChange, job, user, onConfirm, isLoading }) {
   const [reason, setReason] = useState('');
+  const [availableQty, setAvailableQty] = useState('');
+
+  const printedQty = job?.current_printed_qty || 0;
+  const originalPlanned = job?.quantity_bottles_planned || 0;
+  // Default "bottles still available" = remaining (planned − already printed)
+  const defaultRemaining = Math.max(0, originalPlanned - printedQty);
+  const canEdit = canManagePlans(user?.role);
+
+  useEffect(() => {
+    if (open) setAvailableQty(String(defaultRemaining));
+  }, [open, defaultRemaining]);
+
+  const newPlannedTotal = Number(availableQty || 0) + printedQty;
+  const isValid = reason.trim() && Number(availableQty) >= 0 && newPlannedTotal >= printedQty;
 
   const handleConfirm = () => {
-    if (!reason.trim()) return;
-    onConfirm(reason.trim());
+    if (!isValid) return;
+    // Pass the new TOTAL planned quantity back (printed + still-available).
+    onConfirm(reason.trim(), newPlannedTotal);
   };
 
   const restoredStatus = job?.previous_status || 'pending';
@@ -44,6 +61,31 @@ export default function LblResumeJobModal({ open, onOpenChange, job, onConfirm, 
           )}
 
           <div className="space-y-1">
+            <Label className="text-xs font-medium text-slate-700">
+              Bottles Still Available to Label {canEdit && <span className="text-red-500">*</span>}
+            </Label>
+            <Input
+              type="number"
+              min="0"
+              value={availableQty}
+              onChange={(e) => setAvailableQty(e.target.value)}
+              readOnly={!canEdit}
+              className={`h-11 md:h-9 ${!canEdit ? 'bg-slate-50 cursor-not-allowed' : ''}`}
+            />
+            <div className="text-xs text-slate-500 space-y-0.5">
+              <p>Originally planned: <span className="font-semibold text-slate-700">{originalPlanned.toLocaleString()}</span> bottles · Already printed: <span className="font-semibold text-slate-700">{printedQty.toLocaleString()}</span></p>
+              {canEdit ? (
+                <p>Default is the remaining quantity. Edit if fewer bottles are actually available to label.</p>
+              ) : (
+                <p>Only a supervisor or admin can edit this value.</p>
+              )}
+              {Number(availableQty) >= 0 && (
+                <p>New total planned will be: <span className="font-semibold text-slate-900">{newPlannedTotal.toLocaleString()}</span> bottles</p>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-1">
             <Label className="text-xs font-medium text-slate-700">Reason for Resuming *</Label>
             <Textarea
               value={reason}
@@ -66,7 +108,7 @@ export default function LblResumeJobModal({ open, onOpenChange, job, onConfirm, 
             <Button
               className="h-11 md:h-9 flex-1 bg-green-600 hover:bg-green-700"
               onClick={handleConfirm}
-              disabled={isLoading || !reason.trim()}
+              disabled={isLoading || !isValid}
             >
               {isLoading ? (
                 <>

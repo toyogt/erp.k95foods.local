@@ -9,15 +9,15 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Only supervisors and admins can resume on-hold jobs
-    if (user.role !== 'admin' && user.role !== 'supervisor') {
+    // Only supervisors and admins (incl. lbl_supervisor) can resume on-hold jobs
+    if (!['admin', 'supervisor', 'lbl_supervisor'].includes(user.role)) {
       return Response.json(
         { error: 'Forbidden: Only supervisors or admins can resume on-hold jobs' },
         { status: 403 }
       );
     }
 
-    const { job_id, resume_reason } = await req.json();
+    const { job_id, resume_reason, updated_planned_quantity } = await req.json();
 
     if (!job_id || !resume_reason) {
       return Response.json(
@@ -43,11 +43,34 @@ Deno.serve(async (req) => {
     // fall back to 'pending' so the job re-enters the queue safely.
     const restoredStatus = currentJob.previous_status || 'pending';
 
-    await base44.entities.LabellingJob.update(job_id, {
+    // Validate & apply optional planned-quantity update
+    const updatePayload = {
       status: restoredStatus,
       previous_status: null,
       rejection_reason: null,
-    });
+    };
+    let quantityChanged = false;
+    const oldPlanned = currentJob.quantity_bottles_planned || 0;
+    const printedSoFar = currentJob.current_printed_qty || 0;
+
+    if (updated_planned_quantity !== undefined && updated_planned_quantity !== null) {
+      const newQty = Number(updated_planned_quantity);
+      if (!Number.isFinite(newQty) || newQty < 0) {
+        return Response.json({ error: 'Invalid planned quantity.' }, { status: 400 });
+      }
+      if (newQty < printedSoFar) {
+        return Response.json(
+          { error: `New planned quantity (${newQty}) cannot be less than already printed (${printedSoFar}).` },
+          { status: 400 }
+        );
+      }
+      if (newQty !== oldPlanned) {
+        updatePayload.quantity_bottles_planned = newQty;
+        quantityChanged = true;
+      }
+    }
+
+    await base44.entities.LabellingJob.update(job_id, updatePayload);
 
     // Log the resume action
     await base44.entities.LblEventLog.create({
@@ -55,7 +78,8 @@ Deno.serve(async (req) => {
       job_id: currentJob.job_id,
       plan_id: currentJob.plan_id,
       action_type: 'job_resumed',
-      description: `Job resumed from on_hold by ${user.full_name}: ${resume_reason}. Restored to status "${restoredStatus}".`,
+      description: `Job resumed from on_hold by ${user.full_name}: ${resume_reason}. Restored to status "${restoredStatus}".` +
+        (quantityChanged ? ` Planned quantity updated from ${oldPlanned} to ${updatePayload.quantity_bottles_planned} bottles.` : ''),
       performed_by_email: user.email,
       performed_by_name: user.full_name,
       timestamp: new Date().toISOString(),
@@ -63,6 +87,8 @@ Deno.serve(async (req) => {
         old_status: 'on_hold',
         restored_status: restoredStatus,
         resume_reason,
+        old_planned_quantity: oldPlanned,
+        new_planned_quantity: quantityChanged ? updatePayload.quantity_bottles_planned : oldPlanned,
       },
     });
 

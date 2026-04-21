@@ -43,12 +43,13 @@ export default function LblOperatorJob() {
     setActing(false);
   };
 
-  const handleResumeJob = async (resume_reason) => {
+  const handleResumeJob = async (resume_reason, updated_planned_quantity) => {
     setActing(true);
     try {
       const response = await base44.functions.invoke('resumeLabellingJob', {
         job_id: job.id,
         resume_reason,
+        updated_planned_quantity,
       });
       if (response.data.success) {
         toast({ title: 'Job Resumed', description: response.data.message });
@@ -218,6 +219,7 @@ export default function LblOperatorJob() {
         open={resumeModalOpen}
         onOpenChange={setResumeModalOpen}
         job={job}
+        user={user}
         onConfirm={handleResumeJob}
         isLoading={acting}
       />
