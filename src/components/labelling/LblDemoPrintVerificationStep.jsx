@@ -58,13 +58,23 @@ export default function LblDemoPrintVerificationStep({ job, user, onComplete }) 
     queryFn: () => base44.entities.LblPrinterConfig.filter({ is_active: true }),
   });
 
-  // Fetch the demo print command record (has request_payload with sent POD values)
-  const { data: demoCommand } = useQuery({
-    queryKey: ['demo-command', job.demo_print_command_id],
-    queryFn: () => base44.entities.LblPrintCommand.filter({ command_id: job.demo_print_command_id }),
-    enabled: !!job.demo_print_command_id,
-    select: data => data?.[0] || null,
+  // Fetch ALL print commands for this job to get sent POD values + last RQLP response
+  const { data: allCommands = [] } = useQuery({
+    queryKey: ['demo-commands', job.id],
+    queryFn: () => base44.entities.LblPrintCommand.filter({ job_id: job.id }),
+    enabled: !!job.id,
   });
+
+  // The demo DATA command has the sent POD values in request_payload.command.data
+  const demoCommand = allCommands.find(c => c.command_id === job.demo_print_command_id) || allCommands[0] || null;
+
+  // Last successful RQLP status response — contains the printed POD col values
+  const lastRqlpCommand = [...allCommands]
+    .filter(c => c.response_payload?.col1 !== undefined || c.response_payload?.rqlp !== undefined)
+    .sort((a, b) => new Date(b.created_date) - new Date(a.created_date))[0] || null;
+
+  // POD data from last stored RQLP response (fallback when printer already reset)
+  const storedPodData = lastRqlpCommand?.response_payload || {};
 
   const printer = printers.find(p => p.printer_id === demoCommand?.printer_id);
 
@@ -76,9 +86,11 @@ export default function LblDemoPrintVerificationStep({ job, user, onComplete }) 
   const { printedCount, totalCount, allPrinted, printerPodData, isPolling, error: pollError, pollingComplete, frozenPodData } =
     useDemoPrintPollStatus(printer, !!printer, 2000);
 
-  // Once allPrinted is confirmed, freeze the POD table using frozenPodData snapshot.
-  // After pollingComplete (0/0 reset), we continue showing the frozen snapshot.
-  const activePodData = (allPrinted && frozenPodData) ? frozenPodData : printerPodData;
+  // POD data priority:
+  // 1. frozenPodData — captured live at the moment printing completed (best)
+  // 2. storedPodData — last RQLP response saved in LblPrintCommand DB (fallback when page loaded after reset)
+  // 3. printerPodData — current live poll data
+  const activePodData = frozenPodData || (pollingComplete ? storedPodData : printerPodData);
 
   // Compare sent vs printed POD values — use frozen data once job is complete
   const podComparison = hasSentPods ? comparePodData(sentPodValues, activePodData) : [];
