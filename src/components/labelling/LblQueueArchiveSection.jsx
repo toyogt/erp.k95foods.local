@@ -5,10 +5,11 @@
  */
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, CheckCircle2, XCircle, PauseCircle } from 'lucide-react';
+import { ChevronDown, CheckCircle2, XCircle, PauseCircle, PlayCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
-function ArchiveGroup({ icon: Icon, title, jobs, iconColor, navigateFn }) {
-  const [open, setOpen] = useState(false);
+function ArchiveGroup({ icon: Icon, title, jobs, iconColor, navigateFn, showResume, defaultOpen }) {
+  const [open, setOpen] = useState(!!defaultOpen);
   if (!jobs || jobs.length === 0) return null;
 
   return (
@@ -37,9 +38,21 @@ function ArchiveGroup({ icon: Icon, title, jobs, iconColor, navigateFn }) {
                   <span>{(job.quantity_bottles_planned || 0).toLocaleString()} bottles</span>
                   {job.batch_no && <span>· Batch: <span className="font-mono">{job.batch_no}</span></span>}
                   {job.line_name && <span>· {job.line_name}</span>}
+                  {showResume && job.previous_status && <span>· Paused at: <span className="font-mono">{job.previous_status}</span></span>}
                 </div>
               </div>
-              <ChevronDown className="w-4 h-4 text-slate-300 -rotate-90" />
+              {showResume ? (
+                <Button
+                  size="sm"
+                  className="h-9 gap-1.5 bg-green-600 hover:bg-green-700 text-white shrink-0"
+                  onClick={(e) => { e.stopPropagation(); navigateFn(`/LblOperatorJob?jobId=${job.id}`); }}
+                >
+                  <PlayCircle className="w-4 h-4" />
+                  Resume
+                </Button>
+              ) : (
+                <ChevronDown className="w-4 h-4 text-slate-300 -rotate-90" />
+              )}
             </div>
           ))}
         </div>
@@ -62,6 +75,8 @@ export default function LblQueueArchiveSection({ onHold, completed, cancelled })
         jobs={onHold}
         iconColor="text-amber-500"
         navigateFn={navigate}
+        showResume
+        defaultOpen
       />
       <ArchiveGroup
         icon={CheckCircle2}
