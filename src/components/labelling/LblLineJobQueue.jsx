@@ -235,9 +235,26 @@ export default function LblLineJobQueue({ line, jobs, products, canManage }) {
   };
 
   const handleDeleteJob = async () => {
-    await base44.entities.LabellingJob.delete(deletingJob.id);
-    setDeletingJob(null);
-    queryClient.invalidateQueries({ queryKey: ['lbl-all-jobs'] });
+    const jobId = deletingJob?.id;
+    if (!jobId) {
+      setDeletingJob(null);
+      return;
+    }
+    try {
+      await base44.entities.LabellingJob.delete(jobId);
+    } catch (err) {
+      // If the job is already gone (404 / not found), treat as success and just refresh the list.
+      const msg = err?.message || '';
+      const notFound = msg.includes('not found') || err?.response?.status === 404;
+      if (!notFound) {
+        console.error('Failed to delete labelling job:', err);
+        alert(`Could not remove job: ${msg || 'Unknown error'}`);
+        return;
+      }
+    } finally {
+      setDeletingJob(null);
+      queryClient.invalidateQueries({ queryKey: ['lbl-all-jobs'] });
+    }
   };
 
   const activeJob = lineJobs.find(j => IN_PROGRESS_STATUSES.includes(j.status));
