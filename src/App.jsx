@@ -125,6 +125,7 @@ import LblEventLogPage from './pages/LblEventLogPage';
 import LblMasterData from './pages/LblMasterData';
 import LblDocTypePermissions from './pages/LblDocTypePermissions';
 import StoreItemCreator from './pages/StoreItemCreator';
+import EADashboard from './pages/EADashboard';
 
 // Page component lookup table
 const PAGE_COMPONENTS = {
@@ -152,6 +153,7 @@ const PAGE_COMPONENTS = {
   LblMasterData,
   LblDocTypePermissions,
   StoreItemCreator,
+  EADashboard,
 };
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -322,6 +324,9 @@ const AuthenticatedApp = () => {
       <Route path="/LblEventLogPage" element={<LayoutWrapper currentPageName="LblEventLogPage"><LblEventLogPage /></LayoutWrapper>} />
       <Route path="/LblMasterData" element={<LayoutWrapper currentPageName="LblMasterData"><LblMasterData /></LayoutWrapper>} />
       <Route path="/LblDocTypePermissions" element={<LayoutWrapper currentPageName="LblDocTypePermissions"><LblDocTypePermissions /></LayoutWrapper>} />
+
+      {/* EA Dashboard */}
+      <Route path="/EADashboard" element={<LayoutWrapper currentPageName="EADashboard"><EADashboard /></LayoutWrapper>} />
 
       {/* Store Management System Routes */}
       {[

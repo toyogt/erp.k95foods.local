@@ -8,6 +8,8 @@ import { CheckCircle2, ChevronDown, ChevronUp, Loader2, ClipboardList, Clipboard
 import { formatDateTime, getTATStatus } from '@/lib/fmsHelpers';
 import { Input } from '@/components/ui/input';
 import moment from 'moment';
+import DirectorTaskCard from '@/components/tasks/DirectorTaskCard';
+import { isTaskOverdue } from '@/lib/directorTaskHelpers';
 
 function TaskCard({ step, onComplete, onOpenChecklist, completing }) {
   const [expanded, setExpanded] = useState(false);
@@ -194,13 +196,15 @@ export default function FMSMyTasks() {
   const [loading, setLoading] = useState(true);
   const [completing, setCompleting] = useState(null);
   const [activeModal, setActiveModal] = useState(null);
+  const [directorTasks, setDirectorTasks] = useState([]);
 
   const load = useCallback(async () => {
     const me = await base44.auth.me();
     setUser(me);
-    const [allSteps, myScheduled] = await Promise.all([
+    const [allSteps, myScheduled, myDirectorTasks] = await Promise.all([
       base44.entities.FMSStepInstance.filter({ assignee_email: me.email, status: 'active' }, '-deadline', 100),
       base44.entities.ScheduledTaskInstance.filter({ assignee_email: me.email, status: 'PENDING' }, '-due_at', 100).catch(() => []),
+      base44.entities.DirectorTask.filter({ assigned_to_email: me.email }, '-created_date', 100).catch(() => []),
     ]);
     const instanceIds = [...new Set(allSteps.map(s => s.instance_id))];
     const instances = await Promise.all(instanceIds.map(id => base44.entities.FMSProcessInstance.filter({ id })));
@@ -228,6 +232,17 @@ export default function FMSMyTasks() {
       return new Date(a.due_at || 0) - new Date(b.due_at || 0);
     });
     setScheduledTasks(sorted);
+    // Director tasks: show open + pending_verification + date_change_requested
+    const activeDT = (myDirectorTasks || []).filter(t => ['open', 'pending_verification', 'date_change_requested'].includes(t.status));
+    activeDT.sort((a, b) => {
+      const aOD = isTaskOverdue(a) ? 0 : 1;
+      const bOD = isTaskOverdue(b) ? 0 : 1;
+      if (aOD !== bOD) return aOD - bOD;
+      const aImp = a.is_important ? 0 : 1;
+      const bImp = b.is_important ? 0 : 1;
+      return aImp - bImp;
+    });
+    setDirectorTasks(activeDT);
     setLoading(false);
   }, []);
 
@@ -265,7 +280,7 @@ export default function FMSMyTasks() {
           <div className="flex items-center justify-center py-16">
             <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
           </div>
-        ) : tasks.length === 0 ? (
+        ) : tasks.length === 0 && scheduledTasks.length === 0 && directorTasks.length === 0 ? (
           <div className="text-center py-20">
             <ClipboardList className="w-12 h-12 text-slate-300 mx-auto mb-3" />
             <p className="text-slate-400 font-medium">No pending tasks</p>
@@ -309,6 +324,20 @@ export default function FMSMyTasks() {
                 <h2 className="text-sm font-semibold text-green-600 uppercase tracking-wider mb-3">✓ On Track ({onTime.length})</h2>
                 <div className="space-y-3">
                   {onTime.map(t => <TaskCard key={t.id} step={t} onComplete={handleMarkDone} onOpenChecklist={handleOpenChecklist} completing={completing} />)}
+                </div>
+              </div>
+            )}
+
+            {/* Director Assigned Tasks Section */}
+            {directorTasks.length > 0 && (
+              <div>
+                <h2 className="text-sm font-semibold text-indigo-600 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                  📋 Assigned Tasks ({directorTasks.length})
+                </h2>
+                <div className="space-y-3">
+                  {directorTasks.map(t => (
+                    <DirectorTaskCard key={t.id} task={t} user={user} viewMode="assignee" onRefresh={load} />
+                  ))}
                 </div>
               </div>
             )}

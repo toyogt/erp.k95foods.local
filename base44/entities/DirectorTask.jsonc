@@ -1,0 +1,146 @@
+{
+  "name": "DirectorTask",
+  "type": "object",
+  "title": "Director Task",
+  "description": "Tasks assigned by Directors or their Executive Assistants to team members",
+  "properties": {
+    "task_number": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Auto-generated task number e.g. DT-0001"
+    },
+    "task_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500,
+      "description": "Title of the task"
+    },
+    "task_details": {
+      "type": "string",
+      "maxLength": 5000,
+      "description": "Detailed description of what needs to be done"
+    },
+    "assigned_to_email": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Email of the person assigned this task"
+    },
+    "assigned_to_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "assigned_by_email": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Email of person who created the task (Director or EA)"
+    },
+    "assigned_by_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "director_email": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "The director this task belongs to (could be assigned by EA on behalf)"
+    },
+    "director_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "is_important": {
+      "type": "boolean",
+      "default": false,
+      "description": "Important tasks get deadline notifications"
+    },
+    "start_date": {
+      "type": "string",
+      "maxLength": 20,
+      "description": "Optional start date DD/MM/YYYY"
+    },
+    "start_time": {
+      "type": "string",
+      "maxLength": 10,
+      "description": "Optional start time HH:MM"
+    },
+    "end_date": {
+      "type": "string",
+      "maxLength": 20,
+      "description": "Mandatory end date DD/MM/YYYY"
+    },
+    "end_time": {
+      "type": "string",
+      "maxLength": 10,
+      "description": "Optional end time HH:MM (default 16:00 for notifications)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "open",
+        "pending_verification",
+        "completed",
+        "date_change_requested",
+        "cancelled"
+      ],
+      "default": "open",
+      "description": "Task workflow status"
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "completed_by_email": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "verified_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "verified_by_email": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "verified_by_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "date_change_reason": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Reason for the latest date change request"
+    },
+    "requested_new_date": {
+      "type": "string",
+      "maxLength": 20,
+      "description": "Requested new end date DD/MM/YYYY"
+    },
+    "requested_new_time": {
+      "type": "string",
+      "maxLength": 10
+    },
+    "notification_time": {
+      "type": "string",
+      "maxLength": 10,
+      "default": "16:00",
+      "description": "Time to send overdue notification HH:MM (default 16:00)"
+    },
+    "overdue_notified": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether overdue notification has been sent"
+    },
+    "ea_emails": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "EA emails to notify (auto-populated from mapping)"
+    }
+  },
+  "required": [
+    "task_name",
+    "assigned_to_email",
+    "director_email",
+    "end_date"
+  ]
+}

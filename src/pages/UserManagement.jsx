@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Users, Loader2, UserPlus, Mail, Search } from 'lucide-react';
 import { auditUserInvited, auditUserRoleChanged } from '@/lib/auditAdminActions';
+import EADirectorMappingPanel from '@/components/admin/EADirectorMappingPanel';
 
 export default function UserManagement() {
   const [user, setUser] = useState(null);
@@ -181,6 +182,13 @@ export default function UserManagement() {
             </div>
           </div>
         </>
+      )}
+
+      {/* EA-Director Mapping */}
+      {!loading && (
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+          <EADirectorMappingPanel />
+        </div>
       )}
 
       {/* Invite dialog */}

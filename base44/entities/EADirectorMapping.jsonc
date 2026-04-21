@@ -1,0 +1,34 @@
+{
+  "name": "EADirectorMapping",
+  "type": "object",
+  "title": "EA-Director Mapping",
+  "description": "Maps Executive Assistants to Directors they support",
+  "properties": {
+    "ea_email": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Email of the Executive Assistant"
+    },
+    "ea_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "director_email": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Email of the Director"
+    },
+    "director_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "ea_email",
+    "director_email"
+  ]
+}

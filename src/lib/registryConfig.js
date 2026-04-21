@@ -94,6 +94,7 @@ export const pageRegistry = [
   { pageKey: 'FMSProcesses', title: 'Processes', moduleKey: 'FMS', icon: GitBranch, roles: ['admin', 'process_designer'], adminOnly: true },
   { pageKey: 'FMSHealthDashboard', title: 'FMS Health', moduleKey: 'FMS', icon: BarChart4, roles: ['admin'], adminOnly: true },
   { pageKey: 'ScheduledTaskManager', title: 'Scheduled Tasks', moduleKey: 'FMS', icon: ClipboardList, roles: ['admin', 'process_controller', 'process_designer', 'user'] },
+  { pageKey: 'EADashboard', title: 'EA Dashboard', moduleKey: 'FMS', icon: ClipboardList, roles: ['admin', 'executive_assistant', 'user'], sortOrder: 7 },
 
   // ─── ADMIN / MASTER DATA ───
   { pageKey: 'MasterData', title: 'Master Data', moduleKey: 'ADMIN', icon: Settings, roles: ['admin', 'production_manager', 'user'] },

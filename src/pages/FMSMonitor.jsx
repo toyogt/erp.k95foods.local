@@ -14,6 +14,7 @@ export default function FMSMonitor() {
   const [search, setSearch] = useState('');
   const [filterProcess, setFilterProcess] = useState('all');
   const [filterTAT, setFilterTAT] = useState('all');
+  const [filterAssignee, setFilterAssignee] = useState('all');
 
   const [detailId, setDetailId] = useState(null);
 
@@ -86,10 +87,24 @@ export default function FMSMonitor() {
     visibleInstances = instances.filter(inst => myProcessIds.includes(inst.process_id));
   }
 
+  // Get unique assignees for filter dropdown
+  const assigneeMap = {};
+  activeStepsRaw.forEach(step => {
+    if (step.assignee_email) {
+      assigneeMap[step.assignee_email] = step.assignee_name || step.assignee_email;
+    }
+  });
+  const assigneeOptions = Object.entries(assigneeMap).map(([email, name]) => ({ email, name }))
+    .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
   // Apply filters
   const filtered = visibleInstances.filter(inst => {
     const step = activeSteps[inst.id];
     if (filterProcess !== 'all' && inst.process_id !== filterProcess) return false;
+
+    if (filterAssignee !== 'all') {
+      if (!step || step.assignee_email !== filterAssignee) return false;
+    }
 
     if (filterTAT !== 'all') {
       if (!step) return filterTAT === 'unknown';
@@ -189,6 +204,16 @@ export default function FMSMonitor() {
             <SelectContent>
               <SelectItem value="all">All Processes</SelectItem>
               {processes.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+
+          <Select value={filterAssignee} onValueChange={setFilterAssignee}>
+            <SelectTrigger className="w-48 h-11 md:h-9">
+              <SelectValue placeholder="All Assignees" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Assignees</SelectItem>
+              {assigneeOptions.map(a => <SelectItem key={a.email} value={a.email}>{a.name}</SelectItem>)}
             </SelectContent>
           </Select>
 

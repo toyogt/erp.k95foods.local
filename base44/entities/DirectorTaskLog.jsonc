@@ -1,0 +1,64 @@
+{
+  "name": "DirectorTaskLog",
+  "type": "object",
+  "title": "Director Task Log",
+  "description": "Audit trail for all task actions",
+  "properties": {
+    "task_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Reference to DirectorTask record ID"
+    },
+    "task_number": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "action": {
+      "type": "string",
+      "enum": [
+        "created",
+        "marked_done",
+        "verified",
+        "reopened",
+        "date_change_requested",
+        "date_change_approved",
+        "date_change_rejected",
+        "edited",
+        "cancelled",
+        "overdue_notification_sent"
+      ],
+      "description": "Type of action performed"
+    },
+    "performed_by_email": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "performed_by_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "details": {
+      "type": "string",
+      "maxLength": 2000,
+      "description": "Description of what happened"
+    },
+    "old_value": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Previous value (for changes)"
+    },
+    "new_value": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "New value (for changes)"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "task_id",
+    "action"
+  ]
+}
