@@ -59,44 +59,40 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Build user list string for AI prompt
-    const userListStr = allUsers
-      .filter(u => u.email)
-      .map(u => `${u.full_name || ''} (${u.email}) [${u.role || 'user'}]`)
-      .join('\n');
-
-    // Get EAs for this director
+    // Get EAs for this director — task will be assigned to the EA
     const eaMappings = await base44.asServiceRole.entities.EADirectorMapping.filter({
       director_email: director.email,
       is_active: true,
     });
+
+    if (!eaMappings || eaMappings.length === 0) {
+      return Response.json({ error: `No EA mapped for director ${director.full_name} (${director.email}). Please set up EA-Director mapping first.` }, { status: 400 });
+    }
+
+    // Use the first mapped EA as the assignee
+    const eaMapping = eaMappings[0];
+    const eaUser = allUsers.find(u => u.email === eaMapping.ea_email);
     const eaEmails = eaMappings.map(m => m.ea_email);
 
     // Today's date for context
     const now = new Date();
     const todayStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
 
-    // Build prompt — same for both audio and text
+    // Build prompt — task is always assigned to the EA
     const basePrompt = `You are a task extraction assistant for a Director in a company.
 Today's date is: ${todayStr}
 
-Here is the list of people in the company:
-${userListStr}
-
 ${audioFileUrl 
-  ? 'The Director has recorded an audio voice command to create a task. Listen to the attached audio file carefully and extract the task details from it.'
-  : `The Director spoke this voice command to create a task:\n\n"${voiceText}"`}
+  ? 'The Director has recorded an audio voice command to create a task for their Executive Assistant. Listen to the attached audio file carefully and extract the task details from it.'
+  : `The Director spoke this voice command to create a task for their Executive Assistant:\n\n"${voiceText}"`}
 
 Extract the following:
 1. task_name: A clear, concise title for the task
 2. task_details: Any additional details mentioned (if none, leave empty)
-3. assigned_to_email: Match the person's name mentioned to the closest user from the list above. If no specific person mentioned, leave empty.
-4. end_date: The deadline in DD/MM/YYYY format. If "today" → use ${todayStr}. If "tomorrow" → calculate. If "next week" → add 7 days. If a specific date mentioned like "25th April" → convert to DD/MM/YYYY using year ${now.getFullYear()}. If no date mentioned, default to 3 days from today.
-5. end_time: Time if mentioned (HH:MM 24h format), otherwise empty
-6. is_important: true if the voice mentions words like "urgent", "important", "critical", "ASAP", "priority", otherwise false
-7. transcription: The full text of what was said (transcribe the audio exactly if audio was provided, or repeat voice_text if text)
-
-IMPORTANT: For assigned_to_email, you MUST pick from the user list above. Try to match by first name, last name, or nickname. If you can't find a match, leave it empty.`;
+3. end_date: The deadline in DD/MM/YYYY format. If "today" → use ${todayStr}. If "tomorrow" → calculate. If "next week" → add 7 days. If a specific date mentioned like "25th April" → convert to DD/MM/YYYY using year ${now.getFullYear()}. If no date mentioned, default to 3 days from today.
+4. end_time: Time if mentioned (HH:MM 24h format), otherwise empty
+5. is_important: true if the voice mentions words like "urgent", "important", "critical", "ASAP", "priority", otherwise false
+6. transcription: The full text of what was said (transcribe the audio exactly if audio was provided, or repeat voice_text if text)`;
 
     const llmParams = {
       prompt: basePrompt,
@@ -105,7 +101,6 @@ IMPORTANT: For assigned_to_email, you MUST pick from the user list above. Try to
         properties: {
           task_name: { type: 'string' },
           task_details: { type: 'string' },
-          assigned_to_email: { type: 'string' },
           end_date: { type: 'string' },
           end_time: { type: 'string' },
           is_important: { type: 'boolean' },
@@ -129,20 +124,8 @@ IMPORTANT: For assigned_to_email, you MUST pick from the user list above. Try to
       }, { status: 400 });
     }
 
-    // Validate assigned_to_email exists
-    let assignee = null;
-    if (aiResult.assigned_to_email) {
-      assignee = allUsers.find(u => u.email === aiResult.assigned_to_email);
-    }
-
-    if (!assignee) {
-      return Response.json({
-        success: false,
-        error: `Could not find the person to assign this task to. Parsed: "${aiResult.assigned_to_email || 'no name detected'}"`,
-        transcription: aiResult.transcription || null,
-        parsed: aiResult,
-      }, { status: 400 });
-    }
+    // Assignee is always the director's EA
+    const assignee = eaUser || { email: eaMapping.ea_email, full_name: eaMapping.ea_name || eaMapping.ea_email };
 
     // Generate task number
     const existing = await base44.asServiceRole.entities.DirectorTask.list('-created_date', 1);
@@ -183,9 +166,8 @@ IMPORTANT: For assigned_to_email, you MUST pick from the user list above. Try to
       timestamp: new Date().toISOString(),
     });
 
-    // Send Telegram notification to assignee
-    const assigneeRecord = allUsers.find(u => u.email === assignee.email);
-    if (assigneeRecord?.telegram_chat_id) {
+    // Send Telegram notification to EA
+    if (eaUser?.telegram_chat_id) {
       const token = Deno.env.get('TELEGRAM_BOT_TOKEN');
       if (token) {
         const msg = `📋 <b>New Task Assigned</b>\n\n` +
@@ -199,7 +181,7 @@ IMPORTANT: For assigned_to_email, you MUST pick from the user list above. Try to
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            chat_id: assigneeRecord.telegram_chat_id,
+            chat_id: eaUser.telegram_chat_id,
             text: msg,
             parse_mode: 'HTML',
           }),
