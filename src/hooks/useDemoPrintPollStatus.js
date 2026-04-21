@@ -68,6 +68,26 @@ export function useDemoPrintPollStatus(printer, enabled = false, pollIntervalMs 
 
       const { printedCount, totalCount, allPrinted, printerPodData } = result;
 
+      // ── EARLY EXIT: Printer already at 0/0 before Phase 1 was ever seen ──
+      // This happens when the page loads AFTER the printer has already finished and reset.
+      // In this case we can never see the total/total snapshot, so treat it as complete.
+      if (!jobCompletionReportedRef.current && printedCount === 0 && totalCount === 0) {
+        console.log('[DEMO-POLL] Printer already reset to 0/0 on first observation — treating as previously completed.');
+        if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+        if (isMountedRef.current) {
+          setStatus(prev => ({
+            ...prev,
+            printedCount: 0,
+            totalCount: 0,
+            allPrinted: true,       // treat as done — operator already printed
+            isPolling: false,
+            pollingComplete: true,
+            error: null,
+          }));
+        }
+        return;
+      }
+
       // ── PHASE 2: After completion was reported, watch for 0/0 printer reset ──
       if (jobCompletionReportedRef.current) {
         if (printedCount === 0 && totalCount === 0) {
@@ -79,7 +99,6 @@ export function useDemoPrintPollStatus(printer, enabled = false, pollIntervalMs 
               ...prev,
               isPolling: false,
               pollingComplete: true,
-              // Keep allPrinted true and frozenPodData intact for UI
             }));
           }
           return;
