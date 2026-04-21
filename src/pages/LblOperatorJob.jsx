@@ -134,7 +134,7 @@ export default function LblOperatorJob() {
         </div>
       )}
       {job.status === 'demo_approved' && <LblBulkPrintStep job={job} user={user} onComplete={refreshJob} mode="start" />}
-      {(job.status === 'bulk_printing' || job.status === 'paused') && <LblBulkPrintStep job={job} user={user} onComplete={refreshJob} mode="control" />}
+      {(job.status === 'bulk_printing' || job.status === 'paused' || job.status === 'bulk_printing_awaiting_printer_reset') && <LblBulkPrintStep job={job} user={user} onComplete={refreshJob} mode="control" />}
       {job.status === 'completed' && <LblCompletionStep job={job} />}
 
       {(['active', 'stock_transferred', 'demo_print_sent', 'demo_print_verified', 'demo_pending_approval', 'demo_approved', 'bulk_printing', 'paused'].includes(job.status) && (user?.role === 'supervisor' || user?.role === 'admin')) && (
