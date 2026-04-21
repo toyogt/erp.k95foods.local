@@ -9,7 +9,7 @@ export default function VoiceShortcutGuide() {
         </div>
         <div>
           <h3 className="font-semibold text-slate-800 text-lg">Voice Task Creation — iPhone Shortcut</h3>
-          <p className="text-sm text-slate-500">Record audio → AI transcribes & creates task automatically</p>
+          <p className="text-sm text-slate-500">Record audio → AI transcribes & creates task for your Executive Assistant automatically</p>
         </div>
       </div>
 
@@ -21,17 +21,17 @@ export default function VoiceShortcutGuide() {
           <div className="bg-white rounded-lg p-3 border border-slate-100">
             <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm mb-2">1</div>
             <p className="font-medium text-slate-700">Record</p>
-            <p className="text-slate-500 text-xs mt-0.5">Tap the shortcut and speak your task, e.g. "Ask Ramesh to prepare MIS report by Friday, urgent"</p>
+            <p className="text-slate-500 text-xs mt-0.5">Tap the shortcut and speak your task, e.g. "Prepare MIS report by Friday, urgent"</p>
           </div>
           <div className="bg-white rounded-lg p-3 border border-slate-100">
             <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 font-bold text-sm mb-2">2</div>
             <p className="font-medium text-slate-700">AI Transcribes & Parses</p>
-            <p className="text-slate-500 text-xs mt-0.5">Audio is sent to the server. AI transcribes it, extracts task name, assignee, deadline, and priority — all in one step</p>
+            <p className="text-slate-500 text-xs mt-0.5">Audio is sent to the server. AI transcribes it, extracts task name, deadline, and priority — all in one step</p>
           </div>
           <div className="bg-white rounded-lg p-3 border border-slate-100">
             <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-600 font-bold text-sm mb-2">3</div>
             <p className="font-medium text-slate-700">Task Created</p>
-            <p className="text-slate-500 text-xs mt-0.5">Task is created instantly and the assignee gets a Telegram notification</p>
+            <p className="text-slate-500 text-xs mt-0.5">Task is created instantly and assigned to your mapped EA. They get a Telegram notification</p>
           </div>
         </div>
       </div>
@@ -96,18 +96,19 @@ export default function VoiceShortcutGuide() {
           <strong>API Key:</strong> Use the VOICE_TASK_API_KEY you set in Dashboard → Settings → Secrets. This key never expires — no need to refresh it.
         </p>
         <p className="text-xs text-amber-700">
-          <strong>Director Email:</strong> Use your login email address so the system knows who is creating the task.
+          <strong>Director Email:</strong> Use your login email address in the <code className="bg-amber-100 px-1 rounded">x-director-email</code> header. The task will be automatically assigned to your mapped EA.
         </p>
       </div>
 
       <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
         <h4 className="font-semibold text-slate-700 text-sm mb-2">Example Voice Commands</h4>
         <div className="space-y-2 text-sm text-slate-600">
-          <p>🗣️ "Ask Ramesh to complete the purchase report by tomorrow"</p>
-          <p>🗣️ "Urgent — tell Priya to send vendor invoices by 28th April"</p>
-          <p>🗣️ "Create a task for Akul to review production data, due next Monday"</p>
-          <p>🗣️ "Assign stock audit to the store manager by end of this week, it's important"</p>
+          <p>🗣️ "Complete the purchase report by tomorrow"</p>
+          <p>🗣️ "Urgent — send vendor invoices by 28th April"</p>
+          <p>🗣️ "Review production data, due next Monday"</p>
+          <p>🗣️ "Stock audit by end of this week, it's important"</p>
         </div>
+        <p className="text-xs text-slate-400 mt-2">No need to say who to assign — tasks automatically go to your EA.</p>
       </div>
     </div>
   );
