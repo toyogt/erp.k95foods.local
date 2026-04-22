@@ -51,6 +51,7 @@ export default function SKUSetup() {
   const [printTemplates, setPrintTemplates] = useState([]);
   const [batchRules, setBatchRules] = useState([]);
   const [artworks, setArtworks] = useState([]);
+  const [boxLabelTemplates, setBoxLabelTemplates] = useState([]);
   const [brands, setBrands] = useState([]);
   const [families, setFamilies] = useState([]);
   const [flavours, setFlavours] = useState([]);
@@ -77,7 +78,7 @@ export default function SKUSetup() {
 
   const loadAll = useCallback(async () => {
     setLoading(true);
-    const [u, s, m, rg, ct, cap, bx, bo, rt, pt, br, art, brnd, fam, flav] = await Promise.all([
+    const [u, s, m, rg, ct, cap, bx, bo, rt, pt, br, art, blt, brnd, fam, flav] = await Promise.all([
       base44.auth.me().catch(() => null),
       base44.entities.ProductMaster.list('-created_date', 500),
       base44.entities.SKUPrintMapping.list('-created_date', 500).catch(() => []),
@@ -90,6 +91,7 @@ export default function SKUSetup() {
       base44.entities.LblPrintTemplate.filter({ is_active: true }, '-created_date', 200).catch(() => []),
       base44.entities.BatchFormatRule.filter({ is_active: true }, '-created_date', 200).catch(() => []),
       base44.entities.LabelArtwork.filter({ is_active: true }, '-created_date', 500).catch(() => []),
+      base44.entities.BoxLabelTemplate.filter({ is_active: true }, '-created_date', 200).catch(() => []),
       base44.entities.BrandMaster.filter({ is_active: true }).catch(() => []),
       base44.entities.ProductFamilyMaster.filter({ is_active: true }).catch(() => []),
       base44.entities.FlavourMaster.filter({ is_active: true }).catch(() => []),
@@ -106,6 +108,7 @@ export default function SKUSetup() {
     setPrintTemplates(pt);
     setBatchRules(br);
     setArtworks(art);
+    setBoxLabelTemplates(blt);
     setBrands(brnd);
     setFamilies(fam);
     setFlavours(flav);
@@ -901,6 +904,29 @@ export default function SKUSetup() {
                 {mappingForm.printer_template_id && (
                   <SKUTemplatePODMappingPreview templateId={mappingForm.printer_template_id} />
                 )}
+              </div>
+
+              {/* Box Label Template — used for stock-transfer / box labels */}
+              <div className="space-y-2 pt-2 border-t border-slate-200">
+                <Label className="text-xs font-medium text-slate-700">Box Label Template</Label>
+                <select
+                  value={skuForm.box_label_template_id || ''}
+                  onChange={e => setSkuForm(f => ({ ...f, box_label_template_id: e.target.value }))}
+                  className="w-full border border-slate-200 rounded-lg px-4 py-3 text-base h-12 bg-white"
+                >
+                  <option value="">— Select box label template —</option>
+                  {boxLabelTemplates.map(t => (
+                    <option key={t.id} value={t.id}>
+                      {t.template_name} ({t.page_width}×{t.page_height} {t.page_unit})
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-slate-500">
+                  Used for box/stock-transfer label printing. Manage templates in{' '}
+                  <a href="/BoxLabelTemplateManager" className="text-blue-600 hover:underline inline-flex items-center gap-1">
+                    Box Label Templates <ExternalLink className="w-3 h-3" />
+                  </a>.
+                </p>
               </div>
 
               </TabsContent>
