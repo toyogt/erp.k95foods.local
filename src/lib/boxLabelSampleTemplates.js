@@ -4,142 +4,100 @@
  */
 import { newElementId } from '@/lib/boxLabelHelpers';
 
-// 6 x 4 inch label, built in mm (152.4 x 101.6 mm)
-// Layout: full-width rows, left label cell + right value cell, thick borders.
-// Coordinates are in mm.
+/**
+ * 6 x 4 inch box label — matches reference image layout.
+ * Coordinates stored in inches; font sizes in points.
+ */
 export function build6x4SampleTemplate() {
-  const PAGE_W = 152.4;
-  const PAGE_H = 101.6;
+  const PAGE_W = 6;    // inch
+  const PAGE_H = 4;    // inch
+  const M = 0.1;       // outer margin (inch)
+  const LABEL_COL = 1.4; // width of the label (left) column
+  const VALUE_X = M + LABEL_COL;
+  const VALUE_W = PAGE_W - M * 2 - LABEL_COL;
 
-  // Row definitions (heights in mm)
+  const elements = [];
+
+  // Rows — heights in inches, total = 3.8 (leaves small margin)
   const rows = [
-    { key: 'item_code',   h: 9,  label: 'Item Code',   field: 'sku.item_code',            labelCol: 30 },
-    { key: 'item_name',   h: 16, label: 'Item Name :', field: 'sku.product_name',         labelCol: 30 },
-    { key: 'batch',       h: 8,  label: 'Batch No.',   field: 'job.batch_no',             labelCol: 30 },
-    { key: 'mfg',         h: 8,  label: 'Manuf Date',  field: 'job.manufacturing_date',   labelCol: 30 },
-    { key: 'exp',         h: 8,  label: 'Expiry Date', field: 'job.expiry_date',          labelCol: 30 },
-    { key: 'pcs_weight',  h: 8,  label: 'No of Pcs',   field: 'sku.bottles_per_box',      labelCol: 30, split: true },
-    { key: 'manuf_by',    h: 9,  label: 'Manuf By',    field: 'sku.manufacturer_name',    labelCol: 30 },
-    { key: 'address',     h: 12, label: 'Address :',   field: 'sku.address_1',            labelCol: 30 },
-    { key: 'phone',       h: 7,  label: 'Phone No.',   field: 'sku.customer_care_phone',  labelCol: 30 },
-    { key: 'fssai',       h: 7,  label: 'FSSAI No.',   field: 'sku.fssai_no',             labelCol: 30 },
+    { label: 'Item Code',   field: 'sku.item_code',          h: 0.35, fs: 14, valueFs: 14 },
+    { label: 'Item Name :', field: 'sku.product_name',       h: 0.60, fs: 13, valueFs: 13, wrap: true },
+    { label: 'Batch No.',   field: 'job.batch_no',           h: 0.30, fs: 11, valueFs: 13 },
+    { label: 'Manuf Date',  field: 'job.manufacturing_date', h: 0.30, fs: 11, valueFs: 13 },
+    { label: 'Expiry Date', field: 'job.expiry_date',        h: 0.30, fs: 11, valueFs: 13 },
+    { label: 'No of Pcs',   field: null,                     h: 0.30, fs: 11, split: true },
+    { label: 'Manuf By',    field: 'sku.manufacturer_name',  h: 0.33, fs: 11, valueFs: 12 },
+    { label: 'Address :',   field: 'sku.address_1',          h: 0.50, fs: 11, valueFs: 11, wrap: true, fullWidth: true },
+    { label: 'Phone No.',   field: 'sku.customer_care_phone',h: 0.26, fs: 11, valueFs: 12 },
+    { label: 'FSSAI No.',   field: 'sku.fssai_no',           h: 0.26, fs: 11, valueFs: 12 },
   ];
 
-  const MARGIN = 2;
-  const elements = [];
-  let y = MARGIN;
+  let y = M;
 
   for (const row of rows) {
-    const labelX = MARGIN;
-    const valueX = MARGIN + row.labelCol;
-    const valueW = PAGE_W - MARGIN * 2 - row.labelCol;
+    const labelH = row.h;
 
-    // Label cell (bold)
+    // Left label cell
     elements.push({
       id: newElementId(),
       type: 'text',
-      x: labelX,
+      x: M,
       y,
-      width: row.labelCol,
-      height: row.h,
+      width: LABEL_COL,
+      height: labelH,
       rotation: 0,
       text_content: row.label,
-      font_size: row.h > 10 ? 12 : 10,
+      font_size: row.fs,
       font_weight: 'bold',
       text_align: 'left',
       color: '#000000',
     });
 
     if (row.split) {
-      // "No of Pcs" | value | "Weight :" | value — 4 cells in one row
-      const cellW = valueW / 3; // value(pcs) | weight-label | weight-value
-      // Pieces value
+      // "No of Pcs | 12 | Weight: | 7.60 Kg" — 4 cells
+      const cellW = VALUE_W / 4;
       elements.push({
-        id: newElementId(),
-        type: 'text',
-        x: valueX,
-        y,
-        width: cellW,
-        height: row.h,
-        rotation: 0,
+        id: newElementId(), type: 'text',
+        x: VALUE_X, y, width: cellW, height: labelH, rotation: 0,
         data_field: 'sku.bottles_per_box',
-        font_size: 11,
-        font_weight: 'bold',
-        text_align: 'left',
-        color: '#000000',
+        font_size: 13, font_weight: 'bold', text_align: 'left', color: '#000000',
       });
-      // Weight label (static)
       elements.push({
-        id: newElementId(),
-        type: 'text',
-        x: valueX + cellW,
-        y,
-        width: cellW,
-        height: row.h,
-        rotation: 0,
+        id: newElementId(), type: 'text',
+        x: VALUE_X + cellW, y, width: cellW * 1.2, height: labelH, rotation: 0,
         text_content: 'Weight :',
-        font_size: 10,
-        font_weight: 'bold',
-        text_align: 'left',
-        color: '#000000',
+        font_size: 11, font_weight: 'bold', text_align: 'left', color: '#000000',
       });
-      // Weight value
       elements.push({
-        id: newElementId(),
-        type: 'text',
-        x: valueX + cellW * 2,
-        y,
-        width: cellW,
-        height: row.h,
-        rotation: 0,
+        id: newElementId(), type: 'text',
+        x: VALUE_X + cellW * 2.2, y, width: cellW * 1.8, height: labelH, rotation: 0,
         data_field: 'sku.gross_weight_kg',
-        font_size: 11,
-        font_weight: 'bold',
-        text_align: 'left',
-        color: '#000000',
+        font_size: 13, font_weight: 'bold', text_align: 'left', color: '#000000',
       });
     } else {
-      // Normal value cell
       elements.push({
         id: newElementId(),
         type: 'text',
-        x: valueX,
+        x: VALUE_X,
         y,
-        width: valueW,
-        height: row.h,
+        width: VALUE_W,
+        height: labelH,
         rotation: 0,
         data_field: row.field,
-        font_size: row.h > 12 ? 12 : 11,
+        font_size: row.valueFs || 12,
         font_weight: 'bold',
         text_align: 'left',
         color: '#000000',
       });
     }
 
-    y += row.h;
-  }
-
-  // Barcode row at bottom
-  const remaining = PAGE_H - y - MARGIN;
-  if (remaining > 6) {
-    elements.push({
-      id: newElementId(),
-      type: 'barcode',
-      x: MARGIN,
-      y: y + 1,
-      width: PAGE_W - MARGIN * 2,
-      height: Math.max(8, remaining - 2),
-      rotation: 0,
-      data_field: 'sku.box_barcode',
-      barcode_type: 'CODE128',
-      color: '#000000',
-    });
+    y += labelH;
   }
 
   return {
     page_unit: 'inch',
-    page_width: 6,
-    page_height: 4,
+    page_width: PAGE_W,
+    page_height: PAGE_H,
     elements,
   };
 }

@@ -14,7 +14,7 @@ export default function BoxLabelCanvas({
   onUpdateElement,
   previewData = null,          // when provided, renders resolved values (preview mode)
   readOnly = false,
-  scale = 2.2,                 // px per mm
+  scale = 1.6,                 // px per mm — fits 6×4 inch in most viewports
 }) {
   const canvasRef = useRef(null);
   const [drag, setDrag] = useState(null);   // { id, offsetX, offsetY }
@@ -137,13 +137,16 @@ export default function BoxLabelCanvas({
             <div
               key={el.id}
               onMouseDown={(e) => onMouseDownElement(e, el)}
-              className={`absolute ${readOnly ? '' : 'cursor-move'} ${selected ? 'ring-2 ring-blue-500' : 'hover:ring-1 hover:ring-slate-300'}`}
+              className={`absolute ${readOnly ? '' : 'cursor-move'} ${selected ? 'ring-2 ring-blue-500 z-10' : 'hover:ring-1 hover:ring-slate-300'}`}
               style={{
                 left: toPx(el.x),
                 top: toPx(el.y),
                 width: toPx(el.width),
                 height: toPx(el.height),
                 transform: el.rotation ? `rotate(${el.rotation}deg)` : undefined,
+                outline: '1px solid #000',
+                outlineOffset: '-1px',
+                boxSizing: 'border-box',
               }}
             >
               {renderContent(el)}
