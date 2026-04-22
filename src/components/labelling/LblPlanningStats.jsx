@@ -9,7 +9,7 @@ const STAT_CONFIG = [
   { key: 'cancelled',  label: 'Cancelled',   icon: XCircle,      accent: 'text-slate-600', bg: 'bg-slate-100', ring: 'ring-slate-500' },
 ];
 
-export default function LblPlanningStats({ stats, activeFilter, onFilterChange }) {
+export default function LblPlanningStats({ stats, activeFilter, onFilterChange, interactive = true }) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 md:gap-3">
       {STAT_CONFIG.map(cfg => {
@@ -20,8 +20,11 @@ export default function LblPlanningStats({ stats, activeFilter, onFilterChange }
           <button
             key={cfg.label}
             type="button"
-            onClick={() => onFilterChange(isActive ? null : cfg.key)}
-            className={`text-left bg-white border rounded-xl p-3 transition-all active:scale-[0.98] ${
+            disabled={!interactive}
+            onClick={() => interactive && onFilterChange(isActive ? null : cfg.key)}
+            className={`text-left bg-white border rounded-xl p-3 transition-all ${
+              interactive ? 'active:scale-[0.98] cursor-pointer' : 'cursor-default'
+            } ${
               isActive
                 ? `border-transparent ring-2 ${cfg.ring} ${cfg.bg}`
                 : 'border-slate-200 hover:border-slate-300'

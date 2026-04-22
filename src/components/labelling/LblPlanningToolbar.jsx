@@ -21,6 +21,10 @@ export default function LblPlanningToolbar({
   mfgDateFrom, mfgDateTo, onMfgDateFromChange, onMfgDateToChange,
   productCode, onProductCodeChange, products = [],
   onResetFilters,
+  caps = {
+    canSearch: true, canSort: true, canFilterByDate: true,
+    canFilterByProduct: true, canFilterByLine: true, canClearFilters: true,
+  },
 }) {
   const allSelected = selectedLineIds.length === 0 || selectedLineIds.length === lines.length;
   const hasAnyDateFilter = entryDateFrom || entryDateTo || mfgDateFrom || mfgDateTo || (productCode && productCode !== ALL_PRODUCTS);
@@ -42,36 +46,45 @@ export default function LblPlanningToolbar({
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-3 md:p-4 space-y-3">
       {/* Row 1: Search + Sort */}
+      {(caps.canSearch || caps.canSort) && (
       <div className="flex flex-col sm:flex-row gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <Input
-            placeholder="Search lines or products…"
-            value={search}
-            onChange={e => onSearchChange(e.target.value)}
-            className="pl-9 h-11 md:h-9"
-          />
-        </div>
-        <div className="flex items-center gap-2 sm:w-72">
-          <ArrowUpDown className="w-4 h-4 text-slate-400 shrink-0" />
-          <Select value={sortBy} onValueChange={onSortChange}>
-            <SelectTrigger className="h-11 md:h-9 text-sm">
-              <SelectValue placeholder="Sort by…" />
-            </SelectTrigger>
-            <SelectContent>
-              {SORT_OPTIONS.map(opt => (
-                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {caps.canSearch && (
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Input
+              placeholder="Search lines or products…"
+              value={search}
+              onChange={e => onSearchChange(e.target.value)}
+              className="pl-9 h-11 md:h-9"
+            />
+          </div>
+        )}
+        {caps.canSort && (
+          <div className="flex items-center gap-2 sm:w-72">
+            <ArrowUpDown className="w-4 h-4 text-slate-400 shrink-0" />
+            <Select value={sortBy} onValueChange={onSortChange}>
+              <SelectTrigger className="h-11 md:h-9 text-sm">
+                <SelectValue placeholder="Sort by…" />
+              </SelectTrigger>
+              <SelectContent>
+                {SORT_OPTIONS.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
+      )}
 
       {/* Row 2: Date filters + Product filter — fully responsive */}
+      {(caps.canFilterByDate || caps.canFilterByProduct) && (
       <div
         className="grid gap-3 pt-3 border-t border-slate-100"
         style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}
       >
+        {caps.canFilterByDate && (
+        <>
         {/* Entry Date Range */}
         <div className="space-y-1.5 min-w-0">
           <label className="text-xs font-medium text-slate-700 flex items-center gap-1.5">
@@ -135,8 +148,11 @@ export default function LblPlanningToolbar({
             </div>
           </div>
         </div>
+        </>
+        )}
 
         {/* Product Code */}
+        {caps.canFilterByProduct && (
         <div className="space-y-1 min-w-0">
           <label className="text-xs font-medium text-slate-700 flex items-center gap-1.5">
             <Package className="w-3.5 h-3.5 text-slate-400" /> Product Code
@@ -158,10 +174,12 @@ export default function LblPlanningToolbar({
             </SelectContent>
           </Select>
         </div>
+        )}
       </div>
+      )}
 
       {/* Clear all filters (search, sort, lines, status, dates, product) */}
-      {hasAnyFilter && (
+      {hasAnyFilter && caps.canClearFilters && (
         <div className="flex justify-end">
           <Button
             variant="outline"
@@ -175,7 +193,7 @@ export default function LblPlanningToolbar({
       )}
 
       {/* Row 3: Line filter pills */}
-      {lines.length > 0 && (
+      {caps.canFilterByLine && lines.length > 0 && (
         <div className="flex items-start gap-2 flex-wrap">
           <span className="text-xs font-medium text-slate-600 mt-2 shrink-0">Lines:</span>
           <div className="flex flex-wrap gap-1.5">

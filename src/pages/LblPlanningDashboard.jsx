@@ -1,7 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { canManagePlans } from '@/lib/labellingHelpers';
+import { getLblDashboardCapabilities } from '@/lib/lblDashboardPermissions';
+import AccessDenied from '@/components/AccessDenied';
 import LblLineJobQueue from '@/components/labelling/LblLineJobQueue';
 import LblPlanningToolbar from '@/components/labelling/LblPlanningToolbar';
 import LblPlanningStats from '@/components/labelling/LblPlanningStats';
@@ -35,6 +36,7 @@ export default function LblPlanningDashboard() {
   const [selectedLineIds, setSelectedLineIds] = useState([]);
   const [statusFilter, setStatusFilter] = useState(null);
   const [user, setUser] = useState(null);
+  const [userLoading, setUserLoading] = useState(true);
   // Date & product filters (YYYY-MM-DD format from native date input)
   const [entryDateFrom, setEntryDateFrom] = useState('');
   const [entryDateTo, setEntryDateTo] = useState('');
@@ -51,9 +53,14 @@ export default function LblPlanningDashboard() {
   };
 
   // Load current user for permission check
-  useState(() => {
-    base44.auth.me().then(setUser).catch(() => {});
-  });
+  useEffect(() => {
+    base44.auth.me()
+      .then(u => { setUser(u); })
+      .catch(() => {})
+      .finally(() => setUserLoading(false));
+  }, []);
+
+  const caps = getLblDashboardCapabilities(user?.role);
 
   const { data: lines = [], isLoading: linesLoading } = useQuery({
     queryKey: ['label-lines'],
@@ -70,7 +77,7 @@ export default function LblPlanningDashboard() {
     queryFn: () => base44.entities.ProductMaster.filter({ is_active: true }),
   });
 
-  const canManage = canManagePlans(user?.role);
+  const canManage = caps.canManageJobs || caps.canEditJob;
 
   // Line filter — if no specific lines selected, show all
   const visibleLines = useMemo(() => {
@@ -147,6 +154,18 @@ export default function LblPlanningDashboard() {
 
   const isLoading = linesLoading || jobsLoading;
 
+  // Gate the entire page while auth loads, and deny unauthorized roles
+  if (userLoading) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <Loader2 className="w-7 h-7 animate-spin text-slate-400" />
+      </div>
+    );
+  }
+  if (!caps.canViewDashboard) {
+    return <AccessDenied page="LblPlanningDashboard" />;
+  }
+
   // Responsive grid columns based on how many lines are visible
   const gridCols = filteredLines.length === 1
     ? 'grid-cols-1'
@@ -167,14 +186,18 @@ export default function LblPlanningDashboard() {
         </div>
       </div>
 
-      {/* Clickable stat cards */}
-      <LblPlanningStats
-        stats={stats}
-        activeFilter={statusFilter}
-        onFilterChange={setStatusFilter}
-      />
+      {/* Clickable stat cards — hidden if role cannot view stats */}
+      {caps.canViewStats && (
+        <LblPlanningStats
+          stats={stats}
+          activeFilter={statusFilter}
+          onFilterChange={caps.canFilterByStatus ? setStatusFilter : () => {}}
+          interactive={caps.canFilterByStatus}
+        />
+      )}
 
-      {/* Toolbar: search + sort + date/product filters + line pills */}
+      {/* Toolbar: search + sort + date/product filters + line pills — hidden if no filter access */}
+      {caps.canUseFilters && (
       <LblPlanningToolbar
         search={search}
         onSearchChange={setSearch}
@@ -198,7 +221,9 @@ export default function LblPlanningDashboard() {
         onProductCodeChange={setProductCode}
         products={products}
         onResetFilters={resetFilters}
+        caps={caps}
       />
+      )}
 
       {/* Loading */}
       {isLoading && (
@@ -233,6 +258,7 @@ export default function LblPlanningDashboard() {
               jobs={filteredJobs}
               products={products}
               canManage={canManage}
+              caps={caps}
               user={user}
               sortBy={sortBy}
             />

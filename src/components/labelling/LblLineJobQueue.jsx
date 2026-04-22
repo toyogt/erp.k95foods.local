@@ -30,11 +30,11 @@ function StatusIcon({ status }) {
   return <PlayCircle className="w-4 h-4 text-blue-500" />;
 }
 
-function JobCard({ job, idx, totalJobs, canManage, isDragging, dragHandleProps, draggableProps, innerRef, onEdit, onDelete, onMoveUp, onMoveDown, onOpen }) {
+function JobCard({ job, idx, totalJobs, canManage, canEdit = canManage, canDelete = canManage, canReorder = canManage, isDragging, dragHandleProps, draggableProps, innerRef, onEdit, onDelete, onMoveUp, onMoveDown, onOpen }) {
   const st = JOB_STATUSES[job.status] || JOB_STATUSES.pending;
   const isTerminal = TERMINAL_STATUSES.includes(job.status);
   const isInProgress = IN_PROGRESS_STATUSES.includes(job.status);
-  const isDraggable = canManage && !isTerminal;
+  const isDraggable = canReorder && !isTerminal;
 
   const cardBg =
     job.status === 'completed' ? 'border-green-200 bg-green-50/40' :
@@ -75,7 +75,7 @@ function JobCard({ job, idx, totalJobs, canManage, isDragging, dragHandleProps, 
         {/* Action buttons */}
         <div className="flex items-center gap-1 shrink-0">
           {/* Move up/down for priority */}
-          {canManage && !isTerminal && (
+          {canReorder && !isTerminal && (
             <>
               <Button
                 size="icon"
@@ -97,25 +97,29 @@ function JobCard({ job, idx, totalJobs, canManage, isDragging, dragHandleProps, 
               >
                 <ArrowDown className="w-3.5 h-3.5" />
               </Button>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-8 w-8 text-slate-400 hover:text-blue-600 hover:bg-blue-50"
-                onClick={() => onEdit(job)}
-                title="Edit job"
-              >
-                <Pencil className="w-3.5 h-3.5" />
-              </Button>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-red-50"
-                onClick={() => onDelete(job)}
-                title="Remove job"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </Button>
             </>
+          )}
+          {canEdit && !isTerminal && (
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8 text-slate-400 hover:text-blue-600 hover:bg-blue-50"
+              onClick={() => onEdit(job)}
+              title="Edit job"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </Button>
+          )}
+          {canDelete && !isTerminal && (
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-red-50"
+              onClick={() => onDelete(job)}
+              title="Remove job"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </Button>
           )}
           <Button
             size="icon"
@@ -172,7 +176,12 @@ function JobCard({ job, idx, totalJobs, canManage, isDragging, dragHandleProps, 
   );
 }
 
-export default function LblLineJobQueue({ line, jobs, products, canManage, user, sortBy = 'priority_asc' }) {
+export default function LblLineJobQueue({ line, jobs, products, canManage, caps, user, sortBy = 'priority_asc' }) {
+  // Derive granular caps from passed caps object (fallback to canManage for backward compat)
+  const canCreate = caps?.canCreateJob ?? canManage;
+  const canEdit = caps?.canEditJob ?? canManage;
+  const canDelete = caps?.canDeleteJob ?? canManage;
+  const canReorder = caps?.canReorderJob ?? canManage;
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [editingJob, setEditingJob] = useState(null);
@@ -297,7 +306,7 @@ export default function LblLineJobQueue({ line, jobs, products, canManage, user,
             <span className="text-green-400">{completedCount} completed</span>
           </div>
         </div>
-        {canManage && (
+        {canCreate && (
           <Button
             size="sm"
             className="h-11 md:h-9 gap-1.5 bg-white text-slate-900 hover:bg-slate-100 font-semibold text-sm px-4"
@@ -333,7 +342,7 @@ export default function LblLineJobQueue({ line, jobs, products, canManage, user,
         {lineJobs.length === 0 && (
           <div className="text-center py-12 text-slate-400">
             <p className="font-medium text-sm">Queue is empty</p>
-            {canManage && (
+            {canCreate && (
               <Button
                 className="mt-3 h-11 gap-2 bg-slate-900 text-white"
                 onClick={() => setAddingJob(true)}
@@ -345,12 +354,12 @@ export default function LblLineJobQueue({ line, jobs, products, canManage, user,
         )}
 
         <DragDropContext onDragEnd={handleDragEnd}>
-          <Droppable droppableId={`line-${line.machine_id}`} isDropDisabled={!canManage}>
+          <Droppable droppableId={`line-${line.machine_id}`} isDropDisabled={!canReorder}>
             {(provided) => (
               <div ref={provided.innerRef} {...provided.droppableProps} className="space-y-2">
                 {lineJobs.map((job, idx) => {
                   const isTerminal = TERMINAL_STATUSES.includes(job.status);
-                  const isDraggable = canManage && !isTerminal;
+                  const isDraggable = canReorder && !isTerminal;
                   return (
                     <Draggable key={job.id} draggableId={job.id} index={idx} isDragDisabled={!isDraggable}>
                       {(provided, snapshot) => (
@@ -359,6 +368,9 @@ export default function LblLineJobQueue({ line, jobs, products, canManage, user,
                           idx={idx}
                           totalJobs={lineJobs.filter(j => !TERMINAL_STATUSES.includes(j.status)).length}
                           canManage={canManage}
+                          canEdit={canEdit}
+                          canDelete={canDelete}
+                          canReorder={canReorder}
                           isDragging={snapshot.isDragging}
                           dragHandleProps={provided.dragHandleProps}
                           draggableProps={provided.draggableProps}
