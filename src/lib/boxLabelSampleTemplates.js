@@ -49,7 +49,7 @@ export function build6x4SampleTemplate() {
         height: row.h,
         rotation: 0,
         font_size: row.valueFs,
-        font_weight: 'bold',
+        font_weight: '800',
         text_align: row.textAlign || 'left',
         color: '#000000',
       };
@@ -76,7 +76,7 @@ export function build6x4SampleTemplate() {
       rotation: 0,
       text_content: row.label,
       font_size: row.labelFs,
-      font_weight: 'bold',
+      font_weight: '800',
       text_align: 'left',
       color: '#000000',
     });
@@ -88,19 +88,19 @@ export function build6x4SampleTemplate() {
         id: newElementId(), type: 'text',
         x: VALUE_X, y, width: cellW * 0.9, height: row.h, rotation: 0,
         data_field: 'sku.bottles_per_box',
-        font_size: 14, font_weight: 'bold', text_align: 'left', color: '#000000',
+        font_size: 14, font_weight: '800', text_align: 'left', color: '#000000',
       });
       elements.push({
         id: newElementId(), type: 'text',
         x: VALUE_X + cellW * 0.9, y, width: cellW * 1.3, height: row.h, rotation: 0,
         text_content: 'Weight :',
-        font_size: 12, font_weight: 'bold', text_align: 'left', color: '#000000',
+        font_size: 12, font_weight: '800', text_align: 'left', color: '#000000',
       });
       elements.push({
         id: newElementId(), type: 'text',
         x: VALUE_X + cellW * 2.2, y, width: cellW * 1.8, height: row.h, rotation: 0,
         data_field: 'computed.gross_weight',
-        font_size: 14, font_weight: 'bold', text_align: 'left', color: '#000000',
+        font_size: 14, font_weight: '800', text_align: 'left', color: '#000000',
       });
     } else {
       elements.push({
@@ -113,7 +113,7 @@ export function build6x4SampleTemplate() {
         rotation: 0,
         data_field: row.field,
         font_size: row.valueFs,
-        font_weight: 'bold',
+        font_weight: '800',
         text_align: 'left',
         color: '#000000',
       });
