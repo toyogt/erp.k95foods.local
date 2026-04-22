@@ -109,11 +109,11 @@ export default function LblJobEditModal({ open, onClose, job, products, planDate
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl w-full">
-        <DialogHeader>
+      <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] p-0 flex flex-col gap-0 overflow-hidden">
+        <DialogHeader className="px-6 pt-6 pb-3 border-b border-slate-100 shrink-0">
           <DialogTitle>{isAdd ? 'Add Product to Plan' : 'Edit Job'}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4 py-2">
+        <div className="space-y-4 py-4 px-6 overflow-y-auto flex-1 min-h-0">
           <div className="space-y-1">
             <Label className="text-xs font-medium text-slate-700">Product *</Label>
             <Select value={selectedProductId} onValueChange={handleProductChange}>
@@ -217,7 +217,7 @@ export default function LblJobEditModal({ open, onClose, job, products, planDate
             </div>
           )}
         </div>
-        <DialogFooter className="gap-2">
+        <DialogFooter className="gap-2 px-6 py-4 border-t border-slate-100 shrink-0 bg-white">
           <Button variant="outline" className="h-11 md:h-9" onClick={onClose}>Cancel</Button>
           <Button className="h-11 md:h-9 gap-2" onClick={handleSubmit} disabled={saving || !form.sku_code || !form.quantity_bottles_planned || !!mfgDateError}>
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
