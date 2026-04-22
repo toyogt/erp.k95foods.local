@@ -138,7 +138,7 @@ export default function BoxLabelTemplateBuilder() {
   };
 
   return (
-    <div className="p-3 md:p-4 lg:p-6 space-y-4 max-w-[1400px] mx-auto">
+    <div className="p-3 md:p-4 lg:p-6 space-y-4">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}><ArrowLeft className="w-4 h-4" /></Button>
         <div className="flex-1">
@@ -157,7 +157,7 @@ export default function BoxLabelTemplateBuilder() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
         {/* Left sidebar: template settings + element props */}
         <div className="space-y-3">
           {/* Template meta */}
@@ -223,8 +223,8 @@ export default function BoxLabelTemplateBuilder() {
           )}
         </div>
 
-        {/* Canvas */}
-        <div className="bg-slate-50 border border-slate-200 rounded-lg overflow-auto min-h-[500px] flex items-start justify-center p-4">
+        {/* Canvas — sticky on desktop so it stays visible while editing */}
+        <div className="bg-slate-50 border border-slate-200 rounded-lg overflow-auto flex items-start justify-center p-4 lg:sticky lg:top-4 lg:h-[calc(100vh-120px)]">
           <BoxLabelCanvas
             template={template}
             elements={template.elements}
@@ -233,6 +233,7 @@ export default function BoxLabelTemplateBuilder() {
             onUpdateElement={updateElement}
             previewData={previewMode ? previewData : null}
             readOnly={previewMode}
+            scale={2.6}
           />
         </div>
       </div>
