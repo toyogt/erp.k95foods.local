@@ -24,7 +24,7 @@ export function build6x4SampleTemplate() {
   // Table rows — total ~4.85", leaving ~1" at the bottom for barcode
   const rows = [
     { label: 'Item Code',    field: 'sku.item_code',           h: 0.40, labelFs: 14, valueFs: 16 },
-    { label: 'Item Name :',  field: 'sku.product_name',        h: 0.70, labelFs: 13, valueFs: 15 },
+    { label: '',             field: 'sku.product_name',        h: 0.80, labelFs: 16, valueFs: 18, fullWidth: true, valueOnly: true, textAlign: 'center' },
     { label: 'Batch No.',    field: 'job.batch_no',            h: 0.38, labelFs: 12, valueFs: 14 },
     { label: 'Manuf Date',   field: 'job.manufacturing_date',  h: 0.38, labelFs: 12, valueFs: 14 },
     { label: 'Expiry Date',  field: 'job.expiry_date',         h: 0.38, labelFs: 12, valueFs: 14 },
@@ -39,8 +39,8 @@ export function build6x4SampleTemplate() {
 
   for (const row of rows) {
     if (row.fullWidth) {
-      // Single-cell row that spans full width (e.g. Address)
-      elements.push({
+      // Single-cell row that spans full width (e.g. Item Name, Address)
+      const el = {
         id: newElementId(),
         type: 'text',
         x: M,
@@ -48,12 +48,19 @@ export function build6x4SampleTemplate() {
         width: PAGE_W - M * 2,
         height: row.h,
         rotation: 0,
-        text_content: `${row.label} {{${row.field}}}`,
         font_size: row.valueFs,
         font_weight: 'bold',
-        text_align: 'left',
+        text_align: row.textAlign || 'left',
         color: '#000000',
-      });
+      };
+      if (row.valueOnly) {
+        // Just the dynamic value, no static label prefix
+        el.data_field = row.field;
+      } else {
+        // Static label + dynamic value template
+        el.text_content = `${row.label} {{${row.field}}}`;
+      }
+      elements.push(el);
       y += row.h;
       continue;
     }
