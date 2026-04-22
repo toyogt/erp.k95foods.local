@@ -14,7 +14,7 @@ export default function BoxLabelCanvas({
   onUpdateElement,
   previewData = null,          // when provided, renders resolved values (preview mode)
   readOnly = false,
-  scale = 1.6,                 // px per mm — fits 6×4 inch in most viewports
+  scale = 1.1,                 // px per mm — fits 4×6 / 6×4 inch in the preview pane
 }) {
   const canvasRef = useRef(null);
   const [drag, setDrag] = useState(null);   // { id, offsetX, offsetY }

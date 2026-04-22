@@ -69,11 +69,11 @@ export default function BoxLabelTemplateBuilder() {
   };
 
   const loadSample6x4 = () => {
-    if (template.elements.length > 0 && !confirm('Replace current elements with the 6×4 sample layout?')) return;
+    if (template.elements.length > 0 && !confirm('Replace current elements with the 4×6 sample layout?')) return;
     const sample = build6x4SampleTemplate();
     setTemplate(t => ({
       ...t,
-      template_name: t.template_name || '6x4 Box Label',
+      template_name: t.template_name || '4x6 Box Label',
       page_unit: sample.page_unit,
       page_width: sample.page_width,
       page_height: sample.page_height,
@@ -208,7 +208,7 @@ export default function BoxLabelTemplateBuilder() {
                 </Button>
               </div>
               <Button variant="outline" className="h-10 w-full gap-2 text-sm mt-2 border-dashed" onClick={loadSample6x4}>
-                <Wand2 className="w-4 h-4" /> Load 6×4 Sample
+                <Wand2 className="w-4 h-4" /> Load 4×6 Sample
               </Button>
             </div>
           )}
