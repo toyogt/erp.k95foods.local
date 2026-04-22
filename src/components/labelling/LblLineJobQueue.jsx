@@ -172,17 +172,39 @@ function JobCard({ job, idx, totalJobs, canManage, isDragging, dragHandleProps, 
   );
 }
 
-export default function LblLineJobQueue({ line, jobs, products, canManage, user }) {
+export default function LblLineJobQueue({ line, jobs, products, canManage, user, sortBy = 'priority_asc' }) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [editingJob, setEditingJob] = useState(null);
   const [addingJob, setAddingJob] = useState(false);
   const [deletingJob, setDeletingJob] = useState(null);
 
+  // Parse DD/MM/YYYY or YYYY-MM-DD into a sortable timestamp
+  const parsePlanDate = (d) => {
+    if (!d) return 0;
+    if (d.includes('/')) {
+      const [day, mon, yr] = d.split('/');
+      return new Date(`${yr}-${mon}-${day}`).getTime() || 0;
+    }
+    return new Date(d).getTime() || 0;
+  };
+
   // Jobs store line_id as the Machine record's `id` (not machine_id field)
   const lineJobs = jobs
     .filter(j => j.line_id === line.id || j.line_id === line.machine_id)
-    .sort((a, b) => (a.priority_order || 999) - (b.priority_order || 999));
+    .sort((a, b) => {
+      if (sortBy === 'priority_desc') {
+        return (b.priority_order || 0) - (a.priority_order || 0);
+      }
+      if (sortBy === 'date_desc') {
+        return parsePlanDate(b.plan_date) - parsePlanDate(a.plan_date);
+      }
+      if (sortBy === 'date_asc') {
+        return parsePlanDate(a.plan_date) - parsePlanDate(b.plan_date);
+      }
+      // Default: priority_asc
+      return (a.priority_order || 999) - (b.priority_order || 999);
+    });
 
   const reorderAndSave = async (reordered) => {
     await Promise.all(

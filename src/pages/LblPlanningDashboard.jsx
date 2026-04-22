@@ -2,12 +2,22 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Input } from '@/components/ui/input';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { canManagePlans, JOB_STATUSES } from '@/lib/labellingHelpers';
 import LblLineJobQueue from '@/components/labelling/LblLineJobQueue';
-import { Search, Loader2 } from 'lucide-react';
+import { Search, Loader2, ArrowUpDown } from 'lucide-react';
+import moment from 'moment';
+
+const SORT_OPTIONS = [
+  { value: 'priority_asc', label: 'Priority (High → Low)' },
+  { value: 'priority_desc', label: 'Priority (Low → High)' },
+  { value: 'date_desc', label: 'Newest First (Plan Date)' },
+  { value: 'date_asc', label: 'Oldest First (Plan Date)' },
+];
 
 export default function LblPlanningDashboard() {
   const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState('priority_asc');
   const [user, setUser] = useState(null);
 
   // Load current user for permission check
@@ -75,15 +85,30 @@ export default function LblPlanningDashboard() {
         ))}
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-        <Input
-          placeholder="Search lines..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="pl-9 h-11 md:h-9"
-        />
+      {/* Search + Sort */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1 sm:max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Input
+            placeholder="Search lines..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="pl-9 h-11 md:h-9"
+          />
+        </div>
+        <div className="flex items-center gap-2 sm:w-64">
+          <ArrowUpDown className="w-4 h-4 text-slate-400 shrink-0" />
+          <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger className="h-11 md:h-9 text-sm">
+              <SelectValue placeholder="Sort by..." />
+            </SelectTrigger>
+            <SelectContent>
+              {SORT_OPTIONS.map(opt => (
+                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Loading */}
@@ -112,6 +137,7 @@ export default function LblPlanningDashboard() {
               products={products}
               canManage={canManage}
               user={user}
+              sortBy={sortBy}
             />
           ))}
         </div>
