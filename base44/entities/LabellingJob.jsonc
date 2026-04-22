@@ -30,6 +30,11 @@
       "type": "string",
       "maxLength": 50
     },
+    "entry_date": {
+      "type": "string",
+      "maxLength": 20,
+      "description": "Date the job was entered/added to the plan DD/MM/YYYY \u2014 defaults to today, editable only with permission"
+    },
     "manufacturing_date": {
       "type": "string",
       "maxLength": 20,

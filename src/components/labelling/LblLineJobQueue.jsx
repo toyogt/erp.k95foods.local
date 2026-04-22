@@ -172,7 +172,7 @@ function JobCard({ job, idx, totalJobs, canManage, isDragging, dragHandleProps, 
   );
 }
 
-export default function LblLineJobQueue({ line, jobs, products, canManage }) {
+export default function LblLineJobQueue({ line, jobs, products, canManage, user }) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [editingJob, setEditingJob] = useState(null);
@@ -367,6 +367,7 @@ export default function LblLineJobQueue({ line, jobs, products, canManage }) {
           products={products}
           onSave={handleAddJob}
           mode="add"
+          user={user}
         />
       )}
 
@@ -379,6 +380,7 @@ export default function LblLineJobQueue({ line, jobs, products, canManage }) {
           products={products}
           onSave={handleEditJob}
           mode="edit"
+          user={user}
         />
       )}
 

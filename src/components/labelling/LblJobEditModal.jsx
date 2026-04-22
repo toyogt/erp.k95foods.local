@@ -4,22 +4,48 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import LblBatchSelect from '@/components/labelling/LblBatchSelect';
 import { generateBatchNumber } from '@/lib/batchNumberGenerator';
-import { Hash, Info } from 'lucide-react';
+import { canManagePlans } from '@/lib/labellingHelpers';
+import { Hash, Info, Lock } from 'lucide-react';
 import { Loader2, Save } from 'lucide-react';
 import moment from 'moment';
 
 const BOTTLES_PER_CASE = 12;
 
-export default function LblJobEditModal({ open, onClose, job, products, planDate, onSave, mode = 'edit' }) {
+export default function LblJobEditModal({ open, onClose, job, products, planDate, onSave, mode = 'edit', user }) {
   const isAdd = mode === 'add';
-  const emptyJob = { sku_code: '', product_name: '', bottle_type: '', mrp: '', manufacturing_date: planDate || '', batch_no: '', quantity_bottles_planned: 0, quantity_cases_planned: 0 };
+  const todayStr = moment().format('YYYY-MM-DD');
+  const todayDisplay = moment().format('DD/MM/YYYY');
+  const canEditEntryDate = canManagePlans(user?.role);
+  const emptyJob = { sku_code: '', product_name: '', bottle_type: '', mrp: '', entry_date: todayDisplay, manufacturing_date: planDate || '', batch_no: '', quantity_bottles_planned: 0, quantity_cases_planned: 0 };
   const [form, setForm] = useState(job || emptyJob);
   const [casesManual, setCasesManual] = useState(false);
   const [saving, setSaving] = useState(false);
   const [mfgDateError, setMfgDateError] = useState('');
-  const todayStr = moment().format('YYYY-MM-DD');
+  const [entryDateUnlocked, setEntryDateUnlocked] = useState(false);
+
+  // Convert stored DD/MM/YYYY to YYYY-MM-DD for native date input
+  const entryDateForInput = useMemo(() => {
+    const v = form.entry_date || '';
+    if (!v) return '';
+    if (v.includes('/')) {
+      const [d, m, y] = v.split('/');
+      return `${y}-${m}-${d}`;
+    }
+    return v;
+  }, [form.entry_date]);
+
+  const handleEntryDateChange = (value) => {
+    // value from input is YYYY-MM-DD — store as DD/MM/YYYY
+    if (!value) {
+      setForm(f => ({ ...f, entry_date: '' }));
+      return;
+    }
+    const formatted = moment(value).format('DD/MM/YYYY');
+    setForm(f => ({ ...f, entry_date: formatted }));
+  };
 
   const handleProductChange = (productId) => {
     const prod = products.find(p => p.id === productId);
@@ -111,6 +137,38 @@ export default function LblJobEditModal({ open, onClose, job, products, planDate
               <Input type="number" value={form.quantity_cases_planned || ''} onChange={e => handleCasesChange(e.target.value)} placeholder="0" className="h-11 md:h-9" />
               <p className="text-xs text-slate-500">{casesManual ? 'Manual entry' : `Auto: ÷${BOTTLES_PER_CASE}`}</p>
             </div>
+          </div>
+
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-medium text-slate-700 flex items-center gap-1.5">
+                Entry Date
+                {!entryDateUnlocked && <Lock className="w-3 h-3 text-slate-400" />}
+              </Label>
+              {canEditEntryDate && (
+                <label className="flex items-center gap-1.5 cursor-pointer text-xs text-slate-600">
+                  <Checkbox
+                    checked={entryDateUnlocked}
+                    onCheckedChange={(v) => setEntryDateUnlocked(!!v)}
+                  />
+                  Edit entry date
+                </label>
+              )}
+            </div>
+            <Input
+              type="date"
+              value={entryDateForInput}
+              readOnly={!entryDateUnlocked}
+              onChange={e => handleEntryDateChange(e.target.value)}
+              className={`h-11 md:h-9 ${!entryDateUnlocked ? 'bg-slate-50 cursor-not-allowed text-slate-700' : ''}`}
+            />
+            <p className="text-xs text-slate-500">
+              {entryDateUnlocked
+                ? 'You can change the entry date.'
+                : canEditEntryDate
+                  ? 'Defaults to today. Tick “Edit entry date” to change.'
+                  : 'Locked to today. Only a supervisor or admin can change this.'}
+            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">

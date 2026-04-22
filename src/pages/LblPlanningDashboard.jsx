@@ -111,6 +111,7 @@ export default function LblPlanningDashboard() {
               jobs={allJobs}
               products={products}
               canManage={canManage}
+              user={user}
             />
           ))}
         </div>
