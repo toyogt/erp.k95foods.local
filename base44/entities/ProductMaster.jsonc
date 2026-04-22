@@ -60,6 +60,11 @@
       "type": "number",
       "minimum": 0
     },
+    "filled_bottle_weight_kg": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Weight of a single filled bottle in kg. Used to auto-compute box gross weight = (bottles_per_box \u00d7 filled_bottle_weight_kg) + box empty weight."
+    },
     "hsn_code": {
       "type": "string",
       "maxLength": 20,

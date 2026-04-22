@@ -24,7 +24,7 @@ function genId(prefix) { return prefix + '-' + Date.now().toString(36).toUpperCa
 
 const EMPTY_SKU = {
   item_code: '', product_name: '', brand_name: '', product_family: '', flavour: '',
-  ml_per_bottle: '', mrp: '', mrp_box: '', shelf_life_days: '', shelf_life_unit: 'days', bottle_type: '',
+  ml_per_bottle: '', mrp: '', mrp_box: '', gross_weight_kg: '', filled_bottle_weight_kg: '', shelf_life_days: '', shelf_life_unit: 'days', bottle_type: '',
   recipe_group_id: '', default_recipe_option_id: '', box_type_id: '', bottles_per_box: '',
   default_artwork_id: '', is_active: false, is_trial_pack: false,
   fssai_no: '', manufacturer_name: '', address_1: '', address_2: '',
@@ -260,7 +260,7 @@ export default function SKUSetup() {
     // Build SKU payload
     const skuPayload = { ...skuForm };
     if (bt) skuPayload.bottles_per_box = bt.bottles_per_box;
-    ['ml_per_bottle','bottles_per_box','mrp','mrp_box','shelf_life_days','gross_weight_kg'].forEach(k => {
+    ['ml_per_bottle','bottles_per_box','mrp','mrp_box','shelf_life_days','gross_weight_kg','filled_bottle_weight_kg'].forEach(k => {
       if (skuPayload[k] !== '' && skuPayload[k] !== undefined && !isNaN(skuPayload[k])) skuPayload[k] = Number(skuPayload[k]);
       else if (skuPayload[k] === '') delete skuPayload[k];
     });
@@ -599,7 +599,29 @@ export default function SKUSetup() {
                     </div>
                   )}
 
-                  <Field label="Gross Weight per Box (kg)" info="Total weight of a filled box (used for logistics weight calculation)">
+                  <Field label="Filled Bottle Weight (kg)" info="Weight of a single filled bottle. Used to auto-compute box gross weight on labels = (bottles per box × filled bottle weight) + empty box weight.">
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      value={skuForm.filled_bottle_weight_kg || ''}
+                      onChange={e => setSkuForm(f => ({ ...f, filled_bottle_weight_kg: e.target.value.replace(/[^0-9.]/g, '') }))}
+                      placeholder="e.g. 0.62"
+                      className="h-12 text-base"
+                    />
+                    {skuForm.filled_bottle_weight_kg && skuForm.bottles_per_box && (
+                      <p className="text-xs text-slate-500 mt-1">
+                        Computed box weight: {(
+                          Number(skuForm.filled_bottle_weight_kg) * Number(skuForm.bottles_per_box)
+                          + Number(selectedBoxType?.empty_weight_kg || 0)
+                        ).toFixed(2)} kg
+                        {selectedBoxType?.empty_weight_kg
+                          ? ` (${skuForm.bottles_per_box} × ${skuForm.filled_bottle_weight_kg} + ${selectedBoxType.empty_weight_kg} empty box)`
+                          : ' (add empty box weight in Box Type for full calculation)'}
+                      </p>
+                    )}
+                  </Field>
+
+                  <Field label="Gross Weight per Box (kg)" info="Optional override / fallback used when filled bottle weight is not set. Also used for logistics weight calculation.">
                     <Input
                       type="text"
                       inputMode="decimal"
