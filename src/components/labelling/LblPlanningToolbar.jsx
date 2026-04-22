@@ -53,14 +53,20 @@ export default function LblPlanningToolbar({
         </div>
       </div>
 
-      {/* Row 2: Date filters + Product filter */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 pt-3 border-t border-slate-100">
+      {/* Row 2: Date filters + Product filter — fully responsive */}
+      <div
+        className="grid gap-3 pt-3 border-t border-slate-100"
+        style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}
+      >
         {/* Entry Date Range */}
         <div className="space-y-1 min-w-0">
           <label className="text-xs font-medium text-slate-700 flex items-center gap-1.5">
             <Calendar className="w-3.5 h-3.5 text-slate-400" /> Entry Date (Job Created)
           </label>
-          <div className="grid grid-cols-2 gap-2">
+          <div
+            className="grid gap-2"
+            style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))' }}
+          >
             <Input
               type="date"
               value={entryDateFrom || ''}
@@ -83,7 +89,10 @@ export default function LblPlanningToolbar({
           <label className="text-xs font-medium text-slate-700 flex items-center gap-1.5">
             <Calendar className="w-3.5 h-3.5 text-slate-400" /> Manufacturing Date
           </label>
-          <div className="grid grid-cols-2 gap-2">
+          <div
+            className="grid gap-2"
+            style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))' }}
+          >
             <Input
               type="date"
               value={mfgDateFrom || ''}
