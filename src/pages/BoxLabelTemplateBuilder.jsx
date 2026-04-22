@@ -10,7 +10,8 @@ import { toast } from '@/components/ui/use-toast';
 import BoxLabelCanvas from '@/components/labelling/BoxLabelCanvas';
 import BoxLabelElementPanel from '@/components/labelling/BoxLabelElementPanel';
 import { buildDefaultElement, generateTemplateId } from '@/lib/boxLabelHelpers';
-import { ArrowLeft, Type, Image as ImageIcon, Barcode, Save, Loader2, Eye } from 'lucide-react';
+import { build6x4SampleTemplate } from '@/lib/boxLabelSampleTemplates';
+import { ArrowLeft, Type, Image as ImageIcon, Barcode, Save, Loader2, Eye, Wand2 } from 'lucide-react';
 
 export default function BoxLabelTemplateBuilder() {
   const navigate = useNavigate();
@@ -64,6 +65,20 @@ export default function BoxLabelTemplateBuilder() {
 
   const deleteElement = (elId) => {
     setTemplate(t => ({ ...t, elements: t.elements.filter(e => e.id !== elId) }));
+    setSelectedId(null);
+  };
+
+  const loadSample6x4 = () => {
+    if (template.elements.length > 0 && !confirm('Replace current elements with the 6×4 sample layout?')) return;
+    const sample = build6x4SampleTemplate();
+    setTemplate(t => ({
+      ...t,
+      template_name: t.template_name || '6x4 Box Label',
+      page_unit: sample.page_unit,
+      page_width: sample.page_width,
+      page_height: sample.page_height,
+      elements: sample.elements,
+    }));
     setSelectedId(null);
   };
 
@@ -192,6 +207,9 @@ export default function BoxLabelTemplateBuilder() {
                   <Barcode className="w-4 h-4" /> Barcode
                 </Button>
               </div>
+              <Button variant="outline" className="h-10 w-full gap-2 text-sm mt-2 border-dashed" onClick={loadSample6x4}>
+                <Wand2 className="w-4 h-4" /> Load 6×4 Sample
+              </Button>
             </div>
           )}
 
