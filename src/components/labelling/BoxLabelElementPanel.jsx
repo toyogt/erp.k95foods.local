@@ -84,6 +84,8 @@ export default function BoxLabelElementPanel({ element, onChange, onDelete }) {
                 <SelectContent>
                   <SelectItem value="normal">Normal</SelectItem>
                   <SelectItem value="bold">Bold</SelectItem>
+                  <SelectItem value="800">Extra Bold</SelectItem>
+                  <SelectItem value="900">Black</SelectItem>
                 </SelectContent>
               </Select>
             </div>

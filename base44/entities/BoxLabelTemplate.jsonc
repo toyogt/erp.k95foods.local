@@ -100,9 +100,12 @@
             "type": "string",
             "enum": [
               "normal",
-              "bold"
+              "bold",
+              "800",
+              "900"
             ],
-            "default": "normal"
+            "default": "normal",
+            "description": "Text weight: normal, bold, 800 (Extra Bold), or 900 (Black)"
           },
           "text_align": {
             "type": "string",
