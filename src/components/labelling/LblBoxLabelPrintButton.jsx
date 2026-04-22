@@ -14,7 +14,7 @@ import { Printer, Loader2 } from 'lucide-react';
 import { resolveElementValue } from '@/lib/boxLabelHelpers';
 import moment from 'moment';
 
-function buildPreviewData(job, sku, overrides = {}) {
+function buildPreviewData(job, sku, boxType, overrides = {}) {
   // Compute expiry from MFG + shelf life
   let expiry = '';
   if (job?.manufacturing_date && sku?.shelf_life_days) {
@@ -24,6 +24,22 @@ function buildPreviewData(job, sku, overrides = {}) {
       expiry = m.add(Number(sku.shelf_life_days), unit).format('DD/MM/YYYY');
     }
   }
+
+  // Compute gross weight of the full box:
+  //   (bottles per box × filled bottle weight) + empty box weight
+  // Falls back to sku.gross_weight_kg if components are missing.
+  let grossWeight = '';
+  const bottlesPerBox = Number(sku?.bottles_per_box) || 0;
+  const bottleWeightKg = Number(sku?.filled_bottle_weight_kg) || 0;
+  const boxEmptyKg = Number(boxType?.empty_weight_kg) || 0;
+  if (bottlesPerBox && bottleWeightKg) {
+    grossWeight = (bottlesPerBox * bottleWeightKg + boxEmptyKg).toFixed(2) + ' Kg';
+  } else if (sku?.gross_weight_kg) {
+    grossWeight = Number(sku.gross_weight_kg).toFixed(2) + ' Kg';
+  }
+
+  const fullAddress = [sku?.address_1, sku?.address_2].filter(Boolean).join(', ');
+
   return {
     job: {
       ...job,
@@ -33,6 +49,10 @@ function buildPreviewData(job, sku, overrides = {}) {
       stock_transfer_qty: overrides.stock_transfer_qty ?? job?.stock_transfer_qty ?? job?.quantity_bottles_planned ?? '',
     },
     sku: sku || {},
+    computed: {
+      gross_weight: grossWeight,
+      full_address: fullAddress,
+    },
   };
 }
 
@@ -190,13 +210,18 @@ export default function LblBoxLabelPrintButton({ job, overrides, size = 'md', va
       return;
     }
     setLoading(true);
-    const template = await base44.entities.BoxLabelTemplate.get(templateId).catch(() => null);
+    const [template, boxTypes] = await Promise.all([
+      base44.entities.BoxLabelTemplate.get(templateId).catch(() => null),
+      sku.box_type_id
+        ? base44.entities.BoxType.filter({ box_type_id: sku.box_type_id }).catch(() => [])
+        : Promise.resolve([]),
+    ]);
     setLoading(false);
     if (!template) {
       toast({ title: 'Template not found', description: 'The mapped Box Label Template is missing or inactive.', variant: 'destructive' });
       return;
     }
-    const data = buildPreviewData(job, sku, overrides);
+    const data = buildPreviewData(job, sku, boxTypes[0], overrides);
     openPrintWindow(template, template.elements || [], data);
   };
 

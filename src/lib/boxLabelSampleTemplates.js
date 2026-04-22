@@ -30,7 +30,7 @@ export function build6x4SampleTemplate() {
     { label: 'Expiry Date',  field: 'job.expiry_date',         h: 0.38, labelFs: 12, valueFs: 14 },
     { label: 'No of Pcs',    field: null,                      h: 0.38, labelFs: 12, split: true },
     { label: 'Manuf By',     field: 'sku.manufacturer_name',   h: 0.38, labelFs: 12, valueFs: 13 },
-    { label: 'Address :',    field: 'sku.address_1',           h: 0.55, labelFs: 12, valueFs: 12, fullWidth: true },
+    { label: 'Address :',    field: 'computed.full_address',   h: 0.55, labelFs: 12, valueFs: 12, fullWidth: true },
     { label: 'Phone No.',    field: 'sku.customer_care_phone', h: 0.35, labelFs: 12, valueFs: 13 },
     { label: 'FSSAI No.',    field: 'sku.fssai_no',            h: 0.35, labelFs: 12, valueFs: 13 },
   ];
@@ -92,7 +92,7 @@ export function build6x4SampleTemplate() {
       elements.push({
         id: newElementId(), type: 'text',
         x: VALUE_X + cellW * 2.2, y, width: cellW * 1.8, height: row.h, rotation: 0,
-        data_field: 'sku.gross_weight_kg',
+        data_field: 'computed.gross_weight',
         font_size: 14, font_weight: 'bold', text_align: 'left', color: '#000000',
       });
     } else {

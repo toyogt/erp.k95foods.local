@@ -32,6 +32,11 @@ export const DATA_FIELDS = [
   { key: 'sku.customer_care_phone',   label: 'Customer Care Phone'  },
   { key: 'sku.product_barcode',       label: 'Product Barcode'      },
   { key: 'sku.box_barcode',           label: 'Box Barcode'          },
+  { key: 'sku.gross_weight_kg',       label: 'Gross Weight (Box)'   },
+
+  // Computed / derived fields — resolved at print time
+  { key: 'computed.gross_weight',     label: 'Computed Box Weight (e.g. "7.60 Kg")' },
+  { key: 'computed.full_address',     label: 'Address 1 + Address 2' },
 ];
 
 /**
