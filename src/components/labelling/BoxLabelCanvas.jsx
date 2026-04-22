@@ -14,7 +14,7 @@ export default function BoxLabelCanvas({
   onUpdateElement,
   previewData = null,          // when provided, renders resolved values (preview mode)
   readOnly = false,
-  scale = 3,                   // px per mm (adjust for readability)
+  scale = 2,                   // px per mm (adjust for readability)
 }) {
   const canvasRef = useRef(null);
   const [drag, setDrag] = useState(null);   // { id, offsetX, offsetY }
