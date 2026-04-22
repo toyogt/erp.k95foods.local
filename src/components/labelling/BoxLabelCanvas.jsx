@@ -14,19 +14,21 @@ export default function BoxLabelCanvas({
   onUpdateElement,
   previewData = null,          // when provided, renders resolved values (preview mode)
   readOnly = false,
-  scale = 2,                   // px per mm (adjust for readability)
+  scale = 2.2,                 // px per mm
 }) {
   const canvasRef = useRef(null);
   const [drag, setDrag] = useState(null);   // { id, offsetX, offsetY }
   const [resize, setResize] = useState(null); // { id, startX, startY, startW, startH }
 
   const unit = template.page_unit || 'mm';
-  const pageW = unitToPx(template.page_width, unit) * (scale / (unit === 'mm' ? 3.7795275591 : 96));
-  const pageH = unitToPx(template.page_height, unit) * (scale / (unit === 'mm' ? 3.7795275591 : 96));
+  // Normalize: coords in template may be mm or inch — always render in mm-equivalent px.
+  const unitToMm = unit === 'inch' ? 25.4 : 1;
+  const pageW = template.page_width * unitToMm * scale;
+  const pageH = template.page_height * unitToMm * scale;
 
   // Convert element coords (unit) → canvas px
-  const toPx = (v) => v * scale * (unit === 'mm' ? 1 : 25.4);
-  const fromPx = (v) => v / (scale * (unit === 'mm' ? 1 : 25.4));
+  const toPx = (v) => v * unitToMm * scale;
+  const fromPx = (v) => v / (unitToMm * scale);
 
   const onMouseDownElement = (e, el) => {
     if (readOnly) return;
@@ -79,10 +81,14 @@ export default function BoxLabelCanvas({
     const text = previewData ? resolveElementValue(el, previewData) : (el.data_field ? `{${el.data_field}}` : (el.text_content || ''));
 
     if (el.type === 'text') {
+      // el.font_size is in points; canvas is mm-based. Convert pt→mm (1pt=0.3528mm) then to px.
+      const fontPx = el.font_size
+        ? el.font_size * 0.3528 * scale
+        : Math.min(toPx(el.height) * 0.6, 18);
       return (
         <div
           style={{
-            fontSize: toPx(el.height * 0.5),
+            fontSize: fontPx,
             fontWeight: el.font_weight || 'normal',
             textAlign: el.text_align || 'left',
             color: el.color || '#000',
