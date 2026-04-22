@@ -1,7 +1,7 @@
 import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Search, ArrowUpDown, X } from 'lucide-react';
+import { Search, ArrowUpDown, X, Calendar, Package, RotateCcw } from 'lucide-react';
 
 const SORT_OPTIONS = [
   { value: 'priority_asc', label: 'Priority (High → Low)' },
@@ -10,13 +10,20 @@ const SORT_OPTIONS = [
   { value: 'date_asc', label: 'Oldest First (Plan Date)' },
 ];
 
+const ALL_PRODUCTS = '__all__';
+
 export default function LblPlanningToolbar({
   search, onSearchChange,
   sortBy, onSortChange,
   lines, selectedLineIds, onToggleLine, onSelectAllLines,
   statusFilter, onClearStatusFilter,
+  entryDateFrom, entryDateTo, onEntryDateFromChange, onEntryDateToChange,
+  mfgDateFrom, mfgDateTo, onMfgDateFromChange, onMfgDateToChange,
+  productCode, onProductCodeChange, products = [],
+  onResetFilters,
 }) {
   const allSelected = selectedLineIds.length === 0 || selectedLineIds.length === lines.length;
+  const hasAnyDateFilter = entryDateFrom || entryDateTo || mfgDateFrom || mfgDateTo || (productCode && productCode !== ALL_PRODUCTS);
 
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-3 md:p-4 space-y-3">
@@ -46,7 +53,95 @@ export default function LblPlanningToolbar({
         </div>
       </div>
 
-      {/* Row 2: Line filter pills */}
+      {/* Row 2: Date filters + Product filter */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 pt-2 border-t border-slate-100">
+        {/* Entry Date Range */}
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-slate-700 flex items-center gap-1.5">
+            <Calendar className="w-3.5 h-3.5 text-slate-400" /> Entry Date (Job Created)
+          </label>
+          <div className="flex gap-1.5 items-center">
+            <Input
+              type="date"
+              value={entryDateFrom || ''}
+              onChange={e => onEntryDateFromChange(e.target.value)}
+              className="h-11 md:h-9 text-xs"
+              placeholder="From"
+            />
+            <span className="text-xs text-slate-400">to</span>
+            <Input
+              type="date"
+              value={entryDateTo || ''}
+              onChange={e => onEntryDateToChange(e.target.value)}
+              className="h-11 md:h-9 text-xs"
+              placeholder="To"
+            />
+          </div>
+        </div>
+
+        {/* Manufacturing Date Range */}
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-slate-700 flex items-center gap-1.5">
+            <Calendar className="w-3.5 h-3.5 text-slate-400" /> Manufacturing Date
+          </label>
+          <div className="flex gap-1.5 items-center">
+            <Input
+              type="date"
+              value={mfgDateFrom || ''}
+              onChange={e => onMfgDateFromChange(e.target.value)}
+              className="h-11 md:h-9 text-xs"
+              placeholder="From"
+            />
+            <span className="text-xs text-slate-400">to</span>
+            <Input
+              type="date"
+              value={mfgDateTo || ''}
+              onChange={e => onMfgDateToChange(e.target.value)}
+              className="h-11 md:h-9 text-xs"
+              placeholder="To"
+            />
+          </div>
+        </div>
+
+        {/* Product Code */}
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-slate-700 flex items-center gap-1.5">
+            <Package className="w-3.5 h-3.5 text-slate-400" /> Product Code
+          </label>
+          <Select value={productCode || ALL_PRODUCTS} onValueChange={v => onProductCodeChange(v === ALL_PRODUCTS ? '' : v)}>
+            <SelectTrigger className="h-11 md:h-9 text-sm">
+              <SelectValue placeholder="All products" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL_PRODUCTS}>All products</SelectItem>
+              {products.map(p => {
+                const code = p.item_code || p.id;
+                return (
+                  <SelectItem key={p.id} value={code}>
+                    {code} — {p.product_name || p.item_name}
+                  </SelectItem>
+                );
+              })}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Reset button when any date/product filter is active */}
+      {hasAnyDateFilter && (
+        <div className="flex justify-end">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onResetFilters}
+            className="h-8 text-xs text-slate-600 hover:text-slate-900 gap-1.5"
+          >
+            <RotateCcw className="w-3 h-3" /> Reset date & product filters
+          </Button>
+        </div>
+      )}
+
+      {/* Row 3: Line filter pills */}
       {lines.length > 0 && (
         <div className="flex items-start gap-2 flex-wrap">
           <span className="text-xs font-medium text-slate-600 mt-2 shrink-0">Lines:</span>

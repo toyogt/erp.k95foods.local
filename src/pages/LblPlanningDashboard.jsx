@@ -10,7 +10,19 @@ import { Loader2, Factory } from 'lucide-react';
 const STATUS_FILTER_LABELS = {
   pending: 'Pending',
   active: 'In Progress',
+  on_hold: 'On Hold',
   completed: 'Completed',
+  cancelled: 'Cancelled',
+};
+
+// Parse DD/MM/YYYY or YYYY-MM-DD to a YYYY-MM-DD string for comparison
+const normalizeDate = (d) => {
+  if (!d) return '';
+  if (d.includes('/')) {
+    const [day, mon, yr] = d.split('/');
+    return `${yr}-${mon?.padStart(2, '0')}-${day?.padStart(2, '0')}`;
+  }
+  return d;
 };
 
 const IN_PROGRESS_STATUSES = ['active', 'stock_transferred', 'demo_print_sent', 'demo_print_verified',
@@ -23,6 +35,20 @@ export default function LblPlanningDashboard() {
   const [selectedLineIds, setSelectedLineIds] = useState([]);
   const [statusFilter, setStatusFilter] = useState(null);
   const [user, setUser] = useState(null);
+  // Date & product filters (YYYY-MM-DD format from native date input)
+  const [entryDateFrom, setEntryDateFrom] = useState('');
+  const [entryDateTo, setEntryDateTo] = useState('');
+  const [mfgDateFrom, setMfgDateFrom] = useState('');
+  const [mfgDateTo, setMfgDateTo] = useState('');
+  const [productCode, setProductCode] = useState('');
+
+  const resetFilters = () => {
+    setEntryDateFrom('');
+    setEntryDateTo('');
+    setMfgDateFrom('');
+    setMfgDateTo('');
+    setProductCode('');
+  };
 
   // Load current user for permission check
   useState(() => {
@@ -67,20 +93,48 @@ export default function LblPlanningDashboard() {
     });
   }, [visibleLines, search, allJobs]);
 
-  // Filter jobs by status filter (from stat-card clicks)
-  const filteredJobs = useMemo(() => {
-    if (!statusFilter) return allJobs;
-    if (statusFilter === 'pending') return allJobs.filter(j => j.status === 'pending');
-    if (statusFilter === 'completed') return allJobs.filter(j => j.status === 'completed');
-    if (statusFilter === 'active') return allJobs.filter(j => IN_PROGRESS_STATUSES.includes(j.status));
-    return allJobs;
-  }, [allJobs, statusFilter]);
+  // Apply date + product filters first (these affect stats AND queue)
+  const dateFilteredJobs = useMemo(() => {
+    return allJobs.filter(j => {
+      // Entry date range
+      if (entryDateFrom || entryDateTo) {
+        const jobEntry = normalizeDate(j.entry_date);
+        if (!jobEntry) return false;
+        if (entryDateFrom && jobEntry < entryDateFrom) return false;
+        if (entryDateTo && jobEntry > entryDateTo) return false;
+      }
+      // Manufacturing date range
+      if (mfgDateFrom || mfgDateTo) {
+        const jobMfg = normalizeDate(j.manufacturing_date);
+        if (!jobMfg) return false;
+        if (mfgDateFrom && jobMfg < mfgDateFrom) return false;
+        if (mfgDateTo && jobMfg > mfgDateTo) return false;
+      }
+      // Product code
+      if (productCode && j.sku_code !== productCode) return false;
+      return true;
+    });
+  }, [allJobs, entryDateFrom, entryDateTo, mfgDateFrom, mfgDateTo, productCode]);
 
+  // Then apply status filter (from stat-card clicks) on top of date-filtered jobs
+  const filteredJobs = useMemo(() => {
+    if (!statusFilter) return dateFilteredJobs;
+    if (statusFilter === 'pending') return dateFilteredJobs.filter(j => j.status === 'pending');
+    if (statusFilter === 'completed') return dateFilteredJobs.filter(j => j.status === 'completed');
+    if (statusFilter === 'on_hold') return dateFilteredJobs.filter(j => j.status === 'on_hold');
+    if (statusFilter === 'cancelled') return dateFilteredJobs.filter(j => j.status === 'cancelled');
+    if (statusFilter === 'active') return dateFilteredJobs.filter(j => IN_PROGRESS_STATUSES.includes(j.status));
+    return dateFilteredJobs;
+  }, [dateFilteredJobs, statusFilter]);
+
+  // Stats reflect the date-filtered set
   const stats = {
-    total: allJobs.length,
-    pending: allJobs.filter(j => j.status === 'pending').length,
-    active: allJobs.filter(j => IN_PROGRESS_STATUSES.includes(j.status)).length,
-    completed: allJobs.filter(j => j.status === 'completed').length,
+    total: dateFilteredJobs.length,
+    pending: dateFilteredJobs.filter(j => j.status === 'pending').length,
+    active: dateFilteredJobs.filter(j => IN_PROGRESS_STATUSES.includes(j.status)).length,
+    on_hold: dateFilteredJobs.filter(j => j.status === 'on_hold').length,
+    completed: dateFilteredJobs.filter(j => j.status === 'completed').length,
+    cancelled: dateFilteredJobs.filter(j => j.status === 'cancelled').length,
   };
 
   const toggleLine = (lineId) => {
@@ -120,7 +174,7 @@ export default function LblPlanningDashboard() {
         onFilterChange={setStatusFilter}
       />
 
-      {/* Toolbar: search + sort + line pills */}
+      {/* Toolbar: search + sort + date/product filters + line pills */}
       <LblPlanningToolbar
         search={search}
         onSearchChange={setSearch}
@@ -132,6 +186,18 @@ export default function LblPlanningDashboard() {
         onSelectAllLines={selectAllLines}
         statusFilter={statusFilter ? STATUS_FILTER_LABELS[statusFilter] : null}
         onClearStatusFilter={() => setStatusFilter(null)}
+        entryDateFrom={entryDateFrom}
+        entryDateTo={entryDateTo}
+        onEntryDateFromChange={setEntryDateFrom}
+        onEntryDateToChange={setEntryDateTo}
+        mfgDateFrom={mfgDateFrom}
+        mfgDateTo={mfgDateTo}
+        onMfgDateFromChange={setMfgDateFrom}
+        onMfgDateToChange={setMfgDateTo}
+        productCode={productCode}
+        onProductCodeChange={setProductCode}
+        products={products}
+        onResetFilters={resetFilters}
       />
 
       {/* Loading */}
