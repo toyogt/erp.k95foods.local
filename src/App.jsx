@@ -127,6 +127,8 @@ import LblDocTypePermissions from './pages/LblDocTypePermissions';
 import RynanPrinterCenter from './pages/RynanPrinterCenter';
 import LblPrintTemplateManager from './pages/LblPrintTemplateManager';
 import PageFieldPermissions from './pages/PageFieldPermissions';
+import BoxLabelTemplateManager from './pages/BoxLabelTemplateManager';
+import BoxLabelTemplateBuilder from './pages/BoxLabelTemplateBuilder';
 
 // Page component lookup table
 const PAGE_COMPONENTS = {
@@ -329,6 +331,8 @@ const AuthenticatedApp = () => {
       <Route path="/LblDocTypePermissions" element={<LayoutWrapper currentPageName="LblDocTypePermissions"><LblDocTypePermissions /></LayoutWrapper>} />
       <Route path="/RynanPrinterCenter" element={<LayoutWrapper currentPageName="RynanPrinterCenter"><RynanPrinterCenter /></LayoutWrapper>} />
       <Route path="/PageFieldPermissions" element={<LayoutWrapper currentPageName="PageFieldPermissions"><PageFieldPermissions /></LayoutWrapper>} />
+      <Route path="/BoxLabelTemplateManager" element={<LayoutWrapper currentPageName="BoxLabelTemplateManager"><BoxLabelTemplateManager /></LayoutWrapper>} />
+      <Route path="/BoxLabelTemplateBuilder" element={<LayoutWrapper currentPageName="BoxLabelTemplateBuilder"><BoxLabelTemplateBuilder /></LayoutWrapper>} />
       {/* Store Management System Routes */}
       {[
         ['SMSDashboard', SMSDashboard], ['SMSLocationManager', SMSLocationManager],

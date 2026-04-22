@@ -11,6 +11,7 @@ import LblDemoPrintVerificationStep from '@/components/labelling/LblDemoPrintVer
 import LblChecklistStep from '@/components/labelling/LblChecklistStep';
 import LblBulkPrintStep from '@/components/labelling/LblBulkPrintStep';
 import LblCompletionStep from '@/components/labelling/LblCompletionStep';
+import LblBoxLabelPrintStep from '@/components/labelling/LblBoxLabelPrintStep';
 import LblStopJobModal from '@/components/labelling/LblStopJobModal';
 import LblResumeJobModal from '@/components/labelling/LblResumeJobModal';
 import { toast } from '@/components/ui/use-toast';
@@ -159,7 +160,12 @@ export default function LblOperatorJob() {
       )}
       {job.status === 'demo_approved' && <LblBulkPrintStep job={job} user={user} onComplete={refreshJob} mode="start" />}
       {(job.status === 'bulk_printing' || job.status === 'paused' || job.status === 'bulk_printing_awaiting_printer_reset') && <LblBulkPrintStep job={job} user={user} onComplete={refreshJob} mode="control" />}
-      {job.status === 'completed' && <LblCompletionStep job={job} />}
+      {job.status === 'completed' && (
+        <>
+          <LblCompletionStep job={job} />
+          <LblBoxLabelPrintStep job={job} user={user} />
+        </>
+      )}
 
       {job.status === 'on_hold' && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-6 text-center space-y-4">
