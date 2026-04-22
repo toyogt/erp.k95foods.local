@@ -10,6 +10,7 @@ import { toast } from '@/components/ui/use-toast';
 import { generateBatchNumber, BATCH_SCHEMES } from '@/lib/batchNumberGenerator';
 import { Loader2, Package, RefreshCw, Info } from 'lucide-react';
 import LblLabelPreviewCard from '@/components/labelling/LblLabelPreviewCard';
+import LblBoxLabelPrintButton from '@/components/labelling/LblBoxLabelPrintButton';
 import moment from 'moment';
 
 export default function LblStockTransferStep({ job, user, onComplete }) {
@@ -205,10 +206,17 @@ export default function LblStockTransferStep({ job, user, onComplete }) {
         templateName={product?.demo_template || product?.bulk_template}
       />
 
-      <Button className="h-11 w-full md:w-auto gap-2" onClick={handleSubmit} disabled={saving}>
-        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Package className="w-4 h-4" />}
-        Submit Stock Transfer
-      </Button>
+      <div className="flex flex-col md:flex-row gap-2">
+        <Button className="h-11 w-full md:w-auto gap-2" onClick={handleSubmit} disabled={saving}>
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Package className="w-4 h-4" />}
+          Submit Stock Transfer
+        </Button>
+        <LblBoxLabelPrintButton
+          job={job}
+          overrides={{ batch_no: batchNo, stock_transfer_qty: Number(qty) || undefined }}
+          className="w-full md:w-auto"
+        />
+      </div>
     </div>
   );
 }
