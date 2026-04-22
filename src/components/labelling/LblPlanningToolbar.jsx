@@ -24,6 +24,20 @@ export default function LblPlanningToolbar({
 }) {
   const allSelected = selectedLineIds.length === 0 || selectedLineIds.length === lines.length;
   const hasAnyDateFilter = entryDateFrom || entryDateTo || mfgDateFrom || mfgDateTo || (productCode && productCode !== ALL_PRODUCTS);
+  const hasAnyFilter =
+    hasAnyDateFilter ||
+    !!search ||
+    (sortBy && sortBy !== 'priority_asc') ||
+    selectedLineIds.length > 0 ||
+    !!statusFilter;
+
+  const handleClearAll = () => {
+    onSearchChange('');
+    onSortChange('priority_asc');
+    onSelectAllLines();
+    if (statusFilter) onClearStatusFilter();
+    onResetFilters();
+  };
 
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-3 md:p-4 space-y-3">
@@ -59,54 +73,66 @@ export default function LblPlanningToolbar({
         style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}
       >
         {/* Entry Date Range */}
-        <div className="space-y-1 min-w-0">
+        <div className="space-y-1.5 min-w-0">
           <label className="text-xs font-medium text-slate-700 flex items-center gap-1.5">
             <Calendar className="w-3.5 h-3.5 text-slate-400" /> Entry Date (Job Created)
           </label>
           <div
             className="grid gap-2"
-            style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))' }}
+            style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}
           >
-            <Input
-              type="date"
-              value={entryDateFrom || ''}
-              onChange={e => onEntryDateFromChange(e.target.value)}
-              className="h-11 md:h-9 text-xs w-full min-w-0"
-              aria-label="Entry date from"
-            />
-            <Input
-              type="date"
-              value={entryDateTo || ''}
-              onChange={e => onEntryDateToChange(e.target.value)}
-              className="h-11 md:h-9 text-xs w-full min-w-0"
-              aria-label="Entry date to"
-            />
+            <div className="space-y-0.5 min-w-0">
+              <span className="text-[10px] uppercase tracking-wide text-slate-500 font-semibold">From</span>
+              <Input
+                type="date"
+                value={entryDateFrom || ''}
+                onChange={e => onEntryDateFromChange(e.target.value)}
+                className="h-11 md:h-9 text-xs w-full min-w-0"
+                aria-label="Entry date from"
+              />
+            </div>
+            <div className="space-y-0.5 min-w-0">
+              <span className="text-[10px] uppercase tracking-wide text-slate-500 font-semibold">To</span>
+              <Input
+                type="date"
+                value={entryDateTo || ''}
+                onChange={e => onEntryDateToChange(e.target.value)}
+                className="h-11 md:h-9 text-xs w-full min-w-0"
+                aria-label="Entry date to"
+              />
+            </div>
           </div>
         </div>
 
         {/* Manufacturing Date Range */}
-        <div className="space-y-1 min-w-0">
+        <div className="space-y-1.5 min-w-0">
           <label className="text-xs font-medium text-slate-700 flex items-center gap-1.5">
             <Calendar className="w-3.5 h-3.5 text-slate-400" /> Manufacturing Date
           </label>
           <div
             className="grid gap-2"
-            style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))' }}
+            style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}
           >
-            <Input
-              type="date"
-              value={mfgDateFrom || ''}
-              onChange={e => onMfgDateFromChange(e.target.value)}
-              className="h-11 md:h-9 text-xs w-full min-w-0"
-              aria-label="Manufacturing date from"
-            />
-            <Input
-              type="date"
-              value={mfgDateTo || ''}
-              onChange={e => onMfgDateToChange(e.target.value)}
-              className="h-11 md:h-9 text-xs w-full min-w-0"
-              aria-label="Manufacturing date to"
-            />
+            <div className="space-y-0.5 min-w-0">
+              <span className="text-[10px] uppercase tracking-wide text-slate-500 font-semibold">From</span>
+              <Input
+                type="date"
+                value={mfgDateFrom || ''}
+                onChange={e => onMfgDateFromChange(e.target.value)}
+                className="h-11 md:h-9 text-xs w-full min-w-0"
+                aria-label="Manufacturing date from"
+              />
+            </div>
+            <div className="space-y-0.5 min-w-0">
+              <span className="text-[10px] uppercase tracking-wide text-slate-500 font-semibold">To</span>
+              <Input
+                type="date"
+                value={mfgDateTo || ''}
+                onChange={e => onMfgDateToChange(e.target.value)}
+                className="h-11 md:h-9 text-xs w-full min-w-0"
+                aria-label="Manufacturing date to"
+              />
+            </div>
           </div>
         </div>
 
@@ -134,16 +160,16 @@ export default function LblPlanningToolbar({
         </div>
       </div>
 
-      {/* Reset button when any date/product filter is active */}
-      {hasAnyDateFilter && (
+      {/* Clear all filters (search, sort, lines, status, dates, product) */}
+      {hasAnyFilter && (
         <div className="flex justify-end">
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
-            onClick={onResetFilters}
-            className="h-8 text-xs text-slate-600 hover:text-slate-900 gap-1.5"
+            onClick={handleClearAll}
+            className="h-9 text-xs text-slate-700 border-slate-300 hover:bg-slate-100 hover:text-slate-900 gap-1.5"
           >
-            <RotateCcw className="w-3 h-3" /> Reset date & product filters
+            <RotateCcw className="w-3.5 h-3.5" /> Clear all filters
           </Button>
         </div>
       )}
