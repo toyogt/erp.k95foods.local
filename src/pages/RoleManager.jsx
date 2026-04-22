@@ -105,9 +105,9 @@ function RoleForm({ initial, onSave, onCancel, saving }) {
   };
 
   return (
-    <div className="flex flex-col flex-1 min-h-0">
+    <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
       {/* Scrollable body */}
-      <div className="flex-1 overflow-y-auto px-1 space-y-4 pb-2">
+      <div className="flex-1 overflow-y-auto px-4 pt-3 space-y-4 pb-3">
         <div className="space-y-1.5">
           <Label className="text-xs font-medium text-slate-700">Role Name <span className="text-red-500">*</span></Label>
           <Input
@@ -206,8 +206,8 @@ function RoleForm({ initial, onSave, onCancel, saving }) {
         </div>
       </div>
 
-      {/* Sticky footer — always accessible on phone */}
-      <div className="sticky bottom-0 -mx-1 mt-3 px-1 pt-3 pb-1 bg-white border-t border-slate-200 flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
+      {/* Pinned footer — always visible */}
+      <div className="shrink-0 px-4 py-3 bg-white border-t border-slate-200 flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
         <Button
           variant="outline"
           onClick={onCancel}
@@ -371,9 +371,7 @@ export default function RoleManager() {
                 {modal.mode === 'create' ? 'Create New Role' : `Edit Role: ${modal.role.label}`}
               </DialogTitle>
             </DialogHeader>
-            <div className="flex-1 min-h-0 flex flex-col px-4 pt-3 pb-4">
-              <RoleForm initial={modal.role} onSave={handleSave} onCancel={() => setModal(null)} saving={saving} />
-            </div>
+            <RoleForm initial={modal.role} onSave={handleSave} onCancel={() => setModal(null)} saving={saving} />
           </DialogContent>
         </Dialog>
       )}
