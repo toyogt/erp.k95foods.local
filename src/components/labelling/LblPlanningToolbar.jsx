@@ -54,65 +54,63 @@ export default function LblPlanningToolbar({
       </div>
 
       {/* Row 2: Date filters + Product filter */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 pt-2 border-t border-slate-100">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 pt-3 border-t border-slate-100">
         {/* Entry Date Range */}
-        <div className="space-y-1">
+        <div className="space-y-1 min-w-0">
           <label className="text-xs font-medium text-slate-700 flex items-center gap-1.5">
             <Calendar className="w-3.5 h-3.5 text-slate-400" /> Entry Date (Job Created)
           </label>
-          <div className="flex gap-1.5 items-center">
+          <div className="grid grid-cols-2 gap-2">
             <Input
               type="date"
               value={entryDateFrom || ''}
               onChange={e => onEntryDateFromChange(e.target.value)}
-              className="h-11 md:h-9 text-xs"
-              placeholder="From"
+              className="h-11 md:h-9 text-xs w-full min-w-0"
+              aria-label="Entry date from"
             />
-            <span className="text-xs text-slate-400">to</span>
             <Input
               type="date"
               value={entryDateTo || ''}
               onChange={e => onEntryDateToChange(e.target.value)}
-              className="h-11 md:h-9 text-xs"
-              placeholder="To"
+              className="h-11 md:h-9 text-xs w-full min-w-0"
+              aria-label="Entry date to"
             />
           </div>
         </div>
 
         {/* Manufacturing Date Range */}
-        <div className="space-y-1">
+        <div className="space-y-1 min-w-0">
           <label className="text-xs font-medium text-slate-700 flex items-center gap-1.5">
             <Calendar className="w-3.5 h-3.5 text-slate-400" /> Manufacturing Date
           </label>
-          <div className="flex gap-1.5 items-center">
+          <div className="grid grid-cols-2 gap-2">
             <Input
               type="date"
               value={mfgDateFrom || ''}
               onChange={e => onMfgDateFromChange(e.target.value)}
-              className="h-11 md:h-9 text-xs"
-              placeholder="From"
+              className="h-11 md:h-9 text-xs w-full min-w-0"
+              aria-label="Manufacturing date from"
             />
-            <span className="text-xs text-slate-400">to</span>
             <Input
               type="date"
               value={mfgDateTo || ''}
               onChange={e => onMfgDateToChange(e.target.value)}
-              className="h-11 md:h-9 text-xs"
-              placeholder="To"
+              className="h-11 md:h-9 text-xs w-full min-w-0"
+              aria-label="Manufacturing date to"
             />
           </div>
         </div>
 
         {/* Product Code */}
-        <div className="space-y-1">
+        <div className="space-y-1 min-w-0">
           <label className="text-xs font-medium text-slate-700 flex items-center gap-1.5">
             <Package className="w-3.5 h-3.5 text-slate-400" /> Product Code
           </label>
           <Select value={productCode || ALL_PRODUCTS} onValueChange={v => onProductCodeChange(v === ALL_PRODUCTS ? '' : v)}>
-            <SelectTrigger className="h-11 md:h-9 text-sm">
+            <SelectTrigger className="h-11 md:h-9 text-sm w-full">
               <SelectValue placeholder="All products" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="max-w-[90vw]">
               <SelectItem value={ALL_PRODUCTS}>All products</SelectItem>
               {products.map(p => {
                 const code = p.item_code || p.id;
