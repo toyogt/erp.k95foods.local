@@ -16,6 +16,17 @@ const MODULE_LABELS = {
   DASHBOARD: 'Dashboard', PRODUCTION: 'Production', LABELLING: 'Labelling & Packing',
   WAREHOUSE: 'Warehouse & FG', PURCHASE: 'Purchase', GRN: 'Goods Receipt',
   QUALITY: 'Quality', ACCOUNTS: 'Accounts', FMS: 'Process Flow', ADMIN: 'Admin',
+  STORE: 'Store', USER_MANAGEMENT: 'User Management', SALES: 'Sales',
+  LBL: 'Labelling', SMS: 'Store Management', REPORTS: 'Reports',
+};
+
+// Fallback: convert SNAKE_CASE to Title Case for any module not in the map
+const formatModuleLabel = (key) => {
+  if (MODULE_LABELS[key]) return MODULE_LABELS[key];
+  return key
+    .split('_')
+    .map(w => w.charAt(0) + w.slice(1).toLowerCase())
+    .join(' ');
 };
 
 const EMPTY_FORM = { role_key: '', label: '', description: '', module_access: [], page_access: [], is_active: true, is_system: false };
@@ -88,89 +99,126 @@ function RoleForm({ initial, onSave, onCancel, saving }) {
     });
   };
 
+  const selectedPageCountForModule = (mod) => {
+    const modulePages = getPagesInModule(mod).map(p => p.pageKey);
+    return (form.page_access || []).filter(p => modulePages.includes(p)).length;
+  };
+
   return (
-    <div className="space-y-4">
-      <div>
-        <Label>Role Name <span className="text-red-500">*</span></Label>
-        <Input className="mt-1" placeholder="e.g. Purchase Manager"
-          value={form.label} 
-          onChange={e => {
-            const newLabel = e.target.value;
-            const newRoleKey = newLabel.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
-            setForm(f => ({ ...f, label: newLabel, role_key: newRoleKey }));
-          }}
-          disabled={initial?.is_system}
-        />
+    <div className="flex flex-col flex-1 min-h-0">
+      {/* Scrollable body */}
+      <div className="flex-1 overflow-y-auto px-1 space-y-4 pb-2">
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium text-slate-700">Role Name <span className="text-red-500">*</span></Label>
+          <Input
+            className="h-11 md:h-9 text-base md:text-sm"
+            placeholder="e.g. Purchase Manager"
+            value={form.label}
+            onChange={e => {
+              const newLabel = e.target.value;
+              const newRoleKey = newLabel.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+              setForm(f => ({ ...f, label: newLabel, role_key: newRoleKey }));
+            }}
+            disabled={initial?.is_system}
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium text-slate-700">Description</Label>
+          <Input
+            className="h-11 md:h-9 text-base md:text-sm"
+            placeholder="What can this role do?"
+            value={form.description}
+            onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+            disabled={initial?.is_system}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label className="text-xs font-medium text-slate-700">Module Access</Label>
+          <p className="text-xs text-slate-500">Tap a module to choose which pages this role can access</p>
+          <div className="space-y-2">
+            {ALL_MODULE_KEYS.filter(m => m !== 'ADMIN').map(mod => {
+              const isSelected = form.module_access.includes(mod);
+              const modulePages = getPagesInModule(mod);
+              const isExpanded = expandedModule === mod;
+              const selectedCount = selectedPageCountForModule(mod);
+              return (
+                <div key={mod} className={`border rounded-xl overflow-hidden transition-colors ${isSelected ? 'border-slate-900' : 'border-slate-200'}`}>
+                  <button
+                    type="button"
+                    onClick={() => toggleExpandModule(mod)}
+                    className={`w-full flex items-center gap-3 px-4 py-3.5 text-sm font-medium transition-all ${
+                      isSelected
+                        ? 'bg-slate-900 text-white'
+                        : 'bg-white text-slate-800 hover:bg-slate-50'
+                    }`}
+                  >
+                    <span className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 ${
+                      isSelected ? 'bg-white border-white' : 'border-slate-300 bg-white'
+                    }`}>
+                      {isSelected && (
+                        <svg className="w-3.5 h-3.5 text-slate-900" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M16.704 5.29a1 1 0 010 1.42l-8 8a1 1 0 01-1.415 0l-4-4a1 1 0 011.415-1.42L8 12.58l7.29-7.29a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </span>
+                    <span className="flex-1 text-left truncate">{formatModuleLabel(mod)}</span>
+                    {isSelected && modulePages.length > 0 && (
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${isSelected ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                        {selectedCount}/{modulePages.length}
+                      </span>
+                    )}
+                    {modulePages.length > 0 && (
+                      <ChevronDown className={`w-4 h-4 transition-transform shrink-0 ${isExpanded ? 'rotate-180' : ''}`} />
+                    )}
+                  </button>
+                  {isExpanded && (
+                    <div className="bg-slate-50 border-t border-slate-200 p-2 space-y-0.5">
+                      <p className="text-xs text-slate-500 px-2 py-1.5">Pages in this module:</p>
+                      {modulePages.length === 0 ? (
+                        <p className="text-xs text-slate-400 italic px-2 py-1">No pages in this module</p>
+                      ) : (
+                        modulePages.map(page => {
+                          const checked = form.page_access?.includes(page.pageKey) ?? true;
+                          return (
+                            <label
+                              key={page.pageKey}
+                              className="flex items-center gap-3 px-3 py-3 md:py-2 hover:bg-white active:bg-white rounded-lg cursor-pointer text-sm"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => togglePageAccess(page.pageKey, mod)}
+                                className="w-5 h-5 md:w-4 md:h-4 cursor-pointer accent-slate-900 shrink-0"
+                              />
+                              <span className="text-slate-700 flex-1">{page.title}</span>
+                            </label>
+                          );
+                        })
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
-      <div>
-        <Label>Description</Label>
-        <Input className="mt-1" placeholder="What can this role do?"
-          value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-          disabled={initial?.is_system}
-        />
-      </div>
-
-      <div>
-         <Label>Module Access</Label>
-         <p className="text-xs text-slate-400 mb-2">Select modules and configure page-level access within each module</p>
-         <div className="space-y-2">
-           {ALL_MODULE_KEYS.filter(m => m !== 'ADMIN').map(mod => {
-             const isSelected = form.module_access.includes(mod);
-             const modulePages = getPagesInModule(mod);
-             return (
-               <div key={mod} className="border border-slate-200 rounded-lg overflow-hidden">
-                 <button
-                   onClick={() => toggleExpandModule(mod)}
-                   className={`w-full flex items-center gap-2 px-3 py-2.5 text-sm font-medium transition-all ${
-                     isSelected
-                       ? 'bg-slate-900 text-white'
-                       : 'bg-slate-50 text-slate-700 hover:bg-slate-100'
-                   }`}
-                 >
-                   <input
-                     type="checkbox"
-                     checked={isSelected}
-                     onChange={() => {}}
-                     className="cursor-pointer pointer-events-none"
-                   />
-                   <span className="flex-1 text-left">{MODULE_LABELS[mod] || mod}</span>
-                   {modulePages.length > 0 && (
-                     <ChevronDown className={`w-4 h-4 transition-transform ${expandedModule === mod ? 'rotate-180' : ''}`} />
-                   )}
-                 </button>
-                 {expandedModule === mod && (
-                   <div className="bg-slate-50 border-t border-slate-200 p-3 space-y-1.5 max-h-48 overflow-y-auto">
-                     <p className="text-xs text-slate-500 mb-2">Select pages this role can access:</p>
-                     {modulePages.length === 0 ? (
-                       <p className="text-xs text-slate-400 italic">No pages in this module</p>
-                     ) : (
-                       modulePages.map(page => (
-                         <label key={page.pageKey} className="flex items-center gap-2 px-2 py-1 hover:bg-white rounded cursor-pointer text-xs">
-                           <input
-                             type="checkbox"
-                             checked={form.page_access?.includes(page.pageKey) ?? true}
-                             onChange={() => togglePageAccess(page.pageKey, mod)}
-                             className="cursor-pointer"
-                           />
-                           <span className="text-slate-600">{page.title}</span>
-                         </label>
-                       ))
-                     )}
-                   </div>
-                 )}
-               </div>
-             );
-           })}
-         </div>
-       </div>
-
-      <div className="flex gap-2 justify-end pt-2">
-        <Button variant="outline" onClick={onCancel}>Cancel</Button>
+      {/* Sticky footer — always accessible on phone */}
+      <div className="sticky bottom-0 -mx-1 mt-3 px-1 pt-3 pb-1 bg-white border-t border-slate-200 flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
+        <Button
+          variant="outline"
+          onClick={onCancel}
+          className="h-11 md:h-9 w-full sm:w-auto"
+        >
+          Cancel
+        </Button>
         <Button
           disabled={saving || !form.role_key || !form.label}
           onClick={() => onSave(form)}
-          className="h-11 px-4"
+          className="h-11 md:h-9 w-full sm:w-auto px-4"
         >
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : (initial ? 'Save Changes' : 'Create Role')}
         </Button>
@@ -237,17 +285,17 @@ export default function RoleManager() {
 
 
   return (
-    <div className="max-w-4xl mx-auto space-y-5 pb-12">
+    <div className="max-w-4xl mx-auto space-y-4 md:space-y-5 pb-12 px-3 md:px-0">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <Shield className="w-6 h-6 text-slate-700" />
-            <h1 className="text-2xl font-bold text-slate-900">Role Manager</h1>
+            <Shield className="w-5 h-5 md:w-6 md:h-6 text-slate-700 shrink-0" />
+            <h1 className="text-xl md:text-2xl font-bold text-slate-900 truncate">Role Manager</h1>
           </div>
-          <p className="text-sm text-slate-500 mt-0.5">Create and manage application roles and their module access</p>
+          <p className="text-xs md:text-sm text-slate-500 mt-0.5">Create and manage application roles and their module access</p>
         </div>
-        <Button onClick={() => setModal({ mode: 'create' })} className="gap-2 h-11 px-4">
+        <Button onClick={() => setModal({ mode: 'create' })} className="gap-2 h-11 px-4 w-full md:w-auto">
           <Plus className="w-4 h-4" /> New Role
         </Button>
       </div>
@@ -277,11 +325,11 @@ export default function RoleManager() {
                     <p className="text-sm text-slate-500 mt-1">{role.description}</p>
                   )}
                   {role.module_access?.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {role.module_access.map(m => (
-                        <span key={m} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{MODULE_LABELS[m] || m}</span>
-                      ))}
-                    </div>
+                   <div className="flex flex-wrap gap-1 mt-2">
+                     {role.module_access.map(m => (
+                       <span key={m} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{formatModuleLabel(m)}</span>
+                     ))}
+                   </div>
                   )}
                   {role.page_access?.length > 0 && (
                     <p className="text-xs text-slate-500 mt-2">+ {role.page_access.length} custom page access overrides</p>
@@ -309,11 +357,23 @@ export default function RoleManager() {
       {/* Create/Edit modal */}
       {modal && (
         <Dialog open onOpenChange={() => setModal(null)}>
-          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{modal.mode === 'create' ? 'Create New Role' : `Edit Role: ${modal.role.label}`}</DialogTitle>
+          <DialogContent
+            className="
+              max-w-lg p-0 gap-0 overflow-hidden
+              w-[calc(100vw-1rem)] sm:w-full
+              h-[92vh] sm:h-auto sm:max-h-[90vh]
+              flex flex-col
+              rounded-xl sm:rounded-lg
+            "
+          >
+            <DialogHeader className="px-4 pt-4 pb-3 border-b border-slate-200 shrink-0">
+              <DialogTitle className="text-base md:text-lg pr-6 truncate">
+                {modal.mode === 'create' ? 'Create New Role' : `Edit Role: ${modal.role.label}`}
+              </DialogTitle>
             </DialogHeader>
-            <RoleForm initial={modal.role} onSave={handleSave} onCancel={() => setModal(null)} saving={saving} />
+            <div className="flex-1 min-h-0 flex flex-col px-4 pt-3 pb-4">
+              <RoleForm initial={modal.role} onSave={handleSave} onCancel={() => setModal(null)} saving={saving} />
+            </div>
           </DialogContent>
         </Dialog>
       )}
