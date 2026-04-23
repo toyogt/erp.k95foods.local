@@ -33,7 +33,8 @@ const IN_PROGRESS_STATUSES = ['active', 'stock_transferred', 'demo_print_sent', 
 export default function LblPlanningDashboard() {
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState('priority_asc');
-  const [selectedLineIds, setSelectedLineIds] = useState([]);
+  // Only one labelling line can be selected at a time
+  const [selectedLineId, setSelectedLineId] = useState(null);
   const [statusFilter, setStatusFilter] = useState(null);
   const [user, setUser] = useState(null);
   const [userLoading, setUserLoading] = useState(true);
@@ -79,11 +80,18 @@ export default function LblPlanningDashboard() {
 
   const canManage = caps.canManageJobs || caps.canEditJob;
 
-  // Line filter — if no specific lines selected, show all
+  // Auto-select first line once loaded — planning is always scoped to one line
+  useEffect(() => {
+    if (!selectedLineId && lines.length > 0) {
+      setSelectedLineId(lines[0].id);
+    }
+  }, [lines, selectedLineId]);
+
+  // Line filter — always exactly one line visible
   const visibleLines = useMemo(() => {
-    if (selectedLineIds.length === 0) return lines;
-    return lines.filter(l => selectedLineIds.includes(l.id));
-  }, [lines, selectedLineIds]);
+    if (!selectedLineId) return [];
+    return lines.filter(l => l.id === selectedLineId);
+  }, [lines, selectedLineId]);
 
   // Filter lines by search (name or product inside queue)
   const filteredLines = useMemo(() => {
@@ -144,13 +152,10 @@ export default function LblPlanningDashboard() {
     cancelled: dateFilteredJobs.filter(j => j.status === 'cancelled').length,
   };
 
-  const toggleLine = (lineId) => {
-    setSelectedLineIds(prev =>
-      prev.includes(lineId) ? prev.filter(id => id !== lineId) : [...prev, lineId]
-    );
+  // Single-select: clicking a line pill switches to that line only
+  const selectLine = (lineId) => {
+    setSelectedLineId(lineId);
   };
-
-  const selectAllLines = () => setSelectedLineIds([]);
 
   const isLoading = linesLoading || jobsLoading;
 
@@ -204,9 +209,8 @@ export default function LblPlanningDashboard() {
         sortBy={sortBy}
         onSortChange={setSortBy}
         lines={lines}
-        selectedLineIds={selectedLineIds}
-        onToggleLine={toggleLine}
-        onSelectAllLines={selectAllLines}
+        selectedLineId={selectedLineId}
+        onSelectLine={selectLine}
         statusFilter={statusFilter ? STATUS_FILTER_LABELS[statusFilter] : null}
         onClearStatusFilter={() => setStatusFilter(null)}
         entryDateFrom={entryDateFrom}

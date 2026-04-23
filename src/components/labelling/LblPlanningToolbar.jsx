@@ -15,7 +15,7 @@ const ALL_PRODUCTS = '__all__';
 export default function LblPlanningToolbar({
   search, onSearchChange,
   sortBy, onSortChange,
-  lines, selectedLineIds, onToggleLine, onSelectAllLines,
+  lines, selectedLineId, onSelectLine,
   statusFilter, onClearStatusFilter,
   entryDateFrom, entryDateTo, onEntryDateFromChange, onEntryDateToChange,
   mfgDateFrom, mfgDateTo, onMfgDateFromChange, onMfgDateToChange,
@@ -26,19 +26,16 @@ export default function LblPlanningToolbar({
     canFilterByProduct: true, canFilterByLine: true, canClearFilters: true,
   },
 }) {
-  const allSelected = selectedLineIds.length === 0 || selectedLineIds.length === lines.length;
   const hasAnyDateFilter = entryDateFrom || entryDateTo || mfgDateFrom || mfgDateTo || (productCode && productCode !== ALL_PRODUCTS);
   const hasAnyFilter =
     hasAnyDateFilter ||
     !!search ||
     (sortBy && sortBy !== 'priority_asc') ||
-    selectedLineIds.length > 0 ||
     !!statusFilter;
 
   const handleClearAll = () => {
     onSearchChange('');
     onSortChange('priority_asc');
-    onSelectAllLines();
     if (statusFilter) onClearStatusFilter();
     onResetFilters();
   };
@@ -192,29 +189,18 @@ export default function LblPlanningToolbar({
         </div>
       )}
 
-      {/* Row 3: Line filter pills */}
+      {/* Row 3: Line filter pills — single-select, only one line active at a time */}
       {caps.canFilterByLine && lines.length > 0 && (
         <div className="flex items-start gap-2 flex-wrap">
-          <span className="text-xs font-medium text-slate-600 mt-2 shrink-0">Lines:</span>
+          <span className="text-xs font-medium text-slate-600 mt-2 shrink-0">Line:</span>
           <div className="flex flex-wrap gap-1.5">
-            <button
-              type="button"
-              onClick={onSelectAllLines}
-              className={`h-9 px-3 rounded-full text-xs font-semibold border transition-all ${
-                allSelected
-                  ? 'bg-slate-900 text-white border-slate-900'
-                  : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'
-              }`}
-            >
-              All ({lines.length})
-            </button>
             {lines.map(line => {
-              const isSelected = selectedLineIds.includes(line.id);
+              const isSelected = selectedLineId === line.id;
               return (
                 <button
                   key={line.id}
                   type="button"
-                  onClick={() => onToggleLine(line.id)}
+                  onClick={() => onSelectLine(line.id)}
                   className={`h-9 px-3 rounded-full text-xs font-semibold border transition-all ${
                     isSelected
                       ? 'bg-blue-600 text-white border-blue-600'

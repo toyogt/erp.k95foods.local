@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,8 @@ import LblQueueArchiveSection from '@/components/labelling/LblQueueArchiveSectio
 import { Loader2, Search, X, Tag } from 'lucide-react';
 
 export default function LblOperatorQueue() {
-  const [lineTab, setLineTab]   = useState('all');
+  // Only one labelling line can be viewed at a time — defaults to first line once loaded
+  const [lineTab, setLineTab]   = useState(null);
   const [search, setSearch]     = useState('');
 
   const { data: jobs = [], isLoading } = useQuery({
@@ -24,6 +25,13 @@ export default function LblOperatorQueue() {
     queryFn: () => base44.entities.Machine.filter({ machine_type: 'LABEL-LINE', is_active: true }),
   });
 
+  // Auto-select the first line once machines load — operators can only view one line at a time
+  useEffect(() => {
+    if (!lineTab && machines.length > 0) {
+      setLineTab(machines[0].id);
+    }
+  }, [machines, lineTab]);
+
   // Search filter
   const searchFiltered = useMemo(() => {
     if (!search.trim()) return jobs;
@@ -35,9 +43,9 @@ export default function LblOperatorQueue() {
     );
   }, [jobs, search]);
 
-  // Line filter
+  // Line filter — always scoped to a single line
   const lineFiltered = useMemo(() => {
-    if (lineTab === 'all') return searchFiltered;
+    if (!lineTab) return [];
     return searchFiltered.filter(j => j.line_id === lineTab);
   }, [searchFiltered, lineTab]);
 
@@ -98,19 +106,9 @@ export default function LblOperatorQueue() {
         </p>
       </div>
 
-      {/* ── Line Tabs ── */}
+      {/* ── Line Tabs (single-select — only one line at a time) ── */}
       {lines.length > 0 && (
         <div className="flex gap-2 overflow-x-auto pb-1">
-          <button
-            onClick={() => setLineTab('all')}
-            className={`flex-shrink-0 px-4 py-2 rounded-lg text-sm font-semibold border transition-all h-11 ${
-              lineTab === 'all'
-                ? 'bg-slate-900 text-white border-slate-900'
-                : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'
-            }`}
-          >
-            All Lines
-          </button>
           {lines.map(m => (
             <button
               key={m.id}
