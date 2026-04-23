@@ -59,12 +59,7 @@
     "batch_number": {
       "type": "string",
       "maxLength": 200,
-      "description": "Batch identifier for FIFO/FEFO grouping"
-    },
-    "supplier_lot_number": {
-      "type": "string",
-      "maxLength": 200,
-      "description": "Supplier's own lot/batch reference number"
+      "description": "Batch identifier for FIFO grouping"
     },
     "mfg_date": {
       "type": "string",
@@ -108,17 +103,6 @@
       "type": "string",
       "maxLength": 100
     },
-    "source_type": {
-      "type": "string",
-      "enum": [
-        "grn",
-        "opening_stock",
-        "adjustment",
-        "return"
-      ],
-      "default": "grn",
-      "description": "How this lot was created"
-    },
     "status": {
       "type": "string",
       "enum": [
@@ -126,8 +110,7 @@
         "rejected",
         "putaway",
         "consumed",
-        "damaged",
-        "quarantine"
+        "damaged"
       ],
       "default": "approved"
     },

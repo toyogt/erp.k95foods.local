@@ -357,16 +357,6 @@ export default function GRNItemCard({ index, item, storeItems, canRemove, onUpda
           )}
         </div>}
 
-        {/* Supplier Lot Number — always visible when batch is captured */}
-        {hasItem && (
-          <div>
-            <Label className="text-xs font-medium text-slate-700">Supplier Lot / Reference Number</Label>
-            <input className="h-11 text-sm mt-1 w-full border border-slate-200 rounded-xl px-3" value={item.supplier_lot || ''}
-              onChange={e => onUpdate('supplier_lot', e.target.value)}
-              placeholder="Supplier's own batch/lot reference (optional)" />
-          </div>
-        )}
-
         {/* Always show Manufacture and Expiry date fields */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>

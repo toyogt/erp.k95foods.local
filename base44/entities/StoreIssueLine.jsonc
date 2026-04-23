@@ -2,7 +2,7 @@
   "name": "StoreIssueLine",
   "type": "object",
   "title": "Store Issue Line",
-  "description": "Individual item lines for a stock issue with batch traceability",
+  "description": "Individual item lines for a stock issue",
   "properties": {
     "issue_id": {
       "type": "string",
@@ -32,26 +32,6 @@
       "type": "string",
       "maxLength": 50
     },
-    "batch_number": {
-      "type": "string",
-      "maxLength": 200,
-      "description": "Batch number from the lot"
-    },
-    "manufacturing_date": {
-      "type": "string",
-      "maxLength": 20,
-      "description": "Manufacturing date of the issued lot"
-    },
-    "expiry_date": {
-      "type": "string",
-      "maxLength": 20,
-      "description": "Expiry date of the issued lot"
-    },
-    "supplier_name": {
-      "type": "string",
-      "maxLength": 300,
-      "description": "Supplier from the original lot"
-    },
     "requested_quantity": {
       "type": "number",
       "minimum": 0
@@ -63,16 +43,6 @@
     "issue_type": {
       "type": "string",
       "maxLength": 50
-    },
-    "picking_strategy": {
-      "type": "string",
-      "enum": [
-        "FEFO",
-        "FIFO",
-        "manual"
-      ],
-      "default": "FEFO",
-      "description": "Strategy used to select this lot"
     },
     "issued_at": {
       "type": "string",

@@ -54,26 +54,6 @@
       "maxLength": 500,
       "description": "Reason for quantity mismatch"
     },
-    "batch_number": {
-      "type": "string",
-      "maxLength": 200,
-      "description": "Batch or lot number from supplier"
-    },
-    "supplier_lot_number": {
-      "type": "string",
-      "maxLength": 200,
-      "description": "Supplier's own lot/batch reference"
-    },
-    "manufacturing_date": {
-      "type": "string",
-      "maxLength": 20,
-      "description": "Manufacturing date DD/MM/YYYY"
-    },
-    "expiry_date": {
-      "type": "string",
-      "maxLength": 20,
-      "description": "Expiry date DD/MM/YYYY"
-    },
     "batch_or_lot_text": {
       "type": "string",
       "maxLength": 200

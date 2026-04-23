@@ -44,13 +44,9 @@ function IssueExpandedDetails({ issue }) {
                 <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1 text-xs text-slate-500">
                   <span>Lot: <strong className="text-slate-700">{ln.lot_id || '—'}</strong></span>
                   <span>Location: <strong className="text-slate-700">{ln.location_code || '—'}</strong></span>
-                  {ln.batch_number && <span>Batch: <strong className="text-slate-700">{ln.batch_number}</strong></span>}
-                  {ln.manufacturing_date && <span>Manufacturing: <strong className="text-slate-700">{ln.manufacturing_date}</strong></span>}
-                  {ln.expiry_date && <span>Expiry: <strong className="text-slate-700">{ln.expiry_date}</strong></span>}
-                  {ln.supplier_name && <span>Supplier: <strong className="text-slate-700">{ln.supplier_name}</strong></span>}
+                  <span>Requested: <strong className="text-slate-700">{ln.requested_quantity ?? '—'}</strong></span>
                   <span>Issued: <strong className="text-slate-700">{ln.issued_quantity}</strong></span>
                   <span>Unit: <strong className="text-slate-700">{ln.uom || 'Nos'}</strong></span>
-                  {ln.picking_strategy && <span>Strategy: <strong className="text-slate-700">{ln.picking_strategy}</strong></span>}
                   {ln.issued_at && <span>At: <strong className="text-slate-700">{formatDateTime(ln.issued_at)}</strong></span>}
                 </div>
               </div>
@@ -89,7 +85,6 @@ export default function StockIssueHistoryCards({ issues }) {
           date={i.issued_at || i.created_date}
           details={[
             { label: 'Items', value: i.total_items || 0 },
-            { label: 'Strategy', value: i.picking_strategy || 'Manual' },
             { label: 'Issued By', value: i.issued_by || '—' },
             ...(i.notes ? [{ label: 'Notes', value: i.notes }] : []),
           ]}
