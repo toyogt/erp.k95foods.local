@@ -26,6 +26,11 @@
       "maxLength": 100,
       "description": "Auto-created lot for this entry"
     },
+    "batch_number": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Batch number for this opening stock entry"
+    },
     "quantity": {
       "type": "number",
       "minimum": 0.01

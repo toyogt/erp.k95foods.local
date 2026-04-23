@@ -18,6 +18,16 @@
       ],
       "default": "production"
     },
+    "picking_strategy": {
+      "type": "string",
+      "enum": [
+        "FEFO",
+        "FIFO",
+        "manual"
+      ],
+      "default": "FEFO",
+      "description": "Strategy for selecting lots: FEFO (First Expired First Out), FIFO (First In First Out), or Manual"
+    },
     "reference_number": {
       "type": "string",
       "maxLength": 100,
