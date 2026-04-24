@@ -22,6 +22,12 @@ export default function EWayBillSection({ invoice, onUpdated }) {
   const [activeAction, setActiveAction] = useState(null); // 'generate', 'cancel', 'vehicle', 'transporter', 'extend'
   const [distanceKm, setDistanceKm] = useState(invoice.distance || '');
 
+  // Generate EWB form
+  const [genVehicleNo, setGenVehicleNo] = useState(invoice.vehicle_no || '');
+  const [genTransporterId, setGenTransporterId] = useState(invoice.transporter_id || '');
+  const [genTransporterName, setGenTransporterName] = useState(invoice.transporter_name || '');
+  const [genTransMode, setGenTransMode] = useState(invoice.mode_of_transport || '1');
+
   // Vehicle update form
   const [vehicleNo, setVehicleNo] = useState('');
   const [fromPlace, setFromPlace] = useState('');
@@ -71,14 +77,21 @@ export default function EWayBillSection({ invoice, onUpdated }) {
     if (!confirm.isConfirmed) return;
 
     Swal.fire({ title: 'Generating E-Way Bill...', text: 'Connecting to government portal via Adaequare GSP', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-    const result = await callAPI('generate_ewb', { distance_km: km });
+    const result = await callAPI('generate_ewb', { 
+      distance_km: km,
+      vehicle_no: genVehicleNo || undefined,
+      transporter_id: genTransporterId || undefined,
+      transporter_name: genTransporterName || undefined,
+      trans_mode: genTransMode || '1',
+    });
 
     if (result?.success) {
-      Swal.fire({ icon: 'success', title: 'E-Way Bill Generated!', html: `<div class="text-left text-sm"><p><b>E-Way Bill Number:</b> ${result.eway_bill || ''}</p><p><b>Valid Until:</b> ${result.valid_upto || ''}</p></div>`, confirmButtonColor: '#16a34a' });
+      const modeTag = result.mode === 'sandbox' ? ' <span style="color:#b45309;font-weight:600">(Sandbox Mode)</span>' : '';
+      Swal.fire({ icon: 'success', title: 'E-Way Bill Generated!', html: `<div class="text-left text-sm"><p><b>E-Way Bill Number:</b> ${result.eway_bill || ''}</p><p><b>Valid Until:</b> ${result.valid_upto || ''}</p>${modeTag}</div>`, confirmButtonColor: '#16a34a' });
       setActiveAction(null);
       onUpdated();
     } else {
-      Swal.fire({ icon: 'error', title: 'E-Way Bill Generation Failed', text: result?.error || 'Check API settings and try again.', confirmButtonColor: '#dc2626' });
+      Swal.fire({ icon: 'error', title: 'E-Way Bill Generation Failed', html: `<div class="text-left text-sm"><p>${result?.error || 'Check API settings and try again.'}</p></div>`, confirmButtonColor: '#dc2626' });
     }
   }
 
@@ -184,6 +197,7 @@ export default function EWayBillSection({ invoice, onUpdated }) {
     setVehicleNo(''); setFromPlace(''); setReasonRemark('');
     setTransporterId(''); setTransporterName('');
     setCancelReason(''); setRemainingDistance('');
+    setReasonCode('1'); setFromState('06'); setTransportMode('1');
   }
 
   return (
@@ -248,12 +262,35 @@ export default function EWayBillSection({ invoice, onUpdated }) {
         {/* Generate EWB Form */}
         {activeAction === 'generate' && (
           <ActionForm title="Generate E-Way Bill" onCancel={resetAction}>
-            <div>
-              <Label className="text-xs font-medium text-slate-700">Distance (km) *</Label>
-              <Input type="number" min={1} max={4000} className="h-9 text-sm mt-1 w-40"
-                value={distanceKm} onChange={e => setDistanceKm(e.target.value)} placeholder="e.g. 250" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs font-medium text-slate-700">Distance (km) *</Label>
+                <Input type="number" min={1} max={4000} className="h-9 text-sm mt-1"
+                  value={distanceKm} onChange={e => setDistanceKm(e.target.value)} placeholder="e.g. 250" />
+              </div>
+              <div>
+                <Label className="text-xs font-medium text-slate-700">Vehicle Number</Label>
+                <Input className="h-9 text-sm mt-1"
+                  value={genVehicleNo} onChange={e => setGenVehicleNo(e.target.value.toUpperCase())} placeholder="e.g. HR06AB1234" />
+              </div>
+              <div>
+                <Label className="text-xs font-medium text-slate-700">Transporter GSTIN</Label>
+                <Input className="h-9 text-sm mt-1"
+                  value={genTransporterId} onChange={e => setGenTransporterId(e.target.value)} placeholder="15-digit GSTIN" />
+              </div>
+              <div>
+                <Label className="text-xs font-medium text-slate-700">Transporter Name</Label>
+                <Input className="h-9 text-sm mt-1"
+                  value={genTransporterName} onChange={e => setGenTransporterName(e.target.value)} placeholder="Transporter name" />
+              </div>
+              <div>
+                <Label className="text-xs font-medium text-slate-700">Transport Mode</Label>
+                <select className="h-9 text-sm mt-1 w-full border rounded-md px-3 border-slate-200" value={genTransMode} onChange={e => setGenTransMode(e.target.value)}>
+                  {TRANSPORT_MODES.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                </select>
+              </div>
             </div>
-            <Button className="h-11 text-sm bg-blue-700 hover:bg-blue-800 text-white" onClick={generateEWB} disabled={loading}>
+            <Button className="h-11 text-sm bg-blue-700 hover:bg-blue-800 text-white w-full md:w-auto" onClick={generateEWB} disabled={loading}>
               {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Zap className="w-4 h-4 mr-2" />}
               Generate E-Way Bill
             </Button>

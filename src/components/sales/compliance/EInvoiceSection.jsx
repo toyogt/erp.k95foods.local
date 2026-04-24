@@ -39,10 +39,12 @@ export default function EInvoiceSection({ invoice, onUpdated }) {
     setLoading(false);
 
     if (resp.data?.success) {
-      Swal.fire({ icon: 'success', title: 'E-Invoice Generated!', html: `<div class="text-left text-sm"><p><b>IRN:</b> <span style="word-break:break-all;font-family:monospace;font-size:11px">${resp.data.irn || ''}</span></p><p><b>Acknowledgement Number:</b> ${resp.data.ack_number || ''}</p><p><b>Acknowledgement Date:</b> ${resp.data.ack_date || ''}</p></div>`, confirmButtonColor: '#16a34a' });
+      const modeTag = resp.data.mode === 'sandbox' ? ' <span style="color:#b45309;font-weight:600">(Sandbox Mode)</span>' : '';
+      Swal.fire({ icon: 'success', title: 'E-Invoice Generated!', html: `<div class="text-left text-sm"><p><b>IRN:</b> <span style="word-break:break-all;font-family:monospace;font-size:11px">${resp.data.irn || ''}</span></p><p><b>Acknowledgement Number:</b> ${resp.data.ack_number || ''}</p><p><b>Acknowledgement Date:</b> ${resp.data.ack_date || ''}</p>${modeTag}</div>`, confirmButtonColor: '#16a34a' });
       onUpdated();
     } else {
-      Swal.fire({ icon: 'error', title: 'E-Invoice Generation Failed', text: resp.data?.error || 'Check API settings and try again.', confirmButtonColor: '#dc2626' });
+      const errCode = resp.data?.error_code ? ` [${resp.data.error_code}]` : '';
+      Swal.fire({ icon: 'error', title: 'E-Invoice Generation Failed', html: `<div class="text-left text-sm"><p>${resp.data?.error || 'Check API settings and try again.'}${errCode}</p></div>`, confirmButtonColor: '#dc2626' });
     }
   }
 
