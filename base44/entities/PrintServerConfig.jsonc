@@ -1,0 +1,54 @@
+{
+  "name": "PrintServerConfig",
+  "type": "object",
+  "title": "Print Server Configuration",
+  "description": "Per-workstation print agent endpoint configuration. Maps a workstation to its print server base URL and the secret name holding its X-Auth-Token.",
+  "properties": {
+    "print_server_config_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "workstation_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "base_url": {
+      "type": "string",
+      "format": "uri"
+    },
+    "auth_token_secret_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "Name of the environment variable holding X-Auth-Token. Resolved server-side."
+    },
+    "request_timeout_ms": {
+      "type": "integer",
+      "minimum": 200,
+      "maximum": 10000,
+      "default": 1200
+    },
+    "heartbeat_stale_seconds": {
+      "type": "integer",
+      "minimum": 10,
+      "maximum": 300,
+      "default": 45
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 500
+    }
+  },
+  "required": [
+    "print_server_config_id",
+    "workstation_id",
+    "base_url",
+    "auth_token_secret_name"
+  ]
+}

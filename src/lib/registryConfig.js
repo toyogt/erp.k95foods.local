@@ -19,6 +19,7 @@ import {
   Activity, BarChart4, AlertCircle, AlertTriangle,
   Store, MapPin, QrCode, ArrowLeftRight, TrendingDown,
   RotateCcw, SlidersHorizontal, CalendarDays, Eye,
+  Send,
 } from 'lucide-react';
 
 /**
@@ -116,6 +117,12 @@ export const pageRegistry = [
   { pageKey: 'AuditLogPage', title: 'Audit Log', moduleKey: 'ADMIN', icon: ScrollText, roles: ['admin', 'production_manager', 'qa', 'user'] },
   { pageKey: 'TraceabilityExplorer', title: 'Traceability Explorer', moduleKey: 'ADMIN', icon: Search, roles: ['admin', 'production_manager', 'qa', 'warehouse_ops', 'user'] },
   { pageKey: 'ReconciliationDashboard', title: 'Reconciliation Dashboard', moduleKey: 'ADMIN', icon: AlertTriangle, roles: ['admin', 'production_manager', 'warehouse_ops', 'supervisor'] },
+
+  // ─── PRINT MANAGEMENT ───
+  { pageKey: 'PrintManagementDashboard', title: 'Print Dashboard', moduleKey: 'PRINT_MGMT', icon: Printer, roles: ['admin', 'production_manager', 'lbl_supervisor', 'user'], sortOrder: 1 },
+  { pageKey: 'PrintJobCreate', title: 'New Print Job', moduleKey: 'PRINT_MGMT', icon: Send, roles: ['admin', 'production_manager', 'lbl_supervisor', 'lbl_operator', 'user'], sortOrder: 2 },
+  { pageKey: 'PrintJobs', title: 'Print Jobs', moduleKey: 'PRINT_MGMT', icon: ListChecks, roles: ['admin', 'production_manager', 'lbl_supervisor', 'lbl_operator', 'user'], sortOrder: 3 },
+  { pageKey: 'PrintManagementAdmin', title: 'Print Admin', moduleKey: 'PRINT_MGMT', icon: Settings, roles: ['admin'], adminOnly: true, sortOrder: 10 },
 
   // ─── STORE MANAGEMENT ───
   { pageKey: 'SMSDashboard',       title: 'Store Dashboard',    moduleKey: 'STORE', icon: Store,           roles: ['admin', 'store_manager', 'store_receiver', 'user'], sortOrder: 1 },
@@ -266,6 +273,15 @@ export const moduleRegistry = [
     bgColor: 'bg-indigo-50',
     adminOnly: true,
     sortOrder: 99,
+  },
+  {
+    moduleKey: 'PRINT_MGMT',
+    label: 'Print Management',
+    icon: Printer,
+    color: 'text-cyan-600',
+    bgColor: 'bg-cyan-50',
+    adminOnly: false,
+    sortOrder: 3.7,
   },
   {
     moduleKey: 'SALES',

@@ -1,0 +1,91 @@
+{
+  "name": "PrintJobAudit",
+  "type": "object",
+  "title": "Print Job Audit",
+  "description": "Audit trail for every ERP-initiated print job: routing decision, selected endpoint, lifecycle status.",
+  "properties": {
+    "erp_job_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "source_type": {
+      "type": "string",
+      "enum": [
+        "path",
+        "url"
+      ]
+    },
+    "source_value": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000
+    },
+    "label_size": {
+      "type": "string",
+      "maxLength": 20
+    },
+    "template_id": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "copies": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 200
+    },
+    "requested_workstation_id": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "selected_workstation_id": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "selected_base_url": {
+      "type": "string",
+      "format": "uri"
+    },
+    "selected_agent_id": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "selected_printer": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "remote_job_id": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "ROUTING",
+        "SUBMITTED",
+        "QUEUED",
+        "ASSIGNED",
+        "DOWNLOADING",
+        "RENDERING",
+        "PRINTING",
+        "SUCCESS",
+        "FAILED",
+        "ROUTING_FAILED"
+      ],
+      "default": "ROUTING"
+    },
+    "routing_trace": {
+      "type": "object"
+    },
+    "error_info": {
+      "type": "object"
+    }
+  },
+  "required": [
+    "erp_job_id",
+    "source_type",
+    "source_value",
+    "copies",
+    "status"
+  ]
+}

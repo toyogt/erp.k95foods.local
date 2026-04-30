@@ -129,6 +129,10 @@ import LblPrintTemplateManager from './pages/LblPrintTemplateManager';
 import PageFieldPermissions from './pages/PageFieldPermissions';
 import BoxLabelTemplateManager from './pages/BoxLabelTemplateManager';
 import BoxLabelTemplateBuilder from './pages/BoxLabelTemplateBuilder';
+import PrintManagementDashboard from './pages/PrintManagementDashboard';
+import PrintJobCreate from './pages/PrintJobCreate';
+import PrintJobs from './pages/PrintJobs';
+import PrintManagementAdmin from './pages/PrintManagementAdmin';
 
 // Page component lookup table
 const PAGE_COMPONENTS = {
@@ -156,6 +160,7 @@ const PAGE_COMPONENTS = {
   LblMasterData,
   LblDocTypePermissions,
   RynanPrinterCenter,
+  PrintManagementDashboard, PrintJobCreate, PrintJobs, PrintManagementAdmin,
 };
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -333,6 +338,12 @@ const AuthenticatedApp = () => {
       <Route path="/PageFieldPermissions" element={<LayoutWrapper currentPageName="PageFieldPermissions"><PageFieldPermissions /></LayoutWrapper>} />
       <Route path="/BoxLabelTemplateManager" element={<LayoutWrapper currentPageName="BoxLabelTemplateManager"><BoxLabelTemplateManager /></LayoutWrapper>} />
       <Route path="/BoxLabelTemplateBuilder" element={<LayoutWrapper currentPageName="BoxLabelTemplateBuilder"><BoxLabelTemplateBuilder /></LayoutWrapper>} />
+
+      {/* Print Management Module */}
+      <Route path="/PrintManagementDashboard" element={<LayoutWrapper currentPageName="PrintManagementDashboard"><PrintManagementDashboard /></LayoutWrapper>} />
+      <Route path="/PrintJobCreate" element={<LayoutWrapper currentPageName="PrintJobCreate"><PrintJobCreate /></LayoutWrapper>} />
+      <Route path="/PrintJobs" element={<LayoutWrapper currentPageName="PrintJobs"><PrintJobs /></LayoutWrapper>} />
+      <Route path="/PrintManagementAdmin" element={<LayoutWrapper currentPageName="PrintManagementAdmin"><PrintManagementAdmin /></LayoutWrapper>} />
       {/* Store Management System Routes */}
       {[
         ['SMSDashboard', SMSDashboard], ['SMSLocationManager', SMSLocationManager],
