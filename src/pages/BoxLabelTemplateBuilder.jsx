@@ -10,7 +10,7 @@ import { toast } from '@/components/ui/use-toast';
 import BoxLabelCanvas from '@/components/labelling/BoxLabelCanvas';
 import BoxLabelElementPanel from '@/components/labelling/BoxLabelElementPanel';
 import { buildDefaultElement, generateTemplateId } from '@/lib/boxLabelHelpers';
-import { build6x4SampleTemplate } from '@/lib/boxLabelSampleTemplates';
+import { build6x4SampleTemplate, build3x4SampleTemplate } from '@/lib/boxLabelSampleTemplates';
 import { ArrowLeft, Type, Image as ImageIcon, Barcode, Save, Loader2, Eye, Wand2 } from 'lucide-react';
 
 export default function BoxLabelTemplateBuilder() {
@@ -74,6 +74,20 @@ export default function BoxLabelTemplateBuilder() {
     setTemplate(t => ({
       ...t,
       template_name: t.template_name || '4x6 Box Label',
+      page_unit: sample.page_unit,
+      page_width: sample.page_width,
+      page_height: sample.page_height,
+      elements: sample.elements,
+    }));
+    setSelectedId(null);
+  };
+
+  const loadSample3x4 = () => {
+    if (template.elements.length > 0 && !confirm('Replace current elements with the 3×4 sample layout?')) return;
+    const sample = build3x4SampleTemplate();
+    setTemplate(t => ({
+      ...t,
+      template_name: t.template_name || '3x4 Box Label',
       page_unit: sample.page_unit,
       page_width: sample.page_width,
       page_height: sample.page_height,
@@ -207,9 +221,14 @@ export default function BoxLabelTemplateBuilder() {
                   <Barcode className="w-4 h-4" /> Barcode
                 </Button>
               </div>
-              <Button variant="outline" className="h-10 w-full gap-2 text-sm mt-2 border-dashed" onClick={loadSample6x4}>
-                <Wand2 className="w-4 h-4" /> Load 4×6 Sample
-              </Button>
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                <Button variant="outline" className="h-10 gap-2 text-sm border-dashed" onClick={loadSample6x4}>
+                  <Wand2 className="w-4 h-4" /> 4×6 Sample
+                </Button>
+                <Button variant="outline" className="h-10 gap-2 text-sm border-dashed" onClick={loadSample3x4}>
+                  <Wand2 className="w-4 h-4" /> 3×4 Sample
+                </Button>
+              </div>
             </div>
           )}
 
