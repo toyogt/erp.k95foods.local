@@ -151,10 +151,12 @@ export default function LblBoxLabelAgentPrintModal({ open, onOpenChange, templat
       ? discovery.rows
       : Array.isArray(discovery?.printers) ? discovery.printers : [];
     const matched = printers.filter(p => p.printer_name && sizeMatches(p.size_code, sizeInfo.aliases));
-    // group by workstation (one entry per workstation; show first matching printer)
+    // Dedupe by workstation display name (case-insensitive) so the same physical
+    // workstation registered under multiple ids (e.g. LBL_DPT_01 vs LBL-DPT-01) shows once.
     const map = new Map();
     for (const p of matched) {
-      if (!map.has(p.workstation_id)) map.set(p.workstation_id, p);
+      const key = (p.display_name || p.workstation_name || p.workstation_id || '').trim().toLowerCase();
+      if (!map.has(key)) map.set(key, p);
     }
     return Array.from(map.values());
   }, [discovery, sizeInfo]);
@@ -287,7 +289,7 @@ export default function LblBoxLabelAgentPrintModal({ open, onOpenChange, templat
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium text-slate-900 truncate">
-                          {p.workstation_name || p.workstation_id}
+                          {p.display_name || p.workstation_name || p.workstation_id}
                         </div>
                         <div className="text-xs text-slate-500 font-mono truncate">
                           {p.printer_name} · {p.size_code}
