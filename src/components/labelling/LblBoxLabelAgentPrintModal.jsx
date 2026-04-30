@@ -115,11 +115,23 @@ async function renderLabelToPdfBlob(template, data) {
 }
 
 export default function LblBoxLabelAgentPrintModal({ open, onOpenChange, template, data, onPrinted }) {
-  const [copies, setCopies] = useState(1);
+  const sizeInfo = useMemo(() => deriveSizeCode(template), [template]);
+
+  // Auto-calc number of boxes = stock transfer bottles / bottles per box (ceil).
+  // Editable by operator if needed.
+  const computedBoxes = useMemo(() => {
+    const bottles = Number(data?.job?.stock_transfer_qty) || 0;
+    const perBox = Number(data?.sku?.bottles_per_box) || 0;
+    if (!bottles || !perBox) return 1;
+    return Math.max(1, Math.ceil(bottles / perBox));
+  }, [data]);
+
+  const [copies, setCopies] = useState(computedBoxes);
   const [selectedWid, setSelectedWid] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const sizeInfo = useMemo(() => deriveSizeCode(template), [template]);
+  // Reset copies whenever the modal opens or the computed value changes
+  useMemo(() => { if (open) setCopies(computedBoxes); }, [open, computedBoxes]);
 
   // Fetch live discovery so we can filter by matching printer size
   const { data: discovery, isLoading: loadingDiscovery, refetch } = useQuery({
@@ -210,15 +222,31 @@ export default function LblBoxLabelAgentPrintModal({ open, onOpenChange, templat
           </div>
 
           <div className="space-y-1">
-            <Label className="text-xs font-medium text-slate-700">Copies</Label>
-            <Input
-              type="number"
-              min={1}
-              max={200}
-              value={copies}
-              onChange={e => setCopies(e.target.value)}
-              className="h-11 md:h-9 w-32"
-            />
+            <Label className="text-xs font-medium text-slate-700">Number of Boxes (Copies)</Label>
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                min={1}
+                max={200}
+                value={copies}
+                onChange={e => setCopies(e.target.value)}
+                className="h-11 md:h-9 w-32"
+              />
+              {copies !== computedBoxes && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-9 text-xs"
+                  onClick={() => setCopies(computedBoxes)}
+                >
+                  Reset to {computedBoxes}
+                </Button>
+              )}
+            </div>
+            <p className="text-xs text-slate-500">
+              {Number(data?.job?.stock_transfer_qty) || 0} bottles ÷ {Number(data?.sku?.bottles_per_box) || 0} bottles/box = <span className="font-semibold text-slate-700">{computedBoxes}</span> box{computedBoxes === 1 ? '' : 'es'}
+            </p>
           </div>
 
           <div className="space-y-2">
