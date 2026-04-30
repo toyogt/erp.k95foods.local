@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Loader2, RefreshCw, CheckCircle2, Plus, Trash2, Search, AlertTriangle, Camera, ListChecks, FileText, Eye, ChevronRight, QrCode, ExternalLink } from 'lucide-react';
+import { Loader2, RefreshCw, CheckCircle2, Plus, Search, ListChecks, FileText, Eye, ChevronRight, ExternalLink } from 'lucide-react';
 import GRNDetailModal from '@/components/store/GRNDetailModal';
 import InvoicePreviewModal from '@/components/store/InvoicePreviewModal';
 import { logGrnAudit, getChecklistTemplate } from '@/components/grn/grnHelpers';
@@ -16,8 +16,7 @@ import { showErrorAlert, showWarningAlert, showValidationErrors } from '@/lib/to
 import { formatDateTime, formatDate } from '@/lib/dateFormatter';
 import Swal from 'sweetalert2';
 import useDraftSave from '@/hooks/useDraftSave';
-import NumericInput from '@/components/ui/NumericInput';
-import { useToast } from "@/components/ui/use-toast";
+
 import TablePagination from '@/components/store/TablePagination';
 
 
@@ -107,8 +106,6 @@ export default function GRNReceive() {
   const [supplierName, setSupplierNameRaw] = useState(draft.supplierName || '');
   const [invoiceNumber, setInvoiceNumberRaw] = useState(draft.invoiceNumber || '');
   const [invoiceDate, setInvoiceDateRaw] = useState(draft.invoiceDate || '');
-  const { toast } = useToast();
-  
   function setSupplierName(v) {
     setSupplierNameRaw(v);
     setDraftState(d => ({ ...d, supplierName: v }));
@@ -581,7 +578,6 @@ export default function GRNReceive() {
                 <GRNManualSupplierSelect
                   value={supplierName}
                   onChange={(name) => setSupplierName(name)}
-                  itemNames={items.map(it => it.item_name).filter(Boolean)}
                 />
               </div>
               <div>

@@ -11,7 +11,7 @@ const SETTING_KEY = 'store_manual_suppliers';
  * - Allows free-text entry; new names are saved to AppSetting for future reuse
  * - Has an "Add New Supplier" option when typed name not found
  */
-export default function GRNManualSupplierSelect({ value, onChange, itemNames = [] }) {
+export default function GRNManualSupplierSelect({ value, onChange }) {
   const [approvedSuppliers, setApprovedSuppliers] = useState([]);
   const [manualSuppliers, setManualSuppliers] = useState([]);
   const [manualSettingId, setManualSettingId] = useState(null);
