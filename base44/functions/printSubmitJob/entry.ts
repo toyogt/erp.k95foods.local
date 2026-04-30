@@ -27,8 +27,28 @@ function buildWorkstationOrder({ preferredWorkstationId, fallbacks = [], worksta
   return { order, tierMap };
 }
 
-function isFresh(iso, secs, now) { if (!iso) return false; const t = Date.parse(iso); return !Number.isNaN(t) && (now - t) / 1000 <= secs; }
-function sizeMatches(a, b) { if (!b) return true; if (!a) return false; return String(a).trim().toLowerCase() === String(b).trim().toLowerCase(); }
+// Heartbeat is "fresh" if missing/empty (agent doesn't report one) OR within window.
+function isFresh(iso, secs, now) {
+  if (!iso) return true;
+  const t = Date.parse(iso);
+  if (Number.isNaN(t)) return true;
+  return (now - t) / 1000 <= secs;
+}
+// Orientation-agnostic size match: "3x4" matches "4x3", "100x150mm" matches "150x100mm", etc.
+function normalizeSize(s) {
+  if (!s) return '';
+  const str = String(s).trim().toLowerCase().replace(/\s+/g, '');
+  const m = str.match(/^(\d+(?:\.\d+)?)x(\d+(?:\.\d+)?)(.*)$/);
+  if (!m) return str;
+  const a = parseFloat(m[1]), b = parseFloat(m[2]), suf = m[3] || '';
+  const lo = Math.min(a, b), hi = Math.max(a, b);
+  return `${lo}x${hi}${suf}`;
+}
+function sizeMatches(a, b) {
+  if (!b) return true;
+  if (!a) return false;
+  return normalizeSize(a) === normalizeSize(b);
+}
 
 function extractCandidates({ workstationId, probeMeta, config, request, tier, now }) {
   const out = []; const reasons = [];
