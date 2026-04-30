@@ -18,7 +18,7 @@ function LocationModal({ loc, onSave, onClose }) {
   function set(k, v) { setForm(f => ({ ...f, [k]: v })); }
 
   function buildCode(f) {
-    const parts = [f.warehouse, f.floor, f.section, f.place, f.slab, f.rack].filter(Boolean);
+    const parts = [f.warehouse, f.floor, f.section, f.rack, f.slab, f.place].filter(Boolean);
     return parts.join('-');
   }
 
@@ -37,9 +37,9 @@ function LocationModal({ loc, onSave, onClose }) {
     { key: 'warehouse', label: 'Warehouse *', placeholder: 'e.g. WH1' },
     { key: 'floor', label: 'Floor', placeholder: 'e.g. F1' },
     { key: 'section', label: 'Section', placeholder: 'e.g. S2' },
-    { key: 'place', label: 'Place', placeholder: 'e.g. P1' },
-    { key: 'slab', label: 'Slab', placeholder: 'e.g. SL1' },
     { key: 'rack', label: 'Rack *', placeholder: 'e.g. R4' },
+    { key: 'slab', label: 'Slab', placeholder: 'e.g. SL1' },
+    { key: 'place', label: 'Place', placeholder: 'e.g. P1' },
   ];
 
   return (
