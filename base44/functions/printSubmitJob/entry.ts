@@ -50,6 +50,23 @@ function sizeMatches(a, b) {
   return normalizeSize(a) === normalizeSize(b);
 }
 
+// Pick the best agent template for this printer: same size_code, prefer ones whose
+// id mentions the requested PDF orientation (e.g. 'label_4x3_pdf_3x4' for a 3x4 PDF on 4x3 stock).
+function pickTemplateId({ snapshot, agentId, printerSize, requestedSize }) {
+  const tpls = Array.isArray(snapshot?.templates) ? snapshot.templates : [];
+  const agentTplIds = new Set(
+    (snapshot?.agents || []).find(a => a.agent_id === agentId)?.templates || []
+  );
+  const matches = tpls.filter(t => agentTplIds.has(t.template_id) && sizeMatches(t.size_code, printerSize));
+  if (matches.length === 0) return '';
+  if (requestedSize) {
+    const want = normalizeSize(requestedSize);
+    const oriented = matches.find(t => String(t.template_id).toLowerCase().includes(`pdf_${want}`));
+    if (oriented) return oriented.template_id;
+  }
+  return matches[0].template_id;
+}
+
 function extractCandidates({ workstationId, probeMeta, config, request, tier, now }) {
   const out = []; const reasons = [];
   if (!probeMeta || !probeMeta.probe_ok) { reasons.push({ workstationId, reason: 'probe_failed', detail: probeMeta?.probe_error }); return { out, reasons }; }
@@ -64,11 +81,15 @@ function extractCandidates({ workstationId, probeMeta, config, request, tier, no
       const agent = agents.find(a => a.agent_id === p.agent_id);
       if (!(agent?.groups || []).includes(request.group)) { reasons.push({ workstationId, printer: p.printer_name, reason: 'group_unsupported' }); continue; }
     }
+    const auto_template_id = pickTemplateId({
+      snapshot: snap, agentId: p.agent_id, printerSize: p.size_code, requestedSize: request.label_size,
+    });
     out.push({
       workstation_id: workstationId, agent_id: p.agent_id, printer_name: p.printer_name, size_code: p.size_code,
       // Agent's own workstation_id (may differ from ERP's id, e.g. 'ws_te244_local' vs 'LBL_DPT_01').
       // Used in the POST body so the agent accepts the job.
       agent_workstation_id: p.workstation_id || workstationId,
+      auto_template_id,
       heartbeat: p.heartbeat, heartbeat_age_ms: Date.parse(p.heartbeat) ? now - Date.parse(p.heartbeat) : null,
       probe_latency_ms: probeMeta.probe_latency_ms ?? null, tier,
     });
@@ -184,9 +205,12 @@ Deno.serve(async (req) => {
       // Send size in the orientation the agent actually reports for this printer
       // (e.g. agent has '4x3' template configured → send '4x3' even if template is '3x4').
       const agentSize = cand.size_code || label_size;
+      // Use caller-supplied template_id if given, else auto-pick the best matching agent template
+      // for deterministic rotation (e.g. 'label_4x3_pdf_3x4' for a 3x4 PDF on 4x3 stock).
+      const finalTemplateId = template_id || cand.auto_template_id || '';
       const payload = {
         source: { type: source_type, value: source_value },
-        ...(agentSize ? { label_size: agentSize } : {}), ...(template_id ? { template_id } : {}),
+        ...(agentSize ? { label_size: agentSize } : {}), ...(finalTemplateId ? { template_id: finalTemplateId } : {}),
         copies,
         target: { workstation_id: cand.agent_workstation_id || cand.workstation_id, agent_id: cand.agent_id, printer: cand.printer_name, ...(group ? { group } : {}) },
         idempotency_key: erp_job_id,
