@@ -146,8 +146,11 @@ export default function LblBoxLabelAgentPrintModal({ open, onOpenChange, templat
 
   // Keep only printers whose size matches the template, group by workstation
   const eligible = useMemo(() => {
-    const printers = Array.isArray(discovery?.printers) ? discovery.printers : [];
-    const matched = printers.filter(p => sizeMatches(p.size_code, sizeInfo.aliases));
+    // printDiscoveryLive returns { ok, rows: [...] }
+    const printers = Array.isArray(discovery?.rows)
+      ? discovery.rows
+      : Array.isArray(discovery?.printers) ? discovery.printers : [];
+    const matched = printers.filter(p => p.printer_name && sizeMatches(p.size_code, sizeInfo.aliases));
     // group by workstation (one entry per workstation; show first matching printer)
     const map = new Map();
     for (const p of matched) {
