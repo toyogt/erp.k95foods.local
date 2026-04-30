@@ -11,7 +11,7 @@ import { fireFMSEvent } from '@/lib/useFMSAutoComplete';
 import ChecklistGate from '@/components/grn/ChecklistGate';
 import GRNItemCard from '@/components/store/GRNItemCard';
 import GRNPrintTemplate from '@/components/store/GRNPrintTemplate';
-import GRNSupplierSelect from '@/components/store/GRNSupplierSelect';
+import GRNManualSupplierSelect from '@/components/store/GRNManualSupplierSelect';
 import { showErrorAlert, showWarningAlert, showValidationErrors } from '@/lib/toastHelpers';
 import { formatDateTime, formatDate } from '@/lib/dateFormatter';
 import Swal from 'sweetalert2';
@@ -133,7 +133,6 @@ export default function GRNReceive() {
     setGrnNotesRaw(v);
     setDraftState(d => ({ ...d, grnNotes: v }));
   }
-  const [suppliers, setSuppliers] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(null);
   const [checklistTemplate, setChecklistTemplate] = useState(null);
@@ -155,12 +154,11 @@ export default function GRNReceive() {
 
   async function load(autoSelectGateId) {
     setLoading(true);
-    const [u, entries, existingGrns, masterItems, approvedSuppliers, allGates] = await Promise.all([
+    const [u, entries, existingGrns, masterItems, allGates] = await Promise.all([
       base44.auth.me(),
       base44.entities.GateEntry.filter({ status: 'OPEN' }, '-created_date', 100),
       base44.entities.GRNHeader.list('-created_date', 200),
       base44.entities.StoreItemMaster.filter({ is_active: true }, 'item_name', 500),
-      base44.entities.Supplier.filter({ approval_status: 'APPROVED' }, 'supplier_name', 500).catch(() => []),
       base44.entities.GateEntry.list('-created_date', 500),
     ]);
     const gateMap = {};
@@ -168,7 +166,6 @@ export default function GRNReceive() {
     setAllGateMap(gateMap);
     setUser(u);
     setStoreItems(masterItems);
-    setSuppliers(approvedSuppliers);
     setAllGrns(existingGrns);
 
     const usedGateIds = new Set(existingGrns.map(g => g.gate_id).filter(Boolean));
@@ -581,9 +578,9 @@ export default function GRNReceive() {
             <p className="text-sm font-semibold text-slate-900 uppercase tracking-wide mb-3">Supplier & Invoice Details</p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
-                <GRNSupplierSelect
+                <GRNManualSupplierSelect
                   value={supplierName}
-                  onChange={({ supplier_name }) => setSupplierName(supplier_name)}
+                  onChange={(name) => setSupplierName(name)}
                   itemNames={items.map(it => it.item_name).filter(Boolean)}
                 />
               </div>

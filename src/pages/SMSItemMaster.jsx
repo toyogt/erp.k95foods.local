@@ -7,6 +7,7 @@ import { Pencil, Trash2, Search, PackageOpen, ImageIcon, Download, AlertTriangle
 import MaterialPhotoUpload from '@/components/store/MaterialPhotoUpload';
 import ImportSystemItemsModal from '@/components/store/ImportSystemItemsModal';
 import { showErrorAlert, showConfirmAlert, showSuccessToast } from '@/lib/toastHelpers';
+import OpeningStockLocationSelect from '@/components/store/OpeningStockLocationSelect';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -26,7 +27,9 @@ const EMPTY_FORM = {
   material_photo: '',
   batch_required: false, expiry_required: false,
   mfg_date_required: false,
-  opening_stock: '', 
+  opening_stock: '',
+  opening_stock_location_id: '',
+  opening_stock_location_code: '',
   storage_notes: '', is_active: true,
 };
 
@@ -53,21 +56,58 @@ function ItemFormModal({ item, onClose, onSaved }) {
     }
     setSaving(true);
     try {
+      const openingQty = form.opening_stock !== '' ? Number(form.opening_stock) : 0;
+      const hasLocation = !!form.opening_stock_location_id;
       const data = {
         ...form,
         item_name: form.item_name.trim(),
-        opening_stock: form.opening_stock !== '' ? Number(form.opening_stock) : 0,
+        opening_stock: openingQty,
       };
+
       if (item?.id) {
         await base44.entities.StoreItemMaster.update(item.id, data);
         showSuccessToast('Item updated successfully');
       } else {
+        // New item: auto-create lot + balance if opening stock + location assigned
+        const itemCode = form.item_code || `ITEM-${Date.now()}`;
+        const openingLotId = (openingQty > 0 && hasLocation)
+          ? `LOT-OPEN-${itemCode}-${Date.now().toString(36).toUpperCase()}`
+          : '';
+
+        data.opening_lot_id = openingLotId;
         await base44.entities.StoreItemMaster.create(data);
+
+        if (openingQty > 0 && hasLocation && openingLotId) {
+          await base44.entities.StoreLot.create({
+            lot_id: openingLotId, qr_code: openingLotId,
+            item_code: itemCode,
+            item_name: form.item_name.trim(),
+            uom: form.uom || 'Nos',
+            original_quantity: openingQty,
+            quantity: openingQty,
+            remaining_quantity: openingQty,
+            mismatch_type: 'none',
+            supplier_name: 'Opening Stock',
+            status: 'putaway',
+            notes: 'Auto-created from opening stock',
+          });
+          await base44.entities.StoreStockBalance.create({
+            location_id: form.opening_stock_location_id,
+            location_code: form.opening_stock_location_code,
+            lot_id: openingLotId,
+            item_code: itemCode,
+            item_name: form.item_name.trim(),
+            uom: form.uom || 'Nos',
+            quantity: openingQty,
+            putaway_date: new Date().toISOString(),
+            putaway_by: 'system/opening-stock',
+          });
+        }
         showSuccessToast('Item created successfully');
       }
       setSaving(false);
       onSaved();
-    } catch (err) {
+    } catch {
       showErrorAlert('Save Failed', 'Failed to save item');
       setSaving(false);
     }
@@ -120,8 +160,18 @@ function ItemFormModal({ item, onClose, onSaved }) {
           <div>
             <label className="text-xs font-medium text-slate-700">Opening Stock</label>
             <Input className="h-9 text-sm mt-1" type="number" min="0" value={form.opening_stock} onChange={e => setField('opening_stock', e.target.value)} placeholder="0" />
-            <p className="text-xs text-slate-400 mt-0.5">Initial stock quantity for this item</p>
+            <p className="text-xs text-slate-400 mt-0.5">Initial stock quantity (treated as current stock)</p>
           </div>
+          {!isEdit && Number(form.opening_stock) > 0 && (
+            <OpeningStockLocationSelect
+              locationId={form.opening_stock_location_id}
+              locationCode={form.opening_stock_location_code}
+              onChange={({ location_id, location_code }) => {
+                setField('opening_stock_location_id', location_id);
+                setField('opening_stock_location_code', location_code);
+              }}
+            />
+          )}
           <div className="border border-slate-100 rounded-xl p-4 space-y-2">
             <p className="text-xs font-semibold text-slate-600 mb-2">Validation Rules</p>
             {[

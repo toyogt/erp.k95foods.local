@@ -31,7 +31,7 @@
     "source_entity": {
       "type": "string",
       "maxLength": 100,
-      "description": "Source entity type if imported from System master (e.g. IngredientItem, BoxType)"
+      "description": "Source entity type if imported from System master"
     },
     "source_id": {
       "type": "string",
@@ -50,28 +50,23 @@
     },
     "batch_required": {
       "type": "boolean",
-      "default": false,
-      "description": "Is batch number mandatory for this item?"
+      "default": false
     },
     "expiry_required": {
       "type": "boolean",
-      "default": false,
-      "description": "Is expiry date mandatory?"
+      "default": false
     },
     "mfg_date_required": {
       "type": "boolean",
-      "default": false,
-      "description": "Is manufacture date mandatory?"
+      "default": false
     },
     "qc_required": {
       "type": "boolean",
-      "default": false,
-      "description": "Does this item require QC inspection?"
+      "default": false
     },
     "min_shelf_life_days": {
       "type": "number",
-      "minimum": 0,
-      "description": "Minimum required shelf life at time of receipt (days)"
+      "minimum": 0
     },
     "opening_stock": {
       "type": "number",
@@ -79,11 +74,25 @@
       "default": 0,
       "description": "Opening stock quantity for this item"
     },
+    "opening_stock_location_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Location ID for opening stock lot"
+    },
+    "opening_stock_location_code": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Location code for opening stock lot (display)"
+    },
+    "opening_lot_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Auto-generated lot ID for opening stock (set after creation)"
+    },
     "reorder_level": {
       "type": "number",
       "minimum": 0,
-      "default": 0,
-      "description": "Reorder alert level for this item"
+      "default": 0
     },
     "storage_notes": {
       "type": "string",

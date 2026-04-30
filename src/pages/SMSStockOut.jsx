@@ -345,6 +345,9 @@ export default function SMSStockOut() {
     lots.forEach(l => {
       const lotStock = stockByLot[l.lot_id] || 0;
       if (lotStock <= 0) return;
+      const lotLocations = locationsByLot[l.lot_id] || [];
+      // Only include lots that have at least one location mapped — required for issuing
+      if (lotLocations.length === 0) return;
       if (!itemMap[l.item_code]) {
         itemMap[l.item_code] = {
           item_code: l.item_code,
@@ -354,7 +357,7 @@ export default function SMSStockOut() {
           total_stock: 0,
         };
       }
-      const lotWithStock = { ...l, actual_stock: lotStock, locations: locationsByLot[l.lot_id] || [] };
+      const lotWithStock = { ...l, actual_stock: lotStock, locations: lotLocations };
       itemMap[l.item_code].lots.push(lotWithStock);
       itemMap[l.item_code].total_stock += lotStock;
     });
@@ -504,9 +507,12 @@ export default function SMSStockOut() {
         {loading ? (
           <p className="text-sm text-slate-400 text-center py-6">Loading stored items...</p>
         ) : storedItems.length === 0 ? (
-          <div className="flex items-center gap-3 text-slate-400 py-6 justify-center">
-            <AlertCircle className="w-5 h-5" />
-            <p className="text-sm">No stored stock available for issue</p>
+          <div className="flex flex-col items-center gap-2 text-slate-400 py-6 text-center">
+            <AlertCircle className="w-6 h-6" />
+            <p className="text-sm font-medium text-slate-600">No stock available for issue</p>
+            <p className="text-xs text-slate-400 max-w-xs">
+              Only stock with an assigned location can be issued. Receive goods via Goods Receipt and complete putaway, or assign an opening stock location in Item Master.
+            </p>
           </div>
         ) : (
           <ManualModeIssue storedItems={storedItems} onIssue={handleIssue} saving={saving} />
