@@ -66,6 +66,9 @@ function extractCandidates({ workstationId, probeMeta, config, request, tier, no
     }
     out.push({
       workstation_id: workstationId, agent_id: p.agent_id, printer_name: p.printer_name, size_code: p.size_code,
+      // Agent's own workstation_id (may differ from ERP's id, e.g. 'ws_te244_local' vs 'LBL_DPT_01').
+      // Used in the POST body so the agent accepts the job.
+      agent_workstation_id: p.workstation_id || workstationId,
       heartbeat: p.heartbeat, heartbeat_age_ms: Date.parse(p.heartbeat) ? now - Date.parse(p.heartbeat) : null,
       probe_latency_ms: probeMeta.probe_latency_ms ?? null, tier,
     });
@@ -178,13 +181,16 @@ Deno.serve(async (req) => {
       const cfg = configByWid.get(cand.workstation_id);
       const token = Deno.env.get(cfg.auth_token_secret_name);
       if (!token) { lastError = { workstation_id: cand.workstation_id, error: 'token_secret_missing' }; continue; }
+      // Send size in the orientation the agent actually reports for this printer
+      // (e.g. agent has '4x3' template configured → send '4x3' even if template is '3x4').
+      const agentSize = cand.size_code || label_size;
       const payload = {
         source: { type: source_type, value: source_value },
-        ...(label_size ? { label_size } : {}), ...(template_id ? { template_id } : {}),
+        ...(agentSize ? { label_size: agentSize } : {}), ...(template_id ? { template_id } : {}),
         copies,
-        target: { workstation_id: cand.workstation_id, agent_id: cand.agent_id, printer: cand.printer_name, ...(group ? { group } : {}) },
+        target: { workstation_id: cand.agent_workstation_id || cand.workstation_id, agent_id: cand.agent_id, printer: cand.printer_name, ...(group ? { group } : {}) },
         idempotency_key: erp_job_id,
-        metadata: { routing_trace },
+        metadata: { routing_trace, requested_label_size: label_size || '' },
       };
       const resp = await submit(cfg.base_url, token, payload, cfg.request_timeout_ms || 1200);
       if (resp.status === 200 || resp.status === 201) { chosen = cand; remoteResp = resp; break; }
