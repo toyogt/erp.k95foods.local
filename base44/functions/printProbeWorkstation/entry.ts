@@ -46,10 +46,15 @@ Deno.serve(async (req) => {
     const config = configs[0];
     if (!config) return Response.json({ error: 'No active PrintServerConfig for workstation' }, { status: 404 });
 
-    const token = Deno.env.get(config.auth_token_secret_name);
+    const secretName = config.auth_token_secret_name;
+    const token = Deno.env.get(secretName);
     if (!token) {
       const cached = await upsertCache(base44, workstation_id, { ok: false, latency: 0, error: 'token_secret_missing' });
-      return Response.json({ ok: false, error: 'Token secret not configured', cache: cached }, { status: 500 });
+      return Response.json({
+        ok: false,
+        error: `Token secret '${secretName}' not configured. Available env keys: ${Object.keys(Deno.env.toObject()).filter(k => !['HOME','PATH','PWD'].includes(k)).join(', ')}`,
+        cache: cached,
+      }, { status: 500 });
     }
 
     const result = await probe(config.base_url, token, config.request_timeout_ms || 1200);
