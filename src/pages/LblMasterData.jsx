@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import LblLineManager from '@/components/labelling/LblLineManager';
 import LblPrinterManager from '@/components/labelling/LblPrinterManager';
-import LblPrintTemplateManager from '@/components/labelling/LblPrintTemplateManager';
+import LblPrintTemplateManager from '@/pages/LblPrintTemplateManager';
 import { Tag, Printer, FileCode2 } from 'lucide-react';
 
 export default function LblMasterData() {
