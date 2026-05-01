@@ -1,0 +1,52 @@
+{
+  "name": "AttendanceLog",
+  "type": "object",
+  "title": "Attendance Log",
+  "description": "Raw attendance punch records ingested from biometric devices via webhook.",
+  "properties": {
+    "employee_code": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50,
+      "description": "Employee code from biometric device (links to Employee.employee_code)"
+    },
+    "employee_name": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Employee name as reported by the device (snapshot)"
+    },
+    "log_datetime": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Full punch timestamp (ISO 8601)"
+    },
+    "log_date": {
+      "type": "string",
+      "maxLength": 20,
+      "description": "Date portion of punch in DD/MM/YYYY format"
+    },
+    "log_time": {
+      "type": "string",
+      "maxLength": 20,
+      "description": "Time portion of punch (HH:mm:ss)"
+    },
+    "device_sn": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Serial number of the biometric device that captured the punch"
+    },
+    "punch_direction": {
+      "type": "string",
+      "maxLength": 20,
+      "description": "Punch type if reported by device (e.g. IN, OUT)"
+    },
+    "raw_payload": {
+      "type": "object",
+      "description": "Full original payload from the biometric machine for audit/debugging"
+    }
+  },
+  "required": [
+    "employee_code",
+    "log_datetime"
+  ]
+}

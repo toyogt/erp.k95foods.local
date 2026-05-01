@@ -1,0 +1,50 @@
+{
+  "name": "Employee",
+  "type": "object",
+  "title": "Employee",
+  "description": "Master employee record. Linked to AttendanceLog via employee_code.",
+  "properties": {
+    "employee_code": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50,
+      "description": "Unique employee identifier from biometric machine (e.g. RT001)"
+    },
+    "employee_name": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Full name of the employee"
+    },
+    "email": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Employee email address"
+    },
+    "phone": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "department": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Department name (e.g. Production, Quality Control, Labelling)"
+    },
+    "designation": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Job title / role"
+    },
+    "date_of_joining": {
+      "type": "string",
+      "maxLength": 20,
+      "description": "Joining date in DD/MM/YYYY format"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "employee_code"
+  ]
+}
