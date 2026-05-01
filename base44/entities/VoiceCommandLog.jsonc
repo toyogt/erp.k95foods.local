@@ -1,0 +1,81 @@
+{
+  "name": "VoiceCommandLog",
+  "type": "object",
+  "title": "Voice Command Log",
+  "description": "Records every voice command sent to voiceCreateTask for analysis and improvement",
+  "properties": {
+    "director_email": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Email of the director who spoke the command"
+    },
+    "director_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "transcript": {
+      "type": "string",
+      "maxLength": 5000,
+      "description": "Raw transcript from Whisper (or voice_text if text input)"
+    },
+    "input_mode": {
+      "type": "string",
+      "enum": [
+        "audio",
+        "text"
+      ],
+      "default": "audio",
+      "description": "Whether input was audio (Whisper) or direct text"
+    },
+    "action_type": {
+      "type": "string",
+      "enum": [
+        "create_standalone_task",
+        "create_project",
+        "failed"
+      ],
+      "description": "What the AI decided to create"
+    },
+    "tasks_created": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0,
+      "description": "Number of DirectorTask records created"
+    },
+    "project_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Project ID if a project was created"
+    },
+    "project_number": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "task_numbers": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Task numbers created (e.g. DT-0010, DT-0011)"
+    },
+    "ai_parsed_json": {
+      "type": "string",
+      "maxLength": 10000,
+      "description": "JSON string of the full AI response \u2014 useful for debugging over-segmentation"
+    },
+    "error_message": {
+      "type": "string",
+      "maxLength": 2000,
+      "description": "Error detail if action_type is failed"
+    },
+    "feedback_note": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Manual annotation for improvement tracking (filled later)"
+    }
+  },
+  "required": [
+    "director_email",
+    "transcript"
+  ]
+}

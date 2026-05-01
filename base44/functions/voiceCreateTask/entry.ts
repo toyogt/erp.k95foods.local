@@ -154,11 +154,13 @@ The Director spoke this voice command:
 "${voiceText}"
 
 RULES:
-1. If the command describes a SINGLE, standalone action → set action_type to "create_standalone_task".
-2. If the command describes MULTIPLE related steps, or a workflow towards a larger goal → set action_type to "create_project".
+1. If the command describes a SINGLE, standalone action or a single goal (even if it implies some follow-up) → set action_type to "create_standalone_task". PREFER this option when in doubt.
+2. ONLY use "create_project" if the command EXPLICITLY describes 2 or more clearly distinct, named actions that are meaningfully different from each other (not just follow-up steps of the same action).
+   - Keep tasks count to the MINIMUM necessary. Aim for 2 tasks maximum unless the command very explicitly lists more.
+   - DO NOT split a single action into sub-steps. For example: "negotiate and get updates" = ONE task, not two.
+   - DO NOT create a separate task just for "follow up" or "check in" — include it in the task details of the main task.
    - Generate a concise, professional project name that captures the overall goal.
    - Generate a brief project description (1-2 sentences).
-   - Break the command into individual tasks in the correct logical sequence.
    - If a task must happen AFTER another, set predecessor_task_index to the 0-based index of that task.
    - The first task in a sequence always has no predecessor.
 3. For end dates:
@@ -201,6 +203,18 @@ RULES:
     });
 
     if (!aiResult || !Array.isArray(aiResult.tasks) || aiResult.tasks.length === 0) {
+      // Log failed attempt
+      await base44.asServiceRole.entities.VoiceCommandLog.create({
+        director_email: director.email,
+        director_name: director.full_name,
+        transcript: voiceText,
+        input_mode: contentType.includes('multipart/form-data') ? 'audio' : 'text',
+        action_type: 'failed',
+        tasks_created: 0,
+        task_numbers: [],
+        ai_parsed_json: JSON.stringify(aiResult || {}),
+        error_message: 'AI returned no tasks',
+      });
       return Response.json({
         success: false,
         error: 'Could not understand the voice command. Please try again.',
@@ -260,6 +274,18 @@ RULES:
           (taskData.task_details ? `\n\n${taskData.task_details}` : '');
         await sendTelegram(telegramToken, eaUser.telegram_chat_id, msg);
       }
+
+      // Log standalone task
+      await base44.asServiceRole.entities.VoiceCommandLog.create({
+        director_email: director.email,
+        director_name: director.full_name,
+        transcript: voiceText,
+        input_mode: contentType.includes('multipart/form-data') ? 'audio' : 'text',
+        action_type: 'create_standalone_task',
+        tasks_created: 1,
+        task_numbers: [taskNumber],
+        ai_parsed_json: JSON.stringify(aiResult),
+      });
 
       return Response.json({
         success: true,
@@ -376,6 +402,20 @@ RULES:
 
       await sendTelegram(telegramToken, eaUser.telegram_chat_id, msg);
     }
+
+    // Log project creation
+    await base44.asServiceRole.entities.VoiceCommandLog.create({
+      director_email: director.email,
+      director_name: director.full_name,
+      transcript: voiceText,
+      input_mode: contentType.includes('multipart/form-data') ? 'audio' : 'text',
+      action_type: 'create_project',
+      tasks_created: createdTasks.length,
+      project_id: project.id,
+      project_number: projectNumber,
+      task_numbers: createdTasks.map(t => t.task_number),
+      ai_parsed_json: JSON.stringify(aiResult),
+    });
 
     return Response.json({
       success: true,
