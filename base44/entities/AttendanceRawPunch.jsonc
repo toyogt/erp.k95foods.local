@@ -1,0 +1,54 @@
+{
+  "name": "AttendanceRawPunch",
+  "type": "object",
+  "title": "Attendance Raw Punch",
+  "description": "Raw, undecoded biometric machine post (glog format). Stored on ingestion for audit, replay and fast-testing mode.",
+  "properties": {
+    "request_code": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Value of the request_code header (expected: realtime_glog)"
+    },
+    "user_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Raw user_id field decoded from machine body"
+    },
+    "io_time": {
+      "type": "string",
+      "maxLength": 30,
+      "description": "Raw io_time string (YYYYMMDDhhmmss)"
+    },
+    "dev_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Raw dev_id (device serial) from machine"
+    },
+    "raw_body": {
+      "type": "string",
+      "maxLength": 8000,
+      "description": "Original request body as text"
+    },
+    "raw_headers": {
+      "type": "object",
+      "description": "All inbound request headers (lowercased keys) for audit"
+    },
+    "received_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Server-side IST timestamp when punch was received"
+    },
+    "processed": {
+      "type": "boolean",
+      "default": false,
+      "description": "True after the punch has been mapped/dedup-checked and an AttendanceLog (and outbox) created"
+    },
+    "process_error": {
+      "type": "string",
+      "maxLength": 1000
+    }
+  },
+  "required": [
+    "received_at"
+  ]
+}

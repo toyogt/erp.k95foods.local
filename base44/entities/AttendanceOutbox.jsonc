@@ -1,0 +1,80 @@
+{
+  "name": "AttendanceOutbox",
+  "type": "object",
+  "title": "Attendance Outbox",
+  "description": "Outbox pattern: queues outbound deliveries of attendance events to the external Base44 captureAttendance endpoint. Source of truth for delivery state, retries and failures.",
+  "properties": {
+    "attendance_log_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "description": "Reference to AttendanceLog.id this outbox row delivers"
+    },
+    "dedup_key": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300,
+      "description": "Deterministic deduplication key: employee_code|log_datetime|device_sn"
+    },
+    "target_url": {
+      "type": "string",
+      "format": "uri",
+      "description": "Outbound URL (the captureAttendance endpoint)"
+    },
+    "payload": {
+      "type": "object",
+      "description": "Exact JSON payload that will be POSTed to target_url"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "PENDING",
+        "PROCESSING",
+        "SENT",
+        "FAILED"
+      ],
+      "default": "PENDING"
+    },
+    "retry_count": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 0
+    },
+    "max_retries": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 5
+    },
+    "next_attempt_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Earliest time the worker may attempt delivery (used for exponential backoff)"
+    },
+    "last_attempt_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "sent_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "failure_reason": {
+      "type": "string",
+      "maxLength": 2000
+    },
+    "response_status_code": {
+      "type": "integer"
+    },
+    "response_body_excerpt": {
+      "type": "string",
+      "maxLength": 2000
+    }
+  },
+  "required": [
+    "attendance_log_id",
+    "dedup_key",
+    "target_url",
+    "payload",
+    "status"
+  ]
+}

@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Fingerprint, RefreshCw, Search } from 'lucide-react';
 import AttendanceLogTable from '@/components/hr/AttendanceLogTable';
 import AttendanceApiTester from '@/components/hr/AttendanceApiTester';
+import EmployeeCSVImport from '@/components/hr/EmployeeCSVImport';
+import AttendanceOutboxStatus from '@/components/hr/AttendanceOutboxStatus';
 
 export default function HRAttendanceLogs() {
   const [user, setUser] = useState(null);
@@ -82,6 +84,12 @@ export default function HRAttendanceLogs() {
           Refresh
         </Button>
       </div>
+
+      {/* Outbound delivery queue */}
+      <AttendanceOutboxStatus onWorkerRun={() => refetch()} />
+
+      {/* Employee master importer */}
+      <EmployeeCSVImport onSuccess={() => refetch()} />
 
       {/* API tester */}
       <AttendanceApiTester onSuccess={() => refetch()} />
