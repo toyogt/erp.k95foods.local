@@ -105,6 +105,7 @@ export async function getDirectorsForEA(eaEmail) {
  * Status display config
  */
 export const TASK_STATUS_CONFIG = {
+  blocked: { label: 'Blocked', color: 'bg-purple-100 text-purple-700', icon: '🔒' },
   open: { label: 'Open', color: 'bg-blue-100 text-blue-700', icon: '📋' },
   pending_verification: { label: 'Pending Verification', color: 'bg-yellow-100 text-yellow-700', icon: '⏳' },
   completed: { label: 'Completed', color: 'bg-green-100 text-green-700', icon: '✅' },

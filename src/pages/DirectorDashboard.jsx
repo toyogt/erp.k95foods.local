@@ -6,11 +6,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Loader2, Plus, Search, ClipboardList, AlertTriangle,
-  CheckCircle2, Clock, User, XCircle, Smartphone
+  CheckCircle2, Clock, User, XCircle, Smartphone, Layers
 } from 'lucide-react';
 import CreateDirectorTaskModal from '@/components/tasks/CreateDirectorTaskModal';
 import DirectorTaskCard from '@/components/tasks/DirectorTaskCard';
 import VoiceShortcutGuide from '@/components/tasks/VoiceShortcutGuide';
+import ProjectFormModal from '@/components/tasks/ProjectFormModal';
+import ProjectCard from '@/components/tasks/ProjectCard';
 import { isTaskOverdue } from '@/lib/directorTaskHelpers';
 
 export default function DirectorDashboard() {
@@ -20,17 +22,21 @@ export default function DirectorDashboard() {
   const [search, setSearch] = useState('');
   const [assigneeFilter, setAssigneeFilter] = useState('all');
   const [showCreate, setShowCreate] = useState(false);
+  const [showCreateProject, setShowCreateProject] = useState(false);
   const [showVoiceGuide, setShowVoiceGuide] = useState(false);
   const [tab, setTab] = useState('open');
+  const [projects, setProjects] = useState([]);
 
   const load = useCallback(async () => {
     setLoading(true);
     const me = await base44.auth.me();
     setUser(me);
-    const allTasks = await base44.entities.DirectorTask.filter(
-      { director_email: me.email }, '-created_date', 500
-    );
+    const [allTasks, allProjects] = await Promise.all([
+      base44.entities.DirectorTask.filter({ director_email: me.email }, '-created_date', 500),
+      base44.entities.Project.filter({ director_email: me.email }, '-created_date', 200),
+    ]);
     setTasks(allTasks);
+    setProjects(allProjects);
     setLoading(false);
   }, []);
 
@@ -78,9 +84,12 @@ export default function DirectorDashboard() {
             All tasks you have assigned — track status, approvals, and deadlines
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button variant="outline" onClick={() => setShowVoiceGuide(v => !v)} className="h-11 px-3 gap-2">
             <Smartphone className="w-4 h-4" /> Voice Shortcut
+          </Button>
+          <Button variant="outline" onClick={() => setShowCreateProject(true)} className="h-11 px-4 gap-2">
+            <Layers className="w-4 h-4" /> New Project
           </Button>
           <Button onClick={() => setShowCreate(true)} className="h-11 px-4 gap-2">
             <Plus className="w-4 h-4" /> Assign New Task
@@ -144,7 +153,11 @@ export default function DirectorDashboard() {
 
           {/* Tabs */}
           <Tabs value={tab} onValueChange={setTab}>
-            <TabsList className="grid grid-cols-5 w-full">
+            <TabsList className="grid grid-cols-6 w-full">
+              <TabsTrigger value="projects" className="text-xs sm:text-sm gap-1">
+                <Layers className="w-3.5 h-3.5 hidden sm:block" />
+                Projects ({projects.filter(p => p.status !== 'completed' && p.status !== 'cancelled').length})
+              </TabsTrigger>
               <TabsTrigger value="open" className="text-xs sm:text-sm">
                 Open ({openTasks.length})
               </TabsTrigger>
@@ -162,6 +175,20 @@ export default function DirectorDashboard() {
               </TabsTrigger>
             </TabsList>
 
+            <TabsContent value="projects" className="mt-4">
+              {projects.filter(p => p.status !== 'completed' && p.status !== 'cancelled').length === 0 ? (
+                <div className="text-center py-12">
+                  <Layers className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+                  <p className="text-slate-400 text-sm">No active projects. Click "New Project" to create one.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {projects.filter(p => p.status !== 'completed' && p.status !== 'cancelled').map(p => (
+                    <ProjectCard key={p.id} project={p} user={user} onRefresh={load} />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
             <TabsContent value="open" className="mt-4">
               <TaskSection tasks={sortByUrgency(openTasks)} user={user} onRefresh={load} />
             </TabsContent>
@@ -185,6 +212,17 @@ export default function DirectorDashboard() {
         <CreateDirectorTaskModal
           open={showCreate}
           onClose={() => setShowCreate(false)}
+          user={user}
+          directorEmail={user.email}
+          directorName={user.full_name}
+          onCreated={load}
+        />
+      )}
+
+      {showCreateProject && user && (
+        <ProjectFormModal
+          open={showCreateProject}
+          onClose={() => setShowCreateProject(false)}
           user={user}
           directorEmail={user.email}
           directorName={user.full_name}

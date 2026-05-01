@@ -1,0 +1,75 @@
+{
+  "name": "Project",
+  "type": "object",
+  "title": "Project",
+  "description": "Groups related delegation tasks under a single project umbrella",
+  "properties": {
+    "project_number": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Auto-generated e.g. PRJ-0001"
+    },
+    "project_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300
+    },
+    "project_description": {
+      "type": "string",
+      "maxLength": 2000
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "planned",
+        "in_progress",
+        "on_hold",
+        "completed",
+        "cancelled"
+      ],
+      "default": "planned"
+    },
+    "start_date": {
+      "type": "string",
+      "maxLength": 20,
+      "description": "DD/MM/YYYY"
+    },
+    "end_date": {
+      "type": "string",
+      "maxLength": 20,
+      "description": "DD/MM/YYYY"
+    },
+    "director_email": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "director_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "created_by_email": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "created_by_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "team_member_emails": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "All staff emails involved in this project"
+    },
+    "is_important": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "project_name",
+    "director_email",
+    "end_date"
+  ]
+}

@@ -7,7 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   CheckCircle2, AlertTriangle, Clock, Calendar, User,
-  Loader2, ChevronDown, ChevronUp, CalendarClock, MessageSquare, ScrollText, XCircle
+  Loader2, ChevronDown, ChevronUp, CalendarClock, MessageSquare, ScrollText, XCircle,
+  Layers, Lock, Send
 } from 'lucide-react';
 import { TASK_STATUS_CONFIG, isTaskOverdue, getTaskUrgency, logTaskAction, formatTaskDate } from '@/lib/directorTaskHelpers';
 import DirectorTaskLogPanel from '@/components/tasks/DirectorTaskLogPanel';
@@ -21,6 +22,8 @@ export default function DirectorTaskCard({ task, user, viewMode, onRefresh }) {
   const [dateChangeReason, setDateChangeReason] = useState('');
   const [newDate, setNewDate] = useState('');
   const [newTime, setNewTime] = useState('');
+  const [progressNote, setProgressNote] = useState('');
+  const [showProgressInput, setShowProgressInput] = useState(false);
 
   const status = TASK_STATUS_CONFIG[task.status] || TASK_STATUS_CONFIG.open;
   const urgency = getTaskUrgency(task);
@@ -138,6 +141,21 @@ export default function DirectorTaskCard({ task, user, viewMode, onRefresh }) {
     onRefresh?.();
   };
 
+  // Send progress update
+  const handleProgressUpdate = async () => {
+    if (!progressNote.trim()) return;
+    setActing(true);
+    await base44.entities.DirectorTask.update(task.id, {
+      progress_note: progressNote.trim(),
+      progress_updated_at: new Date().toISOString(),
+    });
+    await logTaskAction(task, 'edited', user, `Progress update: ${progressNote.trim()}`);
+    setProgressNote('');
+    setShowProgressInput(false);
+    setActing(false);
+    onRefresh?.();
+  };
+
   const isAssignee = user?.email === task.assigned_to_email;
   const isEAOrDirector = viewMode === 'ea' || viewMode === 'director';
 
@@ -155,6 +173,16 @@ export default function DirectorTaskCard({ task, user, viewMode, onRefresh }) {
                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${status.color}`}>
                   {status.label}
                 </span>
+                {task.task_type === 'project' && task.project_name && (
+                  <span className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                    <Layers className="w-3 h-3" /> {task.project_name}
+                  </span>
+                )}
+                {task.status === 'blocked' && (
+                  <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                    <Lock className="w-3 h-3" /> Blocked
+                  </span>
+                )}
                 {task.is_important && (
                   <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
                     <AlertTriangle className="w-3 h-3" /> Important
@@ -190,6 +218,14 @@ export default function DirectorTaskCard({ task, user, viewMode, onRefresh }) {
 
             {/* Actions */}
             <div className="flex flex-col gap-2 items-end shrink-0">
+              {/* Blocked indicator */}
+              {isAssignee && task.status === 'blocked' && (
+                <div className="flex items-center gap-1.5 bg-purple-50 border border-purple-100 rounded-lg px-3 py-2 text-xs text-purple-700">
+                  <Lock className="w-3.5 h-3.5" />
+                  Waiting for predecessor tasks
+                </div>
+              )}
+
               {/* Assignee: Mark Done */}
               {isAssignee && task.status === 'open' && (
                 <Button size="sm" onClick={handleMarkDone} disabled={acting}
@@ -197,6 +233,28 @@ export default function DirectorTaskCard({ task, user, viewMode, onRefresh }) {
                   {acting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
                   Mark Done
                 </Button>
+              )}
+
+              {/* Assignee: Send progress update */}
+              {isAssignee && (task.status === 'open' || task.status === 'blocked') && (
+                !showProgressInput ? (
+                  <Button size="sm" variant="outline" onClick={() => setShowProgressInput(true)}
+                    className="gap-1.5 min-h-[36px] text-xs">
+                    <MessageSquare className="w-3.5 h-3.5" /> Update Progress
+                  </Button>
+                ) : (
+                  <div className="space-y-1.5 w-full md:w-48">
+                    <Input value={progressNote} onChange={e => setProgressNote(e.target.value)}
+                      placeholder="What's the update?" className="h-9 text-sm" />
+                    <div className="flex gap-1.5">
+                      <Button size="sm" variant="outline" className="flex-1 h-8 text-xs" onClick={() => setShowProgressInput(false)}>Cancel</Button>
+                      <Button size="sm" className="flex-1 h-8 text-xs gap-1 bg-blue-600 hover:bg-blue-700"
+                        onClick={handleProgressUpdate} disabled={!progressNote.trim() || acting}>
+                        <Send className="w-3 h-3" /> Send
+                      </Button>
+                    </div>
+                  </div>
+                )
               )}
 
               {/* Assignee: Request Date Change */}
@@ -273,6 +331,22 @@ export default function DirectorTaskCard({ task, user, viewMode, onRefresh }) {
                 <div className="bg-slate-50 rounded-lg p-3">
                   <p className="text-xs font-semibold text-slate-500 uppercase mb-1">What to do</p>
                   <p className="text-sm text-slate-700 whitespace-pre-wrap">{task.task_details}</p>
+                </div>
+              )}
+              {task.progress_note && (
+                <div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
+                  <p className="text-xs font-semibold text-blue-600 uppercase mb-1">Latest Progress Update</p>
+                  <p className="text-sm text-blue-800 whitespace-pre-wrap">{task.progress_note}</p>
+                  {task.progress_updated_at && (
+                    <p className="text-xs text-blue-400 mt-1">
+                      {new Date(task.progress_updated_at).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  )}
+                </div>
+              )}
+              {task.predecessor_task_numbers?.length > 0 && (
+                <div className="text-xs text-slate-400">
+                  Depends on: {task.predecessor_task_numbers.join(', ')}
                 </div>
               )}
               <div className="grid grid-cols-2 gap-2 text-xs text-slate-500">

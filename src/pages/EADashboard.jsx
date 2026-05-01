@@ -6,11 +6,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Loader2, Plus, Search, ClipboardList, AlertTriangle,
-  CheckCircle2, Clock, CalendarClock, User
+  CheckCircle2, Clock, CalendarClock, User, Layers
 } from 'lucide-react';
 import CreateDirectorTaskModal from '@/components/tasks/CreateDirectorTaskModal';
 import DirectorTaskCard from '@/components/tasks/DirectorTaskCard';
 import DirectorTaskLogPanel from '@/components/tasks/DirectorTaskLogPanel';
+import ProjectFormModal from '@/components/tasks/ProjectFormModal';
+import ProjectCard from '@/components/tasks/ProjectCard';
 import { getDirectorsForEA, isTaskOverdue } from '@/lib/directorTaskHelpers';
 
 export default function EADashboard() {
@@ -21,8 +23,10 @@ export default function EADashboard() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showCreate, setShowCreate] = useState(false);
+  const [showCreateProject, setShowCreateProject] = useState(false);
   const [tab, setTab] = useState('pending');
   const [selectedTaskLog, setSelectedTaskLog] = useState(null);
+  const [projects, setProjects] = useState([]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -48,12 +52,17 @@ export default function EADashboard() {
     }
     setDirectors(directorList);
 
-    // Fetch tasks for all directors
+    // Fetch tasks and projects for all directors
     const directorEmails = directorList.map(d => d.email);
     let allTasks = [];
+    let allProjects = [];
     for (const email of directorEmails) {
-      const dt = await base44.entities.DirectorTask.filter({ director_email: email }, '-created_date', 200);
+      const [dt, dp] = await Promise.all([
+        base44.entities.DirectorTask.filter({ director_email: email }, '-created_date', 200),
+        base44.entities.Project.filter({ director_email: email }, '-created_date', 100),
+      ]);
       allTasks = [...allTasks, ...dt];
+      allProjects = [...allProjects, ...dp];
     }
     // Deduplicate by id
     const seen = new Set();
@@ -62,8 +71,15 @@ export default function EADashboard() {
       seen.add(t.id);
       return true;
     });
+    const seenP = new Set();
+    allProjects = allProjects.filter(p => {
+      if (seenP.has(p.id)) return false;
+      seenP.add(p.id);
+      return true;
+    });
 
     setTasks(allTasks);
+    setProjects(allProjects);
     setLoading(false);
   }, []);
 
@@ -103,9 +119,14 @@ export default function EADashboard() {
           </p>
         </div>
         {createDirector && (
-          <Button onClick={() => setShowCreate(true)} className="h-11 px-4 gap-2">
-            <Plus className="w-4 h-4" /> Assign Task
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setShowCreateProject(true)} className="h-11 px-4 gap-2">
+              <Layers className="w-4 h-4" /> New Project
+            </Button>
+            <Button onClick={() => setShowCreate(true)} className="h-11 px-4 gap-2">
+              <Plus className="w-4 h-4" /> Assign Task
+            </Button>
+          </div>
         )}
       </div>
 
@@ -162,7 +183,11 @@ export default function EADashboard() {
 
           {/* Tabs */}
           <Tabs value={tab} onValueChange={setTab}>
-            <TabsList className="grid grid-cols-4 w-full">
+            <TabsList className="grid grid-cols-5 w-full">
+              <TabsTrigger value="projects" className="gap-1.5 text-xs sm:text-sm">
+                <Layers className="w-3.5 h-3.5 hidden sm:block" />
+                Projects ({projects.filter(p => p.status !== 'completed' && p.status !== 'cancelled').length})
+              </TabsTrigger>
               <TabsTrigger value="pending" className="gap-1.5 text-xs sm:text-sm">
                 <ClipboardList className="w-3.5 h-3.5 hidden sm:block" />
                 Open ({pendingTasks.length})
@@ -175,11 +200,22 @@ export default function EADashboard() {
                 <CheckCircle2 className="w-3.5 h-3.5 hidden sm:block" />
                 Done ({completedTasks.length})
               </TabsTrigger>
-              <TabsTrigger value="cancelled" className="gap-1.5 text-xs sm:text-sm">
+              <TabsTrigger value="cancelled" className="text-xs sm:text-sm">
                 Cancelled ({cancelledTasks.length})
               </TabsTrigger>
             </TabsList>
 
+            <TabsContent value="projects" className="mt-4">
+              {projects.filter(p => p.status !== 'completed' && p.status !== 'cancelled').length === 0 ? (
+                <EmptyState text="No active projects. Create a project to group related tasks." />
+              ) : (
+                <div className="space-y-3">
+                  {projects.filter(p => p.status !== 'completed' && p.status !== 'cancelled').map(p => (
+                    <ProjectCard key={p.id} project={p} user={user} onRefresh={load} />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
             <TabsContent value="pending" className="mt-4">
               <TaskList tasks={pendingTasks} user={user} viewMode="ea" onRefresh={load} />
             </TabsContent>
@@ -209,6 +245,18 @@ export default function EADashboard() {
         <CreateDirectorTaskModal
           open={showCreate}
           onClose={() => setShowCreate(false)}
+          user={user}
+          directorEmail={createDirector.email}
+          directorName={createDirector.name}
+          onCreated={load}
+        />
+      )}
+
+      {/* Create Project Modal */}
+      {showCreateProject && createDirector && (
+        <ProjectFormModal
+          open={showCreateProject}
+          onClose={() => setShowCreateProject(false)}
           user={user}
           directorEmail={createDirector.email}
           directorName={createDirector.name}

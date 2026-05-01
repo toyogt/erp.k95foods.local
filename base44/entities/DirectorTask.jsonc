@@ -20,6 +20,39 @@
       "maxLength": 5000,
       "description": "Detailed description of what needs to be done"
     },
+    "task_type": {
+      "type": "string",
+      "enum": [
+        "single",
+        "project"
+      ],
+      "default": "single",
+      "description": "Whether this is a standalone task or part of a project"
+    },
+    "project_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "ID of the parent Project (if task_type = project)"
+    },
+    "project_name": {
+      "type": "string",
+      "maxLength": 300,
+      "description": "Snapshot of project name for display"
+    },
+    "predecessor_task_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Task IDs that must be completed before this task can start"
+    },
+    "predecessor_task_numbers": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Task numbers for display (e.g. DT-0001)"
+    },
     "assigned_to_email": {
       "type": "string",
       "maxLength": 200,
@@ -75,6 +108,7 @@
     "status": {
       "type": "string",
       "enum": [
+        "blocked",
         "open",
         "pending_verification",
         "completed",
@@ -82,7 +116,7 @@
         "cancelled"
       ],
       "default": "open",
-      "description": "Task workflow status"
+      "description": "Task workflow status. 'blocked' = waiting for predecessor tasks"
     },
     "completed_at": {
       "type": "string",
@@ -135,6 +169,15 @@
         "type": "string"
       },
       "description": "EA emails to notify (auto-populated from mapping)"
+    },
+    "progress_note": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Latest progress update from the assignee"
+    },
+    "progress_updated_at": {
+      "type": "string",
+      "format": "date-time"
     }
   },
   "required": [
