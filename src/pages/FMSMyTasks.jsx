@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import TATBadge from '@/components/fms/TATBadge';
 import StepChecklistRunner from '@/components/fms/StepChecklistRunner';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { CheckCircle2, ChevronDown, ChevronUp, Loader2, ClipboardList, ClipboardCheck, Clock, AlertTriangle } from 'lucide-react';
+import { CheckCircle2, ChevronDown, ChevronUp, Loader2, ClipboardList, ClipboardCheck, Clock, AlertTriangle, Search, X } from 'lucide-react';
 import { formatDateTime, getTATStatus } from '@/lib/fmsHelpers';
 import { Input } from '@/components/ui/input';
 import moment from 'moment';
@@ -197,6 +197,9 @@ export default function FMSMyTasks() {
   const [completing, setCompleting] = useState(null);
   const [activeModal, setActiveModal] = useState(null);
   const [directorTasks, setDirectorTasks] = useState([]);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState(null); // null | 'overdue' | 'at_risk' | 'on_time'
+  const [typeFilter, setTypeFilter] = useState('all');    // 'all' | 'process' | 'assigned' | 'scheduled'
 
   const load = useCallback(async () => {
     const me = await base44.auth.me();
@@ -272,6 +275,39 @@ export default function FMSMyTasks() {
   const dtOverdue = directorTasks.filter(t => isTaskOverdue(t));
   const totalPending = tasks.length + scheduledTasks.length + directorTasks.length;
 
+  // Filtered lists applying search + statusFilter + typeFilter
+  const filteredTasks = useMemo(() => {
+    if (typeFilter === 'assigned' || typeFilter === 'scheduled') return [];
+    let list = tasks;
+    if (statusFilter === 'overdue') list = list.filter(t => getTATStatus(t.deadline) === 'overdue');
+    else if (statusFilter === 'at_risk') list = list.filter(t => getTATStatus(t.deadline) === 'at_risk');
+    else if (statusFilter === 'on_time') list = list.filter(t => getTATStatus(t.deadline) === 'on_time');
+    if (search) list = list.filter(t => (t.step_name || '').toLowerCase().includes(search.toLowerCase()));
+    return list;
+  }, [tasks, statusFilter, typeFilter, search]);
+
+  const filteredDirectorTasks = useMemo(() => {
+    if (typeFilter === 'process' || typeFilter === 'scheduled') return [];
+    let list = directorTasks;
+    if (statusFilter === 'overdue') list = list.filter(t => isTaskOverdue(t));
+    else if (statusFilter === 'at_risk' || statusFilter === 'on_time') list = [];
+    if (search) list = list.filter(t => (t.task_name || '').toLowerCase().includes(search.toLowerCase()));
+    return list;
+  }, [directorTasks, statusFilter, typeFilter, search]);
+
+  const filteredScheduledTasks = useMemo(() => {
+    if (typeFilter === 'process' || typeFilter === 'assigned') return [];
+    let list = scheduledTasks;
+    if (statusFilter === 'overdue') list = list.filter(t => t.due_at && new Date(t.due_at) < new Date());
+    else if (statusFilter === 'at_risk' || statusFilter === 'on_time') list = [];
+    if (search) list = list.filter(t => (t.task_name || '').toLowerCase().includes(search.toLowerCase()));
+    return list;
+  }, [scheduledTasks, statusFilter, typeFilter, search]);
+
+  const hasAnyResults = filteredTasks.length > 0 || filteredDirectorTasks.length > 0 || filteredScheduledTasks.length > 0;
+
+  const clearFilters = () => { setSearch(''); setStatusFilter(null); setTypeFilter('all'); };
+
   return (
     <>
     <div className="p-3 md:p-6 max-w-3xl mx-auto">
@@ -293,69 +329,132 @@ export default function FMSMyTasks() {
           </div>
         ) : (
           <div className="space-y-5">
-            {/* Summary counters */}
+            {/* Summary counter cards — clickable to filter */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-center">
-                <p className="text-3xl font-bold text-slate-700">{totalPending}</p>
-                <p className="text-sm text-slate-500 font-medium mt-1">Total Pending</p>
+              <button
+                onClick={() => setStatusFilter(null)}
+                className={`rounded-2xl p-4 text-center border transition-all ${statusFilter === null ? 'bg-slate-800 border-slate-800 text-white ring-2 ring-slate-400' : 'bg-slate-50 border-slate-200 hover:border-slate-400'}`}
+              >
+                <p className={`text-3xl font-bold ${statusFilter === null ? 'text-white' : 'text-slate-700'}`}>{totalPending}</p>
+                <p className={`text-sm font-medium mt-1 ${statusFilter === null ? 'text-slate-300' : 'text-slate-500'}`}>Total Pending</p>
+              </button>
+              <button
+                onClick={() => setStatusFilter(prev => prev === 'overdue' ? null : 'overdue')}
+                className={`rounded-2xl p-4 text-center border transition-all ${statusFilter === 'overdue' ? 'bg-red-600 border-red-600 ring-2 ring-red-300' : 'bg-red-50 border-red-100 hover:border-red-300'}`}
+              >
+                <p className={`text-3xl font-bold ${statusFilter === 'overdue' ? 'text-white' : 'text-red-600'}`}>{overdue.length + dtOverdue.length}</p>
+                <p className={`text-sm font-medium mt-1 ${statusFilter === 'overdue' ? 'text-red-100' : 'text-red-400'}`}>Overdue</p>
+              </button>
+              <button
+                onClick={() => setStatusFilter(prev => prev === 'at_risk' ? null : 'at_risk')}
+                className={`rounded-2xl p-4 text-center border transition-all ${statusFilter === 'at_risk' ? 'bg-yellow-500 border-yellow-500 ring-2 ring-yellow-300' : 'bg-yellow-50 border-yellow-100 hover:border-yellow-300'}`}
+              >
+                <p className={`text-3xl font-bold ${statusFilter === 'at_risk' ? 'text-white' : 'text-yellow-600'}`}>{atRisk.length}</p>
+                <p className={`text-sm font-medium mt-1 ${statusFilter === 'at_risk' ? 'text-yellow-100' : 'text-yellow-500'}`}>At Risk</p>
+              </button>
+              <button
+                onClick={() => setStatusFilter(prev => prev === 'on_time' ? null : 'on_time')}
+                className={`rounded-2xl p-4 text-center border transition-all ${statusFilter === 'on_time' ? 'bg-green-600 border-green-600 ring-2 ring-green-300' : 'bg-green-50 border-green-100 hover:border-green-300'}`}
+              >
+                <p className={`text-3xl font-bold ${statusFilter === 'on_time' ? 'text-white' : 'text-green-600'}`}>{onTime.length}</p>
+                <p className={`text-sm font-medium mt-1 ${statusFilter === 'on_time' ? 'text-green-100' : 'text-green-500'}`}>On Time</p>
+              </button>
+            </div>
+
+            {/* Search + Type filter */}
+            <div className="flex flex-col sm:flex-row gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Input
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Search tasks…"
+                  className="pl-9 h-11 text-sm"
+                />
+                {search && (
+                  <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
               </div>
-              <div className="bg-red-50 border border-red-100 rounded-2xl p-4 text-center">
-                <p className="text-3xl font-bold text-red-600">{overdue.length + dtOverdue.length}</p>
-                <p className="text-sm text-red-400 font-medium mt-1">Overdue</p>
-              </div>
-              <div className="bg-yellow-50 border border-yellow-100 rounded-2xl p-4 text-center">
-                <p className="text-3xl font-bold text-yellow-600">{atRisk.length}</p>
-                <p className="text-sm text-yellow-500 font-medium mt-1">At Risk</p>
-              </div>
-              <div className="bg-green-50 border border-green-100 rounded-2xl p-4 text-center">
-                <p className="text-3xl font-bold text-green-600">{onTime.length}</p>
-                <p className="text-sm text-green-500 font-medium mt-1">On Time</p>
+              <div className="flex gap-1.5 flex-wrap">
+                {[
+                  { key: 'all', label: 'All' },
+                  { key: 'process', label: 'Process Steps' },
+                  { key: 'assigned', label: 'Assigned' },
+                  { key: 'scheduled', label: 'Scheduled' },
+                ].map(opt => (
+                  <button
+                    key={opt.key}
+                    onClick={() => setTypeFilter(opt.key)}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium border transition-all min-h-[44px] ${typeFilter === opt.key ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'}`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
               </div>
             </div>
 
-            {overdue.length > 0 && (
+            {/* Active filter indicator */}
+            {(statusFilter || search || typeFilter !== 'all') && (
+              <div className="flex items-center gap-2 text-sm text-slate-500">
+                <span>Filtering active</span>
+                <button onClick={clearFilters} className="text-blue-600 hover:underline font-medium">Clear all</button>
+              </div>
+            )}
+
+            {/* No results after filter */}
+            {!hasAnyResults && (
+              <div className="text-center py-12 bg-white rounded-2xl border border-slate-200">
+                <p className="text-slate-500 font-semibold">No tasks match your filters</p>
+                <button onClick={clearFilters} className="text-blue-600 text-sm mt-2 hover:underline">Clear filters</button>
+              </div>
+            )}
+
+            {/* Process Step sections */}
+            {filteredTasks.filter(t => getTATStatus(t.deadline) === 'overdue').length > 0 && (
               <div>
                 <div className="flex items-center gap-2 mb-3">
                   <span className="w-2 h-2 rounded-full bg-red-500" />
-                  <h2 className="text-sm font-semibold text-red-600 uppercase tracking-wide">Overdue ({overdue.length})</h2>
+                  <h2 className="text-sm font-semibold text-red-600 uppercase tracking-wide">Overdue ({filteredTasks.filter(t => getTATStatus(t.deadline) === 'overdue').length})</h2>
                 </div>
                 <div className="space-y-3">
-                  {overdue.map(t => <TaskCard key={t.id} step={t} onComplete={handleMarkDone} onOpenChecklist={handleOpenChecklist} completing={completing} />)}
+                  {filteredTasks.filter(t => getTATStatus(t.deadline) === 'overdue').map(t => <TaskCard key={t.id} step={t} onComplete={handleMarkDone} onOpenChecklist={handleOpenChecklist} completing={completing} />)}
                 </div>
               </div>
             )}
-            {atRisk.length > 0 && (
+            {filteredTasks.filter(t => getTATStatus(t.deadline) === 'at_risk').length > 0 && (
               <div>
                 <div className="flex items-center gap-2 mb-3">
                   <span className="w-2 h-2 rounded-full bg-yellow-500" />
-                  <h2 className="text-sm font-semibold text-yellow-600 uppercase tracking-wide">Due Soon ({atRisk.length})</h2>
+                  <h2 className="text-sm font-semibold text-yellow-600 uppercase tracking-wide">Due Soon ({filteredTasks.filter(t => getTATStatus(t.deadline) === 'at_risk').length})</h2>
                 </div>
                 <div className="space-y-3">
-                  {atRisk.map(t => <TaskCard key={t.id} step={t} onComplete={handleMarkDone} onOpenChecklist={handleOpenChecklist} completing={completing} />)}
+                  {filteredTasks.filter(t => getTATStatus(t.deadline) === 'at_risk').map(t => <TaskCard key={t.id} step={t} onComplete={handleMarkDone} onOpenChecklist={handleOpenChecklist} completing={completing} />)}
                 </div>
               </div>
             )}
-            {onTime.length > 0 && (
+            {filteredTasks.filter(t => getTATStatus(t.deadline) === 'on_time').length > 0 && (
               <div>
                 <div className="flex items-center gap-2 mb-3">
                   <span className="w-2 h-2 rounded-full bg-green-500" />
-                  <h2 className="text-sm font-semibold text-green-600 uppercase tracking-wide">On Track ({onTime.length})</h2>
+                  <h2 className="text-sm font-semibold text-green-600 uppercase tracking-wide">On Track ({filteredTasks.filter(t => getTATStatus(t.deadline) === 'on_time').length})</h2>
                 </div>
                 <div className="space-y-3">
-                  {onTime.map(t => <TaskCard key={t.id} step={t} onComplete={handleMarkDone} onOpenChecklist={handleOpenChecklist} completing={completing} />)}
+                  {filteredTasks.filter(t => getTATStatus(t.deadline) === 'on_time').map(t => <TaskCard key={t.id} step={t} onComplete={handleMarkDone} onOpenChecklist={handleOpenChecklist} completing={completing} />)}
                 </div>
               </div>
             )}
 
             {/* Director Assigned Tasks Section */}
-            {directorTasks.length > 0 && (
+            {filteredDirectorTasks.length > 0 && (
               <div>
                 <div className="flex items-center gap-2 mb-3">
                   <span className="w-2 h-2 rounded-full bg-indigo-500" />
-                  <h2 className="text-sm font-semibold text-indigo-600 uppercase tracking-wide">Assigned Tasks ({directorTasks.length})</h2>
+                  <h2 className="text-sm font-semibold text-indigo-600 uppercase tracking-wide">Assigned Tasks ({filteredDirectorTasks.length})</h2>
                 </div>
                 <div className="space-y-3">
-                  {directorTasks.map(t => (
+                  {filteredDirectorTasks.map(t => (
                     <DirectorTaskCard key={t.id} task={t} user={user} viewMode="assignee" onRefresh={load} />
                   ))}
                 </div>
@@ -363,14 +462,14 @@ export default function FMSMyTasks() {
             )}
 
             {/* Scheduled Tasks Section */}
-            {scheduledTasks.length > 0 && (
+            {filteredScheduledTasks.length > 0 && (
               <div>
                 <div className="flex items-center gap-2 mb-3">
                   <span className="w-2 h-2 rounded-full bg-blue-500" />
-                  <h2 className="text-sm font-semibold text-blue-600 uppercase tracking-wide">Scheduled Tasks ({scheduledTasks.length})</h2>
+                  <h2 className="text-sm font-semibold text-blue-600 uppercase tracking-wide">Scheduled Tasks ({filteredScheduledTasks.length})</h2>
                 </div>
                 <div className="space-y-3">
-                  {scheduledTasks.map(t => <ScheduledTaskCard key={t.id} task={t} user={user} onComplete={load} />)}
+                  {filteredScheduledTasks.map(t => <ScheduledTaskCard key={t.id} task={t} user={user} onComplete={load} />)}
                 </div>
               </div>
             )}
