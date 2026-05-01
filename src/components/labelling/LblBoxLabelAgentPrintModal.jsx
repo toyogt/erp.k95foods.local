@@ -133,26 +133,34 @@ export default function LblBoxLabelAgentPrintModal({ open, onOpenChange, templat
   // Reset copies whenever the modal opens or the computed value changes
   useMemo(() => { if (open) setCopies(computedBoxes); }, [open, computedBoxes]);
 
-  // Fetch live discovery so we can filter by matching printer size
-  const { data: discovery, isLoading: loadingDiscovery, refetch } = useQuery({
+  // Fetch live discovery — force a real-time probe (refresh: true) so we don't
+  // rely on a stale cache. A workstation only counts as "active" if its agent
+  // responded right now AND is reporting at least one matching printer.
+  const { data: discovery, isLoading: loadingDiscovery, refetch, isFetching } = useQuery({
     queryKey: ['print-discovery-for-box-label'],
     queryFn: async () => {
-      const res = await base44.functions.invoke('printDiscoveryLive', {});
+      const res = await base44.functions.invoke('printDiscoveryLive', { refresh: true });
       return res.data || {};
     },
     enabled: open,
-    staleTime: 15_000,
+    staleTime: 0,
+    refetchOnWindowFocus: false,
   });
 
-  // Keep only printers whose size matches the template, group by workstation
+  // Keep only printers whose size matches the template AND whose workstation
+  // is verified online by the latest probe (probe_ok === true). Stale cache
+  // entries with probe_ok=false are filtered out.
   const eligible = useMemo(() => {
-    // printDiscoveryLive returns { ok, rows: [...] }
     const printers = Array.isArray(discovery?.rows)
       ? discovery.rows
       : Array.isArray(discovery?.printers) ? discovery.printers : [];
-    const matched = printers.filter(p => p.printer_name && sizeMatches(p.size_code, sizeInfo.aliases));
+    const matched = printers.filter(p =>
+      p.probe_ok === true &&
+      p.printer_name &&
+      sizeMatches(p.size_code, sizeInfo.aliases)
+    );
     // Dedupe by workstation display name (case-insensitive) so the same physical
-    // workstation registered under multiple ids (e.g. LBL_DPT_01 vs LBL-DPT-01) shows once.
+    // workstation registered under multiple ids shows once.
     const map = new Map();
     for (const p of matched) {
       const key = (p.display_name || p.workstation_name || p.workstation_id || '').trim().toLowerCase();
@@ -257,8 +265,8 @@ export default function LblBoxLabelAgentPrintModal({ open, onOpenChange, templat
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label className="text-xs font-medium text-slate-700">Eligible Workstations (matching size {sizeInfo.primary})</Label>
-              <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => refetch()} disabled={loadingDiscovery}>
-                {loadingDiscovery ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Refresh'}
+              <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => refetch()} disabled={loadingDiscovery || isFetching}>
+                {(loadingDiscovery || isFetching) ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Refresh'}
               </Button>
             </div>
 
