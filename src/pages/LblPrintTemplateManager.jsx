@@ -21,6 +21,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { toast } from '@/components/ui/use-toast';
 import { Plus, Edit2, Trash2, Copy, Loader2, Info } from 'lucide-react';
+import PODFieldMappingEditor from '@/components/labelling/PODFieldMappingEditor';
 
 const ERP_FIELDS = [
   // Product & SKU Info
@@ -82,8 +83,6 @@ export default function LblPrintTemplateManager() {
     is_active: true,
     notes: '',
   });
-  const [podInput, setPodInput] = useState({ pod_field: '', label: '', erp_source: '', is_editable: true });
-
   // Fetch all templates
   const { data: templates = [], isLoading } = useQuery({
     queryKey: ['lbl-print-templates'],
@@ -127,27 +126,7 @@ export default function LblPrintTemplateManager() {
       is_active: true,
       notes: '',
     });
-    setPodInput({ pod_field: '', label: '', erp_source: '', is_editable: true });
     setEditingId(null);
-  };
-
-  const handleAddPod = () => {
-    if (!podInput.pod_field || !podInput.erp_source) {
-      toast({ title: 'Enter POD field and ERP source', variant: 'destructive' });
-      return;
-    }
-    setFormData(prev => ({
-      ...prev,
-      field_mappings: [...prev.field_mappings, { ...podInput }],
-    }));
-    setPodInput({ pod_field: '', label: '', erp_source: '', is_editable: true });
-  };
-
-  const handleRemovePod = (index) => {
-    setFormData(prev => ({
-      ...prev,
-      field_mappings: prev.field_mappings.filter((_, i) => i !== index),
-    }));
   };
 
   const handleSave = () => {
@@ -267,7 +246,7 @@ export default function LblPrintTemplateManager() {
 
       {/* Create/Edit Dialog */}
       <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {editingId ? 'Edit Print Template' : 'Create Print Template'}
@@ -324,61 +303,12 @@ export default function LblPrintTemplateManager() {
               />
             </div>
 
-            {/* POD Field Mappings */}
-            <div className="border-t border-slate-200 pt-4 space-y-3">
-              <h3 className="text-sm font-semibold text-slate-900">POD Field Mappings</h3>
-
-              {formData.field_mappings.length > 0 && (
-                <table className="w-full text-xs border border-slate-200 rounded">
-                  <thead>
-                    <tr className="bg-slate-100 border-b border-slate-200">
-                      <th className="text-left p-2 font-semibold">POD Field</th>
-                      <th className="text-left p-2 font-semibold">Label</th>
-                      <th className="text-left p-2 font-semibold">ERP Source</th>
-                      <th className="text-center p-2 w-12">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {formData.field_mappings.map((m, i) => (
-                      <tr key={i} className="border-b border-slate-200 hover:bg-slate-50">
-                        <td className="p-2 font-mono">{m.pod_field}</td>
-                        <td className="p-2">{m.label}</td>
-                        <td className="p-2 font-mono text-slate-600">{m.erp_source}</td>
-                        <td className="p-2 text-center">
-                          <button onClick={() => handleRemovePod(i)} className="text-red-600 hover:text-red-700">
-                            <Trash2 className="w-3 h-3" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-
-              <div className="bg-slate-50 rounded-lg p-3 space-y-2 border border-slate-200">
-                <p className="text-xs font-medium text-slate-700">Add POD Mapping</p>
-                <div className="grid grid-cols-2 gap-2">
-                  <Input
-                    value={podInput.pod_field}
-                    onChange={e => setPodInput(prev => ({ ...prev, pod_field: e.target.value }))}
-                    placeholder="e.g. POD1"
-                    className="h-8 text-xs"
-                  />
-                  <Input
-                    value={podInput.label}
-                    onChange={e => setPodInput(prev => ({ ...prev, label: e.target.value }))}
-                    placeholder="Label"
-                    className="h-8 text-xs"
-                  />
-                </div>
-                <Select value={podInput.erp_source} onValueChange={v => setPodInput(prev => ({ ...prev, erp_source: v }))}>
-                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="ERP source" /></SelectTrigger>
-                  <SelectContent>
-                    {ERP_FIELDS.map(f => <SelectItem key={f.key} value={f.key}>{f.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <Button size="sm" className="w-full h-8 text-xs" onClick={handleAddPod}>Add Mapping</Button>
-              </div>
+            {/* POD Field Mappings — uses dedicated editor with live JSON preview */}
+            <div className="border-t border-slate-200 pt-4">
+              <PODFieldMappingEditor
+                value={formData.field_mappings}
+                onChange={mappings => setFormData(prev => ({ ...prev, field_mappings: mappings }))}
+              />
             </div>
 
             {/* Notes */}
