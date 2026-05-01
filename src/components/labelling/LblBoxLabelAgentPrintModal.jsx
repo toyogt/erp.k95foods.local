@@ -291,10 +291,6 @@ export default function LblBoxLabelAgentPrintModal({ open, onOpenChange, templat
                         <div className="text-sm font-medium text-slate-900 truncate">
                           {p.display_name || p.workstation_name || p.workstation_id}
                         </div>
-                        <div className="text-xs text-slate-500 font-mono truncate">
-                          {p.printer_name} · {p.size_code}
-                          {p.probe_latency_ms != null && <> · {p.probe_latency_ms} ms</>}
-                        </div>
                       </div>
                       {selected && <CheckCircle2 className="w-5 h-5 text-slate-900 shrink-0" />}
                     </button>
