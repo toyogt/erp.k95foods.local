@@ -4,8 +4,26 @@
  * Used in both Plan Create (job row) and Stock Transfer step.
  */
 import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
 import { Tag } from 'lucide-react';
 import { computeLabelFields } from '@/lib/labelFieldComputer';
+
+// Static catalog of all known PODs — used as the default when no template filter applies.
+const ALL_POD_ROWS = [
+  { pod: 'POD1',  label: 'MRP',                                fieldKey: 'mrp',               highlight: true },
+  { pod: 'POD2',  label: 'MRP with USP',                       fieldKey: 'mrpWithUsp' },
+  { pod: 'POD3',  label: 'Incl. of all taxes',                 fieldKey: 'taxLine',           muted: true },
+  { pod: 'POD4',  label: 'Batch No.',                          fieldKey: 'batchNo',           mono: true },
+  { pod: 'POD5',  label: 'Manufacturing Date',                 fieldKey: 'mfgDate' },
+  { pod: 'POD6',  label: 'Expiry Date/Use By Date',            fieldKey: 'expiryDate',        warn: true },
+  { pod: 'POD7',  label: 'USP (Swiggy Noice)',                 fieldKey: 'usp' },
+  { pod: 'POD8',  label: 'Manufacturing Date (Swiggy Noice)',  fieldKey: 'mfgDateOffset',     muted: true },
+  { pod: 'POD9',  label: 'Expiry Date/Use By Date (Swiggy Noice)', fieldKey: 'expiryDateOffset', muted: true },
+  { pod: 'POD10', label: 'Net Weight',                         fieldKey: 'netWeight' },
+  { pod: 'POD11', label: 'USP',                                fieldKey: 'uspWithUnit' },
+  { pod: 'POD12', label: 'MRP and USP',                        fieldKey: 'mrpAndUsp' },
+];
 
 /**
  * @param {string} props.productName
@@ -30,6 +48,7 @@ export default function LblLabelPreviewCard({
   shelfLifeUnit,
   fssaiNo,
   templateName,
+  templateId,
   bottleType,
 }) {
   const fields = useMemo(() => computeLabelFields({
@@ -43,6 +62,32 @@ export default function LblLabelPreviewCard({
     productName,
   }), [mrp, mlPerBottle, mfgDate, labellingDate, shelfLifeDays, shelfLifeUnit, batchNo, productName]);
 
+  // Load the selected print template so we can show ONLY the PODs it actually maps.
+  const { data: templateList = [] } = useQuery({
+    queryKey: ['lbl-print-template-for-preview', templateId],
+    queryFn: () => base44.entities.LblPrintTemplate.filter({ template_id: templateId }),
+    enabled: !!templateId,
+  });
+  const template = templateList[0];
+
+  // Build the filtered row list from the template's field_mappings.
+  // Falls back to the full POD catalog when no template is selected.
+  const visibleRows = useMemo(() => {
+    if (!template?.field_mappings?.length) return ALL_POD_ROWS;
+    return template.field_mappings.map(m => {
+      const base = ALL_POD_ROWS.find(r => r.pod === m.pod_field) || {};
+      return {
+        pod: m.pod_field,
+        label: m.label || base.label || m.pod_field,
+        fieldKey: m.erp_source || base.fieldKey || '',
+        highlight: base.highlight,
+        warn: base.warn,
+        muted: base.muted,
+        mono: base.mono,
+      };
+    });
+  }, [template]);
+
   const hasSomeData = productName || batchNo || mrp;
   if (!hasSomeData) return null;
 
@@ -52,8 +97,8 @@ export default function LblLabelPreviewCard({
       <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 border-b border-slate-200">
         <Tag className="w-3.5 h-3.5 text-slate-500" />
         <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Label Preview — POD Field Values</span>
-        {templateName && (
-          <span className="ml-auto text-xs text-slate-400 font-mono">{templateName}</span>
+        {(template?.name || templateName) && (
+          <span className="ml-auto text-xs text-slate-400 font-mono">{template?.name || templateName}</span>
         )}
       </div>
 
@@ -78,18 +123,30 @@ export default function LblLabelPreviewCard({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              <PodRow pod="POD1"  label="MRP"                              fieldKey="mrp"               value={fields.mrp ? `${fields.mrp}` : '—'} highlight />
-              <PodRow pod="POD2"  label="MRP with USP"                     fieldKey="mrpWithUsp"         value={fields.mrpWithUsp || '—'} />
-              <PodRow pod="POD3"  label="Incl. of all taxes"               fieldKey="taxLine"            value={fields.taxLine} muted />
-              <PodRow pod="POD4"  label="Batch No."                        fieldKey="batchNo"            value={fields.batchNo || '—'} mono />
-              <PodRow pod="POD5"  label="Manufacturing Date"               fieldKey="mfgDate"            value={fields.mfgDate || '—'} />
-              <PodRow pod="POD6"  label="Expiry Date/Use By Date"          fieldKey="expiryDate"         value={fields.expiryDate || '—'} warn={!!fields.expiryDate} />
-              <PodRow pod="POD7"  label="USP (Swiggy Noice)"                    fieldKey="usp"               value={fields.usp || '—'} />
-              <PodRow pod="POD8"  label="Manufacturing Date (Swiggy Noice)"    fieldKey="mfgDateOffset"     value={fields.mfgDateOffset || '—'} muted />
-              <PodRow pod="POD9"  label="Expiry Date/Use By Date (Swiggy Noice)" fieldKey="expiryDateOffset" value={fields.expiryDateOffset || '—'} muted />
-              <PodRow pod="POD10" label="Net Weight"                       fieldKey="netWeight"          value={fields.netWeight || '—'} />
-              <PodRow pod="POD11" label="USP"                              fieldKey="uspWithUnit"        value={fields.uspWithUnit || '—'} />
-              <PodRow pod="POD12" label="MRP and USP"                      fieldKey="mrpAndUsp"          value={fields.mrpAndUsp || '—'} />
+              {visibleRows.map(row => {
+                const raw = fields[row.fieldKey];
+                const value = raw === undefined || raw === null || raw === '' ? '—' : String(raw);
+                return (
+                  <PodRow
+                    key={row.pod}
+                    pod={row.pod}
+                    label={row.label}
+                    fieldKey={row.fieldKey}
+                    value={value}
+                    highlight={row.highlight}
+                    warn={row.warn && raw}
+                    muted={row.muted}
+                    mono={row.mono}
+                  />
+                );
+              })}
+              {visibleRows.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="px-2 py-3 text-center text-slate-500">
+                    No POD fields mapped in this template.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

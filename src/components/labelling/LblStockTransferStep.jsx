@@ -204,6 +204,7 @@ export default function LblStockTransferStep({ job, user, onComplete }) {
         fssaiNo={product?.fssai_no}
         bottleType={job?.bottle_type || product?.bottle_type}
         templateName={product?.demo_template || product?.bulk_template}
+        templateId={job?.printer_template_id || product?.demo_template || product?.bulk_template}
       />
 
       <div className="flex flex-col md:flex-row gap-2">
