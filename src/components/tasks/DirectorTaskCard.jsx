@@ -330,20 +330,25 @@ export default function DirectorTaskCard({ task, user, viewMode, onRefresh }) {
         {/* Expanded details */}
         {expanded && (
           <div className="border-t border-slate-100 px-4 py-3 space-y-3 bg-slate-50">
-            {/* Reference tags: task number, project, assigned by */}
-            <div className="flex flex-wrap gap-2">
-              <span className="text-xs bg-slate-200 text-slate-600 px-2.5 py-1 rounded-full font-medium">
-                {task.task_number}
-              </span>
+            {/* Reference info as clean labelled rows */}
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-slate-400 w-20 shrink-0">Task ID</span>
+                <span className="text-sm text-slate-700 font-medium">{task.task_number}</span>
+              </div>
               {task.task_type === 'project' && task.project_name && (
-                <span className="text-xs bg-indigo-50 text-indigo-600 px-2.5 py-1 rounded-full font-medium flex items-center gap-1">
-                  <Layers className="w-3 h-3" /> {task.project_name}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-slate-400 w-20 shrink-0">Project</span>
+                  <span className="text-sm text-slate-700 flex items-center gap-1">
+                    <Layers className="w-3.5 h-3.5 text-indigo-400" /> {task.project_name}
+                  </span>
+                </div>
               )}
               {(task.assigned_by_name || task.director_name) && (
-                <span className="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full font-medium">
-                  From: {task.assigned_by_name || task.director_name}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-slate-400 w-20 shrink-0">Assigned by</span>
+                  <span className="text-sm text-slate-700">{task.assigned_by_name || task.director_name}</span>
+                </div>
               )}
             </div>
 
@@ -369,11 +374,27 @@ export default function DirectorTaskCard({ task, user, viewMode, onRefresh }) {
                 Depends on: {task.predecessor_task_numbers.join(', ')}
               </div>
             )}
-            <div className="grid grid-cols-2 gap-2 text-xs text-slate-500">
-              <div>Start: {formatTaskDate(task.start_date, task.start_time) || 'Not set'}</div>
-              <div>End: {formatTaskDate(task.end_date, task.end_time)}</div>
-              {!isAssignee && task.assigned_to_name && <div>Assigned to: {task.assigned_to_name}</div>}
-              {task.verified_by_name && <div>Verified by: {task.verified_by_name}</div>}
+            <div className="space-y-1.5 pt-1 border-t border-slate-100">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-slate-400 w-20 shrink-0">Start</span>
+                <span className="text-sm text-slate-600">{formatTaskDate(task.start_date, task.start_time) || '—'}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-slate-400 w-20 shrink-0">End</span>
+                <span className="text-sm text-slate-600">{formatTaskDate(task.end_date, task.end_time)}</span>
+              </div>
+              {!isAssignee && task.assigned_to_name && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-slate-400 w-20 shrink-0">Assigned to</span>
+                  <span className="text-sm text-slate-600">{task.assigned_to_name}</span>
+                </div>
+              )}
+              {task.verified_by_name && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-slate-400 w-20 shrink-0">Verified by</span>
+                  <span className="text-sm text-slate-600">{task.verified_by_name}</span>
+                </div>
+              )}
             </div>
           </div>
         )}
