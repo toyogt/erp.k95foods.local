@@ -156,7 +156,7 @@ export default function DirectorTaskCard({ task, user, viewMode, onRefresh }) {
 
   return (
     <>
-      <div className={`${bgColor} rounded-xl border border-slate-200 border-l-4 ${borderColor} shadow-sm overflow-hidden`}>
+      <div className={`${bgColor} rounded-xl border border-slate-200 border-l-4 ${borderColor} shadow-sm`}>
         {/* Card Header */}
         <div className="p-4 pb-3">
           {/* Status + urgency badges only */}
@@ -229,18 +229,16 @@ export default function DirectorTaskCard({ task, user, viewMode, onRefresh }) {
         {/* Actions area */}
         <div className="px-4 pb-3 flex flex-col gap-2">
 
-          {/* Row 1: Update Progress + Request Date Change (side by side) */}
-          {isAssignee && (task.status === 'open' || task.status === 'blocked') && (
-            <div className="flex gap-2">
-              {!showProgressInput && (
-                <Button variant="outline" onClick={() => setShowProgressInput(true)}
-                  className="flex-1 min-h-[44px] gap-2 text-sm font-medium">
-                  <MessageSquare className="w-4 h-4" /> Update Progress
-                </Button>
-              )}
+          {/* Secondary actions: Update Progress + Request Date Change — stacked vertically */}
+          {isAssignee && (task.status === 'open' || task.status === 'blocked') && !showProgressInput && (
+            <div className="flex flex-col gap-2">
+              <Button variant="outline" onClick={() => setShowProgressInput(true)}
+                className="w-full min-h-[44px] gap-2 text-sm font-medium justify-center">
+                <MessageSquare className="w-4 h-4" /> Update Progress
+              </Button>
               {task.status === 'open' && (
                 <Button variant="outline" onClick={() => setShowDateChange(true)}
-                  className="flex-1 min-h-[44px] gap-2 text-sm font-medium">
+                  className="w-full min-h-[44px] gap-2 text-sm font-medium justify-center">
                   <CalendarClock className="w-4 h-4" /> Request Date Change
                 </Button>
               )}
