@@ -25,6 +25,7 @@ export default function EADashboard() {
   const [showCreateProject, setShowCreateProject] = useState(false);
   const [tab, setTab] = useState('pending');
   const [projects, setProjects] = useState([]);
+  const [projectTaskStats, setProjectTaskStats] = useState({});
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -78,6 +79,17 @@ export default function EADashboard() {
 
     setTasks(allTasks);
     setProjects(allProjects);
+
+    // Build task stats per project
+    const stats = {};
+    allProjects.forEach(p => { stats[p.id] = { total: 0, completed: 0 }; });
+    allTasks.forEach(t => {
+      if (t.project_id && stats[t.project_id] !== undefined) {
+        stats[t.project_id].total += 1;
+        if (t.status === 'completed') stats[t.project_id].completed += 1;
+      }
+    });
+    setProjectTaskStats(stats);
     setLoading(false);
   }, []);
 
@@ -209,7 +221,7 @@ export default function EADashboard() {
               ) : (
                 <div className="space-y-3">
                   {projects.filter(p => p.status !== 'completed' && p.status !== 'cancelled').map(p => (
-                    <ProjectCard key={p.id} project={p} user={user} onRefresh={load} />
+                    <ProjectCard key={p.id} project={p} user={user} onRefresh={load} taskStats={projectTaskStats[p.id]} />
                   ))}
                 </div>
               )}

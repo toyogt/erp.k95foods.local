@@ -22,10 +22,15 @@ function isProjectOverdue(project) {
   return moment(project.end_date, 'DD/MM/YYYY').endOf('day').isBefore(moment());
 }
 
-export default function ProjectCard({ project, user, onRefresh }) {
+export default function ProjectCard({ project, user, onRefresh, taskStats }) {
   const [expanded, setExpanded] = useState(false);
   const statusCfg = PROJECT_STATUS[project.status] || PROJECT_STATUS.planned;
   const overdue = isProjectOverdue(project);
+
+  const totalTasks = taskStats?.total ?? 0;
+  const completedTasks = taskStats?.completed ?? 0;
+  const pct = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+  const progressColor = pct === 100 ? 'bg-green-500' : pct >= 50 ? 'bg-blue-500' : 'bg-orange-400';
 
   const borderColor = overdue ? 'border-l-red-500'
     : project.status === 'completed' ? 'border-l-green-400'
@@ -72,6 +77,24 @@ export default function ProjectCard({ project, user, onRefresh }) {
               <span className="flex items-center gap-1">
                 From: {project.director_name || project.director_email}
               </span>
+            </div>
+
+            {/* Completion progress */}
+            <div className="mt-3">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs text-slate-500 font-medium">
+                  {totalTasks === 0 ? 'No tasks yet' : `${completedTasks} of ${totalTasks} tasks completed`}
+                </span>
+                <span className={`text-xs font-semibold ${pct === 100 ? 'text-green-600' : 'text-slate-600'}`}>
+                  {pct}%
+                </span>
+              </div>
+              <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${progressColor}`}
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
             </div>
           </div>
 
