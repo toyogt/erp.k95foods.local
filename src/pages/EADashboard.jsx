@@ -5,12 +5,11 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
-  Loader2, Plus, Search, ClipboardList, AlertTriangle,
-  CheckCircle2, Clock, CalendarClock, User, Layers
+  Loader2, Plus, Search, ClipboardList,
+  CheckCircle2, Clock, User, Layers
 } from 'lucide-react';
 import CreateDirectorTaskModal from '@/components/tasks/CreateDirectorTaskModal';
 import DirectorTaskCard from '@/components/tasks/DirectorTaskCard';
-import DirectorTaskLogPanel from '@/components/tasks/DirectorTaskLogPanel';
 import ProjectFormModal from '@/components/tasks/ProjectFormModal';
 import ProjectCard from '@/components/tasks/ProjectCard';
 import { getDirectorsForEA, isTaskOverdue } from '@/lib/directorTaskHelpers';
@@ -25,7 +24,6 @@ export default function EADashboard() {
   const [showCreate, setShowCreate] = useState(false);
   const [showCreateProject, setShowCreateProject] = useState(false);
   const [tab, setTab] = useState('pending');
-  const [selectedTaskLog, setSelectedTaskLog] = useState(null);
   const [projects, setProjects] = useState([]);
 
   const load = useCallback(async () => {

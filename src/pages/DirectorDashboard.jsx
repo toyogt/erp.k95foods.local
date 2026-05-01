@@ -5,8 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
-  Loader2, Plus, Search, ClipboardList, AlertTriangle,
-  CheckCircle2, Clock, User, XCircle, Smartphone, Layers
+  Loader2, Plus, Search, ClipboardList,
+  CheckCircle2, Clock, Smartphone, Layers
 } from 'lucide-react';
 import CreateDirectorTaskModal from '@/components/tasks/CreateDirectorTaskModal';
 import DirectorTaskCard from '@/components/tasks/DirectorTaskCard';
