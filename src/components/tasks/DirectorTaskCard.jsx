@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import {
   CheckCircle2, AlertTriangle, Calendar, User,
   Loader2, ChevronDown, ChevronUp, CalendarClock, MessageSquare,
-  ScrollText, XCircle, Layers, Lock, Send
+  ScrollText, XCircle, Lock, Send
 } from 'lucide-react';
 import { TASK_STATUS_CONFIG, isTaskOverdue, getTaskUrgency, logTaskAction, formatTaskDate } from '@/lib/directorTaskHelpers';
 import DirectorTaskLogPanel from '@/components/tasks/DirectorTaskLogPanel';
@@ -339,9 +339,7 @@ export default function DirectorTaskCard({ task, user, viewMode, onRefresh }) {
               {task.task_type === 'project' && task.project_name && (
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-medium text-slate-400 w-20 shrink-0">Project</span>
-                  <span className="text-sm text-slate-700 flex items-center gap-1">
-                    <Layers className="w-3.5 h-3.5 text-indigo-400" /> {task.project_name}
-                  </span>
+                  <span className="text-sm text-slate-700">{task.project_name}</span>
                 </div>
               )}
               {(task.assigned_by_name || task.director_name) && (
