@@ -29,13 +29,18 @@ function normalizeRecord(rec) {
   const employee_code = pick(rec, ['employee_code', 'EmpCode', 'emp_code', 'empCode', 'UserId', 'userid']);
   const employee_name = pick(rec, ['employee_name', 'EmpName', 'emp_name', 'empName', 'UserName']);
   const dt_raw = pick(rec, ['log_datetime', 'LogDateTime', 'logDateTime', 'punch_time', 'PunchTime', 'datetime', 'DateTime']);
+  const downloaded_raw = pick(rec, ['downloaded_at', 'DownloadDateTime', 'download_datetime', 'downloadedAt']);
   const device_sn = pick(rec, ['device_sn', 'DeviceSN', 'device_serial', 'SerialNumber', 'serial_no']);
+  const device_no = pick(rec, ['device_no', 'DeviceNo', 'deviceNo', 'device_number']);
+  const device_name = pick(rec, ['device_name', 'DeviceName', 'deviceName']);
   const punch_direction = pick(rec, ['punch_direction', 'Direction', 'InOut', 'inout', 'punch_type']);
 
   const parsed = parseDateTime(dt_raw);
   if (!employee_code || !parsed) {
     return { ok: false, reason: 'missing_employee_code_or_datetime', raw: rec };
   }
+
+  const downloadedParsed = parseDateTime(downloaded_raw);
 
   return {
     ok: true,
@@ -45,7 +50,10 @@ function normalizeRecord(rec) {
       log_datetime: parsed.iso,
       log_date: parsed.log_date,
       log_time: parsed.log_time,
+      downloaded_at: downloadedParsed ? downloadedParsed.iso : '',
       device_sn: device_sn ? String(device_sn).trim() : '',
+      device_no: device_no ? String(device_no).trim() : '',
+      device_name: device_name ? String(device_name).trim() : '',
       punch_direction: punch_direction ? String(punch_direction).trim() : '',
       raw_payload: rec,
     },
