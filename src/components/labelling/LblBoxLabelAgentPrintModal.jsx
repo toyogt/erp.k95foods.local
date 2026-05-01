@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/components/ui/use-toast';
-import { Loader2, Printer, Wifi, WifiOff, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Loader2, Printer, Wifi, WifiOff, AlertTriangle, CheckCircle2, Download } from 'lucide-react';
 import { deriveSizeCode, sizeMatches } from '@/lib/boxLabelSizeCode';
 import { resolveElementValue } from '@/lib/boxLabelHelpers';
 
@@ -169,6 +169,34 @@ export default function LblBoxLabelAgentPrintModal({ open, onOpenChange, templat
     return Array.from(map.values());
   }, [discovery, sizeInfo]);
 
+  const handleDownloadPdf = async () => {
+    if (!Number(copies) || Number(copies) < 1) {
+      toast({ title: 'Copies must be at least 1', variant: 'destructive' });
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const blob = await renderLabelToPdfBlob(template, data);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `box-label-${data?.job?.batch_no || 'label'}-${Date.now()}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      toast({
+        title: 'PDF downloaded',
+        description: `Open the file and print ${copies} cop${copies === 1 ? 'y' : 'ies'} manually.`,
+      });
+      onOpenChange(false);
+    } catch (e) {
+      toast({ title: 'Failed to generate PDF', description: e.message, variant: 'destructive' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!selectedWid) {
       toast({ title: 'Pick a workstation', variant: 'destructive' });
@@ -273,12 +301,23 @@ export default function LblBoxLabelAgentPrintModal({ open, onOpenChange, templat
             {loadingDiscovery ? (
               <div className="flex items-center justify-center py-6"><Loader2 className="w-5 h-5 animate-spin text-slate-400" /></div>
             ) : eligible.length === 0 ? (
-              <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg p-3">
-                <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
-                <div className="text-xs text-amber-800">
-                  No active workstation has a printer matching size <span className="font-mono font-semibold">{sizeInfo.primary}</span>.
-                  Check the Print Management Dashboard — make sure the printer is online and reporting the right size.
+              <div className="flex flex-col gap-3 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                  <div className="text-xs text-amber-800">
+                    No active workstation has a printer matching size <span className="font-mono font-semibold">{sizeInfo.primary}</span>.
+                    You can download the PDF and print it manually from any printer.
+                  </div>
                 </div>
+                <Button
+                  variant="outline"
+                  className="w-full h-11 md:h-9 bg-white border-amber-300 text-amber-900 hover:bg-amber-100 gap-2"
+                  onClick={handleDownloadPdf}
+                  disabled={submitting}
+                >
+                  {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                  Download PDF for Manual Printing
+                </Button>
               </div>
             ) : (
               <div className="border border-slate-200 rounded-lg divide-y divide-slate-100 max-h-64 overflow-y-auto">
