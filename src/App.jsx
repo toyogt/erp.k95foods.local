@@ -133,6 +133,7 @@ import PrintManagementDashboard from './pages/PrintManagementDashboard';
 import PrintJobCreate from './pages/PrintJobCreate';
 import PrintJobs from './pages/PrintJobs';
 import PrintManagementAdmin from './pages/PrintManagementAdmin';
+import HRAttendanceLogs from './pages/HRAttendanceLogs';
 
 // Page component lookup table
 const PAGE_COMPONENTS = {
@@ -344,6 +345,10 @@ const AuthenticatedApp = () => {
       <Route path="/PrintJobCreate" element={<LayoutWrapper currentPageName="PrintJobCreate"><PrintJobCreate /></LayoutWrapper>} />
       <Route path="/PrintJobs" element={<LayoutWrapper currentPageName="PrintJobs"><PrintJobs /></LayoutWrapper>} />
       <Route path="/PrintManagementAdmin" element={<LayoutWrapper currentPageName="PrintManagementAdmin"><PrintManagementAdmin /></LayoutWrapper>} />
+
+      {/* HR Module */}
+      <Route path="/HRAttendanceLogs" element={<LayoutWrapper currentPageName="HRAttendanceLogs"><HRAttendanceLogs /></LayoutWrapper>} />
+
       {/* Store Management System Routes */}
       {[
         ['SMSDashboard', SMSDashboard], ['SMSLocationManager', SMSLocationManager],
