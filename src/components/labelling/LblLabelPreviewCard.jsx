@@ -49,6 +49,7 @@ export default function LblLabelPreviewCard({
   fssaiNo,
   templateName,
   templateId,
+  skuCode,
   bottleType,
 }) {
   const fields = useMemo(() => computeLabelFields({
@@ -62,11 +63,23 @@ export default function LblLabelPreviewCard({
     productName,
   }), [mrp, mlPerBottle, mfgDate, labellingDate, shelfLifeDays, shelfLifeUnit, batchNo, productName]);
 
-  // Load the selected print template so we can show ONLY the PODs it actually maps.
+  // 1. Resolve template_id — prefer the explicit prop, else look up the default
+  //    SKUPrintMapping for this SKU.
+  const { data: skuMappingList = [] } = useQuery({
+    queryKey: ['sku-print-mapping-for-preview', skuCode],
+    queryFn: () => base44.entities.SKUPrintMapping.filter({ sku_code: skuCode, is_active: true }),
+    enabled: !!skuCode && !templateId,
+  });
+  const resolvedTemplateId = templateId
+    || skuMappingList.find(m => m.is_default)?.template_id
+    || skuMappingList[0]?.template_id
+    || null;
+
+  // 2. Load the print template so we can show ONLY the PODs it actually maps.
   const { data: templateList = [] } = useQuery({
-    queryKey: ['lbl-print-template-for-preview', templateId],
-    queryFn: () => base44.entities.LblPrintTemplate.filter({ template_id: templateId }),
-    enabled: !!templateId,
+    queryKey: ['lbl-print-template-for-preview', resolvedTemplateId],
+    queryFn: () => base44.entities.LblPrintTemplate.filter({ template_id: resolvedTemplateId }),
+    enabled: !!resolvedTemplateId,
   });
   const template = templateList[0];
 
