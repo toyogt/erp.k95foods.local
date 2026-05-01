@@ -3,19 +3,16 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 /**
  * Voice-to-Task API for Apple Shortcuts
  * 
- * PREREQUISITE: App must be set to "Public" visibility in Dashboard → Overview
- * so external HTTP requests can reach this function.
- * 
  * Authentication: Custom API key via "x-api-key" header (VOICE_TASK_API_KEY secret)
  * Also requires "x-director-email" header to identify the director.
  * 
  * Accepts:
- *  - Audio file via multipart form-data (field "audio") — AI transcribes + parses
+ *  - Audio file via multipart form-data (field "audio") — Whisper transcribes, then AI parses
  *  - JSON body with { voice_text: "..." } — AI parses text directly
  */
 Deno.serve(async (req) => {
   try {
-    // ── Custom API key auth (secures the endpoint) ──────────────
+    // ── Custom API key auth ──────────────────────────────────────
     const apiKey = req.headers.get('x-api-key');
     const expectedKey = Deno.env.get('VOICE_TASK_API_KEY');
     if (!apiKey || apiKey !== expectedKey) {
@@ -27,9 +24,8 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Missing x-director-email header' }, { status: 400 });
     }
 
-    // ── Parse request body ──────────────────────────────────────
+    // ── Parse request body ───────────────────────────────────────
     let voiceText = null;
-    let audioBlob = null;
     const contentType = req.headers.get('content-type') || '';
 
     if (contentType.includes('multipart/form-data')) {
@@ -38,7 +34,39 @@ Deno.serve(async (req) => {
       if (!audioFile) {
         return Response.json({ error: 'Missing audio file. Send as form field named "audio".' }, { status: 400 });
       }
-      audioBlob = audioFile;
+
+      // ── Whisper transcription ────────────────────────────────
+      const openaiKey = Deno.env.get('OPENAI_API_KEY');
+      if (!openaiKey) {
+        return Response.json({ error: 'OPENAI_API_KEY not configured' }, { status: 500 });
+      }
+
+      const whisperForm = new FormData();
+      whisperForm.append('file', audioFile, audioFile.name || 'audio.m4a');
+      whisperForm.append('model', 'whisper-1');
+      whisperForm.append('language', 'en');
+
+      const whisperRes = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${openaiKey}` },
+        body: whisperForm,
+      });
+
+      if (!whisperRes.ok) {
+        const err = await whisperRes.text();
+        console.error('[voiceCreateTask] Whisper error:', err);
+        return Response.json({ error: 'Audio transcription failed: ' + err }, { status: 500 });
+      }
+
+      const whisperData = await whisperRes.json();
+      voiceText = whisperData.text;
+
+      if (!voiceText || !voiceText.trim()) {
+        return Response.json({ error: 'Could not transcribe audio. Please speak clearly and try again.' }, { status: 400 });
+      }
+
+      console.log('[voiceCreateTask] Whisper transcription:', voiceText);
+
     } else {
       let rawBody = '';
       try { rawBody = await req.text(); } catch (_e) { /* empty */ }
@@ -50,21 +78,13 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ── SDK init (standard pattern for external HTTP calls) ─────
+    // ── SDK init ─────────────────────────────────────────────────
     const base44 = createClientFromRequest(req);
 
-    // All operations use service role (no user session from Shortcut)
     const allUsers = await base44.asServiceRole.entities.User.list();
     const director = allUsers.find(u => u.email === directorEmail);
     if (!director) {
       return Response.json({ error: `Director not found: ${directorEmail}` }, { status: 400 });
-    }
-
-    // Upload audio if present
-    let audioFileUrl = null;
-    if (audioBlob) {
-      const uploadResult = await base44.asServiceRole.integrations.Core.UploadFile({ file: audioBlob });
-      audioFileUrl = uploadResult.file_url;
     }
 
     // Get EA mapping for this director
@@ -86,24 +106,21 @@ Deno.serve(async (req) => {
     const ist = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
     const todayStr = `${String(ist.getDate()).padStart(2, '0')}/${String(ist.getMonth() + 1).padStart(2, '0')}/${ist.getFullYear()}`;
 
-    // ── AI extraction ───────────────────────────────────────────
-    const basePrompt = `You are a task extraction assistant for a Director in a company.
+    // ── AI extraction from transcribed text ──────────────────────
+    const aiResult = await base44.asServiceRole.integrations.Core.InvokeLLM({
+      prompt: `You are a task extraction assistant for a Director in a company.
 Today's date is: ${todayStr}
 
-${audioFileUrl 
-  ? 'The Director has recorded an audio voice command to create a task for their Executive Assistant. Listen to the attached audio file carefully and extract the task details from it.'
-  : `The Director spoke this voice command to create a task for their Executive Assistant:\n\n"${voiceText}"`}
+The Director spoke this voice command to create a task for their Executive Assistant:
+
+"${voiceText}"
 
 Extract the following:
 1. task_name: A clear, concise title for the task
 2. task_details: Any additional details mentioned (if none, leave empty)
-3. end_date: The deadline in DD/MM/YYYY format. If "today" → ${todayStr}. If "tomorrow" → calculate. If "next week" → add 7 days. If specific date like "25th April" → DD/MM/YYYY using year ${ist.getFullYear()}. If no date, default 3 days from today.
-4. end_time: Time if mentioned (HH:MM 24h), otherwise empty
-5. is_important: true if urgent/important/critical/ASAP/priority mentioned, otherwise false
-6. transcription: Full text of what was said`;
-
-    const llmParams = {
-      prompt: basePrompt,
+3. end_date: The deadline in DD/MM/YYYY format. If "today" → ${todayStr}. If "tomorrow" → calculate. If "next week" → add 7 days. If specific date like "25th April" → DD/MM/YYYY using year ${ist.getFullYear()}. If no date mentioned, default to 3 days from today.
+4. end_time: Time if mentioned (HH:MM 24h format), otherwise empty string
+5. is_important: true if urgent/important/critical/ASAP/priority is mentioned, otherwise false`,
       response_json_schema: {
         type: 'object',
         properties: {
@@ -112,26 +129,19 @@ Extract the following:
           end_date: { type: 'string' },
           end_time: { type: 'string' },
           is_important: { type: 'boolean' },
-          transcription: { type: 'string' },
         },
       },
-    };
-
-    if (audioFileUrl) {
-      llmParams.file_urls = [audioFileUrl];
-    }
-
-    const aiResult = await base44.asServiceRole.integrations.Core.InvokeLLM(llmParams);
+    });
 
     if (!aiResult.task_name) {
       return Response.json({
         success: false,
         error: 'Could not understand the voice command. Please try again.',
-        transcription: aiResult.transcription || null,
+        transcription: voiceText,
       }, { status: 400 });
     }
 
-    // ── Create task ─────────────────────────────────────────────
+    // ── Create task ──────────────────────────────────────────────
     const assignee = eaUser || { email: eaMapping.ea_email, full_name: eaMapping.ea_name || eaMapping.ea_email };
 
     const existing = await base44.asServiceRole.entities.DirectorTask.list('-created_date', 1);
@@ -160,18 +170,17 @@ Extract the following:
     });
 
     // Audit log
-    const sourceText = aiResult.transcription || voiceText || '(audio)';
     await base44.asServiceRole.entities.DirectorTaskLog.create({
       task_id: task.id,
       task_number: taskNumber,
       action: 'created',
       performed_by_email: director.email,
       performed_by_name: director.full_name,
-      details: `Task created via voice command: "${sourceText}"`,
+      details: `Task created via voice command: "${voiceText}"`,
       timestamp: new Date().toISOString(),
     });
 
-    // ── Telegram notification to EA ─────────────────────────────
+    // ── Telegram notification to EA ──────────────────────────────
     if (eaUser?.telegram_chat_id) {
       const token = Deno.env.get('TELEGRAM_BOT_TOKEN');
       if (token) {
@@ -201,9 +210,10 @@ Extract the following:
       assigned_to: assignee.full_name || assignee.email,
       end_date: aiResult.end_date,
       is_important: aiResult.is_important,
-      transcription: aiResult.transcription || voiceText,
+      transcription: voiceText,
       message: `Task ${taskNumber} created: "${aiResult.task_name}" assigned to ${assignee.full_name || assignee.email}, due ${aiResult.end_date}`,
     });
+
   } catch (error) {
     console.error('[voiceCreateTask] Error:', error.message);
     return Response.json({ error: error.message }, { status: 500 });
