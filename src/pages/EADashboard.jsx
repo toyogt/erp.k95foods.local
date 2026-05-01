@@ -152,21 +152,21 @@ export default function EADashboard() {
         <>
           {/* Counters */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div className="bg-red-50 border border-red-100 rounded-xl p-3 text-center">
-              <p className="text-2xl font-bold text-red-600">{overdueTasks.length}</p>
-              <p className="text-xs text-red-400 font-medium mt-0.5">Overdue</p>
+            <div className="bg-red-50 border border-red-100 rounded-2xl p-4 text-center">
+              <p className="text-3xl font-bold text-red-600">{overdueTasks.length}</p>
+              <p className="text-sm text-red-400 font-medium mt-1">Overdue</p>
             </div>
-            <div className="bg-yellow-50 border border-yellow-100 rounded-xl p-3 text-center">
-              <p className="text-2xl font-bold text-yellow-600">{verificationTasks.length}</p>
-              <p className="text-xs text-yellow-400 font-medium mt-0.5">Pending Verification</p>
+            <div className="bg-yellow-50 border border-yellow-100 rounded-2xl p-4 text-center">
+              <p className="text-3xl font-bold text-yellow-600">{verificationTasks.length}</p>
+              <p className="text-sm text-yellow-500 font-medium mt-1">Needs Verification</p>
             </div>
-            <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-center">
-              <p className="text-2xl font-bold text-blue-600">{importantOpen.length}</p>
-              <p className="text-xs text-blue-400 font-medium mt-0.5">Important Open</p>
+            <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 text-center">
+              <p className="text-3xl font-bold text-blue-600">{importantOpen.length}</p>
+              <p className="text-sm text-blue-400 font-medium mt-1">Important Open</p>
             </div>
-            <div className="bg-green-50 border border-green-100 rounded-xl p-3 text-center">
-              <p className="text-2xl font-bold text-green-600">{completedTasks.length}</p>
-              <p className="text-xs text-green-400 font-medium mt-0.5">Completed</p>
+            <div className="bg-green-50 border border-green-100 rounded-2xl p-4 text-center">
+              <p className="text-3xl font-bold text-green-600">{completedTasks.length}</p>
+              <p className="text-sm text-green-500 font-medium mt-1">Completed</p>
             </div>
           </div>
 

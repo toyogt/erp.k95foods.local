@@ -274,10 +274,11 @@ export default function FMSMyTasks() {
 
   return (
     <>
-    <div className="p-6 max-w-3xl mx-auto">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-slate-800">My Tasks</h1>
-          <p className="text-slate-500 text-sm mt-1">Your pending assignments across all processes</p>
+    <div className="p-3 md:p-6 max-w-3xl mx-auto">
+        {/* Header */}
+        <div className="mb-5">
+          <h1 className="text-2xl font-bold text-slate-900">My Tasks</h1>
+          <p className="text-slate-500 text-sm mt-0.5">Your pending assignments across all processes</p>
         </div>
 
         {loading ? (
@@ -285,35 +286,39 @@ export default function FMSMyTasks() {
             <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
           </div>
         ) : tasks.length === 0 && scheduledTasks.length === 0 && directorTasks.length === 0 ? (
-          <div className="text-center py-20">
-            <ClipboardList className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-            <p className="text-slate-400 font-medium">No pending tasks</p>
-            <p className="text-slate-300 text-sm mt-1">You're all caught up!</p>
+          <div className="text-center py-20 bg-white rounded-2xl border border-slate-200">
+            <ClipboardList className="w-14 h-14 text-slate-200 mx-auto mb-4" />
+            <p className="text-slate-500 font-semibold text-lg">All caught up!</p>
+            <p className="text-slate-400 text-sm mt-1">No pending tasks right now.</p>
           </div>
         ) : (
-          <div className="space-y-6">
-            <div className="grid grid-cols-4 gap-3">
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center">
-                <p className="text-2xl font-bold text-slate-700">{totalPending}</p>
-                <p className="text-xs text-slate-400 font-medium mt-0.5">Total Pending</p>
+          <div className="space-y-5">
+            {/* Summary counters */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-center">
+                <p className="text-3xl font-bold text-slate-700">{totalPending}</p>
+                <p className="text-sm text-slate-500 font-medium mt-1">Total Pending</p>
               </div>
-              <div className="bg-red-50 border border-red-100 rounded-xl p-3 text-center">
-                <p className="text-2xl font-bold text-red-600">{overdue.length + dtOverdue.length}</p>
-                <p className="text-xs text-red-400 font-medium mt-0.5">Overdue</p>
+              <div className="bg-red-50 border border-red-100 rounded-2xl p-4 text-center">
+                <p className="text-3xl font-bold text-red-600">{overdue.length + dtOverdue.length}</p>
+                <p className="text-sm text-red-400 font-medium mt-1">Overdue</p>
               </div>
-              <div className="bg-yellow-50 border border-yellow-100 rounded-xl p-3 text-center">
-                <p className="text-2xl font-bold text-yellow-600">{atRisk.length}</p>
-                <p className="text-xs text-yellow-400 font-medium mt-0.5">At Risk</p>
+              <div className="bg-yellow-50 border border-yellow-100 rounded-2xl p-4 text-center">
+                <p className="text-3xl font-bold text-yellow-600">{atRisk.length}</p>
+                <p className="text-sm text-yellow-500 font-medium mt-1">At Risk</p>
               </div>
-              <div className="bg-green-50 border border-green-100 rounded-xl p-3 text-center">
-                <p className="text-2xl font-bold text-green-600">{onTime.length}</p>
-                <p className="text-xs text-green-400 font-medium mt-0.5">On Time</p>
+              <div className="bg-green-50 border border-green-100 rounded-2xl p-4 text-center">
+                <p className="text-3xl font-bold text-green-600">{onTime.length}</p>
+                <p className="text-sm text-green-500 font-medium mt-1">On Time</p>
               </div>
             </div>
 
             {overdue.length > 0 && (
               <div>
-                <h2 className="text-sm font-semibold text-red-600 uppercase tracking-wider mb-3">⚠ Overdue ({overdue.length})</h2>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="w-2 h-2 rounded-full bg-red-500" />
+                  <h2 className="text-sm font-semibold text-red-600 uppercase tracking-wide">Overdue ({overdue.length})</h2>
+                </div>
                 <div className="space-y-3">
                   {overdue.map(t => <TaskCard key={t.id} step={t} onComplete={handleMarkDone} onOpenChecklist={handleOpenChecklist} completing={completing} />)}
                 </div>
@@ -321,7 +326,10 @@ export default function FMSMyTasks() {
             )}
             {atRisk.length > 0 && (
               <div>
-                <h2 className="text-sm font-semibold text-yellow-600 uppercase tracking-wider mb-3">⏰ Due Soon ({atRisk.length})</h2>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="w-2 h-2 rounded-full bg-yellow-500" />
+                  <h2 className="text-sm font-semibold text-yellow-600 uppercase tracking-wide">Due Soon ({atRisk.length})</h2>
+                </div>
                 <div className="space-y-3">
                   {atRisk.map(t => <TaskCard key={t.id} step={t} onComplete={handleMarkDone} onOpenChecklist={handleOpenChecklist} completing={completing} />)}
                 </div>
@@ -329,7 +337,10 @@ export default function FMSMyTasks() {
             )}
             {onTime.length > 0 && (
               <div>
-                <h2 className="text-sm font-semibold text-green-600 uppercase tracking-wider mb-3">✓ On Track ({onTime.length})</h2>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="w-2 h-2 rounded-full bg-green-500" />
+                  <h2 className="text-sm font-semibold text-green-600 uppercase tracking-wide">On Track ({onTime.length})</h2>
+                </div>
                 <div className="space-y-3">
                   {onTime.map(t => <TaskCard key={t.id} step={t} onComplete={handleMarkDone} onOpenChecklist={handleOpenChecklist} completing={completing} />)}
                 </div>
@@ -339,9 +350,10 @@ export default function FMSMyTasks() {
             {/* Director Assigned Tasks Section */}
             {directorTasks.length > 0 && (
               <div>
-                <h2 className="text-sm font-semibold text-indigo-600 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                  📋 Assigned Tasks ({directorTasks.length})
-                </h2>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="w-2 h-2 rounded-full bg-indigo-500" />
+                  <h2 className="text-sm font-semibold text-indigo-600 uppercase tracking-wide">Assigned Tasks ({directorTasks.length})</h2>
+                </div>
                 <div className="space-y-3">
                   {directorTasks.map(t => (
                     <DirectorTaskCard key={t.id} task={t} user={user} viewMode="assignee" onRefresh={load} />
@@ -353,9 +365,10 @@ export default function FMSMyTasks() {
             {/* Scheduled Tasks Section */}
             {scheduledTasks.length > 0 && (
               <div>
-                <h2 className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                  <Clock className="w-4 h-4" /> Scheduled Tasks ({scheduledTasks.length})
-                </h2>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="w-2 h-2 rounded-full bg-blue-500" />
+                  <h2 className="text-sm font-semibold text-blue-600 uppercase tracking-wide">Scheduled Tasks ({scheduledTasks.length})</h2>
+                </div>
                 <div className="space-y-3">
                   {scheduledTasks.map(t => <ScheduledTaskCard key={t.id} task={t} user={user} onComplete={load} />)}
                 </div>
