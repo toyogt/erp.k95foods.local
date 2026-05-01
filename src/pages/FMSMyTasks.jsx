@@ -200,6 +200,7 @@ export default function FMSMyTasks() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState(null); // null | 'overdue' | 'at_risk' | 'on_time'
   const [typeFilter, setTypeFilter] = useState('all');    // 'all' | 'process' | 'assigned' | 'scheduled'
+  const [dateFilter, setDateFilter] = useState('all');    // 'all' | 'today' | 'tomorrow' | 'this_week' | 'next_week' | 'this_month'
 
   const load = useCallback(async () => {
     const me = await base44.auth.me();
@@ -275,6 +276,21 @@ export default function FMSMyTasks() {
   const dtOverdue = directorTasks.filter(t => isTaskOverdue(t));
   const totalPending = tasks.length + scheduledTasks.length + directorTasks.length;
 
+  // Date filter helper — returns true if a date string (ISO or DD/MM/YYYY) falls in the selected window
+  const matchesDateFilter = useCallback((dateStr) => {
+    if (dateFilter === 'all' || !dateStr) return true;
+    const now = moment();
+    // Parse both ISO (for FMS/scheduled) and DD/MM/YYYY (for director tasks)
+    const d = moment(dateStr, ['YYYY-MM-DDTHH:mm:ss', 'YYYY-MM-DD', 'DD/MM/YYYY'], true);
+    if (!d.isValid()) return true;
+    if (dateFilter === 'today') return d.isSame(now, 'day');
+    if (dateFilter === 'tomorrow') return d.isSame(moment().add(1, 'day'), 'day');
+    if (dateFilter === 'this_week') return d.isSame(now, 'week');
+    if (dateFilter === 'next_week') return d.isSame(moment().add(1, 'week'), 'week');
+    if (dateFilter === 'this_month') return d.isSame(now, 'month');
+    return true;
+  }, [dateFilter]);
+
   // Filtered lists applying search + statusFilter + typeFilter
   const filteredTasks = useMemo(() => {
     if (typeFilter === 'assigned' || typeFilter === 'scheduled') return [];
@@ -282,31 +298,34 @@ export default function FMSMyTasks() {
     if (statusFilter === 'overdue') list = list.filter(t => getTATStatus(t.deadline) === 'overdue');
     else if (statusFilter === 'at_risk') list = list.filter(t => getTATStatus(t.deadline) === 'at_risk');
     else if (statusFilter === 'on_time') list = list.filter(t => getTATStatus(t.deadline) === 'on_time');
+    list = list.filter(t => matchesDateFilter(t.deadline));
     if (search) list = list.filter(t => (t.step_name || '').toLowerCase().includes(search.toLowerCase()));
     return list;
-  }, [tasks, statusFilter, typeFilter, search]);
+  }, [tasks, statusFilter, typeFilter, search, matchesDateFilter]);
 
   const filteredDirectorTasks = useMemo(() => {
     if (typeFilter === 'process' || typeFilter === 'scheduled') return [];
     let list = directorTasks;
     if (statusFilter === 'overdue') list = list.filter(t => isTaskOverdue(t));
     else if (statusFilter === 'at_risk' || statusFilter === 'on_time') list = [];
+    list = list.filter(t => matchesDateFilter(t.end_date));
     if (search) list = list.filter(t => (t.task_name || '').toLowerCase().includes(search.toLowerCase()));
     return list;
-  }, [directorTasks, statusFilter, typeFilter, search]);
+  }, [directorTasks, statusFilter, typeFilter, search, matchesDateFilter]);
 
   const filteredScheduledTasks = useMemo(() => {
     if (typeFilter === 'process' || typeFilter === 'assigned') return [];
     let list = scheduledTasks;
     if (statusFilter === 'overdue') list = list.filter(t => t.due_at && new Date(t.due_at) < new Date());
     else if (statusFilter === 'at_risk' || statusFilter === 'on_time') list = [];
+    list = list.filter(t => matchesDateFilter(t.due_at));
     if (search) list = list.filter(t => (t.task_name || '').toLowerCase().includes(search.toLowerCase()));
     return list;
-  }, [scheduledTasks, statusFilter, typeFilter, search]);
+  }, [scheduledTasks, statusFilter, typeFilter, search, matchesDateFilter]);
 
   const hasAnyResults = filteredTasks.length > 0 || filteredDirectorTasks.length > 0 || filteredScheduledTasks.length > 0;
 
-  const clearFilters = () => { setSearch(''); setStatusFilter(null); setTypeFilter('all'); };
+  const clearFilters = () => { setSearch(''); setStatusFilter(null); setTypeFilter('all'); setDateFilter('all'); };
 
   return (
     <>
@@ -395,8 +414,28 @@ export default function FMSMyTasks() {
               </div>
             </div>
 
+            {/* Date filter pills */}
+            <div className="flex gap-1.5 flex-wrap">
+              {[
+                { key: 'all', label: 'All Dates' },
+                { key: 'today', label: 'Today' },
+                { key: 'tomorrow', label: 'Tomorrow' },
+                { key: 'this_week', label: 'This Week' },
+                { key: 'next_week', label: 'Next Week' },
+                { key: 'this_month', label: 'This Month' },
+              ].map(opt => (
+                <button
+                  key={opt.key}
+                  onClick={() => setDateFilter(opt.key)}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-all ${dateFilter === opt.key ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'}`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+
             {/* Active filter indicator */}
-            {(statusFilter || search || typeFilter !== 'all') && (
+            {(statusFilter || search || typeFilter !== 'all' || dateFilter !== 'all') && (
               <div className="flex items-center gap-2 text-sm text-slate-500">
                 <span>Filtering active</span>
                 <button onClick={clearFilters} className="text-blue-600 hover:underline font-medium">Clear all</button>

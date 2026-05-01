@@ -228,63 +228,24 @@ export default function DirectorTaskCard({ task, user, viewMode, onRefresh }) {
 
         {/* Actions area */}
         <div className="px-4 pb-3 flex flex-col gap-2">
-          {/* Primary action buttons */}
-          <div className="flex gap-2 flex-wrap">
-            {/* Assignee: Mark Done */}
-            {isAssignee && task.status === 'open' && (
-              <Button onClick={handleMarkDone} disabled={acting}
-                className="flex-1 min-h-[44px] gap-2 bg-green-600 hover:bg-green-700 text-sm font-medium">
-                {acting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                Mark Done
-              </Button>
-            )}
 
-            {/* Assignee: Update Progress */}
-            {isAssignee && (task.status === 'open' || task.status === 'blocked') && !showProgressInput && (
-              <Button variant="outline" onClick={() => setShowProgressInput(true)}
-                className="flex-1 min-h-[44px] gap-2 text-sm font-medium">
-                <MessageSquare className="w-4 h-4" /> Update Progress
-              </Button>
-            )}
-
-            {/* Assignee: Request Date Change */}
-            {isAssignee && task.status === 'open' && (
-              <Button variant="outline" onClick={() => setShowDateChange(true)}
-                className="flex-1 min-h-[44px] gap-2 text-sm font-medium">
-                <CalendarClock className="w-4 h-4" /> Request Date Change
-              </Button>
-            )}
-
-            {/* EA/Director: Verify completion */}
-            {isEAOrDirector && task.status === 'pending_verification' && (
-              <Button onClick={handleVerify} disabled={acting}
-                className="flex-1 min-h-[44px] gap-2 bg-green-600 hover:bg-green-700 text-sm font-medium">
-                {acting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                Confirm Done
-              </Button>
-            )}
-            {isEAOrDirector && task.status === 'pending_verification' && (
-              <Button variant="outline" onClick={handleReopen} disabled={acting}
-                className="flex-1 min-h-[44px] text-sm font-medium">
-                Reopen
-              </Button>
-            )}
-
-            {/* EA/Director: Approve/Reject Date Change */}
-            {isEAOrDirector && task.status === 'date_change_requested' && (
-              <>
-                <Button onClick={handleApproveDateChange} disabled={acting}
-                  className="flex-1 min-h-[44px] gap-2 bg-green-600 hover:bg-green-700 text-sm font-medium">
-                  {acting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                  Approve
+          {/* Row 1: Update Progress + Request Date Change (side by side) */}
+          {isAssignee && (task.status === 'open' || task.status === 'blocked') && (
+            <div className="flex gap-2">
+              {!showProgressInput && (
+                <Button variant="outline" onClick={() => setShowProgressInput(true)}
+                  className="flex-1 min-h-[44px] gap-2 text-sm font-medium">
+                  <MessageSquare className="w-4 h-4" /> Update Progress
                 </Button>
-                <Button variant="outline" onClick={handleRejectDateChange} disabled={acting}
-                  className="flex-1 min-h-[44px] text-sm font-medium">
-                  Reject
+              )}
+              {task.status === 'open' && (
+                <Button variant="outline" onClick={() => setShowDateChange(true)}
+                  className="flex-1 min-h-[44px] gap-2 text-sm font-medium">
+                  <CalendarClock className="w-4 h-4" /> Request Date Change
                 </Button>
-              </>
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
           {/* Progress input inline */}
           {showProgressInput && (
@@ -299,6 +260,45 @@ export default function DirectorTaskCard({ task, user, viewMode, onRefresh }) {
                 onClick={handleProgressUpdate} disabled={!progressNote.trim() || acting}>
                 {acting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                 Send
+              </Button>
+            </div>
+          )}
+
+          {/* Row 2: Mark Done (full width below) */}
+          {isAssignee && task.status === 'open' && (
+            <Button onClick={handleMarkDone} disabled={acting}
+              className="w-full min-h-[44px] gap-2 bg-green-600 hover:bg-green-700 text-sm font-medium">
+              {acting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+              Mark Done
+            </Button>
+          )}
+
+          {/* EA/Director: Verify completion */}
+          {isEAOrDirector && task.status === 'pending_verification' && (
+            <div className="flex gap-2">
+              <Button onClick={handleVerify} disabled={acting}
+                className="flex-1 min-h-[44px] gap-2 bg-green-600 hover:bg-green-700 text-sm font-medium">
+                {acting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                Confirm Done
+              </Button>
+              <Button variant="outline" onClick={handleReopen} disabled={acting}
+                className="flex-1 min-h-[44px] text-sm font-medium">
+                Reopen
+              </Button>
+            </div>
+          )}
+
+          {/* EA/Director: Approve/Reject Date Change */}
+          {isEAOrDirector && task.status === 'date_change_requested' && (
+            <div className="flex gap-2">
+              <Button onClick={handleApproveDateChange} disabled={acting}
+                className="flex-1 min-h-[44px] gap-2 bg-green-600 hover:bg-green-700 text-sm font-medium">
+                {acting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                Approve
+              </Button>
+              <Button variant="outline" onClick={handleRejectDateChange} disabled={acting}
+                className="flex-1 min-h-[44px] text-sm font-medium">
+                Reject
               </Button>
             </div>
           )}
