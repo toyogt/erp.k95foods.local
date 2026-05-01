@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
-  CheckCircle2, AlertTriangle, Clock, Calendar, User,
+  CheckCircle2, AlertTriangle, Calendar, User,
   Loader2, ChevronDown, ChevronUp, CalendarClock, MessageSquare,
   ScrollText, XCircle, Layers, Lock, Send
 } from 'lucide-react';
@@ -159,19 +159,11 @@ export default function DirectorTaskCard({ task, user, viewMode, onRefresh }) {
       <div className={`${bgColor} rounded-xl border border-slate-200 border-l-4 ${borderColor} shadow-sm overflow-hidden`}>
         {/* Card Header */}
         <div className="p-4 pb-3">
-          {/* Badges row */}
+          {/* Status + urgency badges only */}
           <div className="flex items-center gap-1.5 flex-wrap mb-2">
-            <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-medium">
-              {task.task_number}
-            </span>
-            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${status.color}`}>
+            <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${status.color}`}>
               {status.label}
             </span>
-            {task.task_type === 'project' && task.project_name && (
-              <span className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
-                <Layers className="w-3 h-3" /> {task.project_name}
-              </span>
-            )}
             {task.status === 'blocked' && (
               <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
                 <Lock className="w-3 h-3" /> Blocked
@@ -192,22 +184,21 @@ export default function DirectorTaskCard({ task, user, viewMode, onRefresh }) {
           {/* Title */}
           <h3 className="font-semibold text-slate-900 text-base leading-snug">{task.task_name}</h3>
 
-          {/* Meta info */}
-          <div className="flex items-center gap-4 mt-2 flex-wrap">
-            <span className="flex items-center gap-1.5 text-sm text-slate-600">
-              <User className="w-3.5 h-3.5 text-slate-400" />
-              {isAssignee ? 'You' : task.assigned_to_name || task.assigned_to_email}
+          {/* Only due date shown prominently */}
+          <div className="flex items-center gap-1.5 mt-1.5">
+            <Calendar className="w-3.5 h-3.5 text-slate-400" />
+            <span className={`text-sm font-medium ${overdue ? 'text-red-500' : 'text-slate-500'}`}>
+              Due: {formatTaskDate(task.end_date, task.end_time)}
             </span>
-            <span className="flex items-center gap-1.5 text-sm text-slate-600">
-              <Calendar className="w-3.5 h-3.5 text-slate-400" />
-              {formatTaskDate(task.end_date, task.end_time)}
-            </span>
-            {task.director_name && (
-              <span className="text-sm text-slate-500">
-                From: {task.director_name}
-              </span>
-            )}
           </div>
+
+          {/* Assignee line — only shown in EA/Director view (not assignee's own tasks) */}
+          {!isAssignee && (
+            <div className="flex items-center gap-1.5 mt-1">
+              <User className="w-3.5 h-3.5 text-slate-400" />
+              <span className="text-sm text-slate-600">{task.assigned_to_name || task.assigned_to_email}</span>
+            </div>
+          )}
 
           {/* Progress note preview */}
           {task.progress_note && !expanded && (
@@ -339,6 +330,23 @@ export default function DirectorTaskCard({ task, user, viewMode, onRefresh }) {
         {/* Expanded details */}
         {expanded && (
           <div className="border-t border-slate-100 px-4 py-3 space-y-3 bg-slate-50">
+            {/* Reference tags: task number, project, assigned by */}
+            <div className="flex flex-wrap gap-2">
+              <span className="text-xs bg-slate-200 text-slate-600 px-2.5 py-1 rounded-full font-medium">
+                {task.task_number}
+              </span>
+              {task.task_type === 'project' && task.project_name && (
+                <span className="text-xs bg-indigo-50 text-indigo-600 px-2.5 py-1 rounded-full font-medium flex items-center gap-1">
+                  <Layers className="w-3 h-3" /> {task.project_name}
+                </span>
+              )}
+              {(task.assigned_by_name || task.director_name) && (
+                <span className="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full font-medium">
+                  From: {task.assigned_by_name || task.director_name}
+                </span>
+              )}
+            </div>
+
             {task.task_details && (
               <div className="bg-white rounded-lg p-3 border border-slate-100">
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">What to do</p>
@@ -364,7 +372,7 @@ export default function DirectorTaskCard({ task, user, viewMode, onRefresh }) {
             <div className="grid grid-cols-2 gap-2 text-xs text-slate-500">
               <div>Start: {formatTaskDate(task.start_date, task.start_time) || 'Not set'}</div>
               <div>End: {formatTaskDate(task.end_date, task.end_time)}</div>
-              <div>Assigned by: {task.assigned_by_name || task.assigned_by_email}</div>
+              {!isAssignee && task.assigned_to_name && <div>Assigned to: {task.assigned_to_name}</div>}
               {task.verified_by_name && <div>Verified by: {task.verified_by_name}</div>}
             </div>
           </div>
