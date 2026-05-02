@@ -19,7 +19,7 @@ import {
   Activity, BarChart4, AlertCircle, AlertTriangle,
   Store, MapPin, QrCode, ArrowLeftRight, TrendingDown,
   RotateCcw, SlidersHorizontal, CalendarDays, Eye,
-  Send,
+  Send, UserCheck,
 } from 'lucide-react';
 
 /**
@@ -153,6 +153,9 @@ export const pageRegistry = [
   { pageKey: 'SalesInvoices',          title: 'Invoices',             moduleKey: 'SALES', icon: FileText,     roles: ['admin', 'sales_manager', 'sales_user', 'user'] },
   { pageKey: 'SalesSKUManagement',      title: 'Products (SKU)',        moduleKey: 'SALES', icon: PackageSearch, roles: ['admin', 'sales_manager', 'sales_user', 'user'] },
 
+  // ─── HR ───
+  { pageKey: 'HRAttendanceLogs', title: 'Attendance Logs', moduleKey: 'HR', icon: UserCheck, roles: ['admin', 'hr_manager', 'hr_user', 'user'], sortOrder: 1 },
+
   // ─── USER MANAGEMENT ───
   { pageKey: 'UserManagement', title: 'Users', moduleKey: 'USER_MANAGEMENT', icon: Users, roles: ['admin'], adminOnly: true },
   { pageKey: 'RoleManager', title: 'Roles', moduleKey: 'USER_MANAGEMENT', icon: Shield, roles: ['admin'], adminOnly: true },
@@ -264,6 +267,15 @@ export const moduleRegistry = [
     bgColor: 'bg-blue-50',
     adminOnly: false,
     sortOrder: 9,
+  },
+  {
+    moduleKey: 'HR',
+    label: 'Human Resources',
+    icon: UserCheck,
+    color: 'text-amber-600',
+    bgColor: 'bg-amber-50',
+    adminOnly: false,
+    sortOrder: 50,
   },
   {
     moduleKey: 'USER_MANAGEMENT',
