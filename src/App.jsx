@@ -137,6 +137,9 @@ import HRAttendanceLogs from './pages/HRAttendanceLogs';
 import HRAttendanceSummary from './pages/HRAttendanceSummary';
 import HRShiftTimings from './pages/HRShiftTimings';
 import HRHolidays from './pages/HRHolidays';
+import HRManualPunchRequest from './pages/HRManualPunchRequest';
+import HRManualPunchApprovals from './pages/HRManualPunchApprovals';
+import HREmployeeDailyHours from './pages/HREmployeeDailyHours';
 
 // Page component lookup table
 const PAGE_COMPONENTS = {
@@ -354,6 +357,9 @@ const AuthenticatedApp = () => {
       <Route path="/HRAttendanceSummary" element={<LayoutWrapper currentPageName="HRAttendanceSummary"><HRAttendanceSummary /></LayoutWrapper>} />
       <Route path="/HRShiftTimings" element={<LayoutWrapper currentPageName="HRShiftTimings"><HRShiftTimings /></LayoutWrapper>} />
       <Route path="/HRHolidays" element={<LayoutWrapper currentPageName="HRHolidays"><HRHolidays /></LayoutWrapper>} />
+      <Route path="/HRManualPunchRequest" element={<LayoutWrapper currentPageName="HRManualPunchRequest"><HRManualPunchRequest /></LayoutWrapper>} />
+      <Route path="/HRManualPunchApprovals" element={<LayoutWrapper currentPageName="HRManualPunchApprovals"><HRManualPunchApprovals /></LayoutWrapper>} />
+      <Route path="/HREmployeeDailyHours" element={<LayoutWrapper currentPageName="HREmployeeDailyHours"><HREmployeeDailyHours /></LayoutWrapper>} />
 
       {/* Store Management System Routes */}
       {[

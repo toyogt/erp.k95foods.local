@@ -58,6 +58,11 @@ export const FMS_APP_EVENTS = [
   { key: 'approval_rule_changed',     label: 'Approval Rule Changed',       category: 'Admin',          canTrigger: false, canComplete: true  },
   { key: 'user_role_changed',         label: 'User Role Changed',           category: 'Admin',          canTrigger: false, canComplete: true  },
 
+  // ── HR / Attendance ─────────────────────────────────────────────────────────
+  { key: 'manual_punch_requested',    label: 'Manual Punch Request Submitted', category: 'HR',           canTrigger: true,  canComplete: true  },
+  { key: 'manual_punch_approved',     label: 'Manual Punch Request Approved',  category: 'HR',           canTrigger: false, canComplete: true  },
+  { key: 'manual_punch_rejected',     label: 'Manual Punch Request Rejected',  category: 'HR',           canTrigger: false, canComplete: true  },
+
   // ── Sales ─────────────────────────────────────────────────────────────────────
   // SO Minimal Workflow: Draft → Under Logistics Review → Ready to Pick & Pack → Cancelled
   { key: 'sales_order_created',           label: 'Sales Order Created',                category: 'Sales', canTrigger: true,  canComplete: true  },

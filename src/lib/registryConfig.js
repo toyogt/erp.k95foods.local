@@ -154,7 +154,13 @@ export const pageRegistry = [
   { pageKey: 'SalesSKUManagement',      title: 'Products (SKU)',        moduleKey: 'SALES', icon: PackageSearch, roles: ['admin', 'sales_manager', 'sales_user', 'user'] },
 
   // ─── HR ───
-  { pageKey: 'HRAttendanceLogs', title: 'Attendance Logs', moduleKey: 'HR', icon: UserCheck, roles: ['admin', 'hr_manager', 'hr_user', 'user'], sortOrder: 1 },
+  { pageKey: 'HRAttendanceLogs', title: 'Attendance Logs', moduleKey: 'HR', icon: UserCheck, roles: ['admin', 'hr_manager', 'hr_supervisor', 'hr_user', 'user'], sortOrder: 1 },
+  { pageKey: 'HRAttendanceSummary', title: 'Attendance Summary', moduleKey: 'HR', icon: ClipboardList, roles: ['admin', 'hr_manager', 'hr_supervisor', 'hr_user'], sortOrder: 2 },
+  { pageKey: 'HREmployeeDailyHours', title: 'Employee Daily Hours', moduleKey: 'HR', icon: BarChart3, roles: ['admin', 'hr_manager', 'hr_supervisor', 'hr_user', 'supervisor'], sortOrder: 3 },
+  { pageKey: 'HRManualPunchRequest', title: 'Punch Requests', moduleKey: 'HR', icon: ClipboardList, roles: ['admin', 'hr_manager', 'hr_supervisor', 'hr_user', 'user'], sortOrder: 4 },
+  { pageKey: 'HRManualPunchApprovals', title: 'Punch Approvals', moduleKey: 'HR', icon: ClipboardCheck, roles: ['admin', 'hr_manager', 'hr_supervisor', 'supervisor'], sortOrder: 5 },
+  { pageKey: 'HRShiftTimings', title: 'Shift Timings', moduleKey: 'HR', icon: Settings, roles: ['admin', 'hr_manager'], sortOrder: 10 },
+  { pageKey: 'HRHolidays', title: 'Holidays', moduleKey: 'HR', icon: CalendarDays, roles: ['admin', 'hr_manager'], sortOrder: 11 },
 
   // ─── USER MANAGEMENT ───
   { pageKey: 'UserManagement', title: 'Users', moduleKey: 'USER_MANAGEMENT', icon: Users, roles: ['admin'], adminOnly: true },

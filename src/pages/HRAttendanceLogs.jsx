@@ -5,12 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Fingerprint, RefreshCw, Search } from 'lucide-react';
+import { Fingerprint, RefreshCw, Search, ClipboardList } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import AttendanceLogTable from '@/components/hr/AttendanceLogTable';
 import AttendanceApiTester from '@/components/hr/AttendanceApiTester';
 import EmployeeCSVImport from '@/components/hr/EmployeeCSVImport';
 import AttendanceOutboxStatus from '@/components/hr/AttendanceOutboxStatus';
-import ManualPunchManager from '@/components/hr/ManualPunchManager';
 
 export default function HRAttendanceLogs() {
   const [user, setUser] = useState(null);
@@ -75,15 +75,23 @@ export default function HRAttendanceLogs() {
             </p>
           </div>
         </div>
-        <Button
-          variant="outline"
-          onClick={() => refetch()}
-          disabled={isFetching}
-          className="h-11 md:h-9 gap-2"
-        >
-          <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          <Link to="/HRManualPunchRequest">
+            <Button variant="outline" className="h-11 md:h-9 gap-2">
+              <ClipboardList className="w-4 h-4" />
+              Manual Punch Requests
+            </Button>
+          </Link>
+          <Button
+            variant="outline"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="h-11 md:h-9 gap-2"
+          >
+            <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {/* Outbound delivery queue */}
@@ -151,8 +159,6 @@ export default function HRAttendanceLogs() {
         </CardContent>
       </Card>
 
-      {/* Manual Punch CRUD — auto-triggers recalculation */}
-      <ManualPunchManager logs={filtered} />
     </div>
   );
 }
