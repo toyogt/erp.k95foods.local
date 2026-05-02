@@ -29,9 +29,17 @@ function istNowIso() {
   return ist.toISOString().replace('Z', '+05:30');
 }
 
+// Detects placeholder dates the device sometimes sends ("YYYY-05-DD ...")
+function hasInvalidPlaceholders(s) {
+  if (!s) return true;
+  return /[A-Za-z]/.test(String(s)); // any letter means placeholder (Y, M, D, etc.)
+}
+
 function parseIoTime(io) {
   if (!io) return null;
-  const s = String(io).replace(/\D/g, '');
+  const raw = String(io).trim();
+  if (hasInvalidPlaceholders(raw)) return null;
+  const s = raw.replace(/\D/g, '');
   if (s.length < 14) return null;
   const yyyy = s.slice(0, 4);
   const MM = s.slice(4, 6);
@@ -39,6 +47,9 @@ function parseIoTime(io) {
   const HH = s.slice(8, 10);
   const mm = s.slice(10, 12);
   const ss = s.slice(12, 14);
+  // Sanity check: year between 2000 and 2100
+  const yr = Number(yyyy);
+  if (yr < 2000 || yr > 2100) return null;
   // Treat punch as IST local time (no UTC conversion).
   const iso = `${yyyy}-${MM}-${dd}T${HH}:${mm}:${ss}+05:30`;
   const d = new Date(iso);
@@ -48,6 +59,45 @@ function parseIoTime(io) {
     log_date: `${dd}/${MM}/${yyyy}`,
     log_time: `${HH}:${mm}:${ss}`,
   };
+}
+
+// Parses "YYYY-MM-DD HH:mm:ss" or "YYYY-MM-DDTHH:mm:ss" as IST local time.
+// Returns null if unparseable or contains letter-placeholders.
+function parseLogDateTime(input) {
+  if (!input) return null;
+  const raw = String(input).trim();
+  if (hasInvalidPlaceholders(raw)) return null;
+  // Convert "YYYY-MM-DD HH:mm:ss" → io_time digits
+  const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/);
+  if (!match) return null;
+  const [, yyyy, MM, dd, HH, mm, ss] = match;
+  return parseIoTime(`${yyyy}${MM}${dd}${HH}${mm}${ss}`);
+}
+
+// Convert IST ISO (with +05:30) into io_time-style "YYYYMMDDHHmmss" using IST clock
+function istIsoToDigits(istIso) {
+  const m = String(istIso).match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
+  if (!m) return null;
+  return `${m[1]}${m[2]}${m[3]}${m[4]}${m[5]}${m[6]}`;
+}
+
+// Returns today's date in IST as { yyyy, MM, dd }
+function istTodayParts() {
+  const now = new Date();
+  const ist = new Date(now.getTime() + (5 * 60 + 30) * 60 * 1000);
+  return {
+    yyyy: String(ist.getUTCFullYear()),
+    MM: pad2(ist.getUTCMonth() + 1),
+    dd: pad2(ist.getUTCDate()),
+  };
+}
+
+// Try to extract just HH:mm:ss from a string (even if date is placeholder)
+function extractTimeOnly(s) {
+  if (!s) return null;
+  const m = String(s).match(/(\d{2}):(\d{2}):(\d{2})/);
+  if (!m) return null;
+  return { HH: m[1], mm: m[2], ss: m[3] };
 }
 
 function parseBody(rawText) {
@@ -83,13 +133,15 @@ function ackResponse() {
   return new Response(ACK_BODY, { status: 200, headers: ACK_HEADERS });
 }
 
-async function processPunch(base44, { rawPunchId, userId, ioTime, devId, rawHeaders }) {
+async function processPunch(base44, { rawPunchId, userId, ioTime, devId, rawHeaders, employeeNameFromBody }) {
   const parsed = parseIoTime(ioTime);
   if (!userId || !parsed) {
     if (rawPunchId) {
       try {
         await base44.asServiceRole.entities.AttendanceRawPunch.update(rawPunchId, {
-          process_error: 'missing_user_id_or_io_time',
+          process_error: !userId
+            ? 'missing_employee_code'
+            : 'invalid_or_placeholder_datetime',
           processed: true,
         });
       } catch { /* ignore */ }
@@ -101,13 +153,13 @@ async function processPunch(base44, { rawPunchId, userId, ioTime, devId, rawHead
 
   // Enrich from Employee master (best-effort)
   let canonicalCode = String(userId).trim();
-  let employeeName = '';
+  let employeeName = employeeNameFromBody ? String(employeeNameFromBody).trim() : '';
   try {
     const matches = await base44.asServiceRole.entities.Employee.list('-created_date', 5000);
     for (const emp of matches) {
       if (normalizeEmployeeCode(emp.employee_code) === normCode) {
         canonicalCode = emp.employee_code;
-        employeeName = emp.employee_name || '';
+        if (emp.employee_name) employeeName = emp.employee_name;
         break;
       }
     }
@@ -240,9 +292,41 @@ Deno.serve(async (req) => {
     console.warn(`[ingestBiometricPunch] unexpected request_code=${requestCode}`);
   }
 
-  const userId = body.user_id ?? body.UserId ?? body.userid ?? body.user ?? '';
-  const ioTime = body.io_time ?? body.ioTime ?? body.IoTime ?? body.time ?? '';
-  const devId = body.dev_id ?? body.devId ?? body.device_sn ?? body.DevId ?? '';
+  // Accept BOTH formats:
+  //  (a) realtime_glog: { user_id, io_time, dev_id }
+  //  (b) JSON push format: { employee_code, log_datetime, device_sn, downloaded_at, employee_name, ... }
+  const userId = body.user_id ?? body.UserId ?? body.userid ?? body.user
+    ?? body.employee_code ?? body.EmpCode ?? body.empCode ?? '';
+
+  let ioTime = body.io_time ?? body.ioTime ?? body.IoTime ?? body.time ?? '';
+  // If io_time not present, derive from log_datetime (e.g. "YYYY-MM-DD HH:mm:ss")
+  if (!ioTime) {
+    const parsedLog = parseLogDateTime(body.log_datetime ?? body.LogDateTime ?? body.logDateTime ?? '');
+    if (parsedLog) {
+      ioTime = istIsoToDigits(parsedLog.iso);
+    }
+  }
+  // Fallback: if log_datetime is a placeholder ("YYYY-05-DD..."), try downloaded_at
+  if (!ioTime) {
+    const parsedDownload = parseLogDateTime(body.downloaded_at ?? body.DownloadDateTime ?? body.download_datetime ?? '');
+    if (parsedDownload) {
+      ioTime = istIsoToDigits(parsedDownload.iso);
+    }
+  }
+  // Final fallback: device sent placeholder dates everywhere ("YYYY-05-DD").
+  // Use today's IST date + the HH:mm:ss extracted from log_time (or log_datetime).
+  if (!ioTime) {
+    const timeOnly = extractTimeOnly(body.log_time)
+      || extractTimeOnly(body.log_datetime)
+      || extractTimeOnly(body.downloaded_at);
+    if (timeOnly) {
+      const { yyyy, MM, dd } = istTodayParts();
+      ioTime = `${yyyy}${MM}${dd}${timeOnly.HH}${timeOnly.mm}${timeOnly.ss}`;
+    }
+  }
+
+  const devId = body.dev_id ?? body.devId ?? body.device_sn ?? body.DevId ?? body.DeviceSN ?? '';
+  const employeeNameFromBody = body.employee_name ?? body.EmpName ?? body.empName ?? body.UserName ?? '';
 
   // Persist raw punch first — never lose data, even if downstream parsing fails.
   let rawPunchId = '';
@@ -268,6 +352,7 @@ Deno.serve(async (req) => {
       ioTime,
       devId,
       rawHeaders,
+      employeeNameFromBody,
     });
   } catch (e) {
     // Even on internal error, ACK the device to prevent floods of retries.
