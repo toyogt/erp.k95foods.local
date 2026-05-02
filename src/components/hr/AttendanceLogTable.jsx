@@ -1,6 +1,6 @@
-import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Inbox } from 'lucide-react';
+import { formatIstDate, formatIstTime, formatIstDateTime } from '@/lib/istFormatter';
 
 export default function AttendanceLogTable({ logs, isLoading }) {
   if (isLoading) {
@@ -40,8 +40,8 @@ export default function AttendanceLogTable({ logs, isLoading }) {
             <tr key={log.id} className="hover:bg-slate-50">
               <td className="px-3 py-2 font-mono text-slate-900">{log.employee_code}</td>
               <td className="px-3 py-2 text-slate-700">{log.employee_name || '—'}</td>
-              <td className="px-3 py-2 text-slate-700">{log.log_date || '—'}</td>
-              <td className="px-3 py-2 font-mono text-slate-700">{log.log_time || '—'}</td>
+              <td className="px-3 py-2 text-slate-700">{log.log_datetime ? formatIstDate(log.log_datetime) : (log.log_date || '—')}</td>
+              <td className="px-3 py-2 font-mono text-slate-700">{log.log_datetime ? formatIstTime(log.log_datetime) : (log.log_time || '—')}</td>
               <td className="px-3 py-2">
                 {log.punch_direction ? (
                   <Badge className={log.punch_direction.toUpperCase().includes('IN') ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}>
@@ -56,7 +56,7 @@ export default function AttendanceLogTable({ logs, isLoading }) {
                 )}
               </td>
               <td className="px-3 py-2 text-xs text-slate-500">
-                {log.created_date ? format(new Date(log.created_date), 'dd/MM/yyyy HH:mm:ss') : '—'}
+                {formatIstDateTime(log.downloaded_at || log.created_date)}
               </td>
             </tr>
           ))}
