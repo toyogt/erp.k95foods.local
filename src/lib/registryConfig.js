@@ -154,6 +154,7 @@ export const pageRegistry = [
   { pageKey: 'SalesSKUManagement',      title: 'Products (SKU)',        moduleKey: 'SALES', icon: PackageSearch, roles: ['admin', 'sales_manager', 'sales_user', 'user'] },
 
   // ─── HR ───
+  { pageKey: 'HREmployees', title: 'Employees', moduleKey: 'HR', icon: Users, roles: ['admin', 'hr_manager', 'hr_supervisor', 'hr_user'], sortOrder: 0 },
   { pageKey: 'HRAttendanceLogs', title: 'Attendance Logs', moduleKey: 'HR', icon: UserCheck, roles: ['admin', 'hr_manager', 'hr_supervisor', 'hr_user', 'user'], sortOrder: 1 },
   { pageKey: 'HRAttendanceSummary', title: 'Attendance Summary', moduleKey: 'HR', icon: ClipboardList, roles: ['admin', 'hr_manager', 'hr_supervisor', 'hr_user'], sortOrder: 2 },
   { pageKey: 'HREmployeeDailyHours', title: 'Employee Daily Hours', moduleKey: 'HR', icon: BarChart3, roles: ['admin', 'hr_manager', 'hr_supervisor', 'hr_user', 'supervisor'], sortOrder: 3 },

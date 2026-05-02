@@ -140,6 +140,7 @@ import HRHolidays from './pages/HRHolidays';
 import HRManualPunchRequest from './pages/HRManualPunchRequest';
 import HRManualPunchApprovals from './pages/HRManualPunchApprovals';
 import HREmployeeDailyHours from './pages/HREmployeeDailyHours';
+import HREmployees from './pages/HREmployees';
 
 // Page component lookup table
 const PAGE_COMPONENTS = {
@@ -360,6 +361,7 @@ const AuthenticatedApp = () => {
       <Route path="/HRManualPunchRequest" element={<LayoutWrapper currentPageName="HRManualPunchRequest"><HRManualPunchRequest /></LayoutWrapper>} />
       <Route path="/HRManualPunchApprovals" element={<LayoutWrapper currentPageName="HRManualPunchApprovals"><HRManualPunchApprovals /></LayoutWrapper>} />
       <Route path="/HREmployeeDailyHours" element={<LayoutWrapper currentPageName="HREmployeeDailyHours"><HREmployeeDailyHours /></LayoutWrapper>} />
+      <Route path="/HREmployees" element={<LayoutWrapper currentPageName="HREmployees"><HREmployees /></LayoutWrapper>} />
 
       {/* Store Management System Routes */}
       {[
