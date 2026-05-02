@@ -39,7 +39,7 @@
       "type": "number",
       "minimum": 0,
       "default": 0,
-      "description": "Total worked time in minutes (sum of paired IN/OUT durations)"
+      "description": "Total worked time in minutes (sum of paired IN/OUT durations, after break deduction)"
     },
     "total_work_hours": {
       "type": "number",
@@ -116,10 +116,64 @@
         "FLAGGED",
         "MISSING_OUT",
         "MISSING_IN",
-        "NO_PUNCHES"
+        "NO_PUNCHES",
+        "HOLIDAY",
+        "HOLIDAY_WORKED"
       ],
       "default": "CLEAN",
-      "description": "CLEAN = all punches paired; FLAGGED = has unmatched punches; MISSING_OUT/IN = day has only IN or only OUT punches"
+      "description": "CLEAN = all punches paired; FLAGGED = has unmatched punches; MISSING_OUT/IN = day has only IN or only OUT punches; HOLIDAY = registered holiday with no punches; HOLIDAY_WORKED = registered holiday but employee punched in"
+    },
+    "shift_name_applied": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Name of the shift used for late/overtime calculation"
+    },
+    "is_holiday": {
+      "type": "boolean",
+      "default": false,
+      "description": "True if work_date is a registered holiday"
+    },
+    "holiday_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "is_late_arrival": {
+      "type": "boolean",
+      "default": false
+    },
+    "is_early_departure": {
+      "type": "boolean",
+      "default": false
+    },
+    "late_arrival_minutes": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0,
+      "description": "Minutes late beyond shift start + grace"
+    },
+    "early_departure_minutes": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0,
+      "description": "Minutes left early before shift end - grace"
+    },
+    "overtime_minutes": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0,
+      "description": "Minutes worked beyond shift end + overtime threshold"
+    },
+    "expected_work_minutes": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0,
+      "description": "Shift's expected work duration in minutes (end - start - break)"
+    },
+    "deducted_break_minutes": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0,
+      "description": "Break minutes deducted from gross worked time"
     },
     "calculation_method": {
       "type": "string",

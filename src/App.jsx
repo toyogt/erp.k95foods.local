@@ -135,6 +135,8 @@ import PrintJobs from './pages/PrintJobs';
 import PrintManagementAdmin from './pages/PrintManagementAdmin';
 import HRAttendanceLogs from './pages/HRAttendanceLogs';
 import HRAttendanceSummary from './pages/HRAttendanceSummary';
+import HRShiftTimings from './pages/HRShiftTimings';
+import HRHolidays from './pages/HRHolidays';
 
 // Page component lookup table
 const PAGE_COMPONENTS = {
@@ -350,6 +352,8 @@ const AuthenticatedApp = () => {
       {/* HR Module */}
       <Route path="/HRAttendanceLogs" element={<LayoutWrapper currentPageName="HRAttendanceLogs"><HRAttendanceLogs /></LayoutWrapper>} />
       <Route path="/HRAttendanceSummary" element={<LayoutWrapper currentPageName="HRAttendanceSummary"><HRAttendanceSummary /></LayoutWrapper>} />
+      <Route path="/HRShiftTimings" element={<LayoutWrapper currentPageName="HRShiftTimings"><HRShiftTimings /></LayoutWrapper>} />
+      <Route path="/HRHolidays" element={<LayoutWrapper currentPageName="HRHolidays"><HRHolidays /></LayoutWrapper>} />
 
       {/* Store Management System Routes */}
       {[

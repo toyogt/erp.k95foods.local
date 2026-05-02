@@ -1,13 +1,13 @@
 // Computes DailyAttendanceSummary records from AttendanceLog punches.
 // Strategy: Simple Pairing (consecutive IN/OUT). Punches without a matching pair are flagged.
 //
+// Now incorporates:
+//   - ShiftTiming master (per-employee or default) → late/early/overtime flagging + break deduction
+//   - Holiday master → flags work_date as holiday and adjusts status
+//
 // Trigger modes:
 //   - Manual (admin): POST { from_date_iso, to_date_iso } or { work_date_iso }
 //   - Scheduled: no payload — processes yesterday's punches in IST
-//
-// Direction inference:
-//   - Uses punch_direction if present (IN/OUT)
-//   - Otherwise alternates starting with IN (1st=IN, 2nd=OUT, 3rd=IN, ...)
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
@@ -28,7 +28,7 @@ function istPartsOf(date) {
 
 function istDateKeyOf(date) {
   const p = istPartsOf(date);
-  return `${p.year}-${p.month}-${p.day}`; // YYYY-MM-DD
+  return `${p.year}-${p.month}-${p.day}`;
 }
 
 function isoToDDMMYYYY(iso) {
@@ -38,7 +38,6 @@ function isoToDDMMYYYY(iso) {
 
 function yesterdayIstIso() {
   const now = new Date();
-  // shift to IST date, then subtract 1 day
   const istKey = istDateKeyOf(now);
   const [y, m, d] = istKey.split('-').map(Number);
   const utc = Date.UTC(y, m - 1, d);
@@ -60,6 +59,19 @@ function enumerateDateRange(fromIso, toIso) {
   return out;
 }
 
+// Get IST hour:minute (in minutes since midnight) from a UTC ISO timestamp
+function istMinutesFromIso(iso) {
+  const p = istPartsOf(new Date(iso));
+  return Number(p.hour) * 60 + Number(p.minute);
+}
+
+// "HH:mm" → minutes since midnight
+function hhmmToMinutes(hhmm) {
+  if (!hhmm || !/^\d{1,2}:\d{2}$/.test(hhmm)) return null;
+  const [h, m] = hhmm.split(':').map(Number);
+  return h * 60 + m;
+}
+
 // ---------- direction inference ----------
 function normalizeDirection(raw) {
   if (!raw) return null;
@@ -70,14 +82,11 @@ function normalizeDirection(raw) {
 }
 
 // ---------- core computation ----------
-function computeSummaryForDay(employeeCode, employeeName, workDateIso, punches) {
-  // punches: AttendanceLog rows, all for this employee on this IST date.
-  // Sort chronologically.
+function computeSummaryForDay(employeeCode, employeeName, workDateIso, punches, shift, holiday) {
   const sorted = [...punches].sort((a, b) =>
     new Date(a.log_datetime).getTime() - new Date(b.log_datetime).getTime()
   );
 
-  // Resolve direction for each punch
   const resolved = sorted.map((p, idx) => {
     const dir = normalizeDirection(p.punch_direction);
     return {
@@ -93,7 +102,7 @@ function computeSummaryForDay(employeeCode, employeeName, workDateIso, punches) 
     else if (r.direction === 'OUT') outCount++;
   }
 
-  // Simple pairing: walk forward. Hold an open IN; on OUT, close it.
+  // Simple pairing
   const pairs = [];
   const unmatched = [];
   let openIn = null;
@@ -109,7 +118,7 @@ function computeSummaryForDay(employeeCode, employeeName, workDateIso, punches) 
         });
       }
       openIn = r;
-    } else { // OUT
+    } else {
       if (openIn) {
         const dur = (new Date(r.log_datetime).getTime() - new Date(openIn.log_datetime).getTime()) / 60000;
         if (dur > 0) {
@@ -144,11 +153,73 @@ function computeSummaryForDay(employeeCode, employeeName, workDateIso, punches) 
     ? Math.max(0, (new Date(lastOut).getTime() - new Date(firstIn).getTime()) / 60000)
     : 0;
 
+  // ---- shift-based flags ----
+  let isLate = false;
+  let isEarly = false;
+  let lateMin = 0;
+  let earlyMin = 0;
+  let overtimeMin = 0;
+  let expectedWorkMin = 0;
+  let deductedBreak = 0;
+  let shiftNameApplied = '';
+
+  if (shift) {
+    shiftNameApplied = shift.shift_name || '';
+    const startMin = hhmmToMinutes(shift.start_time);
+    const endMin = hhmmToMinutes(shift.end_time);
+    const breakMin = Number(shift.break_minutes) || 0;
+    const graceLate = Number(shift.grace_minutes_late) || 0;
+    const graceEarly = Number(shift.grace_minutes_early) || 0;
+    const otThreshold = Number(shift.overtime_threshold_minutes) || 0;
+
+    if (startMin !== null && endMin !== null) {
+      // Expected work = end - start (handle midnight crossing) - break
+      let span = endMin - startMin;
+      if (span <= 0) span += 24 * 60;
+      expectedWorkMin = Math.max(0, span - breakMin);
+
+      // Deduct break only if employee's gross span covers most of it
+      if (totalMinutes > breakMin && breakMin > 0) {
+        deductedBreak = breakMin;
+        totalMinutes = Math.max(0, totalMinutes - breakMin);
+      }
+
+      if (firstIn) {
+        const inMin = istMinutesFromIso(firstIn);
+        const diff = inMin - startMin;
+        if (diff > graceLate) {
+          isLate = true;
+          lateMin = diff - graceLate;
+        }
+      }
+      if (lastOut) {
+        const outMin = istMinutesFromIso(lastOut);
+        // Early departure
+        const earlyDiff = endMin - outMin;
+        if (earlyDiff > graceEarly && earlyDiff < 12 * 60) {
+          isEarly = true;
+          earlyMin = earlyDiff - graceEarly;
+        }
+        // Overtime
+        const otDiff = outMin - endMin;
+        if (otDiff > otThreshold && otDiff < 12 * 60) {
+          overtimeMin = otDiff - otThreshold;
+        }
+      }
+    }
+  }
+
   let status = 'CLEAN';
   if (sorted.length === 0) status = 'NO_PUNCHES';
   else if (unmatched.length > 0) status = 'FLAGGED';
   else if (inCount > 0 && outCount === 0) status = 'MISSING_OUT';
   else if (outCount > 0 && inCount === 0) status = 'MISSING_IN';
+
+  // Holiday override
+  if (holiday) {
+    if (sorted.length === 0) status = 'HOLIDAY';
+    else status = 'HOLIDAY_WORKED';
+  }
 
   return {
     employee_code: employeeCode,
@@ -166,6 +237,16 @@ function computeSummaryForDay(employeeCode, employeeName, workDateIso, punches) 
     pairs,
     unmatched_punches: unmatched,
     status,
+    shift_name_applied: shiftNameApplied,
+    is_holiday: !!holiday,
+    holiday_name: holiday?.holiday_name || '',
+    is_late_arrival: isLate,
+    is_early_departure: isEarly,
+    late_arrival_minutes: Math.round(lateMin * 100) / 100,
+    early_departure_minutes: Math.round(earlyMin * 100) / 100,
+    overtime_minutes: Math.round(overtimeMin * 100) / 100,
+    expected_work_minutes: Math.round(expectedWorkMin * 100) / 100,
+    deducted_break_minutes: deductedBreak,
     calculation_method: 'simple_pairing',
     calculated_at: new Date().toISOString(),
   };
@@ -177,7 +258,6 @@ Deno.serve(async (req) => {
     return Response.json({ ok: false, error: 'Use POST' }, { status: 405 });
   }
 
-  // Auth: admin user OR scheduled (no auth header → service-level)
   let isAdmin = false;
   let isScheduled = false;
   try {
@@ -195,7 +275,6 @@ Deno.serve(async (req) => {
   let body = {};
   try { body = await req.json(); } catch { body = {}; }
 
-  // Decide which dates to process (ISO YYYY-MM-DD in IST)
   let dateList = [];
   if (body.work_date_iso) {
     dateList = [body.work_date_iso];
@@ -206,6 +285,20 @@ Deno.serve(async (req) => {
   }
 
   const base44 = createClientFromRequest(req);
+
+  // Pre-load all active shifts and employees
+  const allShifts = await base44.asServiceRole.entities.ShiftTiming.filter({ is_active: true }, 'shift_name', 200).catch(() => []);
+  const shiftByName = {};
+  let defaultShift = null;
+  for (const s of allShifts) {
+    shiftByName[s.shift_name] = s;
+    if (s.is_default) defaultShift = s;
+  }
+
+  const allEmployees = await base44.asServiceRole.entities.Employee.filter({}, 'employee_code', 5000).catch(() => []);
+  const empByCode = {};
+  for (const e of allEmployees) empByCode[e.employee_code] = e;
+
   const result = {
     ok: true,
     dates_processed: dateList,
@@ -217,17 +310,22 @@ Deno.serve(async (req) => {
   };
 
   for (const dateIso of dateList) {
-    // Fetch all AttendanceLog rows where log_date matches DD/MM/YYYY for this IST day
     const ddmmyyyy = isoToDDMMYYYY(dateIso);
 
-    // Use service role to get all punches for the day
+    // Holiday lookup for this date
+    const holidayMatches = await base44.asServiceRole.entities.Holiday.filter(
+      { holiday_date_iso: dateIso, is_active: true },
+      '-created_date',
+      5
+    ).catch(() => []);
+    const holiday = holidayMatches[0] || null;
+
     const punches = await base44.asServiceRole.entities.AttendanceLog.filter(
       { log_date: ddmmyyyy },
       '-log_datetime',
       5000
     );
 
-    // Group by employee_code
     const byEmployee = {};
     for (const p of punches) {
       const code = p.employee_code;
@@ -237,7 +335,6 @@ Deno.serve(async (req) => {
       if (!byEmployee[code].name && p.employee_name) byEmployee[code].name = p.employee_name;
     }
 
-    // Existing summaries for this date — to update vs create
     const existing = await base44.asServiceRole.entities.DailyAttendanceSummary.filter(
       { work_date_iso: dateIso },
       '-calculated_at',
@@ -249,7 +346,12 @@ Deno.serve(async (req) => {
     let dateCreated = 0, dateUpdated = 0, dateSkipped = 0;
 
     for (const [code, info] of Object.entries(byEmployee)) {
-      const summary = computeSummaryForDay(code, info.name, dateIso, info.punches);
+      // Resolve shift for this employee
+      const emp = empByCode[code];
+      const empShift = emp?.shift_name ? shiftByName[emp.shift_name] : null;
+      const shift = empShift || defaultShift || null;
+
+      const summary = computeSummaryForDay(code, info.name, dateIso, info.punches, shift, holiday);
       const prev = existingByEmp[code];
 
       if (prev) {
@@ -277,6 +379,9 @@ Deno.serve(async (req) => {
       updated: dateUpdated,
       skipped_manual: dateSkipped,
       total_punches: punches.length,
+      is_holiday: !!holiday,
+      holiday_name: holiday?.holiday_name || null,
+      shifts_loaded: allShifts.length,
     });
   }
 

@@ -1,0 +1,51 @@
+{
+  "name": "Holiday",
+  "type": "object",
+  "title": "Registered Holiday",
+  "description": "Official company holiday. Days marked as holiday change attendance flagging in calculateDailyAttendance.",
+  "properties": {
+    "holiday_date_iso": {
+      "type": "string",
+      "format": "date",
+      "description": "Holiday date in YYYY-MM-DD format (IST)"
+    },
+    "holiday_date": {
+      "type": "string",
+      "maxLength": 20,
+      "description": "Holiday date in DD/MM/YYYY format (display)"
+    },
+    "holiday_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "Name of the holiday (e.g. Republic Day, Diwali)"
+    },
+    "holiday_type": {
+      "type": "string",
+      "enum": [
+        "gazetted",
+        "restricted",
+        "optional",
+        "weekly_off"
+      ],
+      "default": "gazetted"
+    },
+    "is_paid": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether the holiday is paid"
+    },
+    "remarks": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "holiday_date_iso",
+    "holiday_name"
+  ]
+}

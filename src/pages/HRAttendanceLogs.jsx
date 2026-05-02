@@ -10,6 +10,7 @@ import AttendanceLogTable from '@/components/hr/AttendanceLogTable';
 import AttendanceApiTester from '@/components/hr/AttendanceApiTester';
 import EmployeeCSVImport from '@/components/hr/EmployeeCSVImport';
 import AttendanceOutboxStatus from '@/components/hr/AttendanceOutboxStatus';
+import ManualPunchManager from '@/components/hr/ManualPunchManager';
 
 export default function HRAttendanceLogs() {
   const [user, setUser] = useState(null);
@@ -149,6 +150,9 @@ export default function HRAttendanceLogs() {
           <AttendanceLogTable logs={filtered} isLoading={isLoading} />
         </CardContent>
       </Card>
+
+      {/* Manual Punch CRUD — auto-triggers recalculation */}
+      <ManualPunchManager logs={filtered} />
     </div>
   );
 }

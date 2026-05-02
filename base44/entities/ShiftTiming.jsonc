@@ -1,0 +1,62 @@
+{
+  "name": "ShiftTiming",
+  "type": "object",
+  "title": "Shift Timing",
+  "description": "Defines a work shift's start, end, grace periods and break deduction. Used by calculateDailyAttendance to flag late arrivals, early departures and overtime.",
+  "properties": {
+    "shift_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "description": "Unique name for the shift (e.g. Morning Shift, General Day, Night Shift)"
+    },
+    "start_time": {
+      "type": "string",
+      "pattern": "^([0-1][0-9]|2[0-3]):[0-5][0-9]$",
+      "description": "Shift start time HH:mm (24-hour, IST)"
+    },
+    "end_time": {
+      "type": "string",
+      "pattern": "^([0-1][0-9]|2[0-3]):[0-5][0-9]$",
+      "description": "Shift end time HH:mm (24-hour, IST). If end <= start, shift is treated as crossing midnight."
+    },
+    "grace_minutes_late": {
+      "type": "number",
+      "minimum": 0,
+      "default": 10,
+      "description": "Minutes after start_time before arrival is flagged late"
+    },
+    "grace_minutes_early": {
+      "type": "number",
+      "minimum": 0,
+      "default": 10,
+      "description": "Minutes before end_time within which leaving is still considered on-time"
+    },
+    "break_minutes": {
+      "type": "number",
+      "minimum": 0,
+      "default": 30,
+      "description": "Standard unpaid break minutes deducted from total work minutes"
+    },
+    "overtime_threshold_minutes": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0,
+      "description": "Minutes worked beyond shift end before counting as overtime (0 = any minute past end)"
+    },
+    "is_default": {
+      "type": "boolean",
+      "default": false,
+      "description": "If true, applied to employees with no shift_name set"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "shift_name",
+    "start_time",
+    "end_time"
+  ]
+}
