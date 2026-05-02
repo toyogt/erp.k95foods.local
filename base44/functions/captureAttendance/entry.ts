@@ -65,6 +65,9 @@ Deno.serve(async (req) => {
     return Response.json({ ok: false, error: 'Method not allowed. Use POST.' }, { status: 405 });
   }
 
+  // Authentication: accept EITHER
+  //   (a) Bearer ATTENDANCE_API_KEY  — used by the biometric machine, or
+  //   (b) a logged-in admin Base44 user — used by the in-app "Send Test Punch" tester.
   const expectedKey = Deno.env.get('ATTENDANCE_API_KEY');
   if (!expectedKey) {
     return Response.json({ ok: false, error: 'Server misconfigured: ATTENDANCE_API_KEY not set' }, { status: 500 });
@@ -72,7 +75,18 @@ Deno.serve(async (req) => {
 
   const authHeader = req.headers.get('authorization') || req.headers.get('Authorization') || '';
   const provided = authHeader.replace(/^Bearer\s+/i, '').trim();
-  if (!provided || provided !== expectedKey) {
+  const apiKeyValid = provided && provided === expectedKey;
+
+  let adminUserValid = false;
+  if (!apiKeyValid) {
+    try {
+      const base44Auth = createClientFromRequest(req);
+      const user = await base44Auth.auth.me();
+      if (user && user.role === 'admin') adminUserValid = true;
+    } catch { /* not a logged-in user */ }
+  }
+
+  if (!apiKeyValid && !adminUserValid) {
     return Response.json({ ok: false, error: 'Unauthorized: invalid or missing API key' }, { status: 401 });
   }
 
