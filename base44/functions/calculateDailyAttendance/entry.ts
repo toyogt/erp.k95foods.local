@@ -81,17 +81,59 @@ function normalizeDirection(raw) {
   return null;
 }
 
+// Shift-aware single-punch inference.
+// If only ONE punch exists for the day, decide IN/OUT by which side of the shift midpoint it falls on.
+// - Closer to shift start  → IN  (morning-only punch, missed OUT)
+// - Closer to shift end    → OUT (evening-only punch, missed IN)
+// Falls back to noon (12:00) midpoint when no shift is configured.
+function inferSinglePunchDirection(punchIso, shift) {
+  const punchMin = istMinutesFromIso(punchIso);
+  let startMin = shift ? hhmmToMinutes(shift.start_time) : null;
+  let endMin = shift ? hhmmToMinutes(shift.end_time) : null;
+
+  if (startMin === null || endMin === null) {
+    // No shift → use 12:00 noon as midpoint
+    return punchMin < 12 * 60 ? 'IN' : 'OUT';
+  }
+
+  // Handle midnight-crossing shifts
+  let span = endMin - startMin;
+  if (span <= 0) span += 24 * 60;
+  const midpoint = (startMin + span / 2) % (24 * 60);
+
+  // Distance from punch to start vs end (circular, in minutes)
+  const distTo = (a, b) => {
+    const d = Math.abs(a - b);
+    return Math.min(d, 24 * 60 - d);
+  };
+  const dStart = distTo(punchMin, startMin);
+  const dEnd = distTo(punchMin, endMin);
+  void midpoint; // kept for future use
+  return dStart <= dEnd ? 'IN' : 'OUT';
+}
+
 // ---------- core computation ----------
 function computeSummaryForDay(employeeCode, employeeName, workDateIso, punches, shift, holiday) {
   const sorted = [...punches].sort((a, b) =>
     new Date(a.log_datetime).getTime() - new Date(b.log_datetime).getTime()
   );
 
+  // Special case: single punch — use shift-aware inference (morning=IN, evening=OUT)
+  const singlePunchOverride = sorted.length === 1
+    ? inferSinglePunchDirection(sorted[0].log_datetime, shift)
+    : null;
+
   const resolved = sorted.map((p, idx) => {
     const dir = normalizeDirection(p.punch_direction);
+    let inferred;
+    if (singlePunchOverride) {
+      inferred = singlePunchOverride;
+    } else {
+      inferred = idx % 2 === 0 ? 'IN' : 'OUT';
+    }
     return {
       log_datetime: p.log_datetime,
-      direction: dir || (idx % 2 === 0 ? 'IN' : 'OUT'),
+      direction: dir || inferred,
       direction_inferred: !dir,
     };
   });
