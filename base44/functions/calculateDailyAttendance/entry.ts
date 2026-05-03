@@ -114,9 +114,18 @@ function inferSinglePunchDirection(punchIso, shift) {
 
 // ---------- core computation ----------
 function computeSummaryForDay(employeeCode, employeeName, workDateIso, punches, shift, holiday) {
-  const sorted = [...punches].sort((a, b) =>
+  // Sort by timestamp, then deduplicate punches that share the same timestamp (device echo / network retry).
+  const sortedRaw = [...punches].sort((a, b) =>
     new Date(a.log_datetime).getTime() - new Date(b.log_datetime).getTime()
   );
+  const seenTs = new Set();
+  const sorted = [];
+  for (const p of sortedRaw) {
+    const ts = new Date(p.log_datetime).getTime();
+    if (seenTs.has(ts)) continue;
+    seenTs.add(ts);
+    sorted.push(p);
+  }
 
   // Special case: single punch — use shift-aware inference (morning=IN, evening=OUT)
   const singlePunchOverride = sorted.length === 1
@@ -189,8 +198,10 @@ function computeSummaryForDay(employeeCode, employeeName, workDateIso, punches, 
     });
   }
 
-  const firstIn = sorted.find((p) => normalizeDirection(p.punch_direction) === 'IN' || p === sorted[0])?.log_datetime || null;
-  const lastOut = [...sorted].reverse().find((p) => normalizeDirection(p.punch_direction) === 'OUT' || p === sorted[sorted.length - 1])?.log_datetime || null;
+  // firstIn = first punch resolved as IN; lastOut = last punch resolved as OUT.
+  // If none resolved as IN/OUT respectively, leave null (don't fall back to first/last raw punch — that creates phantom pairs).
+  const firstIn = resolved.find((r) => r.direction === 'IN')?.log_datetime || null;
+  const lastOut = [...resolved].reverse().find((r) => r.direction === 'OUT')?.log_datetime || null;
   const grossMin = (firstIn && lastOut)
     ? Math.max(0, (new Date(lastOut).getTime() - new Date(firstIn).getTime()) / 60000)
     : 0;
