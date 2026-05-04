@@ -53,7 +53,8 @@ export default function HRAttendanceSummary() {
   });
 
   // Stats
-  const totalHours = filtered.reduce((sum, s) => sum + (s.total_work_hours || 0), 0);
+  const totalMinutes = filtered.reduce((sum, s) => sum + (s.total_work_minutes || 0), 0);
+  const totalHoursLabel = `${Math.floor(totalMinutes / 60)}h ${String(Math.round(totalMinutes % 60)).padStart(2, '0')}m`;
   const flaggedCount = filtered.filter((s) => s.status === 'FLAGGED' || s.status === 'MISSING_OUT' || s.status === 'MISSING_IN').length;
   const cleanCount = filtered.filter((s) => s.status === 'CLEAN').length;
 
@@ -89,7 +90,7 @@ export default function HRAttendanceSummary() {
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard label="Employees" value={filtered.length} />
-        <StatCard label="Total Hours" value={totalHours.toFixed(1) + 'h'} />
+        <StatCard label="Total Hours" value={totalHoursLabel} />
         <StatCard label="Clean" value={cleanCount} valueClass="text-green-700" />
         <StatCard label="Flagged" value={flaggedCount} valueClass="text-amber-700" />
       </div>
