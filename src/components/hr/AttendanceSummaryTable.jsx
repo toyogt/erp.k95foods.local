@@ -10,10 +10,11 @@ const STATUS_BADGE = {
   NO_PUNCHES: { cls: 'bg-slate-100 text-slate-600', icon: Inbox, label: 'No Punches' },
 };
 
-function formatHoursMinutes(hours) {
-  if (!hours || hours <= 0) return '0h 00m';
-  const h = Math.floor(hours);
-  const m = Math.round((hours - h) * 60);
+function formatMinutesToHM(minutes) {
+  if (!minutes || minutes <= 0) return '0h 00m';
+  const total = Math.round(minutes);
+  const h = Math.floor(total / 60);
+  const m = total % 60;
   return `${h}h ${String(m).padStart(2, '0')}m`;
 }
 
@@ -64,7 +65,7 @@ export default function AttendanceSummaryTable({ summaries, isLoading }) {
                 <td className="px-3 py-2 font-mono text-slate-700">{s.first_in ? formatIstTime(s.first_in) : '—'}</td>
                 <td className="px-3 py-2 font-mono text-slate-700">{s.last_out ? formatIstTime(s.last_out) : '—'}</td>
                 <td className="px-3 py-2 text-right font-semibold text-slate-900">
-                  {formatHoursMinutes(s.total_work_hours)}
+                  {formatMinutesToHM(s.total_work_minutes)}
                 </td>
                 <td className="px-3 py-2 text-center text-slate-600">
                   <span className="text-xs">
