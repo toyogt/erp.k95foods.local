@@ -141,6 +141,13 @@ import HRManualPunchRequest from './pages/HRManualPunchRequest';
 import HRManualPunchApprovals from './pages/HRManualPunchApprovals';
 import HREmployeeDailyHours from './pages/HREmployeeDailyHours';
 import HREmployees from './pages/HREmployees';
+import HRDepartments from './pages/HRDepartments';
+import HRDesignations from './pages/HRDesignations';
+import HRBranches from './pages/HRBranches';
+import HRCompanies from './pages/HRCompanies';
+import HRLeaveTypes from './pages/HRLeaveTypes';
+import HRNotificationSettings from './pages/HRNotificationSettings';
+import HRAttendanceAlerts from './pages/HRAttendanceAlerts';
 
 // Page component lookup table
 const PAGE_COMPONENTS = {
@@ -169,6 +176,8 @@ const PAGE_COMPONENTS = {
   LblDocTypePermissions,
   RynanPrinterCenter,
   PrintManagementDashboard, PrintJobCreate, PrintJobs, PrintManagementAdmin,
+  HRDepartments, HRDesignations, HRBranches, HRCompanies, HRLeaveTypes,
+  HRNotificationSettings, HRAttendanceAlerts,
 };
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -362,6 +371,13 @@ const AuthenticatedApp = () => {
       <Route path="/HRManualPunchApprovals" element={<LayoutWrapper currentPageName="HRManualPunchApprovals"><HRManualPunchApprovals /></LayoutWrapper>} />
       <Route path="/HREmployeeDailyHours" element={<LayoutWrapper currentPageName="HREmployeeDailyHours"><HREmployeeDailyHours /></LayoutWrapper>} />
       <Route path="/HREmployees" element={<LayoutWrapper currentPageName="HREmployees"><HREmployees /></LayoutWrapper>} />
+      <Route path="/HRDepartments" element={<LayoutWrapper currentPageName="HRDepartments"><HRDepartments /></LayoutWrapper>} />
+      <Route path="/HRDesignations" element={<LayoutWrapper currentPageName="HRDesignations"><HRDesignations /></LayoutWrapper>} />
+      <Route path="/HRBranches" element={<LayoutWrapper currentPageName="HRBranches"><HRBranches /></LayoutWrapper>} />
+      <Route path="/HRCompanies" element={<LayoutWrapper currentPageName="HRCompanies"><HRCompanies /></LayoutWrapper>} />
+      <Route path="/HRLeaveTypes" element={<LayoutWrapper currentPageName="HRLeaveTypes"><HRLeaveTypes /></LayoutWrapper>} />
+      <Route path="/HRNotificationSettings" element={<LayoutWrapper currentPageName="HRNotificationSettings"><HRNotificationSettings /></LayoutWrapper>} />
+      <Route path="/HRAttendanceAlerts" element={<LayoutWrapper currentPageName="HRAttendanceAlerts"><HRAttendanceAlerts /></LayoutWrapper>} />
 
       {/* Store Management System Routes */}
       {[

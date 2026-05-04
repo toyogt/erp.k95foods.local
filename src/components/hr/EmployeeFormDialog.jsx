@@ -11,13 +11,24 @@ import { Loader2, AlertCircle } from 'lucide-react';
 const EMPTY = {
   employee_code: '',
   employee_name: '',
+  father_name: '',
+  card_number: '',
   phone: '',
   email: '',
   department: '',
   designation: '',
+  branch_name: '',
+  company_name: '',
+  supervisor_email: '',
+  supervisor_name: '',
+  date_of_birth: '',
+  date_of_joining: '',
+  weekly_off: '',
   shift_name: '',
   is_active: true,
 };
+
+const WEEKLY_OFF_OPTIONS = ['None', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 export default function EmployeeFormDialog({ open, employee, onClose, onSubmit }) {
   const [form, setForm] = useState(EMPTY);
@@ -27,6 +38,24 @@ export default function EmployeeFormDialog({ open, employee, onClose, onSubmit }
   const { data: shifts = [] } = useQuery({
     queryKey: ['shifts-active'],
     queryFn: () => base44.entities.ShiftTiming.filter({ is_active: true }, 'shift_name', 100),
+    enabled: open,
+  });
+
+  const { data: departments = [] } = useQuery({
+    queryKey: ['departments-active'],
+    queryFn: () => base44.entities.Department.filter({ is_active: true }, 'department_name', 200),
+    enabled: open,
+  });
+
+  const { data: designations = [] } = useQuery({
+    queryKey: ['designations-active'],
+    queryFn: () => base44.entities.Designation.filter({ is_active: true }, 'designation_name', 200),
+    enabled: open,
+  });
+
+  const { data: branches = [] } = useQuery({
+    queryKey: ['branches-active'],
+    queryFn: () => base44.entities.Branch.filter({ is_active: true }, 'branch_name', 200),
     enabled: open,
   });
 
@@ -61,6 +90,11 @@ export default function EmployeeFormDialog({ open, employee, onClose, onSubmit }
         email: form.email?.trim() || '',
         department: form.department?.trim() || '',
         designation: form.designation?.trim() || '',
+        branch_name: form.branch_name?.trim() || '',
+        company_name: form.company_name?.trim() || '',
+        supervisor_email: form.supervisor_email?.trim() || '',
+        supervisor_name: form.supervisor_name?.trim() || '',
+        weekly_off: form.weekly_off?.trim() || '',
         shift_name: form.shift_name?.trim() || '',
       });
     } catch (err) {
@@ -133,22 +167,88 @@ export default function EmployeeFormDialog({ open, employee, onClose, onSubmit }
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label className="text-xs font-medium text-slate-700">Department</Label>
-              <Input
-                value={form.department}
-                onChange={(e) => update('department', e.target.value)}
-                placeholder="e.g. Production"
-                className="h-11 md:h-9 text-base md:text-sm"
-              />
+              <Select
+                value={form.department || 'none'}
+                onValueChange={(v) => update('department', v === 'none' ? '' : v)}
+              >
+                <SelectTrigger className="h-11 md:h-9 text-base md:text-sm">
+                  <SelectValue placeholder="Select department" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">— Not assigned —</SelectItem>
+                  {departments.map((d) => (
+                    <SelectItem key={d.id} value={d.department_name}>{d.department_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-slate-500">Manage list in HR &gt; Departments</p>
             </div>
             <div className="space-y-1">
               <Label className="text-xs font-medium text-slate-700">Designation</Label>
-              <Input
-                value={form.designation}
-                onChange={(e) => update('designation', e.target.value)}
-                placeholder="e.g. Operator"
-                className="h-11 md:h-9 text-base md:text-sm"
-              />
+              <Select
+                value={form.designation || 'none'}
+                onValueChange={(v) => update('designation', v === 'none' ? '' : v)}
+              >
+                <SelectTrigger className="h-11 md:h-9 text-base md:text-sm">
+                  <SelectValue placeholder="Select designation" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">— Not assigned —</SelectItem>
+                  {designations.map((d) => (
+                    <SelectItem key={d.id} value={d.designation_name}>{d.designation_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs font-medium text-slate-700">Branch</Label>
+              <Select
+                value={form.branch_name || 'none'}
+                onValueChange={(v) => update('branch_name', v === 'none' ? '' : v)}
+              >
+                <SelectTrigger className="h-11 md:h-9 text-base md:text-sm">
+                  <SelectValue placeholder="Select branch" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">— Not assigned —</SelectItem>
+                  {branches.map((b) => (
+                    <SelectItem key={b.id} value={b.branch_name}>{b.branch_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs font-medium text-slate-700">Weekly Off</Label>
+              <Select
+                value={form.weekly_off || 'unset'}
+                onValueChange={(v) => update('weekly_off', v === 'unset' ? '' : v)}
+              >
+                <SelectTrigger className="h-11 md:h-9 text-base md:text-sm">
+                  <SelectValue placeholder="Select weekly off" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unset">— Not set —</SelectItem>
+                  {WEEKLY_OFF_OPTIONS.map((d) => (
+                    <SelectItem key={d} value={d}>{d}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <Label className="text-xs font-medium text-slate-700">Supervisor Email</Label>
+            <Input
+              type="email"
+              value={form.supervisor_email}
+              onChange={(e) => update('supervisor_email', e.target.value)}
+              placeholder="supervisor@company.com"
+              className="h-11 md:h-9 text-base md:text-sm"
+            />
+            <p className="text-xs text-slate-500">Receives attendance anomaly alerts. If empty, the Department head email is used.</p>
           </div>
 
           <div className="space-y-1">

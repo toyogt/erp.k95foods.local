@@ -160,8 +160,15 @@ export const pageRegistry = [
   { pageKey: 'HREmployeeDailyHours', title: 'Employee Daily Hours', moduleKey: 'HR', icon: BarChart3, roles: ['admin', 'hr_manager', 'hr_supervisor', 'hr_user', 'supervisor'], sortOrder: 3 },
   { pageKey: 'HRManualPunchRequest', title: 'Punch Requests', moduleKey: 'HR', icon: ClipboardList, roles: ['admin', 'hr_manager', 'hr_supervisor', 'hr_user', 'user'], sortOrder: 4 },
   { pageKey: 'HRManualPunchApprovals', title: 'Punch Approvals', moduleKey: 'HR', icon: ClipboardCheck, roles: ['admin', 'hr_manager', 'hr_supervisor', 'supervisor'], sortOrder: 5 },
+  { pageKey: 'HRAttendanceAlerts', title: 'Attendance Alerts', moduleKey: 'HR', icon: Bell, roles: ['admin', 'hr_manager', 'hr_supervisor', 'hr_user'], sortOrder: 6 },
   { pageKey: 'HRShiftTimings', title: 'Shift Timings', moduleKey: 'HR', icon: Settings, roles: ['admin', 'hr_manager'], sortOrder: 10 },
   { pageKey: 'HRHolidays', title: 'Holidays', moduleKey: 'HR', icon: CalendarDays, roles: ['admin', 'hr_manager'], sortOrder: 11 },
+  { pageKey: 'HRDepartments', title: 'Departments', moduleKey: 'HR', icon: Users, roles: ['admin', 'hr_manager', 'hr_supervisor'], sortOrder: 20 },
+  { pageKey: 'HRDesignations', title: 'Designations', moduleKey: 'HR', icon: Tag, roles: ['admin', 'hr_manager', 'hr_supervisor'], sortOrder: 21 },
+  { pageKey: 'HRBranches', title: 'Branches', moduleKey: 'HR', icon: MapPin, roles: ['admin', 'hr_manager', 'hr_supervisor'], sortOrder: 22 },
+  { pageKey: 'HRCompanies', title: 'Companies', moduleKey: 'HR', icon: Factory, roles: ['admin', 'hr_manager'], sortOrder: 23 },
+  { pageKey: 'HRLeaveTypes', title: 'Leave Types', moduleKey: 'HR', icon: CalendarDays, roles: ['admin', 'hr_manager'], sortOrder: 24 },
+  { pageKey: 'HRNotificationSettings', title: 'Notification Settings', moduleKey: 'HR', icon: Bell, roles: ['admin', 'hr_manager'], sortOrder: 25 },
 
   // ─── USER MANAGEMENT ───
   { pageKey: 'UserManagement', title: 'Users', moduleKey: 'USER_MANAGEMENT', icon: Users, roles: ['admin'], adminOnly: true },

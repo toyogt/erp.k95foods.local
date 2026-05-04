@@ -1,0 +1,25 @@
+{
+  "name": "Designation",
+  "type": "object",
+  "title": "Designation",
+  "description": "Master list of job designations / titles.",
+  "properties": {
+    "designation_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "description": "Unique designation (e.g. MANPOWER, ACCOUNTANT, PRODUCTION INCHARGE)"
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "designation_name"
+  ]
+}

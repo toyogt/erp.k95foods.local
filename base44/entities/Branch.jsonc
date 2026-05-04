@@ -1,0 +1,37 @@
+{
+  "name": "Branch",
+  "type": "object",
+  "title": "Branch",
+  "description": "Master list of company branches / locations.",
+  "properties": {
+    "branch_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "address": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "phone_number": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "email": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "company_name": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Owning company name (matches Company.company_name)"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "branch_name"
+  ]
+}

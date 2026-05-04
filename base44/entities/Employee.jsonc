@@ -15,6 +15,15 @@
       "maxLength": 200,
       "description": "Full name of the employee"
     },
+    "father_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "card_number": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Biometric card number"
+    },
     "email": {
       "type": "string",
       "maxLength": 200,
@@ -27,17 +36,46 @@
     "department": {
       "type": "string",
       "maxLength": 100,
-      "description": "Department name (e.g. Production, Quality Control, Labelling)"
+      "description": "Department name (matches Department.department_name)"
     },
     "designation": {
       "type": "string",
       "maxLength": 100,
-      "description": "Job title / role"
+      "description": "Job title / role (matches Designation.designation_name)"
+    },
+    "branch_name": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Branch / location name (matches Branch.branch_name)"
+    },
+    "company_name": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Owning company (matches Company.company_name)"
+    },
+    "supervisor_email": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Direct supervisor email \u2014 receives attendance anomaly alerts. If empty, the Department head email is used."
+    },
+    "supervisor_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "date_of_birth": {
+      "type": "string",
+      "maxLength": 20,
+      "description": "Date of birth in DD/MM/YYYY format"
     },
     "date_of_joining": {
       "type": "string",
       "maxLength": 20,
       "description": "Joining date in DD/MM/YYYY format"
+    },
+    "weekly_off": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Weekly off day (e.g. Sunday, None)"
     },
     "shift_name": {
       "type": "string",
