@@ -9,6 +9,7 @@ import { formatDateTime, getTATStatus } from '@/lib/fmsHelpers';
 import { Input } from '@/components/ui/input';
 import moment from 'moment';
 import DirectorTaskCard from '@/components/tasks/DirectorTaskCard';
+import TaskLanguageToggle from '@/components/tasks/TaskLanguageToggle';
 import { isTaskOverdue } from '@/lib/directorTaskHelpers';
 
 function TaskCard({ step, onComplete, onOpenChecklist, completing }) {
@@ -208,6 +209,8 @@ export default function FMSMyTasks() {
   const [statusFilter, setStatusFilter] = useState(null); // null | 'overdue' | 'at_risk' | 'on_time'
   const [typeFilter, setTypeFilter] = useState('all');    // 'all' | 'process' | 'assigned' | 'scheduled'
   const [dateFilter, setDateFilter] = useState('all');    // 'all' | 'today' | 'tomorrow' | 'this_week' | 'next_week' | 'this_month'
+  const [taskLang, setTaskLang] = useState('english');
+  const [taskTranslations, setTaskTranslations] = useState({}); // { [taskId]: { task_name, task_details } }
 
   const load = useCallback(async () => {
     const me = await base44.auth.me();
@@ -481,14 +484,25 @@ export default function FMSMyTasks() {
             {/* Director Assigned Tasks Section */}
             {filteredDirectorTasks.length > 0 && (
               <div>
-                <div className="flex items-center gap-2 mb-2.5 px-3 py-1.5 rounded-xl bg-indigo-50 border border-indigo-100 w-fit">
-                  <span className="w-2 h-2 rounded-full bg-indigo-500" />
-                  <h2 className="text-xs font-bold uppercase tracking-wider text-indigo-600">Assigned Tasks · {filteredDirectorTasks.length}</h2>
+                <div className="flex items-center justify-between flex-wrap gap-2 mb-2.5">
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-50 border border-indigo-100 w-fit">
+                    <span className="w-2 h-2 rounded-full bg-indigo-500" />
+                    <h2 className="text-xs font-bold uppercase tracking-wider text-indigo-600">Assigned Tasks · {filteredDirectorTasks.length}</h2>
+                  </div>
+                  <TaskLanguageToggle
+                    language={taskLang}
+                    onLanguageChange={setTaskLang}
+                    tasks={filteredDirectorTasks}
+                    onTranslationsReady={setTaskTranslations}
+                  />
                 </div>
                 <div className="space-y-3">
-                  {filteredDirectorTasks.map(t => (
-                    <DirectorTaskCard key={t.id} task={t} user={user} viewMode="assignee" onRefresh={load} />
-                  ))}
+                  {filteredDirectorTasks.map(t => {
+                    const translated = taskLang !== 'english' && taskTranslations[t.id]
+                      ? { ...t, task_name: taskTranslations[t.id].task_name || t.task_name, task_details: taskTranslations[t.id].task_details || t.task_details }
+                      : t;
+                    return <DirectorTaskCard key={t.id} task={translated} user={user} viewMode="assignee" onRefresh={load} />;
+                  })}
                 </div>
               </div>
             )}
