@@ -3,7 +3,7 @@ import { ChevronRight, Save, Loader2, CheckCircle2, MessageSquare, Lock } from '
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/components/ui/use-toast';
+
 
 const HEALTH_BADGE = {
   Good: 'bg-green-100 text-green-700',
@@ -38,7 +38,7 @@ function NumInput({ value, onChange, max, disabled }) {
 }
 
 export default function PersonScoreTable({ persons, onSelectPerson, plans, onSaveRow, meetingFilter }) {
-  const { toast } = useToast();
+  const [rowErrors, setRowErrors] = useState({});
 
   const filteredRows = useMemo(() => {
     if (meetingFilter === 'pending') {
@@ -68,6 +68,9 @@ export default function PersonScoreTable({ persons, onSelectPerson, plans, onSav
       ...prev,
       [email]: { ...(prev[email] || {}), [field]: value },
     }));
+    if (field.startsWith('next_week_planned_')) {
+      setRowErrors(prev => { const n = { ...prev }; delete n[email]; return n; });
+    }
   };
 
   const getNextWeekTotal = (email) => {
@@ -80,13 +83,10 @@ export default function PersonScoreTable({ persons, onSelectPerson, plans, onSav
   const handleSaveRow = async (p) => {
     const total = getNextWeekTotal(p.person_email);
     if (total !== 100) {
-      toast({
-        variant: 'destructive',
-        title: 'Validation Error',
-        description: `Next Week Planned for ${p.person_name} must total exactly 100% (currently ${total}%)`,
-      });
+      setRowErrors(prev => ({ ...prev, [p.person_email]: `Must total 100% (currently ${total}%)` }));
       return;
     }
+    setRowErrors(prev => { const n = { ...prev }; delete n[p.person_email]; return n; });
 
     setSavingEmail(p.person_email);
     const d = drafts[p.person_email] || {};
@@ -110,7 +110,6 @@ export default function PersonScoreTable({ persons, onSelectPerson, plans, onSav
     await onSaveRow(p.person_email, p.person_name, fields);
     setDrafts(prev => { const n = { ...prev }; delete n[p.person_email]; return n; });
     setSavingEmail(null);
-    toast({ title: 'Saved', description: `Meeting score saved for ${p.person_name}` });
   };
 
   const openRemarkModal = (email, name) => {
@@ -193,6 +192,7 @@ export default function PersonScoreTable({ persons, onSelectPerson, plans, onSav
                 const nwTotal = getNextWeekTotal(p.person_email);
                 const totalValid = nwTotal === 100;
                 const hasRemark = !!(getDraft(p.person_email, 'meeting_remarks') || '').trim();
+                const rowError = rowErrors[p.person_email];
 
                 return (
                   <tr
@@ -205,7 +205,10 @@ export default function PersonScoreTable({ persons, onSelectPerson, plans, onSav
                     >
                       <div className="flex items-center gap-2">
                         {isDone && <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />}
-                        <span className="text-slate-900">{p.person_name}</span>
+                        <div>
+                          <span className="text-slate-900">{p.person_name}</span>
+                          {rowError && <p className="text-xs text-red-600 mt-0.5">{rowError}</p>}
+                        </div>
                       </div>
                     </td>
                     <td className="text-center px-2 py-2 bg-blue-50/30">
