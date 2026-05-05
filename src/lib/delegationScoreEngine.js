@@ -70,15 +70,29 @@ export function buildScoringCycles(task, logs, today) {
   }
 
   // 2. Collect all date-change events (requested, approved, rejected — all count)
-  const dateChangeEvents = logs
+  //    DE-DUPLICATE: If request + approved/rejected share the same old→new dates,
+  //    count them as ONE logical date-change event, not two.
+  const rawDateChangeEvents = logs
     .filter(l => ['date_change_requested', 'date_change_approved', 'date_change_rejected'].includes(l.action))
     .map(l => ({
       action: l.action,
       oldDate: parseDDMMYYYY(l.old_value),
       newDate: parseDDMMYYYY(l.new_value),
       timestamp: moment(l.timestamp),
+      oldStr: l.old_value,
+      newStr: l.new_value,
     }))
     .filter(e => e.oldDate && e.newDate);
+
+  // De-duplicate: group by old_value+new_value, keep earliest timestamp
+  const dedupeMap = new Map();
+  for (const evt of rawDateChangeEvents) {
+    const key = `${evt.oldStr}|${evt.newStr}`;
+    if (!dedupeMap.has(key) || evt.timestamp.isBefore(dedupeMap.get(key).timestamp)) {
+      dedupeMap.set(key, evt);
+    }
+  }
+  const dateChangeEvents = Array.from(dedupeMap.values());
 
   // Also pick up direct "edited" logs where old_value/new_value look like dates
   const editedDateChanges = logs
@@ -89,7 +103,11 @@ export function buildScoringCycles(task, logs, today) {
       oldDate: parseDDMMYYYY(l.old_value),
       newDate: parseDDMMYYYY(l.new_value),
       timestamp: moment(l.timestamp),
-    }));
+      oldStr: l.old_value,
+      newStr: l.new_value,
+    }))
+    // Also dedupe against existing date change events
+    .filter(e => !dedupeMap.has(`${e.oldStr}|${e.newStr}`));
 
   const allDateChanges = [...dateChangeEvents, ...editedDateChanges]
     .sort((a, b) => a.timestamp.valueOf() - b.timestamp.valueOf());
