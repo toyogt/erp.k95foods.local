@@ -104,7 +104,7 @@ export const pageRegistry = [
   { pageKey: 'ItemMasterManager', title: 'Item Master', moduleKey: 'ADMIN', icon: PackageSearch, roles: ['admin', 'store_manager', 'purchase_manager', 'user'] },
   { pageKey: 'SKUBOMConfig', title: 'Material Planning Config', moduleKey: 'ADMIN', icon: PackageSearch, roles: ['admin', 'production_manager', 'user'] },
   { pageKey: 'IngredientManager', title: 'Ingredients', moduleKey: 'ADMIN', icon: Zap, roles: ['admin', 'production_manager', 'user'] },
-  { pageKey: 'IngredientGroupManager', title: 'Ingredient Groups', moduleKey: 'ADMIN', icon: Zap, roles: ['admin', 'production_manager', 'user'] },
+  // IngredientGroupManager is now a tab inside IngredientManager — not a standalone page
   { pageKey: 'UOMManager', title: 'UOMs', moduleKey: 'ADMIN', icon: Tag, roles: ['admin', 'production_manager', 'user'] },
   { pageKey: 'BoxTypeManager', title: 'Box Types', moduleKey: 'ADMIN', icon: Box, roles: ['admin', 'production_manager', 'user'] },
   { pageKey: 'LabelArtworkManager', title: 'Label Artworks', moduleKey: 'ADMIN', icon: Printer, roles: ['admin', 'production_manager', 'user'] },

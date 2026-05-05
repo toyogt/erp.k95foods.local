@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import IngredientSpecTab from './IngredientSpecTab';
 import IngredientBrandTab from './IngredientBrandTab';
+import IngredientGroupManager from './IngredientGroupManager';
 
-const TABS = ['Specs', 'Brand Items'];
+const TABS = ['Specs', 'Brand Items', 'Ingredient Groups'];
 
 export default function IngredientMasterManager({ user }) {
   const [tab, setTab] = useState(0);
@@ -22,6 +23,7 @@ export default function IngredientMasterManager({ user }) {
       </div>
       {tab === 0 && <IngredientSpecTab user={user} />}
       {tab === 1 && <IngredientBrandTab user={user} />}
+      {tab === 2 && <IngredientGroupManager user={user} />}
     </div>
   );
 }
