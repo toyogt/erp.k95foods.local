@@ -3,7 +3,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import moment from 'moment';
 
-export default function ScoreWeekSelector({ weekOffset, onWeekChange, personFilter, onPersonFilterChange, assignees }) {
+export default function ScoreWeekSelector({ weekOffset, onWeekChange, personFilter, onPersonFilterChange, assignees, planFilter, onPlanFilterChange }) {
   const start = moment().startOf('isoWeek').add(weekOffset, 'weeks');
   const end = start.clone().endOf('isoWeek');
   const label = `${start.format('DD/MM/YYYY')} – ${end.format('DD/MM/YYYY')}`;
@@ -38,7 +38,19 @@ export default function ScoreWeekSelector({ weekOffset, onWeekChange, personFilt
         </SelectContent>
       </Select>
 
-      {/* Status filter */}
+      {/* Plan status filter */}
+      <Select value={planFilter} onValueChange={onPlanFilterChange}>
+        <SelectTrigger className="w-44 h-11 md:h-9">
+          <SelectValue placeholder="All" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All</SelectItem>
+          <SelectItem value="no_plan">No Meeting Plan</SelectItem>
+          <SelectItem value="has_plan">Has Meeting Plan</SelectItem>
+        </SelectContent>
+      </Select>
+
+      {/* Go to current week */}
       {weekOffset !== 0 && (
         <Button variant="outline" className="h-11 md:h-9 text-sm" onClick={() => onWeekChange(0)}>
           Go to Current Week

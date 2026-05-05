@@ -16,16 +16,12 @@ import PersonScoreTable from '@/components/delegation/PersonScoreTable';
 import TaskDrilldownModal from '@/components/delegation/TaskDrilldownModal';
 import ScoreWeekSelector from '@/components/delegation/ScoreWeekSelector';
 
-const PLAN_FIELDS = [
-  'this_week_planned_green', 'this_week_planned_yellow', 'this_week_planned_red',
-  'next_week_planned_green', 'next_week_planned_yellow', 'next_week_planned_red',
-  'meeting_remarks',
-];
-
 function emptyPlan() {
-  return { this_week_planned_green: 0, this_week_planned_yellow: 0, this_week_planned_red: 0,
-           next_week_planned_green: 0, next_week_planned_yellow: 0, next_week_planned_red: 0,
-           meeting_remarks: '' };
+  return {
+    this_week_planned_green: 0, this_week_planned_yellow: 0, this_week_planned_red: 0,
+    next_week_planned_green: 0, next_week_planned_yellow: 0, next_week_planned_red: 0,
+    meeting_remarks: '',
+  };
 }
 
 export default function DelegationScore() {
@@ -35,6 +31,7 @@ export default function DelegationScore() {
   const [assignees, setAssignees] = useState([]);
   const [weekOffset, setWeekOffset] = useState(0);
   const [personFilter, setPersonFilter] = useState('all');
+  const [planFilter, setPlanFilter] = useState('all');
   const [selectedPerson, setSelectedPerson] = useState(null);
 
   const [currentWeekPlans, setCurrentWeekPlans] = useState({});
@@ -75,11 +72,11 @@ export default function DelegationScore() {
     const cycles = [];
     for (const task of tasks) {
       if (task.status === 'cancelled') continue;
-      const taskLogs = logsByTask[task.id] || [];
-      cycles.push(...buildScoringCycles(task, taskLogs, today));
+      cycles.push(...buildScoringCycles(task, logsByTask[task.id] || [], today));
     }
     setAllCycles(cycles);
 
+    // Build ALL assignees from all tasks (not just this week)
     const aMap = new Map();
     for (const task of tasks) {
       if (task.assigned_to_email && !aMap.has(task.assigned_to_email)) {
@@ -101,10 +98,9 @@ export default function DelegationScore() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  // Build merged plans: this_week_planned auto-carries from prev week's next_week_planned
+  // Build merged plans
   const mergedPlans = useMemo(() => {
     const map = {};
-    // Current week data
     for (const email of Object.keys(currentWeekPlans)) {
       const cur = currentWeekPlans[email];
       map[email] = {
@@ -118,11 +114,9 @@ export default function DelegationScore() {
         meeting_remarks: cur.meeting_remarks || '',
       };
     }
-    // Carry forward from previous week
     for (const email of Object.keys(prevWeekPlans)) {
       const prev = prevWeekPlans[email];
       if (!map[email]) map[email] = { id: null, ...emptyPlan() };
-      // Only auto-fill this_week_planned if it's zero (not manually set)
       if (!map[email].this_week_planned_green && prev.next_week_planned_green) map[email].this_week_planned_green = prev.next_week_planned_green;
       if (!map[email].this_week_planned_yellow && prev.next_week_planned_yellow) map[email].this_week_planned_yellow = prev.next_week_planned_yellow;
       if (!map[email].this_week_planned_red && prev.next_week_planned_red) map[email].this_week_planned_red = prev.next_week_planned_red;
@@ -130,46 +124,56 @@ export default function DelegationScore() {
     return map;
   }, [currentWeekPlans, prevWeekPlans]);
 
-  // Save a plan field
-  const handleSavePlan = async (personEmail, personName, field, value) => {
-    const existing = currentWeekPlans[personEmail];
+  // Batch save: changedPlans = { email: { field: value, person_name } }
+  const handleSaveBatch = async (changedPlans) => {
     const weekEnd = weekRange.end.format('DD/MM/YYYY');
     const weekNum = weekRange.start.isoWeek();
     const year = weekRange.start.isoWeekYear();
 
-    if (existing) {
-      await base44.entities.ExecutiveMeetingPlan.update(existing.id, {
-        [field]: value,
-        updated_by_email: user?.email || '',
-        updated_by_name: user?.full_name || '',
-      });
-      setCurrentWeekPlans(prev => ({
-        ...prev,
-        [personEmail]: { ...prev[personEmail], [field]: value },
-      }));
-    } else {
-      // Create — also carry forward this_week_planned from prev week
-      const prev = prevWeekPlans[personEmail];
-      const newRec = await base44.entities.ExecutiveMeetingPlan.create({
-        person_email: personEmail,
-        person_name: personName,
-        week_start_date: weekStartStr,
-        week_end_date: weekEnd,
-        week_number: weekNum,
-        year: year,
-        this_week_planned_green: prev?.next_week_planned_green || 0,
-        this_week_planned_yellow: prev?.next_week_planned_yellow || 0,
-        this_week_planned_red: prev?.next_week_planned_red || 0,
-        next_week_planned_green: 0,
-        next_week_planned_yellow: 0,
-        next_week_planned_red: 0,
-        meeting_remarks: '',
-        [field]: value,
-        updated_by_email: user?.email || '',
-        updated_by_name: user?.full_name || '',
-      });
-      setCurrentWeekPlans(prev => ({ ...prev, [personEmail]: newRec }));
+    const updates = [];
+    for (const email of Object.keys(changedPlans)) {
+      const { person_name, ...fields } = changedPlans[email];
+      const existing = currentWeekPlans[email];
+
+      if (existing) {
+        updates.push(
+          base44.entities.ExecutiveMeetingPlan.update(existing.id, {
+            ...fields,
+            updated_by_email: user?.email || '',
+            updated_by_name: user?.full_name || '',
+          }).then(res => ({ email, data: { ...existing, ...fields } }))
+        );
+      } else {
+        const prev = prevWeekPlans[email];
+        updates.push(
+          base44.entities.ExecutiveMeetingPlan.create({
+            person_email: email,
+            person_name: person_name,
+            week_start_date: weekStartStr,
+            week_end_date: weekEnd,
+            week_number: weekNum,
+            year: year,
+            this_week_planned_green: prev?.next_week_planned_green || 0,
+            this_week_planned_yellow: prev?.next_week_planned_yellow || 0,
+            this_week_planned_red: prev?.next_week_planned_red || 0,
+            next_week_planned_green: 0,
+            next_week_planned_yellow: 0,
+            next_week_planned_red: 0,
+            meeting_remarks: '',
+            ...fields,
+            updated_by_email: user?.email || '',
+            updated_by_name: user?.full_name || '',
+          }).then(res => ({ email, data: res }))
+        );
+      }
     }
+
+    const results = await Promise.all(updates);
+    const newCwMap = { ...currentWeekPlans };
+    for (const { email, data } of results) {
+      newCwMap[email] = data;
+    }
+    setCurrentWeekPlans(newCwMap);
   };
 
   const filteredCycles = useMemo(() => {
@@ -227,6 +231,8 @@ export default function DelegationScore() {
         personFilter={personFilter}
         onPersonFilterChange={setPersonFilter}
         assignees={assignees}
+        planFilter={planFilter}
+        onPlanFilterChange={setPlanFilter}
       />
 
       {loading ? (
@@ -238,9 +244,11 @@ export default function DelegationScore() {
           <ScoreKPICards kpis={kpis} />
           <PersonScoreTable
             persons={persons}
+            allAssignees={assignees}
             onSelectPerson={setSelectedPerson}
             plans={mergedPlans}
-            onSavePlan={handleSavePlan}
+            onSaveBatch={handleSaveBatch}
+            planFilter={planFilter}
           />
         </>
       )}
