@@ -442,6 +442,7 @@ export default function DirectorTaskCard({ task, user, viewMode, onRefresh, supp
                 value={newDate}
                 onChange={setNewDate}
                 placeholder="Select new date"
+                minDate={(() => { const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(0,0,0,0); return d; })()}
               />
               <div>
                 <label className="text-xs font-medium text-slate-700">New End Time</label>

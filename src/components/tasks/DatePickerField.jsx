@@ -8,7 +8,7 @@ import { format, parse, isValid } from 'date-fns';
 /**
  * Date picker that stores value as DD/MM/YYYY string
  */
-export default function DatePickerField({ value, onChange, placeholder, label, required, className }) {
+export default function DatePickerField({ value, onChange, placeholder, label, required, className, minDate }) {
   const [open, setOpen] = useState(false);
 
   // Parse DD/MM/YYYY to Date
@@ -46,6 +46,7 @@ export default function DatePickerField({ value, onChange, placeholder, label, r
             mode="single"
             selected={dateObj}
             onSelect={handleSelect}
+            disabled={minDate ? (date) => date < minDate : undefined}
             initialFocus
           />
         </PopoverContent>
