@@ -91,7 +91,7 @@ export const pageRegistry = [
   // FMSMyTasks is the home page (/) — not shown in FMS module nav
   { pageKey: 'FMSActiveRuns', title: 'Active Runs', moduleKey: 'FMS', icon: PlayCircle, roles: ['admin', 'process_controller', 'process_designer', 'user'] },
   { pageKey: 'FMSMonitor', title: 'Monitor', moduleKey: 'FMS', icon: MonitorDot, roles: ['admin', 'process_controller', 'user'] },
-  { pageKey: 'FMSProcesses', title: 'Processes', moduleKey: 'FMS', icon: GitBranch, roles: ['admin', 'process_designer'], adminOnly: true },
+  { pageKey: 'FMSProcesses', title: 'FMS', moduleKey: 'FMS', icon: GitBranch, roles: ['admin', 'process_designer'], adminOnly: true },
   { pageKey: 'FMSHealthDashboard', title: 'FMS Health', moduleKey: 'FMS', icon: BarChart4, roles: ['admin'], adminOnly: true },
   { pageKey: 'ScheduledTaskManager', title: 'Scheduled Tasks', moduleKey: 'FMS', icon: ClipboardList, roles: ['admin', 'process_controller', 'process_designer', 'user'] },
   { pageKey: 'EADashboard', title: 'EA Dashboard', moduleKey: 'FMS', icon: ClipboardList, roles: ['admin', 'executive_assistant', 'user'], sortOrder: 7 },
@@ -255,7 +255,7 @@ export const moduleRegistry = [
   },
   {
     moduleKey: 'FMS',
-    label: 'FMS',
+    label: 'Process Flow',
     icon: GitBranch,
     color: 'text-blue-700',
     bgColor: 'bg-blue-50',
