@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { ChevronRight, Save, Loader2, CheckCircle2 } from 'lucide-react';
+import { ChevronRight, Save, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const HEALTH_BADGE = {
@@ -9,34 +9,52 @@ const HEALTH_BADGE = {
 };
 
 /**
- * Shows only persons who have tasks for the week (task-based, not plan-based).
- * Each row has its own Save button for individual meeting review.
- * meetingFilter: 'all' | 'pending' | 'done'
+ * Numeric text input that:
+ * - Strips leading zeros automatically
+ * - Blocks scroll-wheel changes
+ * - Only allows digits 0-9
+ * - Caps at max value
  */
+function NumInput({ value, onChange, max }) {
+  const display = value === 0 || value === '0' ? '0' : String(value || '');
+
+  const handleChange = (e) => {
+    const raw = e.target.value.replace(/[^0-9]/g, '');
+    if (raw === '') { onChange(0); return; }
+    const num = parseInt(raw, 10);
+    if (max !== undefined && num > max) return;
+    onChange(num);
+  };
+
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      value={display}
+      onChange={handleChange}
+      onWheel={e => e.target.blur()}
+      onFocus={e => { if (display === '0') e.target.select(); }}
+      className="w-12 h-8 border border-slate-200 rounded px-1 text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-400"
+    />
+  );
+}
+
 export default function PersonScoreTable({ persons, onSelectPerson, plans, onSaveRow, meetingFilter }) {
-  // Filter by meeting status
   const filteredRows = useMemo(() => {
     if (meetingFilter === 'pending') {
-      return persons.filter(p => {
-        const plan = plans?.[p.person_email];
-        return !plan?.meeting_done;
-      });
+      return persons.filter(p => !plans?.[p.person_email]?.meeting_done);
     }
     if (meetingFilter === 'done') {
-      return persons.filter(p => {
-        const plan = plans?.[p.person_email];
-        return !!plan?.meeting_done;
-      });
+      return persons.filter(p => !!plans?.[p.person_email]?.meeting_done);
     }
     return persons;
   }, [persons, plans, meetingFilter]);
 
-  // Local drafts per person
   const [drafts, setDrafts] = useState({});
   const [savingEmail, setSavingEmail] = useState(null);
+  const [rowErrors, setRowErrors] = useState({});
 
-  // Reset drafts when plans or persons change
-  useEffect(() => { setDrafts({}); }, [plans]);
+  useEffect(() => { setDrafts({}); setRowErrors({}); }, [plans]);
 
   const getDraft = (email, field) => {
     if (drafts[email]?.[field] !== undefined) return drafts[email][field];
@@ -49,26 +67,32 @@ export default function PersonScoreTable({ persons, onSelectPerson, plans, onSav
       ...prev,
       [email]: { ...(prev[email] || {}), [field]: value },
     }));
+    // Clear error on edit
+    if (rowErrors[email]) {
+      setRowErrors(prev => { const n = { ...prev }; delete n[email]; return n; });
+    }
   };
 
-  const hasRowChanges = (email) => {
-    const d = drafts[email];
-    if (!d) return false;
-    const plan = plans?.[email] || {};
-    for (const field of Object.keys(d)) {
-      const saved = plan[field] ?? (field === 'meeting_remarks' ? '' : 0);
-      const drafted = d[field];
-      if (field === 'meeting_remarks') {
-        if ((drafted || '').trim() !== (saved || '').trim()) return true;
-      } else {
-        if ((Number(drafted) || 0) !== (Number(saved) || 0)) return true;
-      }
-    }
-    return false;
+  const getNextWeekTotal = (email) => {
+    const g = Number(getDraft(email, 'next_week_planned_green')) || 0;
+    const y = Number(getDraft(email, 'next_week_planned_yellow')) || 0;
+    const r = Number(getDraft(email, 'next_week_planned_red')) || 0;
+    return g + y + r;
   };
 
   const handleSaveRow = async (p) => {
+    const total = getNextWeekTotal(p.person_email);
+    if (total !== 100) {
+      setRowErrors(prev => ({
+        ...prev,
+        [p.person_email]: `Next Week Planned total must be exactly 100% (currently ${total}%)`,
+      }));
+      return;
+    }
+
     setSavingEmail(p.person_email);
+    setRowErrors(prev => { const n = { ...prev }; delete n[p.person_email]; return n; });
+
     const d = drafts[p.person_email] || {};
     const plan = plans?.[p.person_email] || {};
     const fields = {};
@@ -79,12 +103,21 @@ export default function PersonScoreTable({ persons, onSelectPerson, plans, onSav
     }
     fields.meeting_done = true;
 
+    // Persist actual scores snapshot for year-end review
+    fields.actual_total = p.total;
+    fields.actual_green = p.green;
+    fields.actual_yellow = p.yellow;
+    fields.actual_red = p.red;
+    fields.actual_green_pct = p.green_pct;
+    fields.actual_yellow_pct = p.yellow_pct;
+    fields.actual_red_pct = p.red_pct;
+    fields.actual_health = p.person_health;
+
     await onSaveRow(p.person_email, p.person_name, fields);
     setDrafts(prev => { const n = { ...prev }; delete n[p.person_email]; return n; });
     setSavingEmail(null);
   };
 
-  // Summary counts
   const totalCount = persons.length;
   const doneCount = persons.filter(p => plans?.[p.person_email]?.meeting_done).length;
   const pendingCount = totalCount - doneCount;
@@ -101,7 +134,6 @@ export default function PersonScoreTable({ persons, onSelectPerson, plans, onSav
 
   return (
     <div className="space-y-3">
-      {/* Meeting progress bar */}
       <div className="flex items-center gap-4 text-sm">
         <span className="text-slate-500">Meeting Progress:</span>
         <div className="flex-1 max-w-xs bg-slate-100 rounded-full h-2.5">
@@ -129,7 +161,7 @@ export default function PersonScoreTable({ persons, onSelectPerson, plans, onSav
                 <th className="text-center px-2 py-3 font-medium">Y%</th>
                 <th className="text-center px-2 py-3 font-medium">R%</th>
                 <th className="text-center px-3 py-3 font-medium">Health</th>
-                <th className="text-center px-2 py-3 font-medium bg-indigo-50 text-indigo-700" colSpan={3}>Next Week Planned</th>
+                <th className="text-center px-2 py-3 font-medium bg-indigo-50 text-indigo-700" colSpan={4}>Next Week Planned</th>
                 <th className="text-left px-3 py-3 font-medium min-w-[160px]">Remarks</th>
                 <th className="text-center px-2 py-3 font-medium w-20">Save</th>
                 <th className="w-8"></th>
@@ -143,6 +175,7 @@ export default function PersonScoreTable({ persons, onSelectPerson, plans, onSav
                 <th className="text-center px-2 py-1.5 font-medium text-green-600 bg-indigo-50/50">G</th>
                 <th className="text-center px-2 py-1.5 font-medium text-yellow-600 bg-indigo-50/50">Y</th>
                 <th className="text-center px-2 py-1.5 font-medium text-red-600 bg-indigo-50/50">R</th>
+                <th className="text-center px-2 py-1.5 font-medium text-slate-400 bg-indigo-50/50">Σ</th>
                 <th colSpan={3}></th>
               </tr>
             </thead>
@@ -151,23 +184,32 @@ export default function PersonScoreTable({ persons, onSelectPerson, plans, onSav
                 const plan = plans?.[p.person_email] || {};
                 const isDone = !!plan.meeting_done;
                 const isSaving = savingEmail === p.person_email;
-                const rowChanged = hasRowChanges(p.person_email);
+                const nwTotal = getNextWeekTotal(p.person_email);
+                const error = rowErrors[p.person_email];
+                const totalValid = nwTotal === 100;
 
                 return (
                   <tr
                     key={p.person_email}
-                    className={`transition-colors ${isDone ? 'bg-green-50/40' : 'hover:bg-slate-50'}`}
+                    className={`transition-colors ${isDone ? 'bg-green-50/40' : 'hover:bg-slate-50'} ${error ? 'bg-red-50/30' : ''}`}
                   >
                     <td
-                      className={`px-4 py-3 font-medium whitespace-nowrap sticky left-0 z-10 cursor-pointer ${isDone ? 'bg-green-50/40' : 'bg-white'}`}
+                      className={`px-4 py-3 font-medium whitespace-nowrap sticky left-0 z-10 cursor-pointer ${isDone ? 'bg-green-50/40' : error ? 'bg-red-50/30' : 'bg-white'}`}
                       onClick={() => onSelectPerson(p)}
                     >
                       <div className="flex items-center gap-2">
                         {isDone && <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />}
-                        <span className="text-slate-900">{p.person_name}</span>
+                        <div>
+                          <span className="text-slate-900">{p.person_name}</span>
+                          {error && (
+                            <div className="flex items-center gap-1 mt-0.5">
+                              <AlertCircle className="w-3 h-3 text-red-500 shrink-0" />
+                              <span className="text-xs text-red-600">{error}</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </td>
-                    {/* This Week Planned (read-only, from prev week's next_week_planned) */}
                     <td className="text-center px-2 py-2 bg-blue-50/30">
                       <span className={`text-sm font-semibold ${(plan.this_week_planned_green || 0) > 0 ? 'text-green-700' : 'text-slate-300'}`}>{plan.this_week_planned_green || 0}</span>
                     </td>
@@ -177,7 +219,6 @@ export default function PersonScoreTable({ persons, onSelectPerson, plans, onSav
                     <td className="text-center px-2 py-2 bg-blue-50/30">
                       <span className={`text-sm font-semibold ${(plan.this_week_planned_red || 0) > 0 ? 'text-red-600' : 'text-slate-300'}`}>{plan.this_week_planned_red || 0}</span>
                     </td>
-                    {/* Actual Score */}
                     <td className="text-center px-3 py-3 font-semibold text-slate-900">{p.total}</td>
                     <td className="text-center px-2 py-3 font-semibold text-green-700">{p.green}</td>
                     <td className="text-center px-2 py-3 font-semibold text-yellow-600">{p.yellow}</td>
@@ -190,29 +231,34 @@ export default function PersonScoreTable({ persons, onSelectPerson, plans, onSav
                         {p.person_health}
                       </span>
                     </td>
-                    {/* Next Week Planned */}
+                    {/* Next Week Planned — NumInput (no scroll, no leading zero) */}
                     <td className="text-center px-1 py-1.5 bg-indigo-50/30" onClick={e => e.stopPropagation()}>
-                      <input type="number" min={0}
+                      <NumInput
                         value={getDraft(p.person_email, 'next_week_planned_green')}
-                        onChange={e => setDraft(p.person_email, 'next_week_planned_green', e.target.value)}
-                        className="w-12 h-8 border border-slate-200 rounded px-1 text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                        onChange={v => setDraft(p.person_email, 'next_week_planned_green', v)}
+                        max={100}
                       />
                     </td>
                     <td className="text-center px-1 py-1.5 bg-indigo-50/30" onClick={e => e.stopPropagation()}>
-                      <input type="number" min={0}
+                      <NumInput
                         value={getDraft(p.person_email, 'next_week_planned_yellow')}
-                        onChange={e => setDraft(p.person_email, 'next_week_planned_yellow', e.target.value)}
-                        className="w-12 h-8 border border-slate-200 rounded px-1 text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                        onChange={v => setDraft(p.person_email, 'next_week_planned_yellow', v)}
+                        max={100}
                       />
                     </td>
                     <td className="text-center px-1 py-1.5 bg-indigo-50/30" onClick={e => e.stopPropagation()}>
-                      <input type="number" min={0}
+                      <NumInput
                         value={getDraft(p.person_email, 'next_week_planned_red')}
-                        onChange={e => setDraft(p.person_email, 'next_week_planned_red', e.target.value)}
-                        className="w-12 h-8 border border-slate-200 rounded px-1 text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                        onChange={v => setDraft(p.person_email, 'next_week_planned_red', v)}
+                        max={100}
                       />
                     </td>
-                    {/* Remarks */}
+                    {/* Running total */}
+                    <td className="text-center px-1 py-1.5 bg-indigo-50/30">
+                      <span className={`text-xs font-bold ${totalValid ? 'text-green-600' : nwTotal > 100 ? 'text-red-600' : 'text-amber-600'}`}>
+                        {nwTotal}%
+                      </span>
+                    </td>
                     <td className="px-2 py-1.5" onClick={e => e.stopPropagation()}>
                       <input type="text"
                         value={getDraft(p.person_email, 'meeting_remarks')}
@@ -221,18 +267,17 @@ export default function PersonScoreTable({ persons, onSelectPerson, plans, onSav
                         className="w-full min-w-[140px] h-8 border border-slate-200 rounded px-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 placeholder:text-slate-300"
                       />
                     </td>
-                    {/* Per-row Save */}
                     <td className="text-center px-2 py-1.5" onClick={e => e.stopPropagation()}>
                       <Button
                         size="sm"
-                        variant={isDone && !rowChanged ? 'ghost' : 'default'}
-                        className={`h-8 px-3 text-xs gap-1 ${isDone && !rowChanged ? 'text-green-600' : ''}`}
+                        variant={isDone ? 'ghost' : 'default'}
+                        className={`h-8 px-3 text-xs gap-1 ${isDone ? 'text-green-600' : ''}`}
                         disabled={isSaving}
                         onClick={() => handleSaveRow(p)}
                       >
                         {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> :
-                          isDone && !rowChanged ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Save className="w-3.5 h-3.5" />}
-                        {isDone && !rowChanged ? 'Done' : 'Save'}
+                          isDone ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Save className="w-3.5 h-3.5" />}
+                        {isDone ? 'Done' : 'Save'}
                       </Button>
                     </td>
                     <td className="px-2 py-3">

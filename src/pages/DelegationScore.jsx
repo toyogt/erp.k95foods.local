@@ -124,22 +124,24 @@ export default function DelegationScore() {
     return map;
   }, [currentWeekPlans, prevWeekPlans]);
 
-  // Save a single person's row
+  // Save a single person's row (includes actual scores for year-end review)
   const handleSaveRow = async (personEmail, personName, fields) => {
     const existing = currentWeekPlans[personEmail];
     const weekEnd = weekRange.end.format('DD/MM/YYYY');
     const weekNum = weekRange.start.isoWeek();
     const year = weekRange.start.isoWeekYear();
 
+    const saveData = {
+      ...fields,
+      updated_by_email: user?.email || '',
+      updated_by_name: user?.full_name || '',
+    };
+
     if (existing) {
-      await base44.entities.ExecutiveMeetingPlan.update(existing.id, {
-        ...fields,
-        updated_by_email: user?.email || '',
-        updated_by_name: user?.full_name || '',
-      });
+      await base44.entities.ExecutiveMeetingPlan.update(existing.id, saveData);
       setCurrentWeekPlans(prev => ({
         ...prev,
-        [personEmail]: { ...prev[personEmail], ...fields },
+        [personEmail]: { ...prev[personEmail], ...saveData },
       }));
     } else {
       const prev = prevWeekPlans[personEmail];
@@ -158,9 +160,7 @@ export default function DelegationScore() {
         next_week_planned_red: 0,
         meeting_remarks: '',
         meeting_done: false,
-        ...fields,
-        updated_by_email: user?.email || '',
-        updated_by_name: user?.full_name || '',
+        ...saveData,
       });
       setCurrentWeekPlans(prev => ({ ...prev, [personEmail]: newRec }));
     }

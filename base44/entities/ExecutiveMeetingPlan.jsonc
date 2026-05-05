@@ -2,7 +2,7 @@
   "name": "ExecutiveMeetingPlan",
   "type": "object",
   "title": "Executive Meeting Plan",
-  "description": "Weekly meeting planning per person \u2014 planned Green/Yellow/Red counts, remarks, and meeting status",
+  "description": "Weekly meeting planning per person \u2014 planned Green/Yellow/Red counts, remarks, meeting status, and actual scores snapshot for year-end review",
   "properties": {
     "person_email": {
       "type": "string",
@@ -60,6 +60,53 @@
       "type": "number",
       "minimum": 0,
       "default": 0
+    },
+    "actual_total": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0,
+      "description": "Actual total tasks scored this week"
+    },
+    "actual_green": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0,
+      "description": "Actual green tasks this week"
+    },
+    "actual_yellow": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0,
+      "description": "Actual yellow tasks this week"
+    },
+    "actual_red": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0,
+      "description": "Actual red tasks this week"
+    },
+    "actual_green_pct": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0,
+      "description": "Green percentage this week"
+    },
+    "actual_yellow_pct": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0,
+      "description": "Yellow percentage this week"
+    },
+    "actual_red_pct": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0,
+      "description": "Red percentage this week"
+    },
+    "actual_health": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Health label: Good, Needs Follow-up, Critical"
     },
     "meeting_remarks": {
       "type": "string",
