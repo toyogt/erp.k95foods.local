@@ -1,6 +1,5 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
-import { X } from 'lucide-react';
+import { ClipboardList, MessageSquare, CalendarClock } from 'lucide-react';
 
 const HEALTH_COLORS = {
   Green: 'bg-green-100 text-green-700',
@@ -8,12 +7,11 @@ const HEALTH_COLORS = {
   Red: 'bg-red-100 text-red-700',
 };
 
-const PENALTY_LABEL = { 0: 'None', 1: '1', 2: '2' };
-
-export default function TaskDrilldownModal({ open, onClose, person }) {
+export default function TaskDrilldownModal({ open, onClose, person, plan }) {
   if (!person) return null;
 
   const cycles = person.cycles || [];
+  const currentPlan = plan || {};
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -31,7 +29,10 @@ export default function TaskDrilldownModal({ open, onClose, person }) {
           </DialogTitle>
         </DialogHeader>
 
-        {/* Summary */}
+        {/* Meeting Plan Summary */}
+        <MeetingPlanSummary plan={currentPlan} person={person} />
+
+        {/* Score Summary */}
         <div className="flex gap-4 flex-wrap text-sm pb-3 border-b border-slate-100">
           <span>Total: <strong>{person.total}</strong></span>
           <span className="text-green-700">Green: <strong>{person.green}</strong> ({person.green_pct}%)</span>
@@ -39,7 +40,7 @@ export default function TaskDrilldownModal({ open, onClose, person }) {
           <span className="text-red-600">Red: <strong>{person.red}</strong> ({person.red_pct}%)</span>
         </div>
 
-        {/* Table */}
+        {/* Task Scoring Table */}
         <div className="flex-1 overflow-auto">
           <table className="w-full text-xs">
             <thead className="sticky top-0 z-10">
@@ -66,7 +67,6 @@ export default function TaskDrilldownModal({ open, onClose, person }) {
                 const completedDate = c.completed_at
                   ? new Date(c.completed_at).toLocaleDateString('en-GB')
                   : '—';
-
                 return (
                   <tr key={`${c.task_id}-${i}`} className="hover:bg-slate-50">
                     <td className="px-3 py-2.5 font-mono text-slate-600">{c.task_number}</td>
@@ -95,15 +95,9 @@ export default function TaskDrilldownModal({ open, onClose, person }) {
                         <span className="text-red-600 font-semibold">{c.unmanaged_overdue_days}</span>
                       ) : '—'}
                     </td>
-                    <td className="text-center px-2 py-2.5">
-                      <PenaltyCell val={c.date_change_penalty} />
-                    </td>
-                    <td className="text-center px-2 py-2.5">
-                      <PenaltyCell val={c.week_shift_penalty} />
-                    </td>
-                    <td className="text-center px-2 py-2.5">
-                      <PenaltyCell val={c.unmanaged_overdue_penalty} />
-                    </td>
+                    <td className="text-center px-2 py-2.5"><PenaltyCell val={c.date_change_penalty} /></td>
+                    <td className="text-center px-2 py-2.5"><PenaltyCell val={c.week_shift_penalty} /></td>
+                    <td className="text-center px-2 py-2.5"><PenaltyCell val={c.unmanaged_overdue_penalty} /></td>
                     <td className="text-center px-2 py-2.5 font-bold">{c.final_penalty}</td>
                     <td className="text-center px-2 py-2.5">
                       <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${HEALTH_COLORS[c.task_health]}`}>
@@ -118,6 +112,50 @@ export default function TaskDrilldownModal({ open, onClose, person }) {
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function MeetingPlanSummary({ plan, person }) {
+  const hasAnyPlan = plan.this_week_planned_notes || plan.next_week_planned_notes || plan.meeting_remarks;
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pb-3 border-b border-slate-100">
+      <PlanCard
+        icon={<ClipboardList className="w-4 h-4 text-blue-500" />}
+        title="This Week Planned"
+        value={plan.this_week_planned_notes}
+        emptyText="No plan carried over from last week"
+        bg="bg-blue-50 border-blue-100"
+      />
+      <PlanCard
+        icon={<CalendarClock className="w-4 h-4 text-indigo-500" />}
+        title="Next Week Planned"
+        value={plan.next_week_planned_notes}
+        emptyText="Not entered yet"
+        bg="bg-indigo-50 border-indigo-100"
+      />
+      <PlanCard
+        icon={<MessageSquare className="w-4 h-4 text-amber-500" />}
+        title="Meeting Remarks"
+        value={plan.meeting_remarks}
+        emptyText="No remarks"
+        bg="bg-amber-50 border-amber-100"
+      />
+    </div>
+  );
+}
+
+function PlanCard({ icon, title, value, emptyText, bg }) {
+  return (
+    <div className={`border rounded-lg p-3 ${bg}`}>
+      <div className="flex items-center gap-1.5 mb-1">
+        {icon}
+        <span className="text-xs font-semibold text-slate-600">{title}</span>
+      </div>
+      <p className={`text-sm whitespace-pre-wrap leading-snug ${value ? 'text-slate-800' : 'text-slate-400 italic'}`}>
+        {value || emptyText}
+      </p>
+    </div>
   );
 }
 

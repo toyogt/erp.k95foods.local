@@ -1,0 +1,62 @@
+{
+  "name": "ExecutiveMeetingPlan",
+  "type": "object",
+  "title": "Executive Meeting Plan",
+  "description": "Weekly meeting planning notes per person \u2014 This Week Planned, Next Week Planned, Meeting Remarks",
+  "properties": {
+    "person_email": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Email of the person this plan is for"
+    },
+    "person_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "week_start_date": {
+      "type": "string",
+      "maxLength": 20,
+      "description": "Monday of the week DD/MM/YYYY"
+    },
+    "week_end_date": {
+      "type": "string",
+      "maxLength": 20,
+      "description": "Sunday of the week DD/MM/YYYY"
+    },
+    "week_number": {
+      "type": "number",
+      "description": "ISO week number"
+    },
+    "year": {
+      "type": "number",
+      "description": "Year"
+    },
+    "this_week_planned_notes": {
+      "type": "string",
+      "maxLength": 5000,
+      "description": "What was planned for this week (auto-carried from previous week next_week_planned_notes)"
+    },
+    "next_week_planned_notes": {
+      "type": "string",
+      "maxLength": 5000,
+      "description": "What is planned for next week (entered during meeting)"
+    },
+    "meeting_remarks": {
+      "type": "string",
+      "maxLength": 5000,
+      "description": "Meeting remarks / observations for this person this week"
+    },
+    "updated_by_email": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "updated_by_name": {
+      "type": "string",
+      "maxLength": 200
+    }
+  },
+  "required": [
+    "person_email",
+    "week_start_date"
+  ]
+}
