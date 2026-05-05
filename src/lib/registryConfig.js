@@ -88,7 +88,7 @@ export const pageRegistry = [
   { pageKey: 'PaymentRequests', title: 'Payment Requests', moduleKey: 'ACCOUNTS', icon: CreditCard, roles: ['admin', 'accounts_manager', 'user'] },
 
   // ─── PROCESS FLOW (FMS) ───
-  // FMSMyTasks is the home page (/) — not shown in FMS module nav
+  { pageKey: 'FMSMyTasks', title: 'My Tasks', moduleKey: 'FMS', icon: ListChecks, roles: ['admin', 'user', 'executive_assistant', 'process_controller', 'process_designer'], sortOrder: 0 },
   { pageKey: 'FMSActiveRuns', title: 'Active Runs', moduleKey: 'FMS', icon: PlayCircle, roles: ['admin', 'process_controller', 'process_designer', 'user'] },
   { pageKey: 'FMSMonitor', title: 'Monitor', moduleKey: 'FMS', icon: MonitorDot, roles: ['admin', 'process_controller', 'user'] },
   { pageKey: 'FMSProcesses', title: 'FMS', moduleKey: 'FMS', icon: GitBranch, roles: ['admin', 'process_designer'], adminOnly: true },
@@ -96,6 +96,7 @@ export const pageRegistry = [
   { pageKey: 'ScheduledTaskManager', title: 'Scheduled Tasks', moduleKey: 'FMS', icon: ClipboardList, roles: ['admin', 'process_controller', 'process_designer', 'user'] },
   { pageKey: 'EADashboard', title: 'EA Dashboard', moduleKey: 'FMS', icon: ClipboardList, roles: ['admin', 'executive_assistant', 'user'], sortOrder: 7 },
   { pageKey: 'DirectorDashboard', title: 'Director Dashboard', moduleKey: 'FMS', icon: ClipboardList, roles: ['admin'], sortOrder: 8 },
+  { pageKey: 'ProjectManager', title: 'Project Manager', moduleKey: 'FMS', icon: ClipboardList, roles: ['admin', 'executive_assistant', 'user'], sortOrder: 9 },
 
   // ─── ADMIN / MASTER DATA ───
   { pageKey: 'MasterData', title: 'Master Data', moduleKey: 'ADMIN', icon: Settings, roles: ['admin', 'production_manager', 'user'] },
@@ -121,7 +122,9 @@ export const pageRegistry = [
   // ─── STORE MANAGEMENT ───
   { pageKey: 'SMSDashboard',       title: 'Store Dashboard',    moduleKey: 'STORE', icon: Store,           roles: ['admin', 'store_manager', 'store_receiver', 'user'], sortOrder: 1 },
   { pageKey: 'GateEntry',          title: 'Gate Entry',         moduleKey: 'STORE', icon: ShieldCheck,     roles: ['admin', 'security_guard', 'store_receiver', 'user'], sortOrder: 2 },
+  { pageKey: 'GateInbox',          title: 'Gate Inbox',         moduleKey: 'STORE', icon: ClipboardList,   roles: ['admin', 'store_manager', 'store_receiver', 'security_guard', 'user'], sortOrder: 2.5 },
   { pageKey: 'GRNReceive',         title: 'Goods Received Note',moduleKey: 'STORE', icon: PackageOpen,     roles: ['admin', 'store_receiver', 'user'], sortOrder: 3 },
+  { pageKey: 'StoresIssue',        title: 'Stores Issue',       moduleKey: 'STORE', icon: PackageOpen,     roles: ['admin', 'store_manager', 'user'], sortOrder: 5.5 },
   { pageKey: 'SMSPutaway',         title: 'Putaway',            moduleKey: 'STORE', icon: Archive,         roles: ['admin', 'store_manager', 'store_receiver', 'user'], sortOrder: 4 },
   { pageKey: 'SMSStockOut',        title: 'Stock Issue',        moduleKey: 'STORE', icon: PackageOpen,     roles: ['admin', 'store_manager', 'user'], sortOrder: 5 },
   { pageKey: 'SMSItemMaster',      title: 'Item Master',        moduleKey: 'STORE', icon: PackageSearch,   roles: ['admin', 'store_manager', 'user'], sortOrder: 10 },
@@ -163,6 +166,9 @@ export const pageRegistry = [
   { pageKey: 'SyncCenter', title: 'Sync Center', moduleKey: 'ADMIN', icon: Activity, roles: ['admin', 'user'] },
   { pageKey: 'RulesManager', title: 'Rules Manager', moduleKey: 'ADMIN', icon: ShieldCheck, roles: ['admin', 'user'] },
   { pageKey: 'BlockedAttemptsViewer', title: 'Blocked Attempts', moduleKey: 'ADMIN', icon: AlertCircle, roles: ['admin', 'user'] },
+  { pageKey: 'AuditLogViewer', title: 'Audit Log Viewer', moduleKey: 'ADMIN', icon: ScrollText, roles: ['admin', 'production_manager', 'user'] },
+  { pageKey: 'SLAConfigManager', title: 'SLA Configuration', moduleKey: 'ADMIN', icon: Settings, roles: ['admin'], adminOnly: true },
+  { pageKey: 'SLAEscalationDashboard', title: 'SLA Escalations', moduleKey: 'ADMIN', icon: AlertTriangle, roles: ['admin'], adminOnly: true },
   { pageKey: 'SystemSettings', title: 'System Settings', moduleKey: 'ADMIN', icon: Settings, roles: ['admin', 'accounts_manager', 'sales_manager', 'user'] },
   { pageKey: 'RoutesDiagnostics', title: 'Routes Diagnostics', moduleKey: 'ADMIN', icon: Activity, roles: ['admin', 'user'] },
 ];

@@ -28,24 +28,11 @@ function RoleForm({ initial, onSave, onCancel, saving }) {
     if (!pages?.length) return [];
     const modules = new Set();
     pages.forEach(pageKey => {
-      const allPages = getPagesInModule('PRODUCTION')
-        .concat(getPagesInModule('LABELLING'))
-        .concat(getPagesInModule('WAREHOUSE'))
-        .concat(getPagesInModule('PURCHASE'))
-        .concat(getPagesInModule('GRN'))
-        .concat(getPagesInModule('QUALITY'))
-        .concat(getPagesInModule('ACCOUNTS'))
-        .concat(getPagesInModule('FMS'))
-        .concat(getPagesInModule('DASHBOARD'));
-      const page = allPages.find(p => p.pageKey === pageKey);
-      if (page) {
-        // Find which module this page belongs to
-        ALL_MODULE_KEYS.forEach(mod => {
-          if (getPagesInModule(mod).find(p => p.pageKey === pageKey)) {
-            modules.add(mod);
-          }
-        });
-      }
+      ALL_MODULE_KEYS.forEach(mod => {
+        if (getPagesInModule(mod).find(p => p.pageKey === pageKey)) {
+          modules.add(mod);
+        }
+      });
     });
     return Array.from(modules);
   };
