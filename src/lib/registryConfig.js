@@ -103,6 +103,7 @@ export const pageRegistry = [
   { pageKey: 'RecipeBuilder', title: 'Recipe Builder', moduleKey: 'ADMIN', icon: FlaskConical, roles: ['admin', 'production_manager', 'user'] },
   { pageKey: 'ItemMasterManager', title: 'Item Master', moduleKey: 'ADMIN', icon: PackageSearch, roles: ['admin', 'store_manager', 'purchase_manager', 'user'] },
   { pageKey: 'SKUBOMConfig', title: 'Material Planning Config', moduleKey: 'ADMIN', icon: PackageSearch, roles: ['admin', 'production_manager', 'user'] },
+  { pageKey: 'ItemModule', title: 'Item Module', moduleKey: 'ADMIN', icon: PackageSearch, roles: ['admin', 'production_manager', 'user'] },
   { pageKey: 'IngredientManager', title: 'Ingredients', moduleKey: 'ADMIN', icon: Zap, roles: ['admin', 'production_manager', 'user'] },
   // IngredientGroupManager is now a tab inside IngredientManager — not a standalone page
   { pageKey: 'UOMManager', title: 'UOMs', moduleKey: 'ADMIN', icon: Tag, roles: ['admin', 'production_manager', 'user'] },

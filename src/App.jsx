@@ -126,6 +126,7 @@ import LblMasterData from './pages/LblMasterData';
 import LblDocTypePermissions from './pages/LblDocTypePermissions';
 import StoreItemCreator from './pages/StoreItemCreator';
 import SMSOpeningStockManager from './pages/SMSOpeningStockManager';
+import ItemModule from './pages/ItemModule';
 import EADashboard from './pages/EADashboard';
 import DirectorDashboard from './pages/DirectorDashboard';
 import ProjectManager from './pages/ProjectManager';
@@ -157,6 +158,7 @@ const PAGE_COMPONENTS = {
   LblDocTypePermissions,
   StoreItemCreator,
   SMSOpeningStockManager,
+  ItemModule,
   EADashboard,
   DirectorDashboard,
   ProjectManager,
@@ -330,6 +332,9 @@ const AuthenticatedApp = () => {
       <Route path="/LblEventLogPage" element={<LayoutWrapper currentPageName="LblEventLogPage"><LblEventLogPage /></LayoutWrapper>} />
       <Route path="/LblMasterData" element={<LayoutWrapper currentPageName="LblMasterData"><LblMasterData /></LayoutWrapper>} />
       <Route path="/LblDocTypePermissions" element={<LayoutWrapper currentPageName="LblDocTypePermissions"><LblDocTypePermissions /></LayoutWrapper>} />
+
+      {/* Item Module */}
+      <Route path="/ItemModule" element={<LayoutWrapper currentPageName="ItemModule"><ItemModule /></LayoutWrapper>} />
 
       {/* EA Dashboard */}
       <Route path="/EADashboard" element={<LayoutWrapper currentPageName="EADashboard"><EADashboard /></LayoutWrapper>} />
