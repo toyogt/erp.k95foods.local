@@ -1,6 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
-import { ChevronRight, Save, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ChevronRight, Save, Loader2, CheckCircle2, MessageSquare, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/components/ui/use-toast';
 
 const HEALTH_BADGE = {
   Good: 'bg-green-100 text-green-700',
@@ -8,17 +11,11 @@ const HEALTH_BADGE = {
   Critical: 'bg-red-100 text-red-700',
 };
 
-/**
- * Numeric text input that:
- * - Strips leading zeros automatically
- * - Blocks scroll-wheel changes
- * - Only allows digits 0-9
- * - Caps at max value
- */
-function NumInput({ value, onChange, max }) {
+function NumInput({ value, onChange, max, disabled }) {
   const display = value === 0 || value === '0' ? '0' : String(value || '');
 
   const handleChange = (e) => {
+    if (disabled) return;
     const raw = e.target.value.replace(/[^0-9]/g, '');
     if (raw === '') { onChange(0); return; }
     const num = parseInt(raw, 10);
@@ -34,12 +31,15 @@ function NumInput({ value, onChange, max }) {
       onChange={handleChange}
       onWheel={e => e.target.blur()}
       onFocus={e => { if (display === '0') e.target.select(); }}
-      className="w-12 h-8 border border-slate-200 rounded px-1 text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-400"
+      disabled={disabled}
+      className={`w-12 h-8 border rounded px-1 text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-400 ${disabled ? 'bg-slate-50 text-slate-400 border-slate-100 cursor-not-allowed' : 'border-slate-200'}`}
     />
   );
 }
 
 export default function PersonScoreTable({ persons, onSelectPerson, plans, onSaveRow, meetingFilter }) {
+  const { toast } = useToast();
+
   const filteredRows = useMemo(() => {
     if (meetingFilter === 'pending') {
       return persons.filter(p => !plans?.[p.person_email]?.meeting_done);
@@ -52,9 +52,10 @@ export default function PersonScoreTable({ persons, onSelectPerson, plans, onSav
 
   const [drafts, setDrafts] = useState({});
   const [savingEmail, setSavingEmail] = useState(null);
-  const [rowErrors, setRowErrors] = useState({});
+  const [remarkModal, setRemarkModal] = useState(null); // { email, name }
+  const [remarkText, setRemarkText] = useState('');
 
-  useEffect(() => { setDrafts({}); setRowErrors({}); }, [plans]);
+  useEffect(() => { setDrafts({}); }, [plans]);
 
   const getDraft = (email, field) => {
     if (drafts[email]?.[field] !== undefined) return drafts[email][field];
@@ -67,10 +68,6 @@ export default function PersonScoreTable({ persons, onSelectPerson, plans, onSav
       ...prev,
       [email]: { ...(prev[email] || {}), [field]: value },
     }));
-    // Clear error on edit
-    if (rowErrors[email]) {
-      setRowErrors(prev => { const n = { ...prev }; delete n[email]; return n; });
-    }
   };
 
   const getNextWeekTotal = (email) => {
@@ -83,16 +80,15 @@ export default function PersonScoreTable({ persons, onSelectPerson, plans, onSav
   const handleSaveRow = async (p) => {
     const total = getNextWeekTotal(p.person_email);
     if (total !== 100) {
-      setRowErrors(prev => ({
-        ...prev,
-        [p.person_email]: `Next Week Planned total must be exactly 100% (currently ${total}%)`,
-      }));
+      toast({
+        variant: 'destructive',
+        title: 'Validation Error',
+        description: `Next Week Planned for ${p.person_name} must total exactly 100% (currently ${total}%)`,
+      });
       return;
     }
 
     setSavingEmail(p.person_email);
-    setRowErrors(prev => { const n = { ...prev }; delete n[p.person_email]; return n; });
-
     const d = drafts[p.person_email] || {};
     const plan = plans?.[p.person_email] || {};
     const fields = {};
@@ -102,8 +98,6 @@ export default function PersonScoreTable({ persons, onSelectPerson, plans, onSav
       fields[field] = field === 'meeting_remarks' ? (drafted || '').trim() : (Number(drafted) || 0);
     }
     fields.meeting_done = true;
-
-    // Persist actual scores snapshot for year-end review
     fields.actual_total = p.total;
     fields.actual_green = p.green;
     fields.actual_yellow = p.yellow;
@@ -116,6 +110,19 @@ export default function PersonScoreTable({ persons, onSelectPerson, plans, onSav
     await onSaveRow(p.person_email, p.person_name, fields);
     setDrafts(prev => { const n = { ...prev }; delete n[p.person_email]; return n; });
     setSavingEmail(null);
+    toast({ title: 'Saved', description: `Meeting score saved for ${p.person_name}` });
+  };
+
+  const openRemarkModal = (email, name) => {
+    setRemarkText(getDraft(email, 'meeting_remarks'));
+    setRemarkModal({ email, name });
+  };
+
+  const saveRemarkModal = () => {
+    if (remarkModal) {
+      setDraft(remarkModal.email, 'meeting_remarks', remarkText);
+    }
+    setRemarkModal(null);
   };
 
   const totalCount = persons.length;
@@ -160,10 +167,9 @@ export default function PersonScoreTable({ persons, onSelectPerson, plans, onSav
                 <th className="text-center px-2 py-3 font-medium">G%</th>
                 <th className="text-center px-2 py-3 font-medium">Y%</th>
                 <th className="text-center px-2 py-3 font-medium">R%</th>
-                <th className="text-center px-3 py-3 font-medium">Health</th>
                 <th className="text-center px-2 py-3 font-medium bg-indigo-50 text-indigo-700" colSpan={4}>Next Week Planned</th>
-                <th className="text-left px-3 py-3 font-medium min-w-[160px]">Remarks</th>
-                <th className="text-center px-2 py-3 font-medium w-20">Save</th>
+                <th className="text-center px-2 py-3 font-medium w-10"></th>
+                <th className="text-center px-2 py-3 font-medium w-20">Action</th>
                 <th className="w-8"></th>
               </tr>
               <tr className="bg-slate-50 text-slate-500 text-xs">
@@ -171,7 +177,7 @@ export default function PersonScoreTable({ persons, onSelectPerson, plans, onSav
                 <th className="text-center px-2 py-1.5 font-medium text-green-600 bg-blue-50/50">G</th>
                 <th className="text-center px-2 py-1.5 font-medium text-yellow-600 bg-blue-50/50">Y</th>
                 <th className="text-center px-2 py-1.5 font-medium text-red-600 bg-blue-50/50">R</th>
-                <th colSpan={8}></th>
+                <th colSpan={7}></th>
                 <th className="text-center px-2 py-1.5 font-medium text-green-600 bg-indigo-50/50">G</th>
                 <th className="text-center px-2 py-1.5 font-medium text-yellow-600 bg-indigo-50/50">Y</th>
                 <th className="text-center px-2 py-1.5 font-medium text-red-600 bg-indigo-50/50">R</th>
@@ -185,29 +191,21 @@ export default function PersonScoreTable({ persons, onSelectPerson, plans, onSav
                 const isDone = !!plan.meeting_done;
                 const isSaving = savingEmail === p.person_email;
                 const nwTotal = getNextWeekTotal(p.person_email);
-                const error = rowErrors[p.person_email];
                 const totalValid = nwTotal === 100;
+                const hasRemark = !!(getDraft(p.person_email, 'meeting_remarks') || '').trim();
 
                 return (
                   <tr
                     key={p.person_email}
-                    className={`transition-colors ${isDone ? 'bg-green-50/40' : 'hover:bg-slate-50'} ${error ? 'bg-red-50/30' : ''}`}
+                    className={`transition-colors ${isDone ? 'bg-green-50/40' : 'hover:bg-slate-50'}`}
                   >
                     <td
-                      className={`px-4 py-3 font-medium whitespace-nowrap sticky left-0 z-10 cursor-pointer ${isDone ? 'bg-green-50/40' : error ? 'bg-red-50/30' : 'bg-white'}`}
+                      className={`px-4 py-3 font-medium whitespace-nowrap sticky left-0 z-10 cursor-pointer ${isDone ? 'bg-green-50/40' : 'bg-white'}`}
                       onClick={() => onSelectPerson(p)}
                     >
                       <div className="flex items-center gap-2">
                         {isDone && <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />}
-                        <div>
-                          <span className="text-slate-900">{p.person_name}</span>
-                          {error && (
-                            <div className="flex items-center gap-1 mt-0.5">
-                              <AlertCircle className="w-3 h-3 text-red-500 shrink-0" />
-                              <span className="text-xs text-red-600">{error}</span>
-                            </div>
-                          )}
-                        </div>
+                        <span className="text-slate-900">{p.person_name}</span>
                       </div>
                     </td>
                     <td className="text-center px-2 py-2 bg-blue-50/30">
@@ -226,59 +224,61 @@ export default function PersonScoreTable({ persons, onSelectPerson, plans, onSav
                     <td className="text-center px-2 py-3 text-green-600">{p.green_pct}%</td>
                     <td className="text-center px-2 py-3 text-yellow-600">{p.yellow_pct}%</td>
                     <td className="text-center px-2 py-3 text-red-600 font-semibold">{p.red_pct}%</td>
-                    <td className="text-center px-3 py-3">
-                      <span className={`text-xs px-2.5 py-1 rounded-full font-medium whitespace-nowrap ${HEALTH_BADGE[p.person_health] || 'bg-slate-100 text-slate-500'}`}>
-                        {p.person_health}
-                      </span>
-                    </td>
-                    {/* Next Week Planned — NumInput (no scroll, no leading zero) */}
+                    {/* Next Week Planned — locked after save */}
                     <td className="text-center px-1 py-1.5 bg-indigo-50/30" onClick={e => e.stopPropagation()}>
                       <NumInput
                         value={getDraft(p.person_email, 'next_week_planned_green')}
                         onChange={v => setDraft(p.person_email, 'next_week_planned_green', v)}
-                        max={100}
+                        max={100} disabled={isDone}
                       />
                     </td>
                     <td className="text-center px-1 py-1.5 bg-indigo-50/30" onClick={e => e.stopPropagation()}>
                       <NumInput
                         value={getDraft(p.person_email, 'next_week_planned_yellow')}
                         onChange={v => setDraft(p.person_email, 'next_week_planned_yellow', v)}
-                        max={100}
+                        max={100} disabled={isDone}
                       />
                     </td>
                     <td className="text-center px-1 py-1.5 bg-indigo-50/30" onClick={e => e.stopPropagation()}>
                       <NumInput
                         value={getDraft(p.person_email, 'next_week_planned_red')}
                         onChange={v => setDraft(p.person_email, 'next_week_planned_red', v)}
-                        max={100}
+                        max={100} disabled={isDone}
                       />
                     </td>
-                    {/* Running total */}
                     <td className="text-center px-1 py-1.5 bg-indigo-50/30">
                       <span className={`text-xs font-bold ${totalValid ? 'text-green-600' : nwTotal > 100 ? 'text-red-600' : 'text-amber-600'}`}>
                         {nwTotal}%
                       </span>
                     </td>
-                    <td className="px-2 py-1.5" onClick={e => e.stopPropagation()}>
-                      <input type="text"
-                        value={getDraft(p.person_email, 'meeting_remarks')}
-                        onChange={e => setDraft(p.person_email, 'meeting_remarks', e.target.value)}
-                        placeholder="Remarks…"
-                        className="w-full min-w-[140px] h-8 border border-slate-200 rounded px-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 placeholder:text-slate-300"
-                      />
-                    </td>
-                    <td className="text-center px-2 py-1.5" onClick={e => e.stopPropagation()}>
-                      <Button
-                        size="sm"
-                        variant={isDone ? 'ghost' : 'default'}
-                        className={`h-8 px-3 text-xs gap-1 ${isDone ? 'text-green-600' : ''}`}
-                        disabled={isSaving}
-                        onClick={() => handleSaveRow(p)}
+                    {/* Remark icon button → opens popup */}
+                    <td className="text-center px-1 py-1.5" onClick={e => e.stopPropagation()}>
+                      <button
+                        onClick={() => openRemarkModal(p.person_email, p.person_name)}
+                        className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${hasRemark ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}
+                        title={hasRemark ? 'Edit remarks' : 'Add remarks'}
                       >
-                        {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> :
-                          isDone ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Save className="w-3.5 h-3.5" />}
-                        {isDone ? 'Done' : 'Save'}
-                      </Button>
+                        <MessageSquare className="w-4 h-4" />
+                      </button>
+                    </td>
+                    {/* Save / Done — non-clickable once saved */}
+                    <td className="text-center px-2 py-1.5" onClick={e => e.stopPropagation()}>
+                      {isDone ? (
+                        <div className="flex items-center justify-center gap-1 text-green-600 text-xs font-medium">
+                          <Lock className="w-3.5 h-3.5" />
+                          <span>Saved</span>
+                        </div>
+                      ) : (
+                        <Button
+                          size="sm"
+                          className="h-8 px-3 text-xs gap-1"
+                          disabled={isSaving}
+                          onClick={() => handleSaveRow(p)}
+                        >
+                          {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                          Save
+                        </Button>
+                      )}
                     </td>
                     <td className="px-2 py-3">
                       <ChevronRight
@@ -293,6 +293,28 @@ export default function PersonScoreTable({ persons, onSelectPerson, plans, onSav
           </table>
         </div>
       </div>
+
+      {/* Remark Dialog */}
+      <Dialog open={!!remarkModal} onOpenChange={() => setRemarkModal(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Meeting Remarks — {remarkModal?.name}</DialogTitle>
+          </DialogHeader>
+          <Textarea
+            value={remarkText}
+            onChange={e => setRemarkText(e.target.value)}
+            placeholder="Enter meeting remarks, observations, action items…"
+            className="min-h-[120px] text-sm"
+            disabled={remarkModal && !!plans?.[remarkModal.email]?.meeting_done}
+          />
+          <div className="flex justify-end gap-2 mt-2">
+            <Button variant="outline" className="h-9" onClick={() => setRemarkModal(null)}>Cancel</Button>
+            {!(remarkModal && plans?.[remarkModal.email]?.meeting_done) && (
+              <Button className="h-9" onClick={saveRemarkModal}>Save Remarks</Button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
