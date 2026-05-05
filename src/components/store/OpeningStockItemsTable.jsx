@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Plus, ChevronDown, ChevronUp } from 'lucide-react';
 import TablePagination from '@/components/store/TablePagination';
 import OpeningStockLotForm from './OpeningStockLotForm';
-import OpeningStockLotList from './OpeningStockLotList';
+import OpeningStockLotsSubTable from './OpeningStockLotsSubTable';
 
 const CATEGORY_LABELS = {
   ingredient: 'Ingredient',
@@ -42,14 +42,16 @@ export default function OpeningStockItemsTable({ items, allLots, locations, onLo
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-slate-100 text-slate-700 text-xs">
-              <th className="px-3 py-2.5 text-left font-semibold w-8"></th>
-              <th className="px-3 py-2.5 text-left font-semibold">Item Code</th>
-              <th className="px-3 py-2.5 text-left font-semibold min-w-[200px]">Item Name</th>
-              <th className="px-3 py-2.5 text-left font-semibold">Category</th>
-              <th className="px-3 py-2.5 text-left font-semibold">UOM</th>
-              <th className="px-3 py-2.5 text-right font-semibold">Total Quantity</th>
-              <th className="px-3 py-2.5 text-center font-semibold">Lots</th>
-              <th className="px-3 py-2.5 text-center font-semibold">Action</th>
+             <th className="px-3 py-2.5 text-left font-semibold w-8"></th>
+             <th className="px-3 py-2.5 text-left font-semibold">Item Code</th>
+             <th className="px-3 py-2.5 text-left font-semibold min-w-[200px]">Item Name</th>
+             <th className="px-3 py-2.5 text-left font-semibold">Category</th>
+             <th className="px-3 py-2.5 text-left font-semibold">UOM</th>
+             <th className="px-3 py-2.5 text-left font-semibold">Rules</th>
+             <th className="px-3 py-2.5 text-right font-semibold">Opening Stock</th>
+             <th className="px-3 py-2.5 text-right font-semibold">Lot Quantity</th>
+             <th className="px-3 py-2.5 text-center font-semibold">Lots</th>
+             <th className="px-3 py-2.5 text-center font-semibold">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -76,7 +78,7 @@ export default function OpeningStockItemsTable({ items, allLots, locations, onLo
             })}
             {paginated.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-3 py-12 text-center text-slate-400 text-sm">
+                <td colSpan={10} className="px-3 py-12 text-center text-slate-400 text-sm">
                   No items found.
                 </td>
               </tr>
@@ -97,6 +99,7 @@ export default function OpeningStockItemsTable({ items, allLots, locations, onLo
 }
 
 function ItemTableRow({ item, itemLots, totalQty, isExpanded, showForm, locations, onToggleExpand, onShowForm, onSaved, onCancelForm }) {
+  const hasRules = item.batch_required || item.expiry_required || item.mfg_date_required;
   return (
     <>
       <tr className="hover:bg-slate-50">
@@ -115,6 +118,20 @@ function ItemTableRow({ item, itemLots, totalQty, isExpanded, showForm, location
           </span>
         </td>
         <td className="px-3 py-2.5 text-slate-600">{item.uom || 'Nos'}</td>
+        <td className="px-3 py-2.5">
+          {hasRules ? (
+            <div className="flex flex-wrap gap-1">
+              {item.batch_required && <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">Batch</span>}
+              {item.expiry_required && <span className="px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded text-xs">Expiry</span>}
+              {item.mfg_date_required && <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded text-xs">Mfg Date</span>}
+            </div>
+          ) : <span className="text-xs text-slate-400">—</span>}
+        </td>
+        <td className="px-3 py-2.5 text-right">
+          <span className={`font-bold ${(item.opening_stock || 0) > 0 ? 'text-slate-800' : 'text-slate-400'}`}>
+            {item.opening_stock || 0}
+          </span>
+        </td>
         <td className="px-3 py-2.5 text-right">
           <span className={`font-bold ${totalQty > 0 ? 'text-teal-700' : 'text-slate-400'}`}>
             {totalQty}
@@ -138,7 +155,7 @@ function ItemTableRow({ item, itemLots, totalQty, isExpanded, showForm, location
 
       {isExpanded && (
         <tr>
-          <td colSpan={8} className="bg-slate-50/50 px-4 py-3">
+          <td colSpan={10} className="bg-slate-50/50 px-4 py-3">
             <div className="space-y-3">
               {showForm && (
                 <div className="border border-teal-200 bg-teal-50/30 rounded-xl p-4">
@@ -152,7 +169,7 @@ function ItemTableRow({ item, itemLots, totalQty, isExpanded, showForm, location
                   />
                 </div>
               )}
-              <OpeningStockLotList lots={itemLots} />
+              <OpeningStockLotsSubTable lots={itemLots} />
             </div>
           </td>
         </tr>

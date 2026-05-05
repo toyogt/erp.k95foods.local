@@ -29,9 +29,16 @@ export default function OpeningStockLotForm({ item, locations = [], existingLots
     setForm(prev => ({ ...prev, location_id: loc?.id || '', location_code: loc?.location_code || '' }));
   }
 
+  const batchRequired = !!item.batch_required;
+  const expiryRequired = !!item.expiry_required;
+  const mfgDateRequired = !!item.mfg_date_required;
+
   async function handleSave() {
     if (!form.quantity || Number(form.quantity) <= 0) { setError('Quantity must be greater than 0'); return; }
     if (!form.location_id) { setError('Location is required'); return; }
+    if (batchRequired && !form.batch_number.trim()) { setError('Batch Number is required for this item'); return; }
+    if (expiryRequired && !form.expiry_date.trim()) { setError('Expiry Date is required for this item'); return; }
+    if (mfgDateRequired && !form.mfg_date.trim()) { setError('Manufacture Date is required for this item'); return; }
 
     setSaving(true);
     setError('');
@@ -97,6 +104,10 @@ export default function OpeningStockLotForm({ item, locations = [], existingLots
       posted_at: new Date().toISOString(),
     });
 
+    // Update opening_stock on StoreItemMaster (accumulate)
+    const newOpeningTotal = (item.opening_stock || 0) + Number(form.quantity);
+    await base44.entities.StoreItemMaster.update(item.id, { opening_stock: newOpeningTotal });
+
     setSaving(false);
     if (onSaved) onSaved(entry);
   }
@@ -112,9 +123,18 @@ export default function OpeningStockLotForm({ item, locations = [], existingLots
         <span className="text-slate-500 ml-2 font-mono text-xs">{item.item_code}</span>
       </div>
 
+      {/* Item rules indicator */}
+      {(batchRequired || expiryRequired || mfgDateRequired) && (
+        <div className="flex flex-wrap gap-1.5">
+          {batchRequired && <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">Batch Required</span>}
+          {mfgDateRequired && <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-medium">Manufacture Date Required</span>}
+          {expiryRequired && <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium">Expiry Date Required</span>}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
-          <label className="text-xs font-medium text-slate-700">Batch Number</label>
+          <label className="text-xs font-medium text-slate-700">Batch Number {batchRequired ? '*' : ''}</label>
           <Input className="h-9 text-sm mt-1" value={form.batch_number} onChange={e => setField('batch_number', e.target.value)} placeholder="e.g. BN-2024-001" />
         </div>
         <div>
@@ -128,11 +148,11 @@ export default function OpeningStockLotForm({ item, locations = [], existingLots
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
-          <label className="text-xs font-medium text-slate-700">Manufacture Date (DD/MM/YYYY)</label>
+          <label className="text-xs font-medium text-slate-700">Manufacture Date (DD/MM/YYYY) {mfgDateRequired ? '*' : ''}</label>
           <Input className="h-9 text-sm mt-1" value={form.mfg_date} onChange={e => setField('mfg_date', e.target.value)} placeholder="DD/MM/YYYY" maxLength={10} />
         </div>
         <div>
-          <label className="text-xs font-medium text-slate-700">Expiry Date (DD/MM/YYYY)</label>
+          <label className="text-xs font-medium text-slate-700">Expiry Date (DD/MM/YYYY) {expiryRequired ? '*' : ''}</label>
           <Input className="h-9 text-sm mt-1" value={form.expiry_date} onChange={e => setField('expiry_date', e.target.value)} placeholder="DD/MM/YYYY" maxLength={10} />
         </div>
       </div>
