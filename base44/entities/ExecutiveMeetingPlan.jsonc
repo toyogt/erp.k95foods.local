@@ -2,7 +2,7 @@
   "name": "ExecutiveMeetingPlan",
   "type": "object",
   "title": "Executive Meeting Plan",
-  "description": "Weekly meeting planning notes per person \u2014 This Week Planned, Next Week Planned, Meeting Remarks",
+  "description": "Weekly meeting planning per person \u2014 planned Green/Yellow/Red counts and remarks",
   "properties": {
     "person_email": {
       "type": "string",
@@ -31,15 +31,41 @@
       "type": "number",
       "description": "Year"
     },
-    "this_week_planned_notes": {
-      "type": "string",
-      "maxLength": 5000,
-      "description": "What was planned for this week (auto-carried from previous week next_week_planned_notes)"
+    "this_week_planned_green": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0,
+      "description": "Planned green task count for this week"
     },
-    "next_week_planned_notes": {
-      "type": "string",
-      "maxLength": 5000,
-      "description": "What is planned for next week (entered during meeting)"
+    "this_week_planned_yellow": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0,
+      "description": "Planned yellow task count for this week"
+    },
+    "this_week_planned_red": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0,
+      "description": "Planned red task count for this week"
+    },
+    "next_week_planned_green": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0,
+      "description": "Planned green task count for next week"
+    },
+    "next_week_planned_yellow": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0,
+      "description": "Planned yellow task count for next week"
+    },
+    "next_week_planned_red": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0,
+      "description": "Planned red task count for next week"
     },
     "meeting_remarks": {
       "type": "string",

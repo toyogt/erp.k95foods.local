@@ -29,8 +29,8 @@ export default function TaskDrilldownModal({ open, onClose, person, plan }) {
           </DialogTitle>
         </DialogHeader>
 
-        {/* Meeting Plan Summary */}
-        <MeetingPlanSummary plan={currentPlan} person={person} />
+        {/* Meeting Plan Comparison */}
+        <PlanComparisonBar plan={currentPlan} actual={person} />
 
         {/* Score Summary */}
         <div className="flex gap-4 flex-wrap text-sm pb-3 border-b border-slate-100">
@@ -76,9 +76,7 @@ export default function TaskDrilldownModal({ open, onClose, person, plan }) {
                     <td className="text-center px-2 py-2.5 text-slate-500 whitespace-nowrap">
                       {c.cycle_week_start} – {c.cycle_week_end}
                     </td>
-                    <td className="text-center px-2 py-2.5">
-                      <CycleStatusBadge status={c.cycle_status} />
-                    </td>
+                    <td className="text-center px-2 py-2.5"><CycleStatusBadge status={c.cycle_status} /></td>
                     <td className="text-center px-2 py-2.5 text-slate-600">{completedDate}</td>
                     <td className="text-center px-2 py-2.5">{c.date_change_count}</td>
                     <td className="text-center px-2 py-2.5">
@@ -91,9 +89,7 @@ export default function TaskDrilldownModal({ open, onClose, person, plan }) {
                       )}
                     </td>
                     <td className="text-center px-2 py-2.5">
-                      {c.unmanaged_overdue_days > 0 ? (
-                        <span className="text-red-600 font-semibold">{c.unmanaged_overdue_days}</span>
-                      ) : '—'}
+                      {c.unmanaged_overdue_days > 0 ? <span className="text-red-600 font-semibold">{c.unmanaged_overdue_days}</span> : '—'}
                     </td>
                     <td className="text-center px-2 py-2.5"><PenaltyCell val={c.date_change_penalty} /></td>
                     <td className="text-center px-2 py-2.5"><PenaltyCell val={c.week_shift_penalty} /></td>
@@ -115,46 +111,63 @@ export default function TaskDrilldownModal({ open, onClose, person, plan }) {
   );
 }
 
-function MeetingPlanSummary({ plan, person }) {
-  const hasAnyPlan = plan.this_week_planned_notes || plan.next_week_planned_notes || plan.meeting_remarks;
+/** Compact plan vs actual comparison bar */
+function PlanComparisonBar({ plan, actual }) {
+  const rows = [
+    { label: 'Green', planKey: 'this_week_planned_green', nextKey: 'next_week_planned_green', actualVal: actual.green, color: 'green' },
+    { label: 'Yellow', planKey: 'this_week_planned_yellow', nextKey: 'next_week_planned_yellow', actualVal: actual.yellow, color: 'yellow' },
+    { label: 'Red', planKey: 'this_week_planned_red', nextKey: 'next_week_planned_red', actualVal: actual.red, color: 'red' },
+  ];
+
+  const colorMap = {
+    green: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200' },
+    yellow: { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200' },
+    red: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' },
+  };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pb-3 border-b border-slate-100">
-      <PlanCard
-        icon={<ClipboardList className="w-4 h-4 text-blue-500" />}
-        title="This Week Planned"
-        value={plan.this_week_planned_notes}
-        emptyText="No plan carried over from last week"
-        bg="bg-blue-50 border-blue-100"
-      />
-      <PlanCard
-        icon={<CalendarClock className="w-4 h-4 text-indigo-500" />}
-        title="Next Week Planned"
-        value={plan.next_week_planned_notes}
-        emptyText="Not entered yet"
-        bg="bg-indigo-50 border-indigo-100"
-      />
-      <PlanCard
-        icon={<MessageSquare className="w-4 h-4 text-amber-500" />}
-        title="Meeting Remarks"
-        value={plan.meeting_remarks}
-        emptyText="No remarks"
-        bg="bg-amber-50 border-amber-100"
-      />
-    </div>
-  );
-}
-
-function PlanCard({ icon, title, value, emptyText, bg }) {
-  return (
-    <div className={`border rounded-lg p-3 ${bg}`}>
-      <div className="flex items-center gap-1.5 mb-1">
-        {icon}
-        <span className="text-xs font-semibold text-slate-600">{title}</span>
+    <div className="pb-3 border-b border-slate-100 space-y-2">
+      <div className="grid grid-cols-3 gap-3">
+        {rows.map(r => {
+          const planned = Number(plan[r.planKey]) || 0;
+          const nextPlanned = Number(plan[r.nextKey]) || 0;
+          const actual = r.actualVal || 0;
+          const cm = colorMap[r.color];
+          const diff = actual - planned;
+          return (
+            <div key={r.label} className={`${cm.bg} border ${cm.border} rounded-lg p-3`}>
+              <div className="flex items-center justify-between mb-2">
+                <span className={`text-xs font-semibold ${cm.text}`}>{r.label}</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div>
+                  <div className="text-xs text-slate-500">Planned</div>
+                  <div className={`text-lg font-bold ${cm.text}`}>{planned}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-slate-500">Actual</div>
+                  <div className={`text-lg font-bold ${cm.text}`}>{actual}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-slate-500">Next</div>
+                  <div className="text-lg font-bold text-indigo-600">{nextPlanned}</div>
+                </div>
+              </div>
+              {planned > 0 && (
+                <div className={`text-xs mt-1 text-center font-medium ${diff > 0 ? 'text-red-600' : diff < 0 ? 'text-green-600' : 'text-slate-500'}`}>
+                  {diff === 0 ? 'On target' : diff > 0 ? `+${diff} over plan` : `${diff} under plan`}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
-      <p className={`text-sm whitespace-pre-wrap leading-snug ${value ? 'text-slate-800' : 'text-slate-400 italic'}`}>
-        {value || emptyText}
-      </p>
+      {plan.meeting_remarks && (
+        <div className="bg-amber-50 border border-amber-100 rounded-lg p-2.5 flex items-start gap-2">
+          <MessageSquare className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+          <p className="text-sm text-amber-800 whitespace-pre-wrap">{plan.meeting_remarks}</p>
+        </div>
+      )}
     </div>
   );
 }

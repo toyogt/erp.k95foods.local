@@ -88,7 +88,6 @@ export const pageRegistry = [
   { pageKey: 'PaymentRequests', title: 'Payment Requests', moduleKey: 'ACCOUNTS', icon: CreditCard, roles: ['admin', 'accounts_manager', 'user'] },
 
   // ─── PROCESS FLOW (FMS) ───
-  { pageKey: 'FMSMyTasks', title: 'My Tasks', moduleKey: 'FMS', icon: ListChecks, roles: ['admin', 'user', 'executive_assistant', 'process_controller', 'process_designer'], sortOrder: 0 },
   { pageKey: 'FMSActiveRuns', title: 'Active Runs', moduleKey: 'FMS', icon: PlayCircle, roles: ['admin', 'process_controller', 'process_designer', 'user'] },
   { pageKey: 'FMSMonitor', title: 'Monitor', moduleKey: 'FMS', icon: MonitorDot, roles: ['admin', 'process_controller', 'user'] },
   { pageKey: 'FMSProcesses', title: 'FMS', moduleKey: 'FMS', icon: GitBranch, roles: ['admin', 'process_designer'], adminOnly: true },
