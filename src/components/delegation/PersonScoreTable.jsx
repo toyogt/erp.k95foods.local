@@ -161,7 +161,7 @@ export default function PersonScoreTable({ persons, onSelectPerson, plans, onSav
             <thead>
               <tr className="bg-slate-100 text-slate-700">
                 <th className="text-left px-4 py-3 font-medium sticky left-0 bg-slate-100 z-10">Person</th>
-                <th className="text-center px-2 py-3 font-medium bg-blue-50 text-blue-700" colSpan={3}>This Week Planned</th>
+                <th className="text-center px-2 py-3 font-medium bg-blue-50 text-blue-700" colSpan={3}>This Week Planned %</th>
                 <th className="text-center px-3 py-3 font-medium">Total</th>
                 <th className="text-center px-2 py-3 font-medium"><span className="inline-block w-3 h-3 rounded-full bg-green-500 mr-0.5" />G</th>
                 <th className="text-center px-2 py-3 font-medium"><span className="inline-block w-3 h-3 rounded-full bg-yellow-400 mr-0.5" />Y</th>
@@ -169,7 +169,7 @@ export default function PersonScoreTable({ persons, onSelectPerson, plans, onSav
                 <th className="text-center px-2 py-3 font-medium">G%</th>
                 <th className="text-center px-2 py-3 font-medium">Y%</th>
                 <th className="text-center px-2 py-3 font-medium">R%</th>
-                <th className="text-center px-2 py-3 font-medium bg-indigo-50 text-indigo-700" colSpan={4}>Next Week Planned</th>
+                <th className="text-center px-2 py-3 font-medium bg-indigo-50 text-indigo-700" colSpan={4}>Next Week Planned %</th>
                 <th className="text-center px-2 py-3 font-medium w-10"></th>
                 <th className="text-center px-2 py-3 font-medium w-20">Action</th>
                 <th className="w-8"></th>
@@ -215,13 +215,13 @@ export default function PersonScoreTable({ persons, onSelectPerson, plans, onSav
                       </div>
                     </td>
                     <td className="text-center px-2 py-2 bg-blue-50/30">
-                      <span className={`text-sm font-semibold ${(plan.this_week_planned_green || 0) > 0 ? 'text-green-700' : 'text-slate-300'}`}>{plan.this_week_planned_green || 0}</span>
+                      <span className={`text-sm font-semibold ${(plan.this_week_planned_green || 0) > 0 ? 'text-green-700' : 'text-slate-300'}`}>{plan.this_week_planned_green || 0}%</span>
                     </td>
                     <td className="text-center px-2 py-2 bg-blue-50/30">
-                      <span className={`text-sm font-semibold ${(plan.this_week_planned_yellow || 0) > 0 ? 'text-yellow-600' : 'text-slate-300'}`}>{plan.this_week_planned_yellow || 0}</span>
+                      <span className={`text-sm font-semibold ${(plan.this_week_planned_yellow || 0) > 0 ? 'text-yellow-600' : 'text-slate-300'}`}>{plan.this_week_planned_yellow || 0}%</span>
                     </td>
                     <td className="text-center px-2 py-2 bg-blue-50/30">
-                      <span className={`text-sm font-semibold ${(plan.this_week_planned_red || 0) > 0 ? 'text-red-600' : 'text-slate-300'}`}>{plan.this_week_planned_red || 0}</span>
+                      <span className={`text-sm font-semibold ${(plan.this_week_planned_red || 0) > 0 ? 'text-red-600' : 'text-slate-300'}`}>{plan.this_week_planned_red || 0}%</span>
                     </td>
                     <td className="text-center px-3 py-3 font-semibold text-slate-900">{p.total}</td>
                     <td className="text-center px-2 py-3 font-semibold text-green-700">{p.green}</td>

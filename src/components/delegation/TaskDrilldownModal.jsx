@@ -114,9 +114,9 @@ export default function TaskDrilldownModal({ open, onClose, person, plan }) {
 /** Compact plan vs actual comparison bar */
 function PlanComparisonBar({ plan, actual }) {
   const rows = [
-    { label: 'Green', planKey: 'this_week_planned_green', nextKey: 'next_week_planned_green', actualVal: actual.green, color: 'green' },
-    { label: 'Yellow', planKey: 'this_week_planned_yellow', nextKey: 'next_week_planned_yellow', actualVal: actual.yellow, color: 'yellow' },
-    { label: 'Red', planKey: 'this_week_planned_red', nextKey: 'next_week_planned_red', actualVal: actual.red, color: 'red' },
+    { label: 'Green', planKey: 'this_week_planned_green', nextKey: 'next_week_planned_green', actualPctVal: actual.green_pct, color: 'green' },
+    { label: 'Yellow', planKey: 'this_week_planned_yellow', nextKey: 'next_week_planned_yellow', actualPctVal: actual.yellow_pct, color: 'yellow' },
+    { label: 'Red', planKey: 'this_week_planned_red', nextKey: 'next_week_planned_red', actualPctVal: actual.red_pct, color: 'red' },
   ];
 
   const colorMap = {
@@ -131,9 +131,9 @@ function PlanComparisonBar({ plan, actual }) {
         {rows.map(r => {
           const planned = Number(plan[r.planKey]) || 0;
           const nextPlanned = Number(plan[r.nextKey]) || 0;
-          const actual = r.actualVal || 0;
+          const actualPct = r.actualPctVal || 0;
           const cm = colorMap[r.color];
-          const diff = actual - planned;
+          const diff = actualPct - planned;
           return (
             <div key={r.label} className={`${cm.bg} border ${cm.border} rounded-lg p-3`}>
               <div className="flex items-center justify-between mb-2">
@@ -142,20 +142,20 @@ function PlanComparisonBar({ plan, actual }) {
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div>
                   <div className="text-xs text-slate-500">Planned</div>
-                  <div className={`text-lg font-bold ${cm.text}`}>{planned}</div>
+                  <div className={`text-lg font-bold ${cm.text}`}>{planned}%</div>
                 </div>
                 <div>
                   <div className="text-xs text-slate-500">Actual</div>
-                  <div className={`text-lg font-bold ${cm.text}`}>{actual}</div>
+                  <div className={`text-lg font-bold ${cm.text}`}>{actualPct}%</div>
                 </div>
                 <div>
                   <div className="text-xs text-slate-500">Next</div>
-                  <div className="text-lg font-bold text-indigo-600">{nextPlanned}</div>
+                  <div className="text-lg font-bold text-indigo-600">{nextPlanned}%</div>
                 </div>
               </div>
               {planned > 0 && (
                 <div className={`text-xs mt-1 text-center font-medium ${diff > 0 ? 'text-red-600' : diff < 0 ? 'text-green-600' : 'text-slate-500'}`}>
-                  {diff === 0 ? 'On target' : diff > 0 ? `+${diff} over plan` : `${diff} under plan`}
+                  {diff === 0 ? 'On target' : diff > 0 ? `+${diff}% over plan` : `${diff}% under plan`}
                 </div>
               )}
             </div>
