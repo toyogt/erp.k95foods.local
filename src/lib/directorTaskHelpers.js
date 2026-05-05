@@ -48,18 +48,19 @@ export function formatTaskDate(dateStr, timeStr) {
 }
 
 /**
- * Check if a task is overdue
+ * Check if a task is overdue.
+ * A task due today is NOT overdue — it becomes overdue from the next calendar day.
+ * Comparison is date-only: today > due date means overdue.
  */
 export function isTaskOverdue(task) {
   if (!task.end_date || task.status === 'completed' || task.status === 'cancelled') return false;
   const endMoment = parseDDMMYYYY(task.end_date);
   if (!endMoment || !endMoment.isValid()) return false;
   
-  const time = task.end_time || task.notification_time || '16:00';
-  const [h, m] = time.split(':').map(Number);
-  endMoment.set({ hour: h || 16, minute: m || 0 });
+  const todayStart = moment().startOf('day');
+  const dueDay = endMoment.startOf('day');
   
-  return moment().isAfter(endMoment);
+  return todayStart.isAfter(dueDay);
 }
 
 /**
