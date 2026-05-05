@@ -3,6 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2, Plus, Pencil, ToggleLeft, ToggleRight, Search } from 'lucide-react';
+import TablePagination from '@/components/store/TablePagination';
 
 function genArtworkId() {
   return 'ART-' + Math.random().toString(36).slice(2, 7).toUpperCase();
@@ -39,6 +40,8 @@ export default function LabelArtworkManager({ user }) {
   const [skus, setSkus] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
   const [showForm, setShowForm] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [form, setForm] = useState({ ...EMPTY_FORM, artwork_id: genArtworkId() });
@@ -353,16 +356,25 @@ export default function LabelArtworkManager({ user }) {
     );
   }
 
+  const paged = filtered.slice((page - 1) * pageSize, page * pageSize);
+
+  const APPROVAL_COLORS = {
+    DRAFT: 'bg-slate-100 text-slate-600',
+    PENDING_APPROVAL: 'bg-amber-100 text-amber-700',
+    APPROVED: 'bg-green-100 text-green-700',
+    ARCHIVED: 'bg-slate-100 text-slate-500',
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
-        <div className="relative flex-1">
+        <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
-            className="w-full h-10 pl-9 pr-3 rounded-lg border border-slate-200 text-sm"
+            className="w-full h-9 pl-9 pr-3 rounded-lg border border-slate-200 text-sm"
             placeholder="Search by name, ID, version…"
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={e => { setSearch(e.target.value); setPage(1); }}
           />
         </div>
         <Button size="sm" onClick={openCreate} className="gap-1 shrink-0">
@@ -372,40 +384,62 @@ export default function LabelArtworkManager({ user }) {
 
       {loading && <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>}
 
-      {!loading && filtered.length === 0 && (
-        <p className="text-sm text-slate-400 text-center py-8">No artworks found. Create one first.</p>
-      )}
-
-      <div className="space-y-2">
-        {filtered.map(a => (
-          <div key={a.id} className={`bg-white rounded-2xl border p-4 flex items-start gap-3 ${a.is_active ? 'border-slate-200' : 'border-slate-100 opacity-60'}`}>
-            {a.preview_url && (
-              <img src={a.preview_url} alt="" className="w-12 h-12 object-contain rounded-lg border border-slate-100 shrink-0" />
-            )}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <p className="font-semibold text-slate-900 truncate">{a.artwork_name}</p>
-                {a.artwork_version && (
-                  <span className="text-xs bg-blue-100 text-blue-700 font-bold px-2 py-0.5 rounded-full">{a.artwork_version}</span>
-                )}
-                {!a.is_active && <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">Inactive</span>}
-                </div>
-                <p className="text-xs text-slate-400 mt-0.5 font-mono">{a.artwork_id}</p>
-                {a.note_text && <p className="text-xs text-slate-500 mt-1">{a.note_text}</p>}
-            </div>
-            <div className="flex flex-col items-end gap-2 shrink-0">
-              <Button size="sm" variant="ghost" onClick={() => openEdit(a)} className="h-7 w-7 p-0">
-                <Pencil className="w-3.5 h-3.5" />
-              </Button>
-              <button onClick={() => toggle(a)} className="text-slate-400 hover:text-slate-600">
-                {a.is_active
-                  ? <ToggleRight className="w-5 h-5 text-emerald-500" />
-                  : <ToggleLeft className="w-5 h-5" />}
-              </button>
-            </div>
+      {!loading && (
+        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-slate-100 text-slate-700 text-xs">
+                  <th className="px-3 py-2.5 text-left font-semibold">Artwork ID</th>
+                  <th className="px-3 py-2.5 text-left font-semibold min-w-[200px]">Artwork Name</th>
+                  <th className="px-3 py-2.5 text-center font-semibold">Version</th>
+                  <th className="px-3 py-2.5 text-left font-semibold">Label Size</th>
+                  <th className="px-3 py-2.5 text-center font-semibold">Approval</th>
+                  <th className="px-3 py-2.5 text-center font-semibold">Status</th>
+                  <th className="px-3 py-2.5 text-center font-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {paged.map(a => (
+                  <tr key={a.id} className={`hover:bg-slate-50 ${!a.is_active ? 'opacity-60' : ''}`}>
+                    <td className="px-3 py-2.5 font-mono text-xs text-slate-500">{a.artwork_id}</td>
+                    <td className="px-3 py-2.5">
+                      <div className="flex items-center gap-2">
+                        {a.preview_url && <img src={a.preview_url} alt="" className="w-8 h-8 object-contain rounded border border-slate-100 shrink-0" />}
+                        <span className="font-medium text-slate-900">{a.artwork_name}</span>
+                      </div>
+                    </td>
+                    <td className="px-3 py-2.5 text-center">
+                      {a.artwork_version ? <span className="text-xs bg-blue-100 text-blue-700 font-bold px-2 py-0.5 rounded-full">{a.artwork_version}</span> : '—'}
+                    </td>
+                    <td className="px-3 py-2.5 text-slate-600 text-xs">{a.label_size || '—'}</td>
+                    <td className="px-3 py-2.5 text-center">
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${APPROVAL_COLORS[a.approval_status] || APPROVAL_COLORS.DRAFT}`}>
+                        {(a.approval_status || 'DRAFT').replace('_', ' ')}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2.5 text-center">
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${a.is_active ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
+                        {a.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2.5 text-center">
+                      <div className="flex gap-1 items-center justify-center">
+                        <button onClick={() => openEdit(a)} className="p-1.5 rounded-lg hover:bg-slate-100"><Pencil className="w-4 h-4 text-slate-500" /></button>
+                        <button onClick={() => toggle(a)} className="p-1.5 rounded-lg hover:bg-slate-100">
+                          {a.is_active ? <ToggleRight className="w-5 h-5 text-emerald-500" /> : <ToggleLeft className="w-5 h-5 text-slate-400" />}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {paged.length === 0 && <tr><td colSpan={7} className="text-center py-8 text-slate-400 text-sm">No artworks found.</td></tr>}
+              </tbody>
+            </table>
           </div>
-        ))}
-      </div>
+          <TablePagination total={filtered.length} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
+        </div>
+      )}
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Plus, Pencil, Loader2, Search, Package } from 'lucide-react';
+import TablePagination from '@/components/store/TablePagination';
 
 function genBoxId() {
   return 'BOX-' + String(Date.now()).slice(-6).padStart(6, '0');
@@ -20,6 +21,8 @@ export default function BoxTypeManager({ user }) {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
   const [editing, setEditing] = useState(null); // null | 'new' | record
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
@@ -159,7 +162,7 @@ export default function BoxTypeManager({ user }) {
       <div className="flex flex-wrap gap-2 items-center justify-between">
         <div className="relative">
           <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-slate-400" />
-          <Input className="pl-8 w-56 text-sm" placeholder="Search box types…" value={search} onChange={e => setSearch(e.target.value)} />
+          <Input className="pl-8 w-56 text-sm" placeholder="Search box types…" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
         </div>
         {isAdmin && (
           <Button size="sm" onClick={openAdd} className="gap-1.5 text-xs">
@@ -187,7 +190,7 @@ export default function BoxTypeManager({ user }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filtered.map(bt => {
+              {filtered.slice((page - 1) * pageSize, page * pageSize).map(bt => {
                 const count = usageCount(bt);
                 const dims = [bt.length_mm, bt.width_mm, bt.height_mm].filter(Boolean);
                 return (
@@ -245,6 +248,7 @@ export default function BoxTypeManager({ user }) {
               })}
             </tbody>
           </table>
+          <TablePagination total={filtered.length} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
         </div>
       )}
     </div>

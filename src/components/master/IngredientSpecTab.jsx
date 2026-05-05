@@ -3,6 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Plus, Pencil, Search, Loader2, ChevronDown, ChevronRight, ToggleLeft, ToggleRight, Printer, Trash2, ArrowLeftRight, AlertTriangle } from 'lucide-react';
 import ReplaceWizard from './ReplaceWizard';
+import TablePagination from '@/components/store/TablePagination';
 
 function normalize(name) {
   return (name || '').toLowerCase().replace(/[\s\-_.,\/#!$%^&*;:{}=`~()]/g, '');
@@ -236,6 +237,8 @@ export default function IngredientSpecTab({ user }) {
   const [expandedId, setExpandedId] = useState(null);
   const [wizard, setWizard] = useState(null);
   const [migrating, setMigrating] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   const isAdmin = user?.role === 'admin';
 
@@ -397,7 +400,7 @@ export default function IngredientSpecTab({ user }) {
       <div className="flex gap-2 items-center">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input className="w-full pl-9 h-9 rounded-lg border border-slate-300 text-sm focus:outline-none focus:border-blue-500" placeholder="Search by name or code…" value={search} onChange={e => setSearch(e.target.value)} />
+          <input className="w-full pl-9 h-9 rounded-lg border border-slate-300 text-sm focus:outline-none focus:border-blue-500" placeholder="Search by name or code…" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
         </div>
         <label className="flex items-center gap-1.5 text-xs text-slate-500 cursor-pointer select-none shrink-0">
           <input type="checkbox" checked={showInactive} onChange={e => setShowInactive(e.target.checked)} className="w-3.5 h-3.5" />
@@ -423,22 +426,24 @@ export default function IngredientSpecTab({ user }) {
         />
       )}
 
-      {/* Header */}
-      {filtered.length > 0 && (
-        <div className="hidden sm:grid grid-cols-12 gap-2 px-3 pb-1 text-xs font-semibold text-slate-400 uppercase tracking-wide">
-          <div className="col-span-1">Code</div>
-          <div className="col-span-3">Name</div>
-          <div className="col-span-2">Group</div>
-          <div className="col-span-1">UOM</div>
-          <div className="col-span-1">Subs.</div>
-          <div className="col-span-1">Brands</div>
-          <div className="col-span-1">Status</div>
-          <div className="col-span-2"></div>
-        </div>
-      )}
-
-      <div className="space-y-2">
-        {filtered.map(item => {
+      {/* Table with pagination */}
+      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-slate-100 text-slate-700 text-xs">
+                <th className="px-3 py-2.5 text-left font-semibold w-20">Code</th>
+                <th className="px-3 py-2.5 text-left font-semibold min-w-[180px]">Name</th>
+                <th className="px-3 py-2.5 text-left font-semibold">Group</th>
+                <th className="px-3 py-2.5 text-center font-semibold">UOM</th>
+                <th className="px-3 py-2.5 text-center font-semibold">Substitution</th>
+                <th className="px-3 py-2.5 text-center font-semibold">Brands</th>
+                <th className="px-3 py-2.5 text-center font-semibold">Status</th>
+                <th className="px-3 py-2.5 text-center font-semibold">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+        {filtered.slice((page - 1) * pageSize, page * pageSize).map(item => {
           const isExpanded = expandedId === item.id;
           const group = groups.find(g => g.group_id === item.group_id);
           const uom = uoms.find(u => u.uom_id === item.uom_id);
@@ -446,101 +451,87 @@ export default function IngredientSpecTab({ user }) {
           const specBrands = brandItems.filter(bi => bi.ingredient_id === item.ingredient_id);
           const hasBlocked = specBrands.some(bi => bi.status === 'BLOCKED');
 
+          if (editing === item.id) {
+            return (
+              <tr key={item.id}><td colSpan={8} className="p-3">
+                <IngredientSpecForm initial={item} groups={groups} uoms={uoms} allSpecs={items} onSave={save} onCancel={() => setEditing(null)} saving={saving} />
+              </td></tr>
+            );
+          }
           return (
-            <div key={item.id} className={`bg-white rounded-xl border ${hasBlocked ? 'border-red-300' : 'border-slate-200'}`}>
-              {editing === item.id ? (
-                <div className="p-3">
-                  <IngredientSpecForm
-                    initial={item}
-                    groups={groups}
-                    uoms={uoms}
-                    allSpecs={items}
-                    onSave={save}
-                    onCancel={() => setEditing(null)}
-                    saving={saving}
-                  />
-                </div>
-              ) : (
-                <div className="p-3">
-                  {hasBlocked && (
-                    <div className="mb-2 bg-red-50 border border-red-200 rounded-lg px-3 py-1.5 text-xs text-red-700 font-semibold flex items-center gap-1">
-                      <AlertTriangle className="w-3.5 h-3.5" /> Has BLOCKED brand item(s)
-                    </div>
-                  )}
-                  <div className="sm:grid sm:grid-cols-12 sm:gap-2 sm:items-center flex flex-wrap gap-2">
-                    <div className="col-span-1">
-                      <span className="font-mono font-black text-base bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-lg">{item.short_code || '—'}</span>
-                    </div>
-                    <div className="col-span-3">
-                      <p className="font-semibold text-sm text-slate-800 truncate">{item.ingredient_name}</p>
-                      <p className="text-xs text-slate-400 font-mono">{item.ingredient_id}</p>
-                    </div>
-                    <div className="col-span-2">
-                      {group ? <span className="text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full font-mono">{group.group_code} {group.group_name}</span> : <span className="text-xs text-slate-400">—</span>}
-                    </div>
-                    <div className="col-span-1">
-                      {uom ? <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-mono">{uom.uom_code}</span> : <span className="text-xs text-slate-400">—</span>}
-                    </div>
-                    <div className="col-span-1">
-                      <span className={`text-xs px-1.5 py-0.5 rounded-full ${item.allow_substitution !== false ? 'bg-emerald-50 text-emerald-700' : 'bg-orange-50 text-orange-700'}`}>
-                        {item.allow_substitution !== false ? 'Any' : 'Fixed'}
-                      </span>
-                    </div>
-                    <div className="col-span-1">
-                      <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${specBrands.length > 0 ? 'bg-blue-50 text-blue-700' : 'bg-slate-50 text-slate-400'}`}>
-                        {specBrands.length}
-                      </span>
-                    </div>
-                    <div className="col-span-1">
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${item.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
-                        {item.is_active ? 'Active' : 'Inactive'}
-                      </span>
-                    </div>
-                    <div className="col-span-2 flex gap-1 justify-end items-center flex-wrap">
-                      <button onClick={() => setExpandedId(isExpanded ? null : item.id)} className="flex items-center gap-0.5 text-xs text-slate-500 px-2 py-1.5 rounded-lg hover:bg-slate-100" title="Where used">
-                        {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-                        <span className={total > 0 ? 'text-amber-600 font-semibold' : ''}>{total}</span>
+            <>
+              <tr key={item.id} className={`hover:bg-slate-50 ${hasBlocked ? 'bg-red-50/30' : ''}`}>
+                <td className="px-3 py-2.5">
+                  <span className="font-mono font-black text-sm bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-lg">{item.short_code || '—'}</span>
+                </td>
+                <td className="px-3 py-2.5">
+                  <p className="font-semibold text-slate-800">{item.ingredient_name}</p>
+                  <p className="text-xs text-slate-400 font-mono">{item.ingredient_id}</p>
+                </td>
+                <td className="px-3 py-2.5">
+                  {group ? <span className="text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full font-mono">{group.group_code} {group.group_name}</span> : <span className="text-xs text-slate-400">—</span>}
+                </td>
+                <td className="px-3 py-2.5 text-center">
+                  {uom ? <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-mono">{uom.uom_code}</span> : <span className="text-xs text-slate-400">—</span>}
+                </td>
+                <td className="px-3 py-2.5 text-center">
+                  <span className={`text-xs px-1.5 py-0.5 rounded-full ${item.allow_substitution !== false ? 'bg-emerald-50 text-emerald-700' : 'bg-orange-50 text-orange-700'}`}>
+                    {item.allow_substitution !== false ? 'Any' : 'Fixed'}
+                  </span>
+                </td>
+                <td className="px-3 py-2.5 text-center">
+                  <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${specBrands.length > 0 ? 'bg-blue-50 text-blue-700' : 'bg-slate-50 text-slate-400'}`}>
+                    {specBrands.length}
+                  </span>
+                </td>
+                <td className="px-3 py-2.5 text-center">
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${item.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                    {item.is_active ? 'Active' : 'Inactive'}
+                  </span>
+                </td>
+                <td className="px-3 py-2.5 text-center">
+                  <div className="flex gap-1 items-center justify-center flex-wrap">
+                    <button onClick={() => setExpandedId(isExpanded ? null : item.id)} className="flex items-center gap-0.5 text-xs text-slate-500 px-2 py-1.5 rounded-lg hover:bg-slate-100" title="Where used">
+                      {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                      <span className={total > 0 ? 'text-amber-600 font-semibold' : ''}>{total}</span>
+                    </button>
+                    {isAdmin && item.short_code && (
+                      <button onClick={() => printIngredientSticker(item)} className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-500" title="Print sticker">
+                        <Printer className="w-4 h-4" />
                       </button>
-                      {isAdmin && item.short_code && (
-                        <button onClick={() => printIngredientSticker(item)} className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-500" title="Print sticker">
-                          <Printer className="w-4 h-4" />
-                        </button>
-                      )}
-                      <button onClick={() => toggleActive(item)} className="p-1.5 rounded-lg hover:bg-slate-100" title={item.is_active ? 'Deactivate' : 'Activate'}>
-                        {item.is_active ? <ToggleRight className="w-5 h-5 text-emerald-500" /> : <ToggleLeft className="w-5 h-5 text-slate-400" />}
+                    )}
+                    <button onClick={() => toggleActive(item)} className="p-1.5 rounded-lg hover:bg-slate-100" title={item.is_active ? 'Deactivate' : 'Activate'}>
+                      {item.is_active ? <ToggleRight className="w-5 h-5 text-emerald-500" /> : <ToggleLeft className="w-5 h-5 text-slate-400" />}
+                    </button>
+                    <button onClick={() => { setEditing(item.id); setExpandedId(null); }} className="p-1.5 rounded-lg hover:bg-slate-100">
+                      <Pencil className="w-4 h-4 text-slate-500" />
+                    </button>
+                    {isAdmin && total > 0 && (
+                      <button onClick={() => setWizard(item)} className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200">
+                        <ArrowLeftRight className="w-3.5 h-3.5" /> Merge
                       </button>
-                      <button onClick={() => { setEditing(item.id); setExpandedId(null); }} className="p-1.5 rounded-lg hover:bg-slate-100">
-                        <Pencil className="w-4 h-4 text-slate-500" />
+                    )}
+                    {isAdmin && (
+                      <button onClick={() => del(item)} className={`p-1.5 rounded-lg ${total > 0 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-red-50'}`} title={total > 0 ? `Used in ${total} place(s)` : 'Delete'}>
+                        <Trash2 className="w-4 h-4 text-red-400" />
                       </button>
-                      {isAdmin && total > 0 && (
-                        <button onClick={() => setWizard(item)} className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200">
-                          <ArrowLeftRight className="w-3.5 h-3.5" /> Merge
-                        </button>
-                      )}
-                      {isAdmin && (
-                        <button onClick={() => del(item)} className={`p-1.5 rounded-lg ${total > 0 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-red-50'}`} title={total > 0 ? `Used in ${total} place(s)` : 'Delete'}>
-                          <Trash2 className="w-4 h-4 text-red-400" />
-                        </button>
-                      )}
-                    </div>
+                    )}
                   </div>
-                  {isExpanded && (
-                    <div className="mt-3 pt-3 border-t border-slate-100">
-                      <WhereUsedPanel
-                        ingredient={item}
-                        recipeVersionIngredients={recipeVersionIngredients}
-                        recipeVersions={recipeVersions}
-                        recipeOptions={recipeOptions}
-                        recipeGroups={recipeGroups}
-                      />
-                    </div>
-                  )}
-                </div>
+                </td>
+              </tr>
+              {isExpanded && (
+                <tr><td colSpan={8} className="bg-slate-50/50 px-4 py-3 border-t border-slate-100">
+                  <WhereUsedPanel ingredient={item} recipeVersionIngredients={recipeVersionIngredients} recipeVersions={recipeVersions} recipeOptions={recipeOptions} recipeGroups={recipeGroups} />
+                </td></tr>
               )}
-            </div>
+            </>
           );
         })}
-        {filtered.length === 0 && <p className="text-center text-slate-400 text-sm py-8">No ingredient specs found.</p>}
+        {filtered.length === 0 && <tr><td colSpan={8} className="text-center py-8 text-slate-400 text-sm">No ingredient specs found.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+        <TablePagination total={filtered.length} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
       </div>
 
       {wizard && (
