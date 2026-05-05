@@ -130,6 +130,7 @@ import ItemModule from './pages/ItemModule';
 import EADashboard from './pages/EADashboard';
 import DirectorDashboard from './pages/DirectorDashboard';
 import ProjectManager from './pages/ProjectManager';
+import DelegationScore from './pages/DelegationScore';
 
 // Page component lookup table
 const PAGE_COMPONENTS = {
@@ -162,6 +163,7 @@ const PAGE_COMPONENTS = {
   EADashboard,
   DirectorDashboard,
   ProjectManager,
+  DelegationScore,
 };
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -344,6 +346,9 @@ const AuthenticatedApp = () => {
 
       {/* Project Manager */}
       <Route path="/ProjectManager" element={<LayoutWrapper currentPageName="ProjectManager"><ProjectManager /></LayoutWrapper>} />
+
+      {/* Delegation Score */}
+      <Route path="/DelegationScore" element={<LayoutWrapper currentPageName="DelegationScore"><DelegationScore /></LayoutWrapper>} />
 
       {/* Store Management System Routes */}
       {[
