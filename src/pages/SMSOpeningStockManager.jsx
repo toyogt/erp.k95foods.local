@@ -18,18 +18,21 @@ const CATEGORY_LABELS = {
 export default function SMSOpeningStockManager() {
   const [items, setItems] = useState([]);
   const [allLots, setAllLots] = useState([]);
+  const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
 
   async function loadAll() {
     setLoading(true);
-    const [itemsData, lotsData] = await Promise.all([
+    const [itemsData, lotsData, locData] = await Promise.all([
       base44.entities.StoreItemMaster.filter({ is_active: true }, 'item_name', 500),
       base44.entities.StoreOpeningStock.list('fifo_rank', 1000),
+      base44.entities.StoreLocation.filter({ is_active: true }, 'location_code', 200),
     ]);
     setItems(itemsData);
     setAllLots(lotsData);
+    setLocations(locData);
     setLoading(false);
   }
 
@@ -96,6 +99,7 @@ export default function SMSOpeningStockManager() {
               key={item.id}
               item={item}
               initialLots={allLots.filter(l => l.item_code === item.item_code)}
+              locations={locations}
               onLotAdded={loadAll}
             />
           ))}

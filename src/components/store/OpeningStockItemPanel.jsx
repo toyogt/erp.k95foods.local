@@ -4,7 +4,7 @@ import { Plus, ChevronDown, ChevronUp, Package } from 'lucide-react';
 import OpeningStockLotForm from './OpeningStockLotForm';
 import OpeningStockLotList from './OpeningStockLotList';
 
-export default function OpeningStockItemPanel({ item, initialLots = [], onLotAdded }) {
+export default function OpeningStockItemPanel({ item, initialLots = [], locations = [], onLotAdded }) {
   const [showForm, setShowForm] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
@@ -54,7 +54,7 @@ export default function OpeningStockItemPanel({ item, initialLots = [], onLotAdd
           {showForm && (
             <div className="border border-teal-200 bg-teal-50/30 rounded-xl p-4">
               <p className="text-sm font-semibold text-teal-800 mb-3">New Opening Stock Lot</p>
-              <OpeningStockLotForm item={item} onSaved={handleSaved} onCancel={() => setShowForm(false)} />
+              <OpeningStockLotForm item={item} locations={locations} existingLotsCount={initialLots.length} onSaved={handleSaved} onCancel={() => setShowForm(false)} />
             </div>
           )}
 

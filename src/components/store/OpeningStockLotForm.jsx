@@ -1,12 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Loader2, MapPin } from 'lucide-react';
 
-export default function OpeningStockLotForm({ item, onSaved, onCancel }) {
-  const [locations, setLocations] = useState([]);
-  const [locLoading, setLocLoading] = useState(true);
+export default function OpeningStockLotForm({ item, locations = [], existingLotsCount = 0, onSaved, onCancel }) {
   const [form, setForm] = useState({
     batch_number: '',
     quantity: '',
@@ -19,12 +17,6 @@ export default function OpeningStockLotForm({ item, onSaved, onCancel }) {
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-
-  useEffect(() => {
-    base44.entities.StoreLocation.filter({ is_active: true }, 'location_code', 200)
-      .then(d => setLocations(d))
-      .finally(() => setLocLoading(false));
-  }, []);
 
   function setField(k, v) {
     setForm(prev => ({ ...prev, [k]: v }));
@@ -48,9 +40,8 @@ export default function OpeningStockLotForm({ item, onSaved, onCancel }) {
     const entryId = `OPEN-${Date.now().toString(36).toUpperCase()}`;
     const lotId = `LOT-OPEN-${item.item_code}-${Date.now().toString(36).toUpperCase()}`;
 
-    // Count existing entries for this item to set FIFO rank
-    const existing = await base44.entities.StoreOpeningStock.filter({ item_code: item.item_code }, 'fifo_rank', 200);
-    const fifoRank = (existing.length || 0) + 1;
+    // FIFO rank derived from already-loaded count — no extra API call needed
+    const fifoRank = existingLotsCount + 1;
 
     // Create StoreLot
     await base44.entities.StoreLot.create({
@@ -148,20 +139,16 @@ export default function OpeningStockLotForm({ item, onSaved, onCancel }) {
 
       <div>
         <label className="text-xs font-medium text-slate-700">Location * <MapPin className="w-3 h-3 inline" /></label>
-        {locLoading
-          ? <div className="flex items-center gap-2 mt-1 text-sm text-slate-400"><Loader2 className="w-4 h-4 animate-spin" /> Loading locations…</div>
-          : (
-            <select
-              className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm mt-1 h-9 bg-white"
-              value={form.location_id}
-              onChange={e => handleLocationChange(e.target.value)}
-            >
-              <option value="">— Select location —</option>
-              {locations.map(l => (
-                <option key={l.id} value={l.id}>{l.display_name || l.location_code}</option>
-              ))}
-            </select>
-          )}
+        <select
+          className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm mt-1 h-9 bg-white"
+          value={form.location_id}
+          onChange={e => handleLocationChange(e.target.value)}
+        >
+          <option value="">— Select location —</option>
+          {locations.map(l => (
+            <option key={l.id} value={l.id}>{l.display_name || l.location_code}</option>
+          ))}
+        </select>
         <p className="text-xs text-slate-400 mt-0.5">FIFO rank is auto-assigned — older batches will be issued first</p>
       </div>
 
