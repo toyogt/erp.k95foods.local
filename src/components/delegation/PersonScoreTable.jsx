@@ -54,6 +54,7 @@ export default function PersonScoreTable({ persons, onSelectPerson, plans, onSav
   const [savingEmail, setSavingEmail] = useState(null);
   const [remarkModal, setRemarkModal] = useState(null); // { email, name }
   const [remarkText, setRemarkText] = useState('');
+  const [nextWeekNotesText, setNextWeekNotesText] = useState('');
 
   useEffect(() => { setDrafts({}); }, [plans]);
 
@@ -93,9 +94,9 @@ export default function PersonScoreTable({ persons, onSelectPerson, plans, onSav
     const plan = plans?.[p.person_email] || {};
     const fields = {};
 
-    for (const field of ['next_week_planned_green', 'next_week_planned_yellow', 'next_week_planned_red', 'meeting_remarks']) {
-      const drafted = d[field] !== undefined ? d[field] : (plan[field] ?? (field === 'meeting_remarks' ? '' : 0));
-      fields[field] = field === 'meeting_remarks' ? (drafted || '').trim() : (Number(drafted) || 0);
+    for (const field of ['next_week_planned_green', 'next_week_planned_yellow', 'next_week_planned_red', 'meeting_remarks', 'next_week_notes']) {
+      const drafted = d[field] !== undefined ? d[field] : (plan[field] ?? (field === 'meeting_remarks' || field === 'next_week_notes' ? '' : 0));
+      fields[field] = (field === 'meeting_remarks' || field === 'next_week_notes') ? (drafted || '').trim() : (Number(drafted) || 0);
     }
     fields.meeting_done = true;
     fields.actual_total = p.total;
@@ -114,12 +115,14 @@ export default function PersonScoreTable({ persons, onSelectPerson, plans, onSav
 
   const openRemarkModal = (email, name) => {
     setRemarkText(getDraft(email, 'meeting_remarks'));
+    setNextWeekNotesText(getDraft(email, 'next_week_notes'));
     setRemarkModal({ email, name });
   };
 
   const saveRemarkModal = () => {
     if (remarkModal) {
       setDraft(remarkModal.email, 'meeting_remarks', remarkText);
+      setDraft(remarkModal.email, 'next_week_notes', nextWeekNotesText);
     }
     setRemarkModal(null);
   };
@@ -191,7 +194,7 @@ export default function PersonScoreTable({ persons, onSelectPerson, plans, onSav
                 const isSaving = savingEmail === p.person_email;
                 const nwTotal = getNextWeekTotal(p.person_email);
                 const totalValid = nwTotal === 100;
-                const hasRemark = !!(getDraft(p.person_email, 'meeting_remarks') || '').trim();
+                const hasRemark = !!(getDraft(p.person_email, 'meeting_remarks') || '').trim() || !!(getDraft(p.person_email, 'next_week_notes') || '').trim();
                 const rowError = rowErrors[p.person_email];
 
                 return (
@@ -299,21 +302,51 @@ export default function PersonScoreTable({ persons, onSelectPerson, plans, onSav
 
       {/* Remark Dialog */}
       <Dialog open={!!remarkModal} onOpenChange={() => setRemarkModal(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Meeting Remarks — {remarkModal?.name}</DialogTitle>
+            <DialogTitle>Meeting Notes — {remarkModal?.name}</DialogTitle>
           </DialogHeader>
-          <Textarea
-            value={remarkText}
-            onChange={e => setRemarkText(e.target.value)}
-            placeholder="Enter meeting remarks, observations, action items…"
-            className="min-h-[120px] text-sm"
-            disabled={remarkModal && !!plans?.[remarkModal.email]?.meeting_done}
-          />
+          <div className="space-y-4">
+            {/* This Week Commitment Notes (read-only, carried from previous week) */}
+            {(getDraft(remarkModal?.email, 'this_week_notes') || plans?.[remarkModal?.email]?.this_week_notes) && (
+              <div>
+                <label className="text-xs font-medium text-slate-700 mb-1 block">This Week Commitment Notes</label>
+                <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-sm text-slate-700 whitespace-pre-wrap min-h-[60px]">
+                  {getDraft(remarkModal?.email, 'this_week_notes') || plans?.[remarkModal?.email]?.this_week_notes || '—'}
+                </div>
+                <p className="text-xs text-slate-400 mt-1">Carried from previous week's next week notes</p>
+              </div>
+            )}
+
+            {/* Next Week Commitment Notes (editable) */}
+            <div>
+              <label className="text-xs font-medium text-slate-700 mb-1 block">Next Week Commitment Notes</label>
+              <Textarea
+                value={nextWeekNotesText}
+                onChange={e => setNextWeekNotesText(e.target.value)}
+                placeholder="Enter commitment notes for next week…"
+                className="min-h-[80px] text-sm"
+                disabled={remarkModal && !!plans?.[remarkModal.email]?.meeting_done}
+              />
+              <p className="text-xs text-slate-400 mt-1">Will become next week's "This Week Commitment Notes"</p>
+            </div>
+
+            {/* Meeting Remarks */}
+            <div>
+              <label className="text-xs font-medium text-slate-700 mb-1 block">Meeting Remarks</label>
+              <Textarea
+                value={remarkText}
+                onChange={e => setRemarkText(e.target.value)}
+                placeholder="Enter meeting remarks, observations, action items…"
+                className="min-h-[80px] text-sm"
+                disabled={remarkModal && !!plans?.[remarkModal.email]?.meeting_done}
+              />
+            </div>
+          </div>
           <div className="flex justify-end gap-2 mt-2">
-            <Button variant="outline" className="h-9" onClick={() => setRemarkModal(null)}>Cancel</Button>
+            <Button variant="outline" className="h-11 md:h-9" onClick={() => setRemarkModal(null)}>Cancel</Button>
             {!(remarkModal && plans?.[remarkModal.email]?.meeting_done) && (
-              <Button className="h-9" onClick={saveRemarkModal}>Save Remarks</Button>
+              <Button className="h-11 md:h-9" onClick={saveRemarkModal}>Save Notes</Button>
             )}
           </div>
         </DialogContent>

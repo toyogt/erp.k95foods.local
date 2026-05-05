@@ -61,6 +61,16 @@
       "minimum": 0,
       "default": 0
     },
+    "this_week_notes": {
+      "type": "string",
+      "maxLength": 5000,
+      "description": "Commitment notes for this week \u2014 auto-carried from previous week next_week_notes"
+    },
+    "next_week_notes": {
+      "type": "string",
+      "maxLength": 5000,
+      "description": "Commitment notes for next week \u2014 editable during current week meeting"
+    },
     "actual_total": {
       "type": "number",
       "minimum": 0,

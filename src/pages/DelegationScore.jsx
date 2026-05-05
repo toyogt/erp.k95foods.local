@@ -20,6 +20,7 @@ function emptyPlan() {
   return {
     this_week_planned_green: 0, this_week_planned_yellow: 0, this_week_planned_red: 0,
     next_week_planned_green: 0, next_week_planned_yellow: 0, next_week_planned_red: 0,
+    this_week_notes: '', next_week_notes: '',
     meeting_remarks: '', meeting_done: false,
   };
 }
@@ -110,6 +111,8 @@ export default function DelegationScore() {
         next_week_planned_green: cur.next_week_planned_green || 0,
         next_week_planned_yellow: cur.next_week_planned_yellow || 0,
         next_week_planned_red: cur.next_week_planned_red || 0,
+        this_week_notes: cur.this_week_notes || '',
+        next_week_notes: cur.next_week_notes || '',
         meeting_remarks: cur.meeting_remarks || '',
         meeting_done: !!cur.meeting_done,
       };
@@ -120,6 +123,7 @@ export default function DelegationScore() {
       if (!map[email].this_week_planned_green && prev.next_week_planned_green) map[email].this_week_planned_green = prev.next_week_planned_green;
       if (!map[email].this_week_planned_yellow && prev.next_week_planned_yellow) map[email].this_week_planned_yellow = prev.next_week_planned_yellow;
       if (!map[email].this_week_planned_red && prev.next_week_planned_red) map[email].this_week_planned_red = prev.next_week_planned_red;
+      if (!map[email].this_week_notes && prev.next_week_notes) map[email].this_week_notes = prev.next_week_notes;
     }
     return map;
   }, [currentWeekPlans, prevWeekPlans]);
@@ -155,9 +159,11 @@ export default function DelegationScore() {
         this_week_planned_green: prev?.next_week_planned_green || 0,
         this_week_planned_yellow: prev?.next_week_planned_yellow || 0,
         this_week_planned_red: prev?.next_week_planned_red || 0,
+        this_week_notes: prev?.next_week_notes || '',
         next_week_planned_green: 0,
         next_week_planned_yellow: 0,
         next_week_planned_red: 0,
+        next_week_notes: '',
         meeting_remarks: '',
         meeting_done: false,
         ...saveData,
@@ -178,7 +184,7 @@ export default function DelegationScore() {
   const persons = useMemo(() => aggregateByPerson(filteredCycles), [filteredCycles]);
 
   const handleExport = () => {
-    const headers = ['Person', 'Meeting Done', 'Planned G', 'Planned Y', 'Planned R', 'Total', 'Green', 'Yellow', 'Red', 'Green %', 'Yellow %', 'Red %', 'Health', 'Next G', 'Next Y', 'Next R', 'Remarks'];
+    const headers = ['Person', 'Meeting Done', 'Planned G', 'Planned Y', 'Planned R', 'Total', 'Green', 'Yellow', 'Red', 'Green %', 'Yellow %', 'Red %', 'Health', 'Next G', 'Next Y', 'Next R', 'This Week Notes', 'Next Week Notes', 'Remarks'];
     const rows = persons.map(p => {
       const plan = mergedPlans[p.person_email] || emptyPlan();
       return [
@@ -186,6 +192,8 @@ export default function DelegationScore() {
         plan.this_week_planned_green, plan.this_week_planned_yellow, plan.this_week_planned_red,
         p.total, p.green, p.yellow, p.red, p.green_pct, p.yellow_pct, p.red_pct, p.person_health,
         plan.next_week_planned_green, plan.next_week_planned_yellow, plan.next_week_planned_red,
+        `"${(plan.this_week_notes || '').replace(/"/g, '""')}"`,
+        `"${(plan.next_week_notes || '').replace(/"/g, '""')}"`,
         `"${(plan.meeting_remarks || '').replace(/"/g, '""')}"`,
       ];
     });

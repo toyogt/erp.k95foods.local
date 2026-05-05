@@ -162,6 +162,24 @@ function PlanComparisonBar({ plan, actual }) {
           );
         })}
       </div>
+      {plan.this_week_notes && (
+        <div className="bg-blue-50 border border-blue-100 rounded-lg p-2.5 flex items-start gap-2">
+          <ClipboardList className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-xs font-medium text-blue-700 mb-0.5">This Week Commitment Notes</p>
+            <p className="text-sm text-blue-800 whitespace-pre-wrap">{plan.this_week_notes}</p>
+          </div>
+        </div>
+      )}
+      {plan.next_week_notes && (
+        <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-2.5 flex items-start gap-2">
+          <CalendarClock className="w-4 h-4 text-indigo-500 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-xs font-medium text-indigo-700 mb-0.5">Next Week Commitment Notes</p>
+            <p className="text-sm text-indigo-800 whitespace-pre-wrap">{plan.next_week_notes}</p>
+          </div>
+        </div>
+      )}
       {plan.meeting_remarks && (
         <div className="bg-amber-50 border border-amber-100 rounded-lg p-2.5 flex items-start gap-2">
           <MessageSquare className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
