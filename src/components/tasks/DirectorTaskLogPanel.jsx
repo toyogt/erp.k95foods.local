@@ -43,6 +43,12 @@ export default function DirectorTaskLogPanel({ taskId }) {
             </div>
             <div className="flex-1 min-w-0">
               <span className="text-slate-600">{log.details}</span>
+              {/* Show old → new values for date changes */}
+              {log.old_value && log.new_value && (
+                <span className="block text-slate-500 mt-0.5">
+                  {log.old_value} → {log.new_value}
+                </span>
+              )}
               <span className="text-slate-400 ml-1.5">
                 — {log.performed_by_name || 'System'}, {moment(log.timestamp).format('DD/MM/YYYY HH:mm')}
               </span>

@@ -1,12 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
-  Loader2, Plus, Search, ClipboardList,
-  CheckCircle2, Clock, User, Layers
+  Loader2, Plus, ClipboardList,
+  CheckCircle2, Clock, User, Layers, CalendarClock
 } from 'lucide-react';
 import CreateDirectorTaskModal from '@/components/tasks/CreateDirectorTaskModal';
 import DirectorTaskCard from '@/components/tasks/DirectorTaskCard';
@@ -14,6 +12,7 @@ import ProjectFormModal from '@/components/tasks/ProjectFormModal';
 import ProjectCard from '@/components/tasks/ProjectCard';
 import { getDirectorsForEA, isTaskOverdue } from '@/lib/directorTaskHelpers';
 import { canEAManageTask } from '@/lib/eaPermissions';
+import EADashboardFilters, { applyFilters } from '@/components/tasks/EADashboardFilters';
 
 export default function EADashboard() {
   const [user, setUser] = useState(null);
@@ -28,25 +27,23 @@ export default function EADashboard() {
   const [projects, setProjects] = useState([]);
   const [projectTaskStats, setProjectTaskStats] = useState({});
   const [supportedDirectorEmails, setSupportedDirectorEmails] = useState([]);
+  const [advancedFilters, setAdvancedFilters] = useState({
+    assignee: 'all', datePreset: 'all', importantOnly: false, overdueOnly: false,
+  });
 
   const load = useCallback(async () => {
     setLoading(true);
     const me = await base44.auth.me();
     setUser(me);
 
-    // Get directors this EA serves
     let directorList = [];
     const isAdmin = me.role === 'admin';
 
     if (isAdmin) {
-      // Admins (directors) see their own tasks
       directorList = [{ email: me.email, name: me.full_name }];
-      // Also check if they have EA mappings (they might be managing other directors)
       const eaMappings = await getDirectorsForEA(me.email);
       eaMappings.forEach(d => {
-        if (!directorList.find(x => x.email === d.email)) {
-          directorList.push(d);
-        }
+        if (!directorList.find(x => x.email === d.email)) directorList.push(d);
       });
     } else {
       directorList = await getDirectorsForEA(me.email);
@@ -55,7 +52,6 @@ export default function EADashboard() {
     const directorEmails = directorList.map(d => d.email);
     setSupportedDirectorEmails(directorEmails);
 
-    // Fetch tasks and projects for all directors
     let allTasks = [];
     let allProjects = [];
     for (const email of directorEmails) {
@@ -66,24 +62,15 @@ export default function EADashboard() {
       allTasks = [...allTasks, ...dt];
       allProjects = [...allProjects, ...dp];
     }
-    // Deduplicate by id
+
     const seen = new Set();
-    allTasks = allTasks.filter(t => {
-      if (seen.has(t.id)) return false;
-      seen.add(t.id);
-      return true;
-    });
+    allTasks = allTasks.filter(t => { if (seen.has(t.id)) return false; seen.add(t.id); return true; });
     const seenP = new Set();
-    allProjects = allProjects.filter(p => {
-      if (seenP.has(p.id)) return false;
-      seenP.add(p.id);
-      return true;
-    });
+    allProjects = allProjects.filter(p => { if (seenP.has(p.id)) return false; seenP.add(p.id); return true; });
 
     setTasks(allTasks);
     setProjects(allProjects);
 
-    // Build task stats per project
     const stats = {};
     allProjects.forEach(p => { stats[p.id] = { total: 0, completed: 0 }; });
     allTasks.forEach(t => {
@@ -98,25 +85,34 @@ export default function EADashboard() {
 
   useEffect(() => { load(); }, [load]);
 
-  // Filter tasks
-  const filtered = tasks.filter(t => {
-    if (selectedDirector !== 'all' && t.director_email !== selectedDirector) return false;
-    if (search) {
-      const q = search.toLowerCase();
-      if (!t.task_name?.toLowerCase().includes(q) && !t.assigned_to_name?.toLowerCase().includes(q) &&
-          !t.task_number?.toLowerCase().includes(q)) return false;
-    }
-    return true;
-  });
+  // Build assignee list from tasks
+  const assignees = useMemo(() => {
+    const map = new Map();
+    tasks.forEach(t => {
+      if (t.assigned_to_email && !map.has(t.assigned_to_email)) {
+        map.set(t.assigned_to_email, { email: t.assigned_to_email, name: t.assigned_to_name || t.assigned_to_email });
+      }
+    });
+    return Array.from(map.values()).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  }, [tasks]);
 
-  const pendingTasks = filtered.filter(t => ['open', 'date_change_requested'].includes(t.status));
+  // Apply all filters
+  const filtered = useMemo(() => {
+    return applyFilters(tasks, {
+      search,
+      director: selectedDirector,
+      ...advancedFilters,
+    });
+  }, [tasks, search, selectedDirector, advancedFilters]);
+
+  const pendingTasks = filtered.filter(t => t.status === 'open');
+  const dateChangeRequests = filtered.filter(t => t.status === 'date_change_requested');
   const verificationTasks = filtered.filter(t => t.status === 'pending_verification');
   const completedTasks = filtered.filter(t => t.status === 'completed');
   const cancelledTasks = filtered.filter(t => t.status === 'cancelled');
-  const overdueTasks = pendingTasks.filter(t => isTaskOverdue(t));
-  const importantOpen = pendingTasks.filter(t => t.is_important && t.status !== 'completed');
+  const overdueTasks = filtered.filter(t => ['open', 'date_change_requested'].includes(t.status) && isTaskOverdue(t));
+  const importantOpen = filtered.filter(t => t.is_important && !['completed', 'cancelled'].includes(t.status));
 
-  // For creating tasks — use first director if only one, otherwise user picks
   const createDirector = directors.length === 1 ? directors[0]
     : selectedDirector !== 'all' ? directors.find(d => d.email === selectedDirector)
     : directors[0];
@@ -154,10 +150,14 @@ export default function EADashboard() {
       ) : (
         <>
           {/* Counters */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             <div className="bg-red-50 border border-red-100 rounded-2xl p-4 text-center">
               <p className="text-3xl font-bold text-red-600">{overdueTasks.length}</p>
               <p className="text-sm text-red-400 font-medium mt-1">Overdue</p>
+            </div>
+            <div className="bg-orange-50 border border-orange-100 rounded-2xl p-4 text-center">
+              <p className="text-3xl font-bold text-orange-600">{dateChangeRequests.length}</p>
+              <p className="text-sm text-orange-400 font-medium mt-1">Date Change</p>
             </div>
             <div className="bg-yellow-50 border border-yellow-100 rounded-2xl p-4 text-center">
               <p className="text-3xl font-bold text-yellow-600">{verificationTasks.length}</p>
@@ -174,29 +174,20 @@ export default function EADashboard() {
           </div>
 
           {/* Filters */}
-          <div className="flex gap-3 flex-wrap">
-            {directors.length > 1 && (
-              <Select value={selectedDirector} onValueChange={setSelectedDirector}>
-                <SelectTrigger className="w-48 h-11 md:h-9">
-                  <SelectValue placeholder="All Directors" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Directors</SelectItem>
-                  {directors.map(d => (
-                    <SelectItem key={d.email} value={d.email}>{d.name || d.email}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <Input className="pl-9 h-11 md:h-9" placeholder="Search tasks…" value={search} onChange={e => setSearch(e.target.value)} />
-            </div>
-          </div>
+          <EADashboardFilters
+            search={search}
+            onSearchChange={setSearch}
+            directors={directors}
+            selectedDirector={selectedDirector}
+            onDirectorChange={setSelectedDirector}
+            assignees={assignees}
+            filters={advancedFilters}
+            onFiltersChange={setAdvancedFilters}
+          />
 
           {/* Tabs */}
           <Tabs value={tab} onValueChange={setTab}>
-            <TabsList className="grid grid-cols-5 w-full">
+            <TabsList className="grid grid-cols-6 w-full">
               <TabsTrigger value="projects" className="gap-1.5 text-xs sm:text-sm">
                 <Layers className="w-3.5 h-3.5 hidden sm:block" />
                 Projects ({projects.filter(p => p.status !== 'completed' && p.status !== 'cancelled').length})
@@ -204,6 +195,10 @@ export default function EADashboard() {
               <TabsTrigger value="pending" className="gap-1.5 text-xs sm:text-sm">
                 <ClipboardList className="w-3.5 h-3.5 hidden sm:block" />
                 Open ({pendingTasks.length})
+              </TabsTrigger>
+              <TabsTrigger value="date_change" className="gap-1.5 text-xs sm:text-sm">
+                <CalendarClock className="w-3.5 h-3.5 hidden sm:block" />
+                Date Change ({dateChangeRequests.length})
               </TabsTrigger>
               <TabsTrigger value="verification" className="gap-1.5 text-xs sm:text-sm">
                 <Clock className="w-3.5 h-3.5 hidden sm:block" />
@@ -232,6 +227,17 @@ export default function EADashboard() {
             <TabsContent value="pending" className="mt-4">
               <TaskList tasks={pendingTasks} user={user} viewMode="ea" onRefresh={load} supportedDirectorEmails={supportedDirectorEmails} />
             </TabsContent>
+            <TabsContent value="date_change" className="mt-4">
+              {dateChangeRequests.length === 0 ? (
+                <EmptyState text="No date change requests pending" />
+              ) : (
+                <div className="space-y-3">
+                  {dateChangeRequests.map(t => (
+                    <DirectorTaskCard key={t.id} task={t} user={user} viewMode="ea" onRefresh={load} supportedDirectorEmails={supportedDirectorEmails} />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
             <TabsContent value="verification" className="mt-4">
               {verificationTasks.length === 0 ? (
                 <EmptyState text="No tasks pending verification" />
@@ -253,7 +259,6 @@ export default function EADashboard() {
         </>
       )}
 
-      {/* Create Task Modal */}
       {showCreate && createDirector && (
         <CreateDirectorTaskModal
           open={showCreate}
@@ -265,7 +270,6 @@ export default function EADashboard() {
         />
       )}
 
-      {/* Create Project Modal */}
       {showCreateProject && createDirector && (
         <ProjectFormModal
           open={showCreateProject}
@@ -283,7 +287,6 @@ export default function EADashboard() {
 function TaskList({ tasks, user, viewMode, onRefresh, supportedDirectorEmails }) {
   if (tasks.length === 0) return <EmptyState text="No tasks here" />;
 
-  // Sort: overdue first, then important, then by end date
   const sorted = [...tasks].sort((a, b) => {
     const aOD = isTaskOverdue(a) ? 0 : 1;
     const bOD = isTaskOverdue(b) ? 0 : 1;
