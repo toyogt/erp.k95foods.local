@@ -17,15 +17,23 @@ const CATEGORY_LABELS = {
 
 export default function SMSOpeningStockManager() {
   const [items, setItems] = useState([]);
+  const [allLots, setAllLots] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
 
-  useEffect(() => {
-    base44.entities.StoreItemMaster.filter({ is_active: true }, 'item_name', 500)
-      .then(data => setItems(data))
-      .finally(() => setLoading(false));
-  }, []);
+  async function loadAll() {
+    setLoading(true);
+    const [itemsData, lotsData] = await Promise.all([
+      base44.entities.StoreItemMaster.filter({ is_active: true }, 'item_name', 500),
+      base44.entities.StoreOpeningStock.list('fifo_rank', 1000),
+    ]);
+    setItems(itemsData);
+    setAllLots(lotsData);
+    setLoading(false);
+  }
+
+  useEffect(() => { loadAll(); }, []);
 
   const categories = ['all', ...Array.from(new Set(items.map(i => i.item_category).filter(Boolean)))];
 
@@ -84,7 +92,12 @@ export default function SMSOpeningStockManager() {
       ) : (
         <div className="space-y-2">
           {filtered.map(item => (
-            <OpeningStockItemPanel key={item.id} item={item} />
+            <OpeningStockItemPanel
+              key={item.id}
+              item={item}
+              initialLots={allLots.filter(l => l.item_code === item.item_code)}
+              onLotAdded={loadAll}
+            />
           ))}
         </div>
       )}

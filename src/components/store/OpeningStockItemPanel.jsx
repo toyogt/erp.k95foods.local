@@ -1,34 +1,18 @@
-import { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Plus, Loader2, ChevronDown, ChevronUp, Package } from 'lucide-react';
+import { Plus, ChevronDown, ChevronUp, Package } from 'lucide-react';
 import OpeningStockLotForm from './OpeningStockLotForm';
 import OpeningStockLotList from './OpeningStockLotList';
 
-export default function OpeningStockItemPanel({ item }) {
-  const [lots, setLots] = useState([]);
-  const [loading, setLoading] = useState(true);
+export default function OpeningStockItemPanel({ item, initialLots = [], onLotAdded }) {
   const [showForm, setShowForm] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
-  async function loadLots() {
-    setLoading(true);
-    const data = await base44.entities.StoreOpeningStock.filter(
-      { item_code: item.item_code },
-      'fifo_rank',
-      200
-    );
-    setLots(data);
-    setLoading(false);
-  }
+  const totalQty = initialLots.reduce((s, l) => s + (l.quantity || 0), 0);
 
-  useEffect(() => { loadLots(); }, [item.item_code]);
-
-  const totalQty = lots.reduce((s, l) => s + (l.quantity || 0), 0);
-
-  function handleSaved() {
+  function handleSaved(entry) {
     setShowForm(false);
-    loadLots();
+    if (onLotAdded) onLotAdded(entry);
   }
 
   return (
@@ -48,14 +32,10 @@ export default function OpeningStockItemPanel({ item }) {
           </div>
         </div>
         <div className="flex items-center gap-3 shrink-0">
-          {loading
-            ? <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
-            : (
-              <div className="text-right">
-                <p className="text-sm font-bold text-teal-700">{totalQty} {item.uom || 'Nos'}</p>
-                <p className="text-xs text-slate-400">{lots.length} lot{lots.length !== 1 ? 's' : ''}</p>
-              </div>
-            )}
+          <div className="text-right">
+            <p className="text-sm font-bold text-teal-700">{totalQty} {item.uom || 'Nos'}</p>
+            <p className="text-xs text-slate-400">{initialLots.length} lot{initialLots.length !== 1 ? 's' : ''}</p>
+          </div>
           {expanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
         </div>
       </div>
@@ -78,10 +58,7 @@ export default function OpeningStockItemPanel({ item }) {
             </div>
           )}
 
-          {loading
-            ? <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-slate-400" /></div>
-            : <OpeningStockLotList lots={lots} />
-          }
+          <OpeningStockLotList lots={initialLots} />
         </div>
       )}
     </div>
