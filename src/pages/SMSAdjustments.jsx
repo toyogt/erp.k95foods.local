@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Plus, CheckCircle2, XCircle, X, Search } from 'lucide-react';
 import { formatDateTime } from '@/lib/dateFormatter';
 import ExportButton from '@/components/store/ExportButton';
+import TablePagination from '@/components/store/TablePagination';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -171,6 +172,9 @@ export default function SMSAdjustments() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [user, setUser] = useState(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [search, setSearch] = useState('');
 
   async function load() {
     setLoading(true);
@@ -233,6 +237,17 @@ export default function SMSAdjustments() {
 
   const isAdmin = user?.role === 'admin';
 
+  const filtered = adjustments.filter(a => {
+    if (!search.trim()) return true;
+    const q = search.toLowerCase();
+    return (a.adjustment_id || '').toLowerCase().includes(q)
+      || (a.item_name || '').toLowerCase().includes(q)
+      || (a.lot_id || '').toLowerCase().includes(q)
+      || (a.reason || '').toLowerCase().includes(q);
+  });
+
+  const paged = filtered.slice((page - 1) * pageSize, page * pageSize);
+
   return (
     <motion.div className="space-y-4" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -241,7 +256,7 @@ export default function SMSAdjustments() {
           <p className="text-sm text-slate-500">Request manual corrections — no direct deletion allowed</p>
         </div>
         <div className="flex gap-2">
-          <ExportButton data={adjustments} columns={[
+          <ExportButton data={filtered} columns={[
             { key: 'adjustment_id', label: 'ID' }, { key: 'item_name', label: 'Item' }, { key: 'lot_id', label: 'Lot' },
             { key: 'adjustment_type', label: 'Type' }, { key: 'quantity_before', label: 'Before' },
             { key: 'adjustment_quantity', label: 'Adjustment' }, { key: 'quantity_after', label: 'After' },
@@ -250,6 +265,13 @@ export default function SMSAdjustments() {
           <Button onClick={() => setShowModal(true)} className="gap-2 h-11 w-full sm:w-auto"><Plus className="w-4 h-4" />Request Adjustment</Button>
         </div>
       </div>
+
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+        <Input className="pl-9 h-11 md:h-9 text-base md:text-sm" placeholder="Search by ID, item, lot, or reason…" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
+      </div>
+
       {/* Desktop Table */}
       <div className="hidden md:block bg-white/50 backdrop-blur-xl border border-white/30 rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] overflow-hidden">
         <div className="overflow-x-auto">
@@ -271,9 +293,9 @@ export default function SMSAdjustments() {
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr><td colSpan={9} className="text-center py-8 text-slate-400">Loading...</td></tr>
-              ) : adjustments.length === 0 ? (
-                <tr><td colSpan={9} className="text-center py-8 text-slate-400">No adjustments yet</td></tr>
-              ) : adjustments.map(a => (
+              ) : paged.length === 0 ? (
+                <tr><td colSpan={9} className="text-center py-8 text-slate-400">No adjustments found</td></tr>
+              ) : paged.map(a => (
                 <tr key={a.id} className={`hover:bg-slate-50 ${a.status === 'approved' ? (a.adjustment_type === 'increase' ? 'bg-green-50' : 'bg-red-50') : ''}`}>
                   <td className="px-4 py-3 font-mono text-xs font-bold">{a.adjustment_id}</td>
                   <td className="px-4 py-3">
@@ -312,16 +334,16 @@ export default function SMSAdjustments() {
             </tbody>
           </table>
         </div>
-        <div className="px-4 py-2.5 bg-slate-50/80 border-t border-slate-100 text-xs text-slate-500 font-medium">{adjustments.length} adjustment(s)</div>
+        <TablePagination total={filtered.length} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
       </div>
 
       {/* Mobile Cards */}
       <div className="md:hidden space-y-2">
         {loading ? (
           <div className="text-center py-8 text-slate-400">Loading...</div>
-        ) : adjustments.length === 0 ? (
-          <div className="text-center py-8 text-slate-400">No adjustments yet</div>
-        ) : adjustments.map(a => (
+        ) : paged.length === 0 ? (
+          <div className="text-center py-8 text-slate-400">No adjustments found</div>
+        ) : paged.map(a => (
           <div key={a.id} className={`bg-white border border-slate-200 rounded-xl p-3 ${a.status === 'approved' ? (a.adjustment_type === 'increase' ? 'bg-green-50' : 'bg-red-50') : ''}`}>
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0 flex-1">
@@ -353,6 +375,7 @@ export default function SMSAdjustments() {
             )}
           </div>
         ))}
+        <TablePagination total={filtered.length} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
       </div>
 
       {showModal && <AdjModal onSave={() => { setShowModal(false); load(); }} onClose={() => setShowModal(false)} />}

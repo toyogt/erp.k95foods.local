@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import OpeningStockItemsTable from '@/components/store/OpeningStockItemsTable';
+import OpeningStockEntriesLog from '@/components/store/OpeningStockEntriesLog';
 import { Loader2, PackageOpen, Search } from 'lucide-react';
-import OpeningStockItemPanel from '@/components/store/OpeningStockItemPanel';
 
 const CATEGORY_LABELS = {
   ingredient: 'Ingredient',
@@ -61,50 +63,63 @@ export default function SMSOpeningStockManager() {
         </p>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-          <Input
-            className="pl-9 h-9 text-sm"
-            placeholder="Search by item name or code…"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
-        </div>
-        <select
-          className="h-9 border border-slate-200 rounded-md px-3 text-sm bg-white"
-          value={categoryFilter}
-          onChange={e => setCategoryFilter(e.target.value)}
-        >
-          {categories.map(c => (
-            <option key={c} value={c}>{c === 'all' ? 'All Categories' : (CATEGORY_LABELS[c] || c)}</option>
-          ))}
-        </select>
-      </div>
+      <Tabs defaultValue="items" className="w-full">
+        <TabsList className="inline-flex h-10 rounded-xl bg-slate-100 p-1">
+          <TabsTrigger value="items" className="rounded-lg text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-4">
+            Items ({filtered.length})
+          </TabsTrigger>
+          <TabsTrigger value="entries" className="rounded-lg text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-4">
+            Entries Log ({allLots.length})
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Item list */}
-      {loading ? (
-        <div className="flex justify-center py-16">
-          <Loader2 className="w-7 h-7 animate-spin text-slate-400" />
-        </div>
-      ) : filtered.length === 0 ? (
-        <div className="text-center py-16 text-slate-400 text-sm">
-          {search || categoryFilter !== 'all' ? 'No items match your filters.' : 'No active store items found. Create items first via Store Item Creator.'}
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {filtered.map(item => (
-            <OpeningStockItemPanel
-              key={item.id}
-              item={item}
-              initialLots={allLots.filter(l => l.item_code === item.item_code)}
+        <TabsContent value="items" className="mt-4 space-y-3">
+          {/* Filters */}
+          <div className="flex flex-col sm:flex-row gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+              <Input
+                className="pl-9 h-9 text-sm"
+                placeholder="Search by item name or code…"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
+            </div>
+            <select
+              className="h-9 border border-slate-200 rounded-md px-3 text-sm bg-white"
+              value={categoryFilter}
+              onChange={e => setCategoryFilter(e.target.value)}
+            >
+              {categories.map(c => (
+                <option key={c} value={c}>{c === 'all' ? 'All Categories' : (CATEGORY_LABELS[c] || c)}</option>
+              ))}
+            </select>
+          </div>
+
+          {loading ? (
+            <div className="flex justify-center py-16">
+              <Loader2 className="w-7 h-7 animate-spin text-slate-400" />
+            </div>
+          ) : (
+            <OpeningStockItemsTable
+              items={filtered}
+              allLots={allLots}
               locations={locations}
               onLotAdded={loadAll}
             />
-          ))}
-        </div>
-      )}
+          )}
+        </TabsContent>
+
+        <TabsContent value="entries" className="mt-4">
+          {loading ? (
+            <div className="flex justify-center py-16">
+              <Loader2 className="w-7 h-7 animate-spin text-slate-400" />
+            </div>
+          ) : (
+            <OpeningStockEntriesLog entries={allLots} />
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

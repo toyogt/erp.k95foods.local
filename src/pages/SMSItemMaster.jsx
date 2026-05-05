@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Pencil, Trash2, Search, PackageOpen, ImageIcon, Download, AlertTriangle, MapPin, X, ChevronDown, CheckSquare, Square } from 'lucide-react';
+import TablePagination from '@/components/store/TablePagination';
 import MaterialPhotoUpload from '@/components/store/MaterialPhotoUpload';
 import ImportSystemItemsModal from '@/components/store/ImportSystemItemsModal';
 import { showErrorAlert, showConfirmAlert, showSuccessToast } from '@/lib/toastHelpers';
@@ -240,6 +241,8 @@ export default function SMSItemMaster() {
   // Bulk selection: set of item IDs
   const [selected, setSelected] = useState(new Set());
   const [bulkSaving, setBulkSaving] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   async function load() {
     setLoading(true);
@@ -444,6 +447,8 @@ export default function SMSItemMaster() {
     return matchSearch && matchCategory;
   });
 
+  const paged = filtered.slice((page - 1) * pageSize, page * pageSize);
+
   const allSelected = filtered.length > 0 && selected.size === filtered.length;
   const someSelected = selected.size > 0;
 
@@ -487,12 +492,12 @@ export default function SMSItemMaster() {
         <div className="flex flex-col sm:flex-row gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <Input className="pl-9 h-9" placeholder="Search items…" value={search} onChange={e => setSearch(e.target.value)} />
+            <Input className="pl-9 h-9" placeholder="Search items…" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
           </div>
           <select
             className="h-9 border border-slate-200 rounded-md px-3 text-sm bg-white"
             value={categoryFilter}
-            onChange={e => setCategoryFilter(e.target.value)}
+            onChange={e => { setCategoryFilter(e.target.value); setPage(1); }}
           >
             <option value="all">All Categories</option>
             {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
@@ -550,7 +555,7 @@ export default function SMSItemMaster() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filtered.map(item => {
+                  {paged.map(item => {
                     const isSelected = selected.has(item.id);
                     const hasPending = !!pendingLocations[item.id] && pendingLocations[item.id].location_id !== (item.opening_stock_location_id || '');
                     return (
@@ -645,12 +650,7 @@ export default function SMSItemMaster() {
                 </tbody>
               </table>
             </div>
-            <div className="px-4 py-2.5 bg-slate-50/80 border-t border-slate-100 text-xs text-slate-500 font-medium flex items-center justify-between">
-              <span>{filtered.length} item(s)</span>
-              {changedItems.length > 0 && (
-                <span className="text-teal-600 font-semibold">{changedItems.length} unsaved location change(s)</span>
-              )}
-            </div>
+            <TablePagination total={filtered.length} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
           </div>
         )}
       </div>
