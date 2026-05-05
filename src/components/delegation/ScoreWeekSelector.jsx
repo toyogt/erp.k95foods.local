@@ -3,7 +3,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import moment from 'moment';
 
-export default function ScoreWeekSelector({ weekOffset, onWeekChange, personFilter, onPersonFilterChange, assignees, planFilter, onPlanFilterChange }) {
+export default function ScoreWeekSelector({ weekOffset, onWeekChange, personFilter, onPersonFilterChange, assignees, meetingFilter, onMeetingFilterChange }) {
   const start = moment().startOf('isoWeek').add(weekOffset, 'weeks');
   const end = start.clone().endOf('isoWeek');
   const label = `${start.format('DD/MM/YYYY')} – ${end.format('DD/MM/YYYY')}`;
@@ -38,15 +38,15 @@ export default function ScoreWeekSelector({ weekOffset, onWeekChange, personFilt
         </SelectContent>
       </Select>
 
-      {/* Plan status filter */}
-      <Select value={planFilter} onValueChange={onPlanFilterChange}>
-        <SelectTrigger className="w-44 h-11 md:h-9">
+      {/* Meeting status filter */}
+      <Select value={meetingFilter} onValueChange={onMeetingFilterChange}>
+        <SelectTrigger className="w-48 h-11 md:h-9">
           <SelectValue placeholder="All" />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">All</SelectItem>
-          <SelectItem value="no_plan">No Meeting Plan</SelectItem>
-          <SelectItem value="has_plan">Has Meeting Plan</SelectItem>
+          <SelectItem value="pending">Meeting Pending</SelectItem>
+          <SelectItem value="done">Meeting Done</SelectItem>
         </SelectContent>
       </Select>
 

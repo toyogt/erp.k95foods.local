@@ -20,7 +20,7 @@ function emptyPlan() {
   return {
     this_week_planned_green: 0, this_week_planned_yellow: 0, this_week_planned_red: 0,
     next_week_planned_green: 0, next_week_planned_yellow: 0, next_week_planned_red: 0,
-    meeting_remarks: '',
+    meeting_remarks: '', meeting_done: false,
   };
 }
 
@@ -31,7 +31,7 @@ export default function DelegationScore() {
   const [assignees, setAssignees] = useState([]);
   const [weekOffset, setWeekOffset] = useState(0);
   const [personFilter, setPersonFilter] = useState('all');
-  const [planFilter, setPlanFilter] = useState('all');
+  const [meetingFilter, setMeetingFilter] = useState('all');
   const [selectedPerson, setSelectedPerson] = useState(null);
 
   const [currentWeekPlans, setCurrentWeekPlans] = useState({});
@@ -76,7 +76,6 @@ export default function DelegationScore() {
     }
     setAllCycles(cycles);
 
-    // Build ALL assignees from all tasks (not just this week)
     const aMap = new Map();
     for (const task of tasks) {
       if (task.assigned_to_email && !aMap.has(task.assigned_to_email)) {
@@ -98,7 +97,7 @@ export default function DelegationScore() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  // Build merged plans
+  // Build merged plans: this_week_planned auto-carries from prev week's next_week_planned
   const mergedPlans = useMemo(() => {
     const map = {};
     for (const email of Object.keys(currentWeekPlans)) {
@@ -112,6 +111,7 @@ export default function DelegationScore() {
         next_week_planned_yellow: cur.next_week_planned_yellow || 0,
         next_week_planned_red: cur.next_week_planned_red || 0,
         meeting_remarks: cur.meeting_remarks || '',
+        meeting_done: !!cur.meeting_done,
       };
     }
     for (const email of Object.keys(prevWeekPlans)) {
@@ -124,58 +124,49 @@ export default function DelegationScore() {
     return map;
   }, [currentWeekPlans, prevWeekPlans]);
 
-  // Batch save: changedPlans = { email: { field: value, person_name } }
-  const handleSaveBatch = async (changedPlans) => {
+  // Save a single person's row
+  const handleSaveRow = async (personEmail, personName, fields) => {
+    const existing = currentWeekPlans[personEmail];
     const weekEnd = weekRange.end.format('DD/MM/YYYY');
     const weekNum = weekRange.start.isoWeek();
     const year = weekRange.start.isoWeekYear();
 
-    const updates = [];
-    for (const email of Object.keys(changedPlans)) {
-      const { person_name, ...fields } = changedPlans[email];
-      const existing = currentWeekPlans[email];
-
-      if (existing) {
-        updates.push(
-          base44.entities.ExecutiveMeetingPlan.update(existing.id, {
-            ...fields,
-            updated_by_email: user?.email || '',
-            updated_by_name: user?.full_name || '',
-          }).then(res => ({ email, data: { ...existing, ...fields } }))
-        );
-      } else {
-        const prev = prevWeekPlans[email];
-        updates.push(
-          base44.entities.ExecutiveMeetingPlan.create({
-            person_email: email,
-            person_name: person_name,
-            week_start_date: weekStartStr,
-            week_end_date: weekEnd,
-            week_number: weekNum,
-            year: year,
-            this_week_planned_green: prev?.next_week_planned_green || 0,
-            this_week_planned_yellow: prev?.next_week_planned_yellow || 0,
-            this_week_planned_red: prev?.next_week_planned_red || 0,
-            next_week_planned_green: 0,
-            next_week_planned_yellow: 0,
-            next_week_planned_red: 0,
-            meeting_remarks: '',
-            ...fields,
-            updated_by_email: user?.email || '',
-            updated_by_name: user?.full_name || '',
-          }).then(res => ({ email, data: res }))
-        );
-      }
+    if (existing) {
+      await base44.entities.ExecutiveMeetingPlan.update(existing.id, {
+        ...fields,
+        updated_by_email: user?.email || '',
+        updated_by_name: user?.full_name || '',
+      });
+      setCurrentWeekPlans(prev => ({
+        ...prev,
+        [personEmail]: { ...prev[personEmail], ...fields },
+      }));
+    } else {
+      const prev = prevWeekPlans[personEmail];
+      const newRec = await base44.entities.ExecutiveMeetingPlan.create({
+        person_email: personEmail,
+        person_name: personName,
+        week_start_date: weekStartStr,
+        week_end_date: weekEnd,
+        week_number: weekNum,
+        year: year,
+        this_week_planned_green: prev?.next_week_planned_green || 0,
+        this_week_planned_yellow: prev?.next_week_planned_yellow || 0,
+        this_week_planned_red: prev?.next_week_planned_red || 0,
+        next_week_planned_green: 0,
+        next_week_planned_yellow: 0,
+        next_week_planned_red: 0,
+        meeting_remarks: '',
+        meeting_done: false,
+        ...fields,
+        updated_by_email: user?.email || '',
+        updated_by_name: user?.full_name || '',
+      });
+      setCurrentWeekPlans(prev => ({ ...prev, [personEmail]: newRec }));
     }
-
-    const results = await Promise.all(updates);
-    const newCwMap = { ...currentWeekPlans };
-    for (const { email, data } of results) {
-      newCwMap[email] = data;
-    }
-    setCurrentWeekPlans(newCwMap);
   };
 
+  // Only show persons with tasks for the week (filtered by cycles)
   const filteredCycles = useMemo(() => {
     return allCycles.filter(c => {
       if (personFilter !== 'all' && c.assigned_to_email !== personFilter) return false;
@@ -187,11 +178,12 @@ export default function DelegationScore() {
   const persons = useMemo(() => aggregateByPerson(filteredCycles), [filteredCycles]);
 
   const handleExport = () => {
-    const headers = ['Person', 'Planned G', 'Planned Y', 'Planned R', 'Total', 'Green', 'Yellow', 'Red', 'Green %', 'Yellow %', 'Red %', 'Health', 'Next G', 'Next Y', 'Next R', 'Remarks'];
+    const headers = ['Person', 'Meeting Done', 'Planned G', 'Planned Y', 'Planned R', 'Total', 'Green', 'Yellow', 'Red', 'Green %', 'Yellow %', 'Red %', 'Health', 'Next G', 'Next Y', 'Next R', 'Remarks'];
     const rows = persons.map(p => {
       const plan = mergedPlans[p.person_email] || emptyPlan();
       return [
-        p.person_name, plan.this_week_planned_green, plan.this_week_planned_yellow, plan.this_week_planned_red,
+        p.person_name, plan.meeting_done ? 'Yes' : 'No',
+        plan.this_week_planned_green, plan.this_week_planned_yellow, plan.this_week_planned_red,
         p.total, p.green, p.yellow, p.red, p.green_pct, p.yellow_pct, p.red_pct, p.person_health,
         plan.next_week_planned_green, plan.next_week_planned_yellow, plan.next_week_planned_red,
         `"${(plan.meeting_remarks || '').replace(/"/g, '""')}"`,
@@ -231,8 +223,8 @@ export default function DelegationScore() {
         personFilter={personFilter}
         onPersonFilterChange={setPersonFilter}
         assignees={assignees}
-        planFilter={planFilter}
-        onPlanFilterChange={setPlanFilter}
+        meetingFilter={meetingFilter}
+        onMeetingFilterChange={setMeetingFilter}
       />
 
       {loading ? (
@@ -244,11 +236,10 @@ export default function DelegationScore() {
           <ScoreKPICards kpis={kpis} />
           <PersonScoreTable
             persons={persons}
-            allAssignees={assignees}
             onSelectPerson={setSelectedPerson}
             plans={mergedPlans}
-            onSaveBatch={handleSaveBatch}
-            planFilter={planFilter}
+            onSaveRow={handleSaveRow}
+            meetingFilter={meetingFilter}
           />
         </>
       )}

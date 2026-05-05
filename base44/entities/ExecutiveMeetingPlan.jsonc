@@ -2,7 +2,7 @@
   "name": "ExecutiveMeetingPlan",
   "type": "object",
   "title": "Executive Meeting Plan",
-  "description": "Weekly meeting planning per person \u2014 planned Green/Yellow/Red counts and remarks",
+  "description": "Weekly meeting planning per person \u2014 planned Green/Yellow/Red counts, remarks, and meeting status",
   "properties": {
     "person_email": {
       "type": "string",
@@ -34,43 +34,41 @@
     "this_week_planned_green": {
       "type": "number",
       "minimum": 0,
-      "default": 0,
-      "description": "Planned green task count for this week"
+      "default": 0
     },
     "this_week_planned_yellow": {
       "type": "number",
       "minimum": 0,
-      "default": 0,
-      "description": "Planned yellow task count for this week"
+      "default": 0
     },
     "this_week_planned_red": {
       "type": "number",
       "minimum": 0,
-      "default": 0,
-      "description": "Planned red task count for this week"
+      "default": 0
     },
     "next_week_planned_green": {
       "type": "number",
       "minimum": 0,
-      "default": 0,
-      "description": "Planned green task count for next week"
+      "default": 0
     },
     "next_week_planned_yellow": {
       "type": "number",
       "minimum": 0,
-      "default": 0,
-      "description": "Planned yellow task count for next week"
+      "default": 0
     },
     "next_week_planned_red": {
       "type": "number",
       "minimum": 0,
-      "default": 0,
-      "description": "Planned red task count for next week"
+      "default": 0
     },
     "meeting_remarks": {
       "type": "string",
-      "maxLength": 5000,
-      "description": "Meeting remarks / observations for this person this week"
+      "maxLength": 5000
+    },
+    "meeting_done": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the meeting for this person for this week has been completed"
     },
     "updated_by_email": {
       "type": "string",
