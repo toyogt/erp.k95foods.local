@@ -266,4 +266,148 @@ These must add up to **100%**. The following week, the system compares your **ac
 
 ---
 
+## 9. Using "My Tasks" — Your Daily Task Hub
+
+When you log into the app, you land on **My Tasks**. This is where you see every task assigned to you and take action on them.
+
+### 9.1 What You'll See on Each Task Card
+
+Each task card shows:
+
+| Element | Description |
+|---|---|
+| **Task Name** | The title of what you need to do |
+| **Due Date** | When the task must be completed (DD/MM/YYYY format) |
+| **Status Badge** | Current status — Open, Blocked, Pending Verification, Completed, Date Change Requested, Cancelled |
+| **Urgency Indicator** | Colour-coded left border: 🔵 Normal, 🟡 Due Soon, 🟠 Due Today, 🔴 Overdue |
+| **Important Flag** | ⚠️ Tasks marked "Important" get deadline notifications |
+| **OVERDUE Badge** | Red flashing badge if the due date has passed |
+| **Progress Note** | Your latest status update (shown as a preview) |
+
+### 9.2 Actions You Can Take
+
+#### ✅ Mark Done
+When you finish a task, tap **"Mark Done"**. This changes the status to **Pending Verification** — the director/EA will review and confirm.
+
+> **Scoring Impact:** Once verified as completed, the task is scored based on whether it was done on time and any date changes.
+
+#### 📝 Update Progress
+Tap **"Update Progress"** to share a quick status update. This is visible to your director/EA and helps show you're actively working on the task. It does **not** affect your score.
+
+#### 📅 Request Date Change
+If you need more time, tap **"Request Date Change"**. You'll need to:
+1. Pick a **new end date** (must be a future date)
+2. Optionally set a **new end time**
+3. Provide a **reason** (mandatory)
+
+After submitting, the task status changes to **Date Change Requested**. The director/EA will approve or reject it.
+
+> **Scoring Impact:**  
+> - If the new date is in the **same week** → 1 penalty point (🟡 Yellow)  
+> - If the new date is in a **different week** → old cycle closes as 🔴 Red, new cycle starts fresh  
+> - Even if rejected, the date change **still counts** as a scoring event (you took action, so no "unmanaged overdue" penalty)
+
+#### 🔍 Details
+Tap **"Details"** to expand and see:
+- Task ID (e.g., DT-0001)
+- Project name (if part of a project)
+- Who assigned the task
+- Full task description ("What to do")
+- Start and end dates
+- Predecessor tasks (if blocked)
+
+#### 📋 Log
+Tap **"Log"** to see the full activity history — every action taken on the task in chronological order (created, date changes, marked done, verified, etc.).
+
+### 9.3 Task Statuses Explained
+
+| Status | What It Means | What You Should Do |
+|---|---|---|
+| **Open** | Task is active and waiting for you | Work on it and mark done before the due date |
+| **Blocked** | Waiting for a predecessor task to finish | Nothing — it will auto-unblock when dependencies complete |
+| **Date Change Requested** | You've asked for a new deadline | Wait for director/EA to approve or reject |
+| **Pending Verification** | You marked it done, awaiting confirmation | Wait for director/EA to verify |
+| **Completed** | Director/EA confirmed it's done | Nothing — task is closed ✅ |
+| **Cancelled** | Task was cancelled | Nothing — task is removed from active list |
+
+### 9.4 What Happens After You Mark Done?
+
+1. You tap **"Mark Done"** → Status becomes **Pending Verification**
+2. Your director or EA sees the task in their dashboard
+3. They either:
+   - **Confirm Done** → Status becomes **Completed** ✅
+   - **Reopen** → Status goes back to **Open** (they felt it wasn't actually finished)
+
+> **Scoring Note:** The scoring uses the date you marked it done (not when it was verified). So if you mark done on time but verification happens later, you still get a good score.
+
+### 9.5 What Happens With Date Change Requests?
+
+1. You tap **"Request Date Change"** → Status becomes **Date Change Requested**
+2. Director/EA sees the request with your reason
+3. They either:
+   - **Approve** → Due date updates to your requested date, status returns to **Open**
+   - **Reject** → Due date stays the same, status returns to **Open**
+
+> **Important for Scoring:**  
+> - Whether approved or rejected, the date change **request itself** counts as a scoring event  
+> - A rejected request won't get the "unmanaged overdue" penalty — you took action  
+> - But the original due date stays, so complete the task as soon as possible
+
+### 9.6 Overdue Tasks — What to Do
+
+If you see the red **OVERDUE** badge on a task:
+
+1. **Act immediately** — every day you wait adds to the unmanaged overdue penalty
+2. **Option A:** Complete the task now → Tap "Mark Done"
+3. **Option B:** Request more time → Tap "Request Date Change"
+
+> ⏱️ **Day 1 overdue without action** = 🟡 Yellow  
+> ⏱️ **Day 2+ overdue without action** = 🔴 Red  
+> 
+> Taking **any** action (mark done or request date change) stops the overdue penalty from applying.
+
+### 9.7 Best Practices for Daily Task Management
+
+| Practice | Why It Matters |
+|---|---|
+| Check My Tasks **every morning** | Catch new tasks and approaching deadlines early |
+| **Update progress** regularly | Keeps your director informed, builds trust |
+| **Mark done immediately** when finished | Don't delay — the system tracks when you mark it |
+| Request date changes **before** the due date | Avoids unmanaged overdue penalty entirely |
+| Provide **clear reasons** for date changes | Helps directors approve faster |
+| Review **blocked tasks** periodically | Know what's coming once dependencies clear |
+
+---
+
+## 10. For Directors/EAs — The Delegation Score Dashboard
+
+The **Delegation Score** page shows a weekly overview of all team members' performance.
+
+### 10.1 What You See
+
+- **KPI Cards** — Total tasks, Green/Yellow/Red counts and percentages
+- **Person Table** — Each team member's score breakdown with:
+  - This Week Planned % (Green/Yellow/Red targets set in previous meeting)
+  - Actual task counts and percentages
+  - Next Week Planned % (set during current meeting)
+- **Task Drilldown** — Click any person to see individual task scoring cycles
+
+### 10.2 Weekly Meeting Workflow
+
+1. **Navigate** to the week using the week selector (← Previous | Current | Next →)
+2. **Review** each person's actual performance vs. planned targets
+3. **Set Next Week Planned %** — Enter target Green/Yellow/Red percentages (must total 100%)
+4. **Add Notes** — Click the 💬 icon to add:
+   - **Next Week Commitment Notes** — Goals and commitments for next week
+   - **Meeting Remarks** — Observations and action items from the discussion
+5. **Save** — Click "Save" to lock the meeting for that person
+
+> **Carry-Forward:** Next week, the "Next Week Commitment Notes" you enter today will automatically appear as "This Week Commitment Notes" — making it easy to review last week's commitments.
+
+### 10.3 Export
+
+Click **"Export CSV"** to download the full week's scoring data as a spreadsheet for reporting.
+
+---
+
 *Last Updated: 05/05/2026*
