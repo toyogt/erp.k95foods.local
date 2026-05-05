@@ -10,10 +10,11 @@ import {
   ScrollText, XCircle, Lock, Send
 } from 'lucide-react';
 import { TASK_STATUS_CONFIG, isTaskOverdue, getTaskUrgency, logTaskAction, formatTaskDate } from '@/lib/directorTaskHelpers';
+import { canEAManageTask } from '@/lib/eaPermissions';
 import DirectorTaskLogPanel from '@/components/tasks/DirectorTaskLogPanel';
 import DatePickerField from '@/components/tasks/DatePickerField';
 
-export default function DirectorTaskCard({ task, user, viewMode, onRefresh }) {
+export default function DirectorTaskCard({ task, user, viewMode, onRefresh, supportedDirectorEmails = [] }) {
   const [expanded, setExpanded] = useState(false);
   const [acting, setActing] = useState(false);
   const [showDateChange, setShowDateChange] = useState(false);
@@ -152,6 +153,13 @@ export default function DirectorTaskCard({ task, user, viewMode, onRefresh }) {
   };
 
   const isAssignee = user?.email === task.assigned_to_email;
+  const isDirector = viewMode === 'director';
+  // For EA view: check granular permission (EA can manage others' tasks, not their own)
+  // For Director view: director always has management rights
+  const canManage = isDirector
+    ? true
+    : (viewMode === 'ea' && canEAManageTask(task, user, supportedDirectorEmails));
+  // Legacy flag — used for showing info like date change request details
   const isEAOrDirector = viewMode === 'ea' || viewMode === 'director';
 
   return (
@@ -271,8 +279,8 @@ export default function DirectorTaskCard({ task, user, viewMode, onRefresh }) {
             </Button>
           )}
 
-          {/* EA/Director: Verify completion */}
-          {isEAOrDirector && task.status === 'pending_verification' && (
+          {/* Verify completion — only if user can manage this task */}
+          {canManage && task.status === 'pending_verification' && (
             <div className="flex gap-2">
               <Button onClick={handleVerify} disabled={acting}
                 className="flex-1 min-h-[44px] gap-2 bg-green-600 hover:bg-green-700 text-sm font-medium">
@@ -286,8 +294,15 @@ export default function DirectorTaskCard({ task, user, viewMode, onRefresh }) {
             </div>
           )}
 
-          {/* EA/Director: Approve/Reject Date Change */}
-          {isEAOrDirector && task.status === 'date_change_requested' && (
+          {/* EA sees pending_verification but cannot manage — show read-only indicator */}
+          {!canManage && isEAOrDirector && task.status === 'pending_verification' && (
+            <div className="bg-yellow-50 border border-yellow-100 rounded-lg px-3 py-2 text-sm text-yellow-700 font-medium text-center">
+              Awaiting Director verification
+            </div>
+          )}
+
+          {/* Approve/Reject Date Change — only if user can manage this task */}
+          {canManage && task.status === 'date_change_requested' && (
             <div className="flex gap-2">
               <Button onClick={handleApproveDateChange} disabled={acting}
                 className="flex-1 min-h-[44px] gap-2 bg-green-600 hover:bg-green-700 text-sm font-medium">
@@ -301,10 +316,17 @@ export default function DirectorTaskCard({ task, user, viewMode, onRefresh }) {
             </div>
           )}
 
+          {/* EA sees date_change_requested but cannot manage — show read-only indicator */}
+          {!canManage && isEAOrDirector && task.status === 'date_change_requested' && (
+            <div className="bg-orange-50 border border-orange-100 rounded-lg px-3 py-2 text-sm text-orange-700 font-medium text-center">
+              Awaiting Director approval for date change
+            </div>
+          )}
+
           {/* Bottom row: secondary actions + toggles */}
           <div className="flex items-center justify-between">
             <div className="flex gap-1">
-              {isEAOrDirector && (task.status === 'open' || task.status === 'date_change_requested') && (
+              {canManage && (task.status === 'open' || task.status === 'date_change_requested') && (
                 <button onClick={handleCancel} disabled={acting}
                   className="flex items-center gap-1 text-sm text-red-400 hover:text-red-600 hover:bg-red-50 px-3 py-2 rounded-lg transition-colors min-h-[40px]">
                   <XCircle className="w-4 h-4" /> Cancel Task

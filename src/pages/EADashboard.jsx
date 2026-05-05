@@ -13,6 +13,7 @@ import DirectorTaskCard from '@/components/tasks/DirectorTaskCard';
 import ProjectFormModal from '@/components/tasks/ProjectFormModal';
 import ProjectCard from '@/components/tasks/ProjectCard';
 import { getDirectorsForEA, isTaskOverdue } from '@/lib/directorTaskHelpers';
+import { canEAManageTask } from '@/lib/eaPermissions';
 
 export default function EADashboard() {
   const [user, setUser] = useState(null);
@@ -26,6 +27,7 @@ export default function EADashboard() {
   const [tab, setTab] = useState('pending');
   const [projects, setProjects] = useState([]);
   const [projectTaskStats, setProjectTaskStats] = useState({});
+  const [supportedDirectorEmails, setSupportedDirectorEmails] = useState([]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -50,9 +52,10 @@ export default function EADashboard() {
       directorList = await getDirectorsForEA(me.email);
     }
     setDirectors(directorList);
+    const directorEmails = directorList.map(d => d.email);
+    setSupportedDirectorEmails(directorEmails);
 
     // Fetch tasks and projects for all directors
-    const directorEmails = directorList.map(d => d.email);
     let allTasks = [];
     let allProjects = [];
     for (const email of directorEmails) {
@@ -227,7 +230,7 @@ export default function EADashboard() {
               )}
             </TabsContent>
             <TabsContent value="pending" className="mt-4">
-              <TaskList tasks={pendingTasks} user={user} viewMode="ea" onRefresh={load} />
+              <TaskList tasks={pendingTasks} user={user} viewMode="ea" onRefresh={load} supportedDirectorEmails={supportedDirectorEmails} />
             </TabsContent>
             <TabsContent value="verification" className="mt-4">
               {verificationTasks.length === 0 ? (
@@ -235,16 +238,16 @@ export default function EADashboard() {
               ) : (
                 <div className="space-y-3">
                   {verificationTasks.map(t => (
-                    <DirectorTaskCard key={t.id} task={t} user={user} viewMode="ea" onRefresh={load} />
+                    <DirectorTaskCard key={t.id} task={t} user={user} viewMode="ea" onRefresh={load} supportedDirectorEmails={supportedDirectorEmails} />
                   ))}
                 </div>
               )}
             </TabsContent>
             <TabsContent value="completed" className="mt-4">
-              <TaskList tasks={completedTasks} user={user} viewMode="ea" onRefresh={load} />
+              <TaskList tasks={completedTasks} user={user} viewMode="ea" onRefresh={load} supportedDirectorEmails={supportedDirectorEmails} />
             </TabsContent>
             <TabsContent value="cancelled" className="mt-4">
-              <TaskList tasks={cancelledTasks} user={user} viewMode="ea" onRefresh={load} />
+              <TaskList tasks={cancelledTasks} user={user} viewMode="ea" onRefresh={load} supportedDirectorEmails={supportedDirectorEmails} />
             </TabsContent>
           </Tabs>
         </>
@@ -277,7 +280,7 @@ export default function EADashboard() {
   );
 }
 
-function TaskList({ tasks, user, viewMode, onRefresh }) {
+function TaskList({ tasks, user, viewMode, onRefresh, supportedDirectorEmails }) {
   if (tasks.length === 0) return <EmptyState text="No tasks here" />;
 
   // Sort: overdue first, then important, then by end date
@@ -294,7 +297,7 @@ function TaskList({ tasks, user, viewMode, onRefresh }) {
   return (
     <div className="space-y-3">
       {sorted.map(t => (
-        <DirectorTaskCard key={t.id} task={t} user={user} viewMode={viewMode} onRefresh={onRefresh} />
+        <DirectorTaskCard key={t.id} task={t} user={user} viewMode={viewMode} onRefresh={onRefresh} supportedDirectorEmails={supportedDirectorEmails} />
       ))}
     </div>
   );
