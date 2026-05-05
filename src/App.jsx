@@ -125,6 +125,7 @@ import LblEventLogPage from './pages/LblEventLogPage';
 import LblMasterData from './pages/LblMasterData';
 import LblDocTypePermissions from './pages/LblDocTypePermissions';
 import StoreItemCreator from './pages/StoreItemCreator';
+import SMSOpeningStockManager from './pages/SMSOpeningStockManager';
 import EADashboard from './pages/EADashboard';
 import DirectorDashboard from './pages/DirectorDashboard';
 import ProjectManager from './pages/ProjectManager';
@@ -155,6 +156,7 @@ const PAGE_COMPONENTS = {
   LblMasterData,
   LblDocTypePermissions,
   StoreItemCreator,
+  SMSOpeningStockManager,
   EADashboard,
   DirectorDashboard,
   ProjectManager,
@@ -346,6 +348,7 @@ const AuthenticatedApp = () => {
         ['SMSReorderConfig', SMSReorderConfig],
         ['SMSCycleCount', SMSCycleCount], ['SMSAdjustments', SMSAdjustments],
         ['SMSReports', SMSReports], ['SMSItemMaster', SMSItemMaster],
+        ['SMSOpeningStockManager', SMSOpeningStockManager],
       ].map(([key, Comp]) => (
         <Route key={key} path={`/${key}`} element={<LayoutWrapper currentPageName={key}><Comp /></LayoutWrapper>} />
       ))}

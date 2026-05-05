@@ -11,7 +11,6 @@ import ContainerFields, { validateContainerFields } from '@/components/store/cat
 import FlavourFields, { validateFlavourFields } from '@/components/store/categoryFields/FlavourFields';
 import LabelArtworkFields, { validateLabelArtworkFields } from '@/components/store/categoryFields/LabelArtworkFields';
 import { Loader2, Sparkles, RefreshCw, AlertCircle } from 'lucide-react';
-import OpeningStockLocationSelect from '@/components/store/OpeningStockLocationSelect';
 
 const ALL_CATEGORIES = [
   { value: 'ingredient', label: 'Ingredient', systemEntity: 'IngredientMaster' },
@@ -42,9 +41,6 @@ const EMPTY_FORM = {
   batch_required: false,
   expiry_required: false,
   mfg_date_required: false,
-  opening_stock: '',
-  opening_stock_location_id: '',
-  opening_stock_location_code: '',
   storage_notes: '',
   is_active: true,
 };
@@ -233,14 +229,6 @@ export default function StoreItemForm({ onSaved, onCancel, userRole }) {
 
     const { source_entity, source_id } = await createInSystemMaster(form.item_category, form, itemCode);
 
-    const openingQty = form.opening_stock !== '' ? Number(form.opening_stock) : 0;
-    const hasLocation = !!form.opening_stock_location_id;
-
-    // Auto-generate opening lot ID if qty > 0 and location assigned
-    const openingLotId = (openingQty > 0 && hasLocation)
-      ? `LOT-OPEN-${itemCode}-${Date.now().toString(36).toUpperCase()}`
-      : undefined;
-
     const masterRecord = await base44.entities.StoreItemMaster.create({
       item_name: form.item_name.trim(),
       item_code: itemCode,
@@ -250,44 +238,11 @@ export default function StoreItemForm({ onSaved, onCancel, userRole }) {
       batch_required: !!form.batch_required,
       expiry_required: !!form.expiry_required,
       mfg_date_required: !!form.mfg_date_required,
-      opening_stock: openingQty,
-      opening_stock_location_id: form.opening_stock_location_id || '',
-      opening_stock_location_code: form.opening_stock_location_code || '',
-      opening_lot_id: openingLotId || '',
       storage_notes: form.storage_notes || '',
       is_active: form.is_active,
       ...(source_entity && { source_entity }),
       ...(source_id && { source_id }),
     });
-
-    // If opening stock > 0 and location is assigned → create lot + stock balance so it's issuable
-    if (openingQty > 0 && hasLocation && openingLotId) {
-      await base44.entities.StoreLot.create({
-        lot_id: openingLotId,
-        qr_code: openingLotId,
-        item_code: itemCode,
-        item_name: form.item_name.trim(),
-        uom: form.uom || 'Nos',
-        original_quantity: openingQty,
-        quantity: openingQty,
-        remaining_quantity: openingQty,
-        mismatch_type: 'none',
-        supplier_name: 'Opening Stock',
-        status: 'putaway',
-        notes: 'Auto-created from opening stock',
-      });
-      await base44.entities.StoreStockBalance.create({
-        location_id: form.opening_stock_location_id,
-        location_code: form.opening_stock_location_code,
-        lot_id: openingLotId,
-        item_code: itemCode,
-        item_name: form.item_name.trim(),
-        uom: form.uom || 'Nos',
-        quantity: openingQty,
-        putaway_date: new Date().toISOString(),
-        putaway_by: 'system/opening-stock',
-      });
-    }
 
     setSaving(false);
     if (onSaved) onSaved(masterRecord);
@@ -391,26 +346,6 @@ export default function StoreItemForm({ onSaved, onCancel, userRole }) {
         onChange={v => setField('material_photo', v)}
         required={form.item_category === 'cap_type'}
       />
-
-      {/* Opening Stock */}
-      <div>
-        <label className="text-xs font-medium text-slate-700">Opening Stock</label>
-        <Input className="h-9 text-sm mt-1" type="number" min="0" value={form.opening_stock}
-          onChange={e => setField('opening_stock', e.target.value)} placeholder="0" />
-        <p className="text-xs text-slate-400 mt-0.5">Initial stock quantity for this item (treated as current stock)</p>
-      </div>
-
-      {/* Opening Stock Location */}
-      {Number(form.opening_stock) > 0 && (
-        <OpeningStockLocationSelect
-          locationId={form.opening_stock_location_id}
-          locationCode={form.opening_stock_location_code}
-          onChange={({ location_id, location_code }) => {
-            setField('opening_stock_location_id', location_id);
-            setField('opening_stock_location_code', location_code);
-          }}
-        />
-      )}
 
       {/* Validation Rules */}
       <div className="border border-slate-100 rounded-xl p-4 space-y-2">

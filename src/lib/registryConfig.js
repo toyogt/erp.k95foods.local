@@ -132,6 +132,7 @@ export const pageRegistry = [
   { pageKey: 'SMSCycleCount',      title: 'Cycle Count',        moduleKey: 'STORE', icon: ClipboardCheck,  roles: ['admin', 'store_manager', 'user'], sortOrder: 22 },
   { pageKey: 'SMSAdjustments',     title: 'Adjustments',        moduleKey: 'STORE', icon: SlidersHorizontal, roles: ['admin', 'store_manager', 'user'], sortOrder: 23 },
   { pageKey: 'SMSReports',         title: 'Store Reports',      moduleKey: 'STORE', icon: BarChart3,       roles: ['admin', 'store_manager', 'user'], sortOrder: 24 },
+  { pageKey: 'SMSOpeningStockManager', title: 'Opening Stock',   moduleKey: 'STORE', icon: PackageOpen,     roles: ['admin', 'store_manager', 'user'], sortOrder: 12 },
 
   // ─── SALES ───
   { pageKey: 'SalesOrders',         title: 'Sales Orders',    moduleKey: 'SALES', icon: ShoppingCart, roles: ['admin', 'sales_manager', 'sales_user', 'user'] },

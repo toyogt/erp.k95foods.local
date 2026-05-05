@@ -2,12 +2,13 @@
   "name": "StoreOpeningStock",
   "type": "object",
   "title": "Store Opening Stock",
-  "description": "One-time opening stock entry \u2014 locked after submission",
+  "description": "Opening stock lots for an item \u2014 each row is one batch/lot with its own expiry and location",
   "properties": {
     "entry_id": {
       "type": "string",
       "minLength": 1,
-      "maxLength": 100
+      "maxLength": 100,
+      "description": "Auto-generated: OPEN-YYYYMMDD-NNNN"
     },
     "item_code": {
       "type": "string",
@@ -24,11 +25,17 @@
     "lot_id": {
       "type": "string",
       "maxLength": 100,
-      "description": "Auto-created lot for this entry"
+      "description": "Auto-created StoreLot record ID"
+    },
+    "batch_number": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Supplier or manufacturer batch number"
     },
     "quantity": {
       "type": "number",
-      "minimum": 0.01
+      "minimum": 0.01,
+      "description": "Quantity in this batch/lot"
     },
     "location_id": {
       "type": "string",
@@ -40,29 +47,44 @@
     },
     "mfg_date": {
       "type": "string",
-      "format": "date"
+      "maxLength": 20,
+      "description": "Manufacture date DD/MM/YYYY"
     },
     "expiry_date": {
       "type": "string",
-      "format": "date"
+      "maxLength": 20,
+      "description": "Expiry date DD/MM/YYYY"
     },
     "supplier_name": {
       "type": "string",
       "maxLength": 300
     },
-    "is_locked": {
-      "type": "boolean",
-      "default": false,
-      "description": "Cannot be modified once locked"
+    "fifo_rank": {
+      "type": "number",
+      "minimum": 1,
+      "description": "FIFO rank \u2014 lower rank = issued first (oldest lot first)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "posted",
+        "locked"
+      ],
+      "default": "pending",
+      "description": "pending=draft, posted=lot created & in stock, locked=cannot edit"
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 1000
     },
     "entered_by": {
       "type": "string",
       "maxLength": 200
     },
-    "session_id": {
+    "posted_at": {
       "type": "string",
-      "maxLength": 100,
-      "description": "Opening stock session grouping"
+      "format": "date-time"
     }
   },
   "required": [
