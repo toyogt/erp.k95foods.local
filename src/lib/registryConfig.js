@@ -19,7 +19,7 @@ import {
   Activity, BarChart4, AlertCircle, AlertTriangle,
   Store, MapPin, QrCode, ArrowLeftRight, TrendingDown,
   RotateCcw, SlidersHorizontal, CalendarDays, Eye,
-  Send, UserCheck,
+  Send, UserCheck, UserPlus,
 } from 'lucide-react';
 
 /**
@@ -169,6 +169,7 @@ export const pageRegistry = [
   { pageKey: 'HRCompanies', title: 'Companies', moduleKey: 'HR', icon: Factory, roles: ['admin', 'hr_manager'], sortOrder: 23 },
   { pageKey: 'HRLeaveTypes', title: 'Leave Types', moduleKey: 'HR', icon: CalendarDays, roles: ['admin', 'hr_manager'], sortOrder: 24 },
   { pageKey: 'HRNotificationSettings', title: 'Notification Settings', moduleKey: 'HR', icon: Bell, roles: ['admin', 'hr_manager'], sortOrder: 25 },
+  { pageKey: 'HRCandidateLeads', title: 'Candidate Leads', moduleKey: 'HR', icon: UserPlus, roles: ['admin', 'hr_manager', 'hr_supervisor', 'hr_user'], sortOrder: 30 },
 
   // ─── USER MANAGEMENT ───
   { pageKey: 'UserManagement', title: 'Users', moduleKey: 'USER_MANAGEMENT', icon: Users, roles: ['admin'], adminOnly: true },

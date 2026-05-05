@@ -1,0 +1,86 @@
+{
+  "name": "CandidateLead",
+  "type": "object",
+  "title": "Candidate Lead",
+  "description": "Profile of a manpower candidate for recruitment tracking. Captures name, contact details, area, role of interest, and how they were sourced.",
+  "properties": {
+    "candidate_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "Full name of the candidate"
+    },
+    "mobile_number": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50,
+      "description": "Primary contact number"
+    },
+    "location_area": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "Preferred working location / area (e.g. Bahadurgarh, Nangloi, Tikri)"
+    },
+    "role_interested": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "Job role(s) the candidate is interested in (e.g. Helper, Packing, Loading, Operator)"
+    },
+    "source_type": {
+      "type": "string",
+      "enum": [
+        "Market Visit",
+        "Walk-in",
+        "Incoming Call",
+        "Referral"
+      ],
+      "description": "How the candidate was found"
+    },
+    "source_details": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Additional source context (e.g. labour chowk name, referrer name, factory gate)"
+    },
+    "first_contact_mode": {
+      "type": "string",
+      "enum": [
+        "In-person",
+        "Phone",
+        "WhatsApp"
+      ],
+      "description": "Mode of first contact with the candidate"
+    },
+    "first_contact_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of first contact (stored as YYYY-MM-DD; displayed as DD/MM/YYYY)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "New",
+        "Contacted",
+        "Shortlisted",
+        "Interviewed",
+        "Hired",
+        "Rejected",
+        "On Hold"
+      ],
+      "default": "New",
+      "description": "Current pipeline status of the candidate"
+    },
+    "remarks": {
+      "type": "string",
+      "maxLength": 2000,
+      "description": "Free-form notes about the candidate"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "candidate_name",
+    "mobile_number"
+  ]
+}
