@@ -158,10 +158,17 @@ export default function ImportSystemItemsModal({ existingItems, onClose, onImpor
 
   function handleProceedToRules() {
     if (selected.size === 0) return;
-    // Initialize rulesMap for selected items
+    // Initialize rulesMap — ingredients default to all 3 rules ON
     const initialRules = {};
-    selectedItems.forEach((_, idx) => {
-      if (!rulesMap[idx]) initialRules[idx] = {};
+    selectedItems.forEach((item, idx) => {
+      if (!rulesMap[idx]) {
+        const isIngredient = item.item_category === 'ingredient';
+        initialRules[idx] = {
+          batch_required: isIngredient,
+          mfg_date_required: isIngredient,
+          expiry_required: isIngredient,
+        };
+      }
     });
     setRulesMap(prev => ({ ...initialRules, ...prev }));
     setStep('rules');
