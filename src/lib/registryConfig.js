@@ -88,7 +88,7 @@ export const pageRegistry = [
   { pageKey: 'PaymentRequests', title: 'Payment Requests', moduleKey: 'ACCOUNTS', icon: CreditCard, roles: ['admin', 'accounts_manager', 'user'] },
 
   // ─── PROCESS FLOW (FMS) ───
-  { pageKey: 'FMSMyTasks', title: 'My Tasks', moduleKey: 'FMS', icon: ClipboardList, roles: ['admin', 'process_designer', 'process_controller', 'user'] },
+  // FMSMyTasks is the home page (/) — not shown in FMS module nav
   { pageKey: 'FMSActiveRuns', title: 'Active Runs', moduleKey: 'FMS', icon: PlayCircle, roles: ['admin', 'process_controller', 'process_designer', 'user'] },
   { pageKey: 'FMSMonitor', title: 'Monitor', moduleKey: 'FMS', icon: MonitorDot, roles: ['admin', 'process_controller', 'user'] },
   { pageKey: 'FMSProcesses', title: 'Processes', moduleKey: 'FMS', icon: GitBranch, roles: ['admin', 'process_designer'], adminOnly: true },
@@ -253,7 +253,7 @@ export const moduleRegistry = [
   },
   {
     moduleKey: 'FMS',
-    label: 'Process Flow',
+    label: 'FMS',
     icon: GitBranch,
     color: 'text-blue-700',
     bgColor: 'bg-blue-50',

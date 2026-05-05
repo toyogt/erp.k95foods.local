@@ -81,7 +81,11 @@ export default function Layout({ children, currentPageName }) {
   const activeModule = getModuleForPage(currentPageName);
 
   const toggleModule = (moduleKey) => {
-    setExpandedModules(prev => ({ ...prev, [moduleKey]: !prev[moduleKey] }));
+    setExpandedModules(prev => {
+      const isCurrentlyOpen = prev[moduleKey];
+      // Close all, then open the clicked one (unless it was already open)
+      return isCurrentlyOpen ? {} : { [moduleKey]: true };
+    });
   };
 
   const SidebarContent = ({ onNavigate, isMobile }) => (
