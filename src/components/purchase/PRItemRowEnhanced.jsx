@@ -1,11 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
-import { Trash2, Search } from 'lucide-react';
+import { base44 } from '@/api/base44Client';
+import { Trash2, Search, Plus } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import NumericInput from '@/components/ui/NumericInput';
 
-export default function PRItemRowEnhanced({ item, index, ingredients, uoms, onUpdate, onRemove, canRemove }) {
+export default function PRItemRowEnhanced({ item, index, ingredients, uoms, onUpdate, onRemove, canRemove, onItemAdded }) {
   const [query, setQuery] = useState(item.item_name || '');
   const [open, setOpen] = useState(false);
+  const [adding, setAdding] = useState(false);
   const ref = useRef(null);
 
   useEffect(() => { setQuery(item.item_name || ''); }, [item.item_name]);
@@ -21,16 +23,44 @@ export default function PRItemRowEnhanced({ item, index, ingredients, uoms, onUp
     ? ingredients.filter(i => i.item_name?.toLowerCase().includes(q) || i.item_code?.toLowerCase().includes(q)).slice(0, 15)
     : ingredients.slice(0, 15);
 
+  const exactMatch = q && ingredients.some(i => i.item_name?.toLowerCase() === q);
+
   function selectItem(ing) {
     onUpdate({ item_code: ing.item_code || ing.item_name, item_name: ing.item_name, unit: ing.base_uom || ing.uom || '' });
     setQuery(ing.item_name);
     setOpen(false);
   }
 
+  function handleInputChange(value) {
+    setQuery(value);
+    onUpdate({ item_name: value, item_code: '' });
+    setOpen(true);
+  }
+
+  async function handleAddNewItem() {
+    const name = query.trim();
+    if (!name) return;
+    setAdding(true);
+    // Create in ItemMaster as a new ad-hoc item
+    const code = `ADHOC-${Date.now().toString(36).toUpperCase()}`;
+    await base44.entities.ItemMaster.create({
+      item_code: code,
+      item_name: name,
+      category: 'CONSUMABLE',
+      base_uom: 'PCS',
+      is_active: true,
+      notes: 'Created from Purchase Request',
+    });
+    onUpdate({ item_code: code, item_name: name });
+    setOpen(false);
+    setAdding(false);
+    if (onItemAdded) onItemAdded({ item_code: code, item_name: name, base_uom: 'PCS', category: 'CONSUMABLE' });
+  }
+
   return (
     <div className="border border-slate-200 rounded-xl p-3 space-y-2">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold text-slate-500">Item {index + 1}</span>
+        <span className="text-xs font-semibold text-slate-500">#{index + 1}</span>
         {canRemove && <button onClick={onRemove} className="text-red-400 hover:text-red-600 p-1"><Trash2 className="w-4 h-4" /></button>}
       </div>
 
@@ -39,18 +69,36 @@ export default function PRItemRowEnhanced({ item, index, ingredients, uoms, onUp
         <div className="relative mt-1">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
           <input className="w-full h-11 md:h-9 pl-8 pr-3 border border-slate-200 rounded-xl text-sm"
-            placeholder="Search items..." value={query}
-            onChange={e => { setQuery(e.target.value); onUpdate({ item_name: e.target.value }); setOpen(true); }}
+            placeholder="Type to search or add new item..." value={query}
+            onChange={e => handleInputChange(e.target.value)}
             onFocus={() => setOpen(true)} />
         </div>
-        {open && filtered.length > 0 && (
-          <div className="absolute z-[9999] top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+        {open && (
+          <div className="absolute z-[9999] top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-56 overflow-y-auto">
             {filtered.map(ing => (
               <div key={ing.id} className="px-3 py-2 text-sm cursor-pointer hover:bg-slate-50" onClick={() => selectItem(ing)}>
                 <p className="font-medium text-slate-800">{ing.item_name}</p>
-                <p className="text-xs text-slate-400">{ing.item_code || ''}</p>
+                {ing.item_code && <p className="text-xs text-slate-400">{ing.item_code}</p>}
               </div>
             ))}
+            {q && !exactMatch && (
+              <div
+                className="px-3 py-2.5 text-sm cursor-pointer hover:bg-green-50 border-t border-slate-100 flex items-center gap-2 text-green-700 font-medium"
+                onClick={handleAddNewItem}
+              >
+                {adding ? (
+                  <span className="text-xs text-slate-500">Adding...</span>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4" />
+                    <span>Add &quot;{query.trim()}&quot; as new item</span>
+                  </>
+                )}
+              </div>
+            )}
+            {filtered.length === 0 && !q && (
+              <div className="px-3 py-3 text-sm text-slate-400 text-center">Start typing to search items</div>
+            )}
           </div>
         )}
       </div>

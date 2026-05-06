@@ -60,7 +60,11 @@ export default function PRCreateForm({ user, onDone, onCancel, isHindi, t }) {
   }
   function removeDoc(index) { setSupportingDocs(prev => prev.filter((_, i) => i !== index)); }
 
-  const validItems = items.filter(it => it.item_name?.trim() && Number(it.quantity) > 0 && it.unit?.trim());
+  const validItems = items.filter(it => it.item_name?.trim() && Number(it.quantity) > 0);
+
+  function handleItemAdded(newItem) {
+    setIngredients(prev => [...prev, newItem]);
+  }
 
   function validate() {
     const errs = {};
@@ -148,7 +152,8 @@ export default function PRCreateForm({ user, onDone, onCancel, isHindi, t }) {
         <p className="text-sm font-semibold text-slate-700">Line Items {errors.items && <span className="text-red-500 font-normal text-xs ml-2">{errors.items}</span>}</p>
         {items.map((it, idx) => (
           <PRItemRowEnhanced key={idx} item={it} index={idx} ingredients={ingredients} uoms={uoms}
-            onUpdate={updates => updateItem(idx, updates)} onRemove={() => removeItem(idx)} canRemove={items.length > 1} />
+            onUpdate={updates => updateItem(idx, updates)} onRemove={() => removeItem(idx)} canRemove={items.length > 1}
+            onItemAdded={handleItemAdded} />
         ))}
         <button onClick={addItem} className="text-sm text-blue-600 font-medium flex items-center gap-1"><Plus className="w-4 h-4" /> Add Item</button>
       </div>
