@@ -167,7 +167,16 @@ export default function StoreItemForm({ onSaved, onCancel, userRole }) {
   const [aiAlternatives, setAiAlternatives] = useState([]);
 
   function setField(k, v) {
-    setForm(prev => ({ ...prev, [k]: v }));
+    setForm(prev => {
+      const next = { ...prev, [k]: v };
+      // When category changes to ingredient, force batch/expiry/mfg mandatory
+      if (k === 'item_category' && v === 'ingredient') {
+        next.batch_required = true;
+        next.expiry_required = true;
+        next.mfg_date_required = true;
+      }
+      return next;
+    });
     if (error) setError('');
   }
 
@@ -194,6 +203,7 @@ export default function StoreItemForm({ onSaved, onCancel, userRole }) {
   async function handleSave() {
     if (!form.item_name?.trim()) { setError('Item name is required'); return; }
     if (!form.item_category) { setError('Category is required'); return; }
+    if (!form.uom?.trim()) { setError('Unit of Measure is required'); return; }
 
     // Validate category-specific mandatory fields
     const validator = CATEGORY_VALIDATORS[form.item_category];
@@ -350,16 +360,27 @@ export default function StoreItemForm({ onSaved, onCancel, userRole }) {
       {/* Validation Rules */}
       <div className="border border-slate-100 rounded-xl p-4 space-y-2">
         <p className="text-xs font-semibold text-slate-600 mb-2">Validation Rules</p>
+        {form.item_category === 'ingredient' && (
+          <p className="text-xs text-blue-600 bg-blue-50 rounded-lg px-3 py-1.5 mb-1">
+            Batch, Expiry, and Manufacture Date are mandatory for Ingredients.
+          </p>
+        )}
         {[
           { key: 'batch_required', label: 'Batch Number Required' },
           { key: 'expiry_required', label: 'Expiry Date Required' },
           { key: 'mfg_date_required', label: 'Manufacture Date Required' },
-        ].map(({ key, label }) => (
-          <label key={key} className="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" className="w-4 h-4 rounded" checked={!!form[key]} onChange={e => setField(key, e.target.checked)} />
-            <span className="text-sm text-slate-700">{label}</span>
-          </label>
-        ))}
+        ].map(({ key, label }) => {
+          const lockedOn = form.item_category === 'ingredient';
+          return (
+            <label key={key} className={`flex items-center gap-2 ${lockedOn ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}`}>
+              <input type="checkbox" className="w-4 h-4 rounded" checked={!!form[key]}
+                disabled={lockedOn}
+                onChange={e => setField(key, e.target.checked)} />
+              <span className="text-sm text-slate-700">{label}</span>
+              {lockedOn && <span className="text-xs text-blue-500 ml-1">(mandatory)</span>}
+            </label>
+          );
+        })}
       </div>
 
       {/* Storage Notes */}

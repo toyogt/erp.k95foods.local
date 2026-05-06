@@ -66,7 +66,7 @@ export default function CreatableUOMSelect({ value, onChange }) {
 
   return (
     <div ref={wrapperRef} className="relative">
-      <label className="text-xs font-medium text-slate-700">Unit of Measure</label>
+      <label className="text-xs font-medium text-slate-700">Unit of Measure <span className="text-red-500">*</span></label>
       <div
         className="mt-1 flex items-center h-9 w-full border border-slate-200 rounded-md bg-white cursor-pointer"
         onClick={() => setOpen(!open)}
