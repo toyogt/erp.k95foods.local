@@ -12,6 +12,7 @@ import { useNavigate } from 'react-router-dom';
 import CandidateLeadTable from '@/components/hr/CandidateLeadTable';
 import CandidateLeadFormDialog from '@/components/hr/CandidateLeadFormDialog';
 import CandidateTimelineDialog from '@/components/hr/CandidateTimelineDialog';
+import CandidateStatusChangeDialog from '@/components/hr/CandidateStatusChangeDialog';
 import { fireFMSEvent, triggerFMSProcess } from '@/lib/useFMSAutoComplete';
 
 /**
@@ -133,6 +134,7 @@ export default function HRCandidateLeads() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [timelineCandidate, setTimelineCandidate] = useState(null);
+  const [statusChangeCandidate, setStatusChangeCandidate] = useState(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -145,6 +147,54 @@ export default function HRCandidateLeads() {
     queryKey: ['candidate-leads'],
     queryFn: () => base44.entities.CandidateLead.list('-created_date', 1000),
     enabled: !!user && ALLOWED_ROLES.includes(user.role),
+  });
+
+  // Dedicated mutation for status-only changes via the guided dialog.
+  // Reuses the existing logging + FMS event firing logic for full consistency.
+  const statusChangeMutation = useMutation({
+    mutationFn: async ({ candidate, newStatus, remarks }) => {
+      const before = { ...candidate };
+      const updatePayload = { status: newStatus };
+
+      // Auto-fill enrollment_date when transitioning to Hired
+      if (newStatus === 'Hired' && !candidate.enrollment_date) {
+        updatePayload.enrollment_date = new Date().toISOString().slice(0, 10);
+      }
+      // Auto-fill attrition_date when transitioning to Terminated
+      if (newStatus === 'Terminated' && !candidate.attrition_date) {
+        updatePayload.attrition_date = new Date().toISOString().slice(0, 10);
+      }
+
+      const saved = await base44.entities.CandidateLead.update(candidate.id, updatePayload);
+
+      await logCandidateStatusChange({
+        candidate: saved,
+        oldStatus: before.status || '',
+        newStatus,
+        userEmail: user?.email,
+        remarks,
+      });
+
+      await fireHRLifecycleEvents({ before, after: saved });
+      return saved;
+    },
+    onSuccess: (saved) => {
+      queryClient.invalidateQueries({ queryKey: ['candidate-leads'] });
+      queryClient.invalidateQueries({ queryKey: ['candidate-status-log', saved.id] });
+      toast({
+        title: 'Status updated',
+        description: `${saved.candidate_name} → ${saved.status}`,
+      });
+      setStatusChangeCandidate(null);
+
+      // For Terminated, redirect to full termination form for offboarding details.
+      if (saved.status === 'Terminated') {
+        navigate(`/HRTerminationForm?id=${saved.id}`);
+      }
+    },
+    onError: (err) => {
+      toast({ title: 'Status change failed', description: err.message, variant: 'destructive' });
+    },
   });
 
   const saveMutation = useMutation({
@@ -337,6 +387,7 @@ export default function HRCandidateLeads() {
             isLoading={isLoading}
             onEdit={(c) => { setEditing(c); setDialogOpen(true); }}
             onViewTimeline={(c) => setTimelineCandidate(c)}
+            onChangeStatus={(c) => setStatusChangeCandidate(c)}
           />
         </CardContent>
       </Card>
@@ -353,6 +404,20 @@ export default function HRCandidateLeads() {
         open={!!timelineCandidate}
         onOpenChange={(o) => { if (!o) setTimelineCandidate(null); }}
         candidate={timelineCandidate}
+      />
+
+      <CandidateStatusChangeDialog
+        open={!!statusChangeCandidate}
+        onOpenChange={(o) => { if (!o) setStatusChangeCandidate(null); }}
+        candidate={statusChangeCandidate}
+        saving={statusChangeMutation.isPending}
+        onSubmit={({ newStatus, remarks }) =>
+          statusChangeMutation.mutate({
+            candidate: statusChangeCandidate,
+            newStatus,
+            remarks,
+          })
+        }
       />
     </div>
   );

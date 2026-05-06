@@ -1,6 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, Inbox, Pencil, Phone } from 'lucide-react';
+import { Loader2, Inbox, Pencil, Phone, ArrowRightCircle } from 'lucide-react';
 
 const STATUS_COLOR = {
   New: 'bg-slate-100 text-slate-700',
@@ -28,7 +28,7 @@ function daysBetween(fromISO, toISO) {
   return Math.max(0, Math.round((b - a) / (1000 * 60 * 60 * 24)));
 }
 
-export default function CandidateLeadTable({ candidates, isLoading, onEdit }) {
+export default function CandidateLeadTable({ candidates, isLoading, onEdit, onChangeStatus }) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-16">
@@ -129,15 +129,28 @@ export default function CandidateLeadTable({ candidates, isLoading, onEdit }) {
                   )}
                 </td>
                 <td className="px-3 py-2 text-right">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onEdit(c)}
-                    className="h-8 gap-1"
-                  >
-                    <Pencil className="w-3.5 h-3.5" />
-                    Edit
-                  </Button>
+                  <div className="flex justify-end gap-1.5">
+                    {onChangeStatus && c.status !== 'Terminated' && (
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => onChangeStatus(c)}
+                        className="h-8 gap-1"
+                      >
+                        <ArrowRightCircle className="w-3.5 h-3.5" />
+                        Change Status
+                      </Button>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onEdit(c)}
+                      className="h-8 gap-1"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                      Edit
+                    </Button>
+                  </div>
                 </td>
               </tr>
             );
