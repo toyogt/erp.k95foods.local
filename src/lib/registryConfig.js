@@ -19,7 +19,7 @@ import {
   Activity, BarChart4, AlertCircle, AlertTriangle,
   Store, MapPin, QrCode, ArrowLeftRight, TrendingDown,
   RotateCcw, SlidersHorizontal, CalendarDays, Eye,
-  Send, UserCheck, UserPlus,
+  Send, UserCheck, UserPlus, UserMinus,
 } from 'lucide-react';
 
 /**
@@ -171,6 +171,7 @@ export const pageRegistry = [
   { pageKey: 'HRNotificationSettings', title: 'Notification Settings', moduleKey: 'HR', icon: Bell, roles: ['admin', 'hr_manager'], sortOrder: 25 },
   { pageKey: 'HRCandidateLeads', title: 'Candidate Leads', moduleKey: 'HR', icon: UserPlus, roles: ['admin', 'hr_manager', 'hr_supervisor', 'hr_user'], sortOrder: 30 },
   { pageKey: 'HRAttritionDashboard', title: 'Attrition Analytics', moduleKey: 'HR', icon: TrendingDown, roles: ['admin', 'hr_manager', 'hr_supervisor', 'hr_user'], sortOrder: 31 },
+  { pageKey: 'HRTerminationForm', title: 'Termination Form', moduleKey: 'HR', icon: UserMinus, roles: ['admin', 'hr_manager', 'hr_supervisor'], sortOrder: 32, hideFromNav: true },
 
   // ─── USER MANAGEMENT ───
   { pageKey: 'UserManagement', title: 'Users', moduleKey: 'USER_MANAGEMENT', icon: Users, roles: ['admin'], adminOnly: true },
@@ -384,6 +385,7 @@ export function getVisiblePagesInModule(moduleKey, userRole) {
   const isAdmin = userRole === 'admin';
   
   return pages.filter(p => {
+    if (p.hideFromNav) return false;
     if (p.adminOnly && !isAdmin) return false;
     return p.roles.includes(userRole) || p.roles.includes('user');
   }).sort((a, b) => (a.sortOrder || 99) - (b.sortOrder || 99));

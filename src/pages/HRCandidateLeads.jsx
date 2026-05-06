@@ -8,9 +8,46 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
 import { UserPlus, Plus, RefreshCw, Search } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import CandidateLeadTable from '@/components/hr/CandidateLeadTable';
 import CandidateLeadFormDialog from '@/components/hr/CandidateLeadFormDialog';
+import CandidateTimelineDialog from '@/components/hr/CandidateTimelineDialog';
 import { fireFMSEvent, triggerFMSProcess } from '@/lib/useFMSAutoComplete';
+
+/**
+ * Logs a status transition for a candidate, computing how long they spent in the previous status.
+ * Best-effort — failures are warned but never block the save.
+ */
+async function logCandidateStatusChange({ candidate, oldStatus, newStatus, userEmail, remarks }) {
+  try {
+    const now = new Date().toISOString();
+    let durationMinutes;
+    if (oldStatus) {
+      const lastLog = await base44.entities.CandidateLeadStatusLog.filter(
+        { candidate_lead_id: candidate.id },
+        '-changed_at',
+        1
+      );
+      const startISO = lastLog?.[0]?.changed_at || candidate.created_date;
+      if (startISO) {
+        const diffMs = new Date(now).getTime() - new Date(startISO).getTime();
+        durationMinutes = Math.max(0, Math.round(diffMs / 60000));
+      }
+    }
+    await base44.entities.CandidateLeadStatusLog.create({
+      candidate_lead_id: candidate.id,
+      candidate_name: candidate.candidate_name,
+      old_status: oldStatus || '',
+      new_status: newStatus,
+      changed_at: now,
+      changed_by: userEmail || 'system',
+      duration_in_previous_status_minutes: durationMinutes,
+      remarks: remarks || '',
+    });
+  } catch (err) {
+    console.warn('[HR] Status log failed:', err?.message);
+  }
+}
 
 const ALLOWED_ROLES = ['admin', 'hr_manager', 'hr_supervisor', 'hr_user'];
 const STATUSES = ['New', 'Contacted', 'Shortlisted', 'Interviewed', 'Hired', 'Rejected', 'On Hold'];
@@ -95,8 +132,10 @@ export default function HRCandidateLeads() {
   const [sourceFilter, setSourceFilter] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [timelineCandidate, setTimelineCandidate] = useState(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   useEffect(() => {
     base44.auth.me().then(setUser).catch(() => setUser(null));
@@ -126,15 +165,35 @@ export default function HRCandidateLeads() {
       } else {
         saved = await base44.entities.CandidateLead.create(payload);
       }
+
+      // Log status transitions (creation or change) — best-effort
+      const beforeStatus = before?.status || '';
+      const afterStatus = saved.status || 'New';
+      if (!before || beforeStatus !== afterStatus) {
+        await logCandidateStatusChange({
+          candidate: saved,
+          oldStatus: before ? beforeStatus : '',
+          newStatus: afterStatus,
+          userEmail: user?.email,
+        });
+      }
+
       // Fire HR FMS lifecycle events (non-blocking — best-effort)
       await fireHRLifecycleEvents({ before, after: saved });
       return saved;
     },
-    onSuccess: () => {
+    onSuccess: (saved) => {
       queryClient.invalidateQueries({ queryKey: ['candidate-leads'] });
+      queryClient.invalidateQueries({ queryKey: ['candidate-status-log', saved.id] });
       toast({ title: editing ? 'Candidate updated' : 'Candidate added', description: 'Saved successfully' });
       setDialogOpen(false);
       setEditing(null);
+
+      // If status was changed to Terminated, redirect to dedicated termination form
+      // for full offboarding details (exit type, last working day, exit feedback, survey).
+      if (saved.status === 'Terminated') {
+        navigate(`/HRTerminationForm?id=${saved.id}`);
+      }
     },
     onError: (err) => {
       toast({ title: 'Save failed', description: err.message, variant: 'destructive' });
@@ -277,6 +336,7 @@ export default function HRCandidateLeads() {
             candidates={filtered}
             isLoading={isLoading}
             onEdit={(c) => { setEditing(c); setDialogOpen(true); }}
+            onViewTimeline={(c) => setTimelineCandidate(c)}
           />
         </CardContent>
       </Card>
@@ -287,6 +347,12 @@ export default function HRCandidateLeads() {
         candidate={editing}
         onSubmit={(payload) => saveMutation.mutate(payload)}
         saving={saveMutation.isPending}
+      />
+
+      <CandidateTimelineDialog
+        open={!!timelineCandidate}
+        onOpenChange={(o) => { if (!o) setTimelineCandidate(null); }}
+        candidate={timelineCandidate}
       />
     </div>
   );
