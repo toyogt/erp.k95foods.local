@@ -12,6 +12,7 @@ import ChecklistGate from '@/components/grn/ChecklistGate';
 import GRNItemCard from '@/components/store/GRNItemCard';
 import GRNPrintTemplate from '@/components/store/GRNPrintTemplate';
 import GRNManualSupplierSelect from '@/components/store/GRNManualSupplierSelect';
+import GRNPOItemPicker from '@/components/store/GRNPOItemPicker';
 import { showErrorAlert, showWarningAlert, showValidationErrors } from '@/lib/toastHelpers';
 import { formatDateTime, formatDate } from '@/lib/dateFormatter';
 import Swal from 'sweetalert2';
@@ -146,6 +147,7 @@ export default function GRNReceive() {
   const [invoicePreview, setInvoicePreview] = useState(null);
   const [allGateMap, setAllGateMap] = useState({});
   const [selectedGrn, setSelectedGrn] = useState(null);
+  const [poPickedItems, setPoPickedItems] = useState([]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -205,6 +207,7 @@ export default function GRNReceive() {
     }
     setDone(null);
     setShowChecklist(false);
+    setPoPickedItems([]);
   }
 
   function setItem(idx, k, v) {
@@ -238,6 +241,13 @@ export default function GRNReceive() {
     if (!invoiceNumber.trim()) errors.push('Invoice Number is required.');
     if (!invoiceDate) errors.push('Invoice Date is required.');
 
+    // Validate PO picked items
+    for (const pi of poPickedItems) {
+      if (pi.receive_now > pi.pending_qty) {
+        errors.push(`${pi.item_name}: Receive quantity (${pi.receive_now}) exceeds pending quantity (${pi.pending_qty}).`);
+      }
+    }
+
     for (let i = 0; i < validItems.length; i++) {
       const it = validItems[i];
       const rules = it._rules;
@@ -255,8 +265,9 @@ export default function GRNReceive() {
   }
 
   async function handleSubmitClick() {
-    if (validItems.length === 0) {
-      showWarningAlert('No Items', 'Please add at least one item with a valid quantity.');
+    const hasPoItems = poPickedItems.length > 0;
+    if (validItems.length === 0 && !hasPoItems) {
+      showWarningAlert('No Items', 'Please select items from Purchase Orders or add items manually.');
       return;
     }
 
@@ -295,10 +306,88 @@ export default function GRNReceive() {
       ...(checklistRunId ? { checklist_run_id: checklistRunId } : {}),
     });
 
+    // --- Process PO-picked items ---
+    const linkedPoIds = new Set();
+    let totalItemCount = 0;
+    for (const poItem of poPickedItems) {
+      const receiveQty = parseFloat(poItem.receive_now) || 0;
+      if (receiveQty <= 0) continue;
+
+      linkedPoIds.add(poItem.po_id);
+      totalItemCount++;
+
+      await base44.entities.GRNItem.create({
+        grn_id,
+        item_code: poItem.item_code,
+        item_name: poItem.item_name,
+        ordered_qty: poItem.ordered_qty,
+        received_qty: receiveQty,
+        uom_code: poItem.uom_code || 'Nos',
+        po_id: poItem.po_id,
+        line_notes: '',
+        mismatch_type: receiveQty < poItem.pending_qty ? 'decreased' : 'none',
+      });
+
+      const lotId = `LOT-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+      await base44.entities.StoreLot.create({
+        lot_id: lotId, qr_code: lotId,
+        item_code: poItem.item_code,
+        item_name: poItem.item_name,
+        uom: poItem.uom_code || 'Nos',
+        original_quantity: poItem.ordered_qty,
+        quantity: receiveQty, remaining_quantity: receiveQty,
+        supplier_name: supplierName || '',
+        invoice_number: invoiceNumber || '',
+        invoice_date: invoiceDate || '',
+        gate_entry_id: selected.gate_id, grn_id,
+        status: 'approved',
+      });
+
+      // Update PO item received_qty
+      const poItemRecords = await base44.entities.PurchaseOrderItem.filter({
+        po_id: poItem.po_id, item_code: poItem.item_code, line_number: poItem.line_number,
+      }).catch(() => []);
+      if (poItemRecords[0]) {
+        const oldReceived = poItemRecords[0].received_qty || 0;
+        const newReceived = oldReceived + receiveQty;
+        const pendingAfter = Math.max(0, (poItemRecords[0].qty || poItemRecords[0].quantity || 0) - newReceived);
+        await base44.entities.PurchaseOrderItem.update(poItemRecords[0].id, {
+          received_qty: newReceived,
+          pending_qty: pendingAfter,
+        });
+      }
+    }
+
+    // Update PO statuses
+    for (const poId of linkedPoIds) {
+      const poItemsAll = await base44.entities.PurchaseOrderItem.filter({ po_id: poId }).catch(() => []);
+      const allFullyReceived = poItemsAll.every(it => {
+        const ordered = it.qty || it.quantity || 0;
+        return (it.received_qty || 0) >= ordered;
+      });
+      const poRecords = await base44.entities.PurchaseOrder.filter({ po_id: poId }).catch(() => []);
+      if (poRecords[0]) {
+        await base44.entities.PurchaseOrder.update(poRecords[0].id, {
+          status: allFullyReceived ? 'Delivered' : 'Partially Received',
+          linked_po_ids: undefined,
+        });
+      }
+    }
+
+    // Link GRN to POs
+    if (linkedPoIds.size > 0) {
+      await base44.entities.GRNHeader.update(grnHeader.id, {
+        linked_po_ids: [...linkedPoIds],
+        po_id: [...linkedPoIds][0],
+      });
+    }
+
+    // --- Process manual items ---
     for (const it of validItems) {
       const originalQty = parseFloat(it.original_quantity || it.quantity);
       const receivedQty = it.qty_mismatch === 'yes' ? parseFloat(it.quantity) : originalQty;
       const mismatchType = it.qty_mismatch === 'yes' ? (it.mismatch_type || 'none') : 'none';
+      totalItemCount++;
 
       await base44.entities.GRNItem.create({
         grn_id,
@@ -339,11 +428,11 @@ export default function GRNReceive() {
 
     await logGrnAudit({
       action: 'GRN_RECEIVED', entity_type: 'GRNHeader',
-      entity_id: grn_id, details: { gate_id: selected.gate_id, item_count: validItems.length, supplier: supplierName, invoice: invoiceNumber }, user,
+      entity_id: grn_id, details: { gate_id: selected.gate_id, item_count: totalItemCount, supplier: supplierName, invoice: invoiceNumber, linked_po_ids: [...linkedPoIds] }, user,
     });
     await fireFMSEvent('grn_received', grnHeader.id);
 
-    setDone({ grn_id, gate_id: selected.gate_id, item_count: validItems.length, items: validItems });
+    setDone({ grn_id, gate_id: selected.gate_id, item_count: totalItemCount, items: validItems });
     setSubmitting(false);
     clearGrnDraft();
     load();
@@ -602,8 +691,20 @@ export default function GRNReceive() {
             </div>
           </div>
 
+          {/* Purchase Order Picker — shows when supplier is selected */}
+          {supplierName?.trim() && (
+            <div className="bg-white/60 backdrop-blur-xl border border-white/40 rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] p-4 md:p-5">
+              <GRNPOItemPicker
+                supplierName={supplierName}
+                onItemsSelected={setPoPickedItems}
+              />
+            </div>
+          )}
+
           <div className="bg-white/60 backdrop-blur-xl border border-white/40 rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] p-4 md:p-5" style={{ overflow: 'visible' }}>
-            <p className="text-sm font-semibold text-slate-900 uppercase tracking-wide mb-3">Items Received <span className="text-red-500">*</span></p>
+            <p className="text-sm font-semibold text-slate-900 uppercase tracking-wide mb-3">
+              {poPickedItems.length > 0 ? 'Additional Manual Items (Optional)' : 'Items Received'} <span className="text-red-500">{poPickedItems.length === 0 ? '*' : ''}</span>
+            </p>
             <div className="space-y-3" style={{ overflow: 'visible' }}>
               {items.map((it, idx) => (
                 <GRNItemCard
@@ -654,7 +755,7 @@ export default function GRNReceive() {
 
           <Button
             onClick={handleSubmitClick}
-            disabled={submitting || validItems.length === 0}
+            disabled={submitting || (validItems.length === 0 && poPickedItems.length === 0)}
             className="w-full h-12 bg-green-600 hover:bg-green-700 text-base"
           >
             {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
