@@ -6,6 +6,7 @@ import { Loader2, CheckCircle2, ChevronRight, ChevronLeft, ArrowLeft } from 'luc
 import { genPONumber, logPurchaseAudit, formatINR, DEPARTMENTS } from '@/components/purchase/purchaseHelpers';
 import { fireFMSEvent, findFMSInstanceByRef, linkFMSRef } from '@/lib/useFMSAutoComplete';
 import { Link, useNavigate } from 'react-router-dom';
+import SupplierSelect from '@/components/purchase/SupplierSelect';
 
 export default function BulkPOCreate() {
   const [user, setUser] = useState(null);
@@ -149,8 +150,7 @@ export default function BulkPOCreate() {
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="md:col-span-2">
-              <label className="text-xs font-medium text-slate-700">Supplier Name *</label>
-              <input className="w-full h-11 md:h-9 border border-slate-200 rounded-xl px-3 text-sm mt-1" value={supplierName} onChange={e => setSupplierName(e.target.value)} placeholder="Enter supplier name" />
+              <SupplierSelect value={supplierName} onChange={(name) => setSupplierName(name)} user={user} />
             </div>
             <div><label className="text-xs font-medium text-slate-700">Purchase Order Date</label><input type="date" className="w-full h-11 md:h-9 border border-slate-200 rounded-xl px-3 text-sm mt-1" value={poDate} onChange={e => setPoDate(e.target.value)} /></div>
             <div><label className="text-xs font-medium text-slate-700">Due Date *</label><input type="date" className="w-full h-11 md:h-9 border border-slate-200 rounded-xl px-3 text-sm mt-1" value={dueDate} onChange={e => setDueDate(e.target.value)} /></div>
