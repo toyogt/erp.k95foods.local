@@ -50,6 +50,11 @@
       "type": "string",
       "maxLength": 50,
       "description": "Telegram chat ID for receiving notifications"
+    },
+    "phone_number": {
+      "type": "string",
+      "maxLength": 20,
+      "description": "WhatsApp phone number with country code (e.g. 919876543210)"
     }
   },
   "required": [

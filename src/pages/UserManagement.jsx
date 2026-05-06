@@ -9,6 +9,7 @@ import { Users, Loader2, UserPlus, Mail, Search, Trash2 } from 'lucide-react';
 import { auditUserInvited, auditUserRoleChanged } from '@/lib/auditAdminActions';
 import EADirectorMappingPanel from '@/components/admin/EADirectorMappingPanel';
 import TelegramConfigPanel from '@/components/admin/TelegramConfigPanel';
+import WhatsAppPhonePanel from '@/components/admin/WhatsAppPhonePanel';
 
 export default function UserManagement() {
   const [user, setUser] = useState(null);
@@ -215,6 +216,13 @@ export default function UserManagement() {
       {!loading && (
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
           <EADirectorMappingPanel />
+        </div>
+      )}
+
+      {/* WhatsApp Phone Numbers */}
+      {!loading && (
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+          <WhatsAppPhonePanel users={users} onReload={load} />
         </div>
       )}
 
