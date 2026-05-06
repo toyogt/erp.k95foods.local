@@ -103,13 +103,13 @@ export default function BulkPOCreate() {
 
     await logPurchaseAudit({ action: `Bulk PO ${poId} created from ${prKeys.length} PRs: ${prKeys.join(', ')}`, entity_type: 'PurchaseOrder', entity_id: poId, user });
     setLoading(false);
-    navigate('/PurchaseOrders');
+    navigate('/PurchaseOrderList');
   }
 
   return (
     <div className="max-w-4xl mx-auto space-y-5 pb-20">
       <div className="flex items-center gap-3">
-        <Link to="/PurchaseOrders"><button className="p-2 rounded-lg hover:bg-slate-100"><ArrowLeft className="w-5 h-5 text-slate-500" /></button></Link>
+        <Link to="/PurchaseOrderList"><button className="p-2 rounded-lg hover:bg-slate-100"><ArrowLeft className="w-5 h-5 text-slate-500" /></button></Link>
         <div><h1 className="text-xl font-bold text-slate-900">Bulk Purchase Order</h1><p className="text-sm text-slate-500">Select multiple Purchase Requests and create a single Purchase Order</p></div>
       </div>
 
@@ -185,7 +185,7 @@ export default function BulkPOCreate() {
       )}
 
       <div className="flex gap-2 pt-2">
-        <Button variant="outline" onClick={step === 1 ? () => navigate('/PurchaseOrders') : () => setStep(s => s - 1)} className="flex-1 h-11">
+        <Button variant="outline" onClick={step === 1 ? () => navigate('/PurchaseOrderList') : () => setStep(s => s - 1)} className="flex-1 h-11">
           <ChevronLeft className="w-4 h-4 mr-1" />{step === 1 ? 'Back' : 'Previous'}
         </Button>
         {step < 3 ? (

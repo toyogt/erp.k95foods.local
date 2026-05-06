@@ -48,7 +48,7 @@ export default function PurchaseOrderCreate() {
       <div className="max-w-lg mx-auto text-center py-12 space-y-4">
         <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto" />
         <h2 className="text-lg font-bold text-slate-900">{error}</h2>
-        <Link to="/PurchaseOrders"><Button variant="outline" className="h-11"><ArrowLeft className="w-4 h-4 mr-2" /> Back to Purchase Orders</Button></Link>
+        <Link to="/PurchaseOrderList"><Button variant="outline" className="h-11"><ArrowLeft className="w-4 h-4 mr-2" /> Back to Purchase Orders</Button></Link>
       </div>
     );
   }
@@ -59,7 +59,7 @@ export default function PurchaseOrderCreate() {
         <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto" />
         <h2 className="text-lg font-bold text-slate-900">Purchase Order Already Exists</h2>
         <p className="text-sm text-slate-500">PO <strong>{existingPO.po_id}</strong> is already linked to this Purchase Request.</p>
-        <Link to="/PurchaseOrders"><Button className="h-11">View Purchase Orders</Button></Link>
+        <Link to="/PurchaseOrderList"><Button className="h-11">View Purchase Orders</Button></Link>
       </div>
     );
   }
@@ -71,7 +71,7 @@ export default function PurchaseOrderCreate() {
   return (
     <div className="max-w-4xl mx-auto space-y-5 pb-20">
       <div className="flex items-center gap-3">
-        <Link to="/PurchaseOrders"><button className="p-2 rounded-lg hover:bg-slate-100"><ArrowLeft className="w-5 h-5 text-slate-500" /></button></Link>
+        <Link to="/PurchaseOrderList"><button className="p-2 rounded-lg hover:bg-slate-100"><ArrowLeft className="w-5 h-5 text-slate-500" /></button></Link>
         <div>
           <h1 className="text-xl font-bold text-slate-900">Create Purchase Order</h1>
           <p className="text-sm text-slate-500">From Purchase Request: {prParam}</p>
