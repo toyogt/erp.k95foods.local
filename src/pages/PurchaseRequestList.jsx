@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Loader2, Plus, Search, Languages, Camera, ChevronRight } from 'lucide-react';
+import { Loader2, Plus, Search, Languages, Camera, ChevronRight, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import PRCreateForm from '@/components/purchase/PRCreateForm';
@@ -59,6 +59,9 @@ export default function PurchaseRequestList() {
     const pr = prs.find(p => p.pr_number === it.pr_number);
     return pr && (pr.requested_by === user?.email);
   });
+
+  // Build a set of PR numbers that need requester action
+  const actionRequiredPRNumbers = new Set(myPendingPhotos.map(it => it.pr_number).filter(Boolean));
 
   if (selectedPR) {
     return (
@@ -132,9 +135,17 @@ export default function PurchaseRequestList() {
                   <th className="text-center px-3 py-3 font-medium whitespace-nowrap">{t('Actions')}</th>
                 </tr></thead>
                 <tbody className="divide-y divide-slate-100">
-                  {paged.map(pr => (
-                    <tr key={pr.id} className="hover:bg-slate-50 cursor-pointer" onClick={() => setSelectedPR(pr)}>
-                      <td className="px-3 py-3 font-bold text-slate-900 whitespace-nowrap">{pr.pr_number || pr.mr_id}</td>
+                  {paged.map(pr => {
+                    const prKey = pr.pr_number || pr.mr_id;
+                    const hasAction = actionRequiredPRNumbers.has(prKey);
+                    return (
+                    <tr key={pr.id} className={`cursor-pointer transition-colors ${hasAction ? 'bg-amber-50 hover:bg-amber-100' : 'hover:bg-slate-50'}`} onClick={() => setSelectedPR(pr)}>
+                      <td className="px-3 py-3 font-bold text-slate-900 whitespace-nowrap">
+                        <span className="flex items-center gap-1.5">
+                          {hasAction && <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" title="Action required" />}
+                          {prKey}
+                        </span>
+                      </td>
                       <td className="px-3 py-3 text-slate-700 max-w-[200px] truncate">{pr.title || (isHindi ? 'अनामित अनुरोध' : 'Untitled Request')}</td>
                       <td className="px-3 py-3"><span className={`text-xs font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${PR_STATUS_COLOR[pr.status] || 'bg-slate-100 text-slate-600'}`}>{isHindi ? t(pr.status) : pr.status}</span></td>
                       <td className="px-3 py-3"><span className={`text-xs font-medium px-2 py-0.5 rounded-full whitespace-nowrap ${PRIORITY_COLOR[pr.priority] || ''}`}>{isHindi ? t(pr.priority) : pr.priority}</span></td>
@@ -144,7 +155,7 @@ export default function PurchaseRequestList() {
                       <td className="px-3 py-3 text-xs text-slate-600 whitespace-nowrap">{formatDateDDMMYYYY(pr.required_by_date)}</td>
                       <td className="px-3 py-3 text-center"><ChevronRight className="w-4 h-4 text-slate-400 mx-auto" /></td>
                     </tr>
-                  ))}
+                  );})}
                 </tbody>
               </table>
             </div>

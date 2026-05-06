@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Loader2, CheckCircle2, Clock, XCircle, Search, Eye } from 'lucide-react';
+import { Loader2, CheckCircle2, Clock, XCircle, Search, Eye, AlertTriangle } from 'lucide-react';
 import PRDetailView from '@/components/purchase/PRDetailView';
 import { PR_STATUS_COLOR, PRIORITY_COLOR, formatDateDDMMYYYY, DEPARTMENTS } from '@/components/purchase/purchaseHelpers';
 import TablePagination from '@/components/store/TablePagination';
@@ -27,6 +27,23 @@ export default function PurchaseRequestApprovals() {
   });
 
   const isManager = user?.role === 'admin' || user?.role === 'purchase_manager' || user?.role === 'production_manager';
+
+  // Fetch items with pending actions to flag PRs
+  const { data: actionItems = [] } = useQuery({
+    queryKey: ['pr-action-items'],
+    queryFn: async () => {
+      const [photoItems, clarItems] = await Promise.all([
+        base44.entities.PurchaseRequestItem.filter({ item_status: 'Sample Photo Requested' }, '-created_date', 200).catch(() => []),
+        base44.entities.PurchaseRequestItem.filter({ item_status: 'Clarification Requested' }, '-created_date', 200).catch(() => []),
+      ]);
+      return [...photoItems, ...clarItems];
+    },
+    staleTime: 30000, enabled: !!user,
+  });
+
+  // Set of PR numbers that have action-required items
+  const actionRequiredPRs = new Set(actionItems.map(it => it.pr_number || it.mr_id).filter(Boolean));
+
   const pendingPRs = prs.filter(pr => pr.status === 'Pending Approval' || pr.status === 'SUBMITTED');
   const reviewedPRs = prs.filter(pr => ['Approved', 'Partially Approved', 'Rejected', 'APPROVED', 'REJECTED'].includes(pr.status));
   const tabPRs = tab === 'pending' ? pendingPRs : tab === 'reviewed' ? reviewedPRs : prs;
@@ -133,9 +150,17 @@ export default function PurchaseRequestApprovals() {
                   <th className="text-center px-3 py-3 font-medium whitespace-nowrap">Action</th>
                 </tr></thead>
                 <tbody className="divide-y divide-slate-100">
-                  {paged.map(pr => (
-                    <tr key={pr.id} className="hover:bg-slate-50 cursor-pointer" onClick={() => setSelectedPR(pr)}>
-                      <td className="px-3 py-3 font-bold text-slate-900 whitespace-nowrap">{pr.pr_number || pr.mr_id}</td>
+                  {paged.map(pr => {
+                    const prKey = pr.pr_number || pr.mr_id;
+                    const hasAction = actionRequiredPRs.has(prKey);
+                    return (
+                    <tr key={pr.id} className={`cursor-pointer transition-colors ${hasAction ? 'bg-amber-50 hover:bg-amber-100' : 'hover:bg-slate-50'}`} onClick={() => setSelectedPR(pr)}>
+                      <td className="px-3 py-3 font-bold text-slate-900 whitespace-nowrap">
+                        <span className="flex items-center gap-1.5">
+                          {hasAction && <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
+                          {prKey}
+                        </span>
+                      </td>
                       <td className="px-3 py-3 text-slate-700 max-w-[180px] truncate whitespace-nowrap">{pr.title || '—'}</td>
                       <td className="px-3 py-3 whitespace-nowrap"><span className={`text-xs font-bold px-2 py-0.5 rounded-full ${PR_STATUS_COLOR[pr.status] || 'bg-slate-100 text-slate-600'}`}>{pr.status}</span></td>
                       <td className="px-3 py-3 whitespace-nowrap"><span className={`text-xs font-medium px-2 py-0.5 rounded-full ${PRIORITY_COLOR[pr.priority] || ''}`}>{pr.priority || '—'}</span></td>
@@ -145,7 +170,7 @@ export default function PurchaseRequestApprovals() {
                       <td className="px-3 py-3 text-xs text-slate-600 whitespace-nowrap">{formatDateDDMMYYYY(pr.required_by_date)}</td>
                       <td className="px-3 py-3 text-center"><Eye className="w-4 h-4 text-slate-400 mx-auto" /></td>
                     </tr>
-                  ))}
+                  );})}
                 </tbody>
               </table>
             </div>
