@@ -75,6 +75,10 @@ export const pageRegistry = [
    { pageKey: 'PurchaseOrders', title: 'Purchase Orders', moduleKey: 'PURCHASE', icon: ShoppingCart, roles: ['admin', 'purchase_user', 'purchase_manager', 'production_manager', 'user'] },
    { pageKey: 'PurchaseReports', title: 'Purchase Reports', moduleKey: 'PURCHASE', icon: BarChart3, roles: ['admin', 'purchase_manager', 'production_manager', 'user'] },
    { pageKey: 'SupplierManager', title: 'Suppliers', moduleKey: 'PURCHASE', icon: Truck, roles: ['admin', 'purchase_manager'], adminOnly: true },
+   { pageKey: 'PurchaseRequestApprovals', title: 'PR Approvals', moduleKey: 'PURCHASE', icon: ClipboardCheck, roles: ['admin', 'purchase_manager', 'production_manager', 'user'] },
+   { pageKey: 'PurchaseOrderTimeline', title: 'PO Master', moduleKey: 'PURCHASE', icon: ListChecks, roles: ['admin', 'purchase_manager', 'production_manager', 'user'] },
+   { pageKey: 'POFollowUpTracker', title: 'Follow-Up Tracker', moduleKey: 'PURCHASE', icon: Bell, roles: ['admin', 'purchase_manager', 'production_manager', 'user'] },
+   { pageKey: 'CentralItemHub', title: 'Central Item Hub', moduleKey: 'PURCHASE', icon: PackageSearch, roles: ['admin', 'purchase_manager', 'store_manager', 'production_manager', 'user'] },
    { pageKey: 'ApprovalsInbox', title: 'Approvals Inbox', moduleKey: 'PURCHASE', icon: ClipboardCheck, roles: ['admin', 'purchase_manager', 'accounts_manager', 'production_manager', 'user'] },
 
   // GRN pages moved to STORE module above

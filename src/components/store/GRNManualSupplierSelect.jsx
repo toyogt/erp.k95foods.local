@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { base44 } from '@/api/base44Client';
 import { Search, ChevronDown, Plus } from 'lucide-react';
 
@@ -133,8 +134,8 @@ export default function GRNManualSupplierSelect({ value, onChange }) {
       </div>
       <p className="text-xs text-slate-400 mt-0.5">Type to search approved suppliers or enter a new name</p>
 
-      {open && (
-        <div className="absolute z-[9999] top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-64 overflow-y-auto">
+      {open && createPortal(
+        <div style={{ position: 'fixed', zIndex: 99999, top: (ref.current?.getBoundingClientRect().bottom || 0) + 4, left: ref.current?.getBoundingClientRect().left || 0, width: ref.current?.getBoundingClientRect().width || 300 }} className="bg-white border border-slate-200 rounded-xl shadow-lg max-h-64 overflow-y-auto">
 
           {/* Approved suppliers section */}
           {filteredApproved.length > 0 && (
@@ -189,7 +190,8 @@ export default function GRNManualSupplierSelect({ value, onChange }) {
               {trimmedQuery ? 'No matches — type to add as new supplier' : 'Type to search or enter supplier name'}
             </div>
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

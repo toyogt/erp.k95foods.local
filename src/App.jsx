@@ -139,6 +139,14 @@ import AllItemsLabelArtworks from './pages/AllItemsLabelArtworks';
 import AllItemsContainers from './pages/AllItemsContainers';
 import AllItemsCaps from './pages/AllItemsCaps';
 import AllItemsFlavours from './pages/AllItemsFlavours';
+import PurchaseOrderCreate from './pages/PurchaseOrderCreate';
+import POFollowUpTracker from './pages/POFollowUpTracker';
+import PurchaseRequestApprovals from './pages/PurchaseRequestApprovals';
+import PurchaseOrderTimeline from './pages/PurchaseOrderTimeline';
+import CentralItemHub from './pages/CentralItemHub';
+import BulkPOCreate from './pages/BulkPOCreate';
+import PurchaseRequestList from './pages/PurchaseRequestList';
+import PurchaseOrderList from './pages/PurchaseOrderList';
 
 // Page component lookup table
 const PAGE_COMPONENTS = {
@@ -180,6 +188,14 @@ const PAGE_COMPONENTS = {
   AllItemsContainers,
   AllItemsCaps,
   AllItemsFlavours,
+  PurchaseOrderCreate,
+  POFollowUpTracker,
+  PurchaseRequestApprovals,
+  PurchaseOrderTimeline,
+  CentralItemHub,
+  BulkPOCreate,
+  PurchaseRequestList,
+  PurchaseOrderList,
 };
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -367,6 +383,16 @@ const AuthenticatedApp = () => {
 
       {/* Quick Assign Task — standalone, no layout wrapper */}
       <Route path="/QuickAssignTask" element={<QuickAssignTask />} />
+
+      {/* Purchase Module Extended */}
+      <Route path="/PurchaseOrderCreate" element={<LayoutWrapper currentPageName="PurchaseOrderCreate"><PurchaseOrderCreate /></LayoutWrapper>} />
+      <Route path="/POFollowUpTracker" element={<LayoutWrapper currentPageName="POFollowUpTracker"><POFollowUpTracker /></LayoutWrapper>} />
+      <Route path="/PurchaseRequestApprovals" element={<LayoutWrapper currentPageName="PurchaseRequestApprovals"><PurchaseRequestApprovals /></LayoutWrapper>} />
+      <Route path="/PurchaseOrderTimeline" element={<LayoutWrapper currentPageName="PurchaseOrderTimeline"><PurchaseOrderTimeline /></LayoutWrapper>} />
+      <Route path="/CentralItemHub" element={<LayoutWrapper currentPageName="CentralItemHub"><CentralItemHub /></LayoutWrapper>} />
+      <Route path="/BulkPOCreate" element={<LayoutWrapper currentPageName="BulkPOCreate"><BulkPOCreate /></LayoutWrapper>} />
+      <Route path="/PurchaseRequestList" element={<LayoutWrapper currentPageName="PurchaseRequestList"><PurchaseRequestList /></LayoutWrapper>} />
+      <Route path="/PurchaseOrderList" element={<LayoutWrapper currentPageName="PurchaseOrderList"><PurchaseOrderList /></LayoutWrapper>} />
 
       {/* All Items Module */}
       <Route path="/AllItemsIngredients" element={<LayoutWrapper currentPageName="AllItemsIngredients"><AllItemsIngredients /></LayoutWrapper>} />

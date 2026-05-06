@@ -1,0 +1,72 @@
+{
+  "name": "PurchaseRequestItem",
+  "type": "object",
+  "title": "Purchase Request Item",
+  "properties": {
+    "mr_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "pr_number": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "line_number": {
+      "type": "number",
+      "minimum": 1
+    },
+    "item_code": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "item_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "uom_code": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "unit": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "qty": {
+      "type": "number",
+      "minimum": 0
+    },
+    "quantity": {
+      "type": "number",
+      "minimum": 0
+    },
+    "estimated_rate": {
+      "type": "number",
+      "minimum": 0
+    },
+    "sample_image": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "remarks": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "item_status": {
+      "type": "string",
+      "maxLength": 50,
+      "default": "Pending"
+    },
+    "required_by": {
+      "type": "string",
+      "format": "date"
+    }
+  },
+  "required": [
+    "item_code",
+    "qty"
+  ]
+}

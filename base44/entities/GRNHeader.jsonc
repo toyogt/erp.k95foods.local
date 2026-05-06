@@ -34,6 +34,13 @@
       "type": "string",
       "maxLength": 50
     },
+    "linked_po_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Array of linked PO IDs for multi-PO GRNs"
+    },
     "status": {
       "type": "string",
       "enum": [
@@ -76,6 +83,16 @@
     "erp_name": {
       "type": "string",
       "maxLength": 100
+    },
+    "freight_amount": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Actual freight cost for this GRN shipment"
+    },
+    "freight_notes": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "Freight notes or transporter details"
     }
   },
   "required": [

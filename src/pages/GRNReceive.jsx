@@ -20,7 +20,7 @@ import useDraftSave from '@/hooks/useDraftSave';
 import TablePagination from '@/components/store/TablePagination';
 
 
-function GRNTable({ grns, title, allGateEntries, onViewInvoice, onOpenGrn }) {
+function GRNTable({ grns, allGateEntries, onViewInvoice, onOpenGrn }) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   if (!grns || grns.length === 0) {
@@ -93,7 +93,7 @@ function emptyItem() {
   return { item_code: '', item_name: '', original_quantity: '', quantity: '', qty_mismatch: 'no', mismatch_type: 'none', mismatch_reason: '', uom: 'Nos', batch_lot: '', expiry_date: '', mfg_date: '', material_photo: '', notes: '', _rules: null };
 }
 
-const GRN_DRAFT_INITIAL = { items: [emptyItem()], grnNotes: '', selectedGateId: '', supplierName: '', invoiceNumber: '', invoiceDate: '' };
+const GRN_DRAFT_INITIAL = { items: [emptyItem()], grnNotes: '', selectedGateId: '', supplierName: '', invoiceNumber: '', invoiceDate: '', freightAmount: '', freightNotes: '' };
 
 export default function GRNReceive() {
   const [user, setUser] = useState(null);
@@ -106,6 +106,10 @@ export default function GRNReceive() {
   const [supplierName, setSupplierNameRaw] = useState(draft.supplierName || '');
   const [invoiceNumber, setInvoiceNumberRaw] = useState(draft.invoiceNumber || '');
   const [invoiceDate, setInvoiceDateRaw] = useState(draft.invoiceDate || '');
+  const [freightAmount, setFreightAmountRaw] = useState(draft.freightAmount || '');
+  const [freightNotes, setFreightNotesRaw] = useState(draft.freightNotes || '');
+  function setFreightAmount(v) { setFreightAmountRaw(v); setDraftState(d => ({ ...d, freightAmount: v })); }
+  function setFreightNotes(v) { setFreightNotesRaw(v); setDraftState(d => ({ ...d, freightNotes: v })); }
   function setSupplierName(v) {
     setSupplierNameRaw(v);
     setDraftState(d => ({ ...d, supplierName: v }));
@@ -187,13 +191,17 @@ export default function GRNReceive() {
       setSupplierNameRaw(draft.supplierName || '');
       setInvoiceNumberRaw(draft.invoiceNumber || '');
       setInvoiceDateRaw(draft.invoiceDate || '');
+      setFreightAmountRaw(draft.freightAmount || '');
+      setFreightNotesRaw(draft.freightNotes || '');
     } else {
       setItemsRaw([emptyItem()]);
       setGrnNotesRaw('');
       setSupplierNameRaw('');
       setInvoiceNumberRaw('');
       setInvoiceDateRaw('');
-      setDraftState(d => ({ ...d, selectedGateId: entry.gate_id, items: [emptyItem()], grnNotes: '', supplierName: '', invoiceNumber: '', invoiceDate: '' }));
+      setFreightAmountRaw('');
+      setFreightNotesRaw('');
+      setDraftState(d => ({ ...d, selectedGateId: entry.gate_id, items: [emptyItem()], grnNotes: '', supplierName: '', invoiceNumber: '', invoiceDate: '', freightAmount: '', freightNotes: '' }));
     }
     setDone(null);
     setShowChecklist(false);
@@ -271,6 +279,7 @@ export default function GRNReceive() {
     const grn_id = `GRN-${Date.now().toString(36).toUpperCase()}`;
 
 
+    const freightVal = freightAmount ? parseFloat(freightAmount) : 0;
     const grnHeader = await base44.entities.GRNHeader.create({
       grn_id,
       gate_id: selected.gate_id,
@@ -281,6 +290,8 @@ export default function GRNReceive() {
       received_at: new Date().toISOString(),
       received_by: user?.email || '',
       notes: grnNotes,
+      freight_amount: freightVal || undefined,
+      freight_notes: freightNotes || undefined,
       ...(checklistRunId ? { checklist_run_id: checklistRunId } : {}),
     });
 
@@ -423,7 +434,7 @@ export default function GRNReceive() {
       {hasGrnDraft && (
         <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
           <p className="text-xs text-amber-700 font-medium">You have an unsaved draft</p>
-          <button onClick={() => { clearGrnDraft(); setItemsRaw([emptyItem()]); setGrnNotesRaw(''); setSupplierNameRaw(''); setInvoiceNumberRaw(''); setInvoiceDateRaw(''); }} className="text-xs text-red-500 hover:text-red-700 font-medium">Clear Draft</button>
+          <button onClick={() => { clearGrnDraft(); setItemsRaw([emptyItem()]); setGrnNotesRaw(''); setSupplierNameRaw(''); setInvoiceNumberRaw(''); setInvoiceDateRaw(''); setFreightAmountRaw(''); setFreightNotesRaw(''); }} className="text-xs text-red-500 hover:text-red-700 font-medium">Clear Draft</button>
         </div>
       )}
 
@@ -448,7 +459,7 @@ export default function GRNReceive() {
         ))}
       </div>
 
-      {activeTab === 'master' && <GRNTable grns={allGrns} title="All Goods Received Notes" allGateEntries={allGateMap} onViewInvoice={url => setInvoicePreview(url)} onOpenGrn={g => setSelectedGrn(g)} />}
+      {activeTab === 'master' && <GRNTable grns={allGrns} allGateEntries={allGateMap} onViewInvoice={url => setInvoicePreview(url)} onOpenGrn={g => setSelectedGrn(g)} />}
 
       {activeTab === 'create' && !selected && (
         <>
@@ -613,6 +624,21 @@ export default function GRNReceive() {
             >
               <Plus className="w-4 h-4" /> Add another item
             </button>
+          </div>
+
+          {/* Freight Section */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-5">
+            <p className="text-sm font-semibold text-slate-900 uppercase tracking-wide mb-3">Freight & Transport Cost</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-medium text-slate-700">Freight Amount (₹)</label>
+                <input type="number" className="h-11 text-sm mt-1 w-full border border-slate-200 rounded-xl px-3" value={freightAmount} onChange={e => setFreightAmount(e.target.value)} placeholder="0.00" min="0" step="0.01" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-slate-700">Freight Notes / Transporter</label>
+                <input className="h-11 text-sm mt-1 w-full border border-slate-200 rounded-xl px-3" value={freightNotes} onChange={e => setFreightNotes(e.target.value)} placeholder="e.g. ABC Transport, LR-12345" />
+              </div>
+            </div>
           </div>
 
           <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-5">
