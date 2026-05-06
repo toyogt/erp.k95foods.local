@@ -29,7 +29,6 @@ export default function QuickAssignTask() {
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(null);
   const [voiceTranscript, setVoiceTranscript] = useState('');
-  const [voiceRecordingUrl, setVoiceRecordingUrl] = useState('');
 
   const [form, setForm] = useState({
     task_name: '',
@@ -99,7 +98,6 @@ export default function QuickAssignTask() {
       is_important: parsed.is_important ?? prev.is_important,
     }));
     setVoiceTranscript(parsed.transcription || '');
-    setVoiceRecordingUrl(parsed.recording_url || '');
   };
 
   const resetForm = () => {
@@ -110,7 +108,6 @@ export default function QuickAssignTask() {
       attachments: [],
     });
     setVoiceTranscript('');
-    setVoiceRecordingUrl('');
     setSuccess(null);
   };
 
@@ -146,11 +143,9 @@ export default function QuickAssignTask() {
       attachments: form.attachments || [],
     });
 
-    const logDetails = `Task "${form.task_name}" assigned to ${selectedUser?.full_name || form.assigned_to_email}, due ${form.end_date}${form.end_time ? ' ' + form.end_time : ''}` +
-      (voiceTranscript ? `\nVoice transcript: "${voiceTranscript}"` : '') +
-      (voiceRecordingUrl ? `\nRecording: ${voiceRecordingUrl}` : '');
-
-    await logTaskAction(task, 'created', user, logDetails);
+    await logTaskAction(task, 'created', user,
+      `Task "${form.task_name}" assigned to ${selectedUser?.full_name || form.assigned_to_email}, due ${form.end_date}${form.end_time ? ' ' + form.end_time : ''}`
+    );
 
     setSuccess(task.task_number);
     setSaving(false);

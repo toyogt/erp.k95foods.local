@@ -5,9 +5,9 @@ import { Mic, Square, Loader2 } from 'lucide-react';
 import moment from 'moment';
 
 /**
- * VoiceTaskInput — optimised for speed (single backend call does Whisper + LLM).
- * Supports Hindi, English, Hinglish.
- * Saves recording URL for future audit.
+ * VoiceTaskInput
+ * Records audio → OpenAI Whisper (exact transcription via backend) → LLM parses transcript → fills form fields.
+ * The transcription is shown verbatim. LLM only structures the exact words spoken into fields.
  */
 export default function VoiceTaskInput({ onParsed, users }) {
   const [recording, setRecording] = useState(false);
@@ -53,31 +53,17 @@ export default function VoiceTaskInput({ onParsed, users }) {
     setProcessingStep('Uploading audio…');
 
     try {
+      // Build audio file from chunks
       const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
       const file = new File([blob], 'voice_task.webm', { type: 'audio/webm' });
 
-      // Upload audio file (saved permanently for audit)
+      // Upload file
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
 
-      // Build user name list for matching
-      const userList = (users || [])
-        .filter(u => u.email && u.full_name)
-        .map(u => `${u.full_name} (${u.email})`)
-        .join('\n');
-
-      // Single backend call — Whisper transcription + LLM extraction combined
-      setProcessingStep('Transcribing and extracting…');
-
-      const res = await base44.functions.invoke('whisperTranscribe', {
-        file_url,
-        user_list: userList || '',
-        today: moment().format('DD/MM/YYYY'),
-        tomorrow: moment().add(1, 'day').format('DD/MM/YYYY'),
-        day_after: moment().add(2, 'days').format('DD/MM/YYYY'),
-        next_week: moment().add(7, 'days').format('DD/MM/YYYY'),
-      });
-
-      const { transcript, parsed } = res.data || {};
+      // Step 1: Get exact transcription from Whisper via backend
+      setProcessingStep('Transcribing your voice…');
+      const whisperRes = await base44.functions.invoke('whisperTranscribe', { file_url });
+      const transcript = whisperRes.data?.transcript;
 
       if (!transcript || !transcript.trim()) {
         setError('No speech detected. Please speak clearly and try again.');
@@ -85,15 +71,74 @@ export default function VoiceTaskInput({ onParsed, users }) {
         return;
       }
 
+      // Step 2: Parse the exact transcript into structured form fields using LLM
+      setProcessingStep('Extracting task details…');
+
+      const todayStr = moment().format('DD/MM/YYYY');
+      const tomorrowStr = moment().add(1, 'day').format('DD/MM/YYYY');
+      const nextWeekStr = moment().add(7, 'days').format('DD/MM/YYYY');
+      const dayAfterStr = moment().add(2, 'days').format('DD/MM/YYYY');
+      const defaultEndStr = moment().add(3, 'days').format('DD/MM/YYYY');
+
+      // Build user name list for matching
+      const userList = (users || [])
+        .filter(u => u.email && u.full_name)
+        .map(u => `${u.full_name} (${u.email})`)
+        .join('\n');
+
+      const result = await base44.integrations.Core.InvokeLLM({
+        prompt: `You are a strict field extractor. You MUST only use the exact words from the transcript below — do NOT add, rephrase, or invent any information.
+
+TRANSCRIPT:
+"${transcript}"
+
+TODAY: ${todayStr}
+
+EXTRACT these fields using ONLY what is spoken:
+
+1. task_name: A short title (max 100 chars) using the speaker's own words. Do NOT rephrase.
+2. task_details: Longer description if the speaker gave extra context. Use their exact words. If nothing extra was said, leave empty.
+3. assigned_to_email: If the speaker mentioned a person's name, match it to the closest name below and return their email. If no name mentioned, return empty string.
+
+TEAM MEMBERS:
+${userList || '(no list available)'}
+
+4. end_date: If a deadline was mentioned, convert to DD/MM/YYYY:
+   - "today" → ${todayStr}
+   - "tomorrow" → ${tomorrowStr}
+   - "day after tomorrow" → ${dayAfterStr}
+   - "next week" → ${nextWeekStr}
+   - Specific date like "15th May" → DD/MM/${moment().year()}
+   - If NO deadline mentioned → empty string
+5. end_time: If a time was mentioned (e.g. "by 3pm" → "15:00"), else empty string
+6. is_important: true ONLY if words like "urgent", "important", "critical", "ASAP", "priority" were actually spoken
+
+CRITICAL RULES:
+- Do NOT generate or invent content. Only extract from the transcript.
+- If something is not mentioned, leave the field as empty string or false.
+- task_name must use the speaker's actual words, not your interpretation.`,
+        response_json_schema: {
+          type: 'object',
+          properties: {
+            task_name: { type: 'string' },
+            task_details: { type: 'string' },
+            assigned_to_email: { type: 'string' },
+            end_date: { type: 'string' },
+            end_time: { type: 'string' },
+            is_important: { type: 'boolean' },
+          },
+          required: ['task_name'],
+        },
+      });
+
       onParsed({
-        task_name: parsed?.task_name || '',
-        task_details: parsed?.task_details || '',
-        assigned_to_email: parsed?.assigned_to_email || '',
-        end_date: parsed?.end_date || '',
-        end_time: parsed?.end_time || '',
-        is_important: parsed?.is_important || false,
+        task_name: result?.task_name || '',
+        task_details: result?.task_details || '',
+        assigned_to_email: result?.assigned_to_email || '',
+        end_date: result?.end_date || '',
+        end_time: result?.end_time || '',
+        is_important: result?.is_important || false,
         transcription: transcript,
-        recording_url: file_url,
       });
 
       setProcessing(false);
@@ -143,7 +188,7 @@ export default function VoiceTaskInput({ onParsed, users }) {
 
       {recording && (
         <p className="text-xs text-center text-red-500 font-medium">
-          🔴 Recording… Speak in Hindi or English. Tap "Stop" when done.
+          🔴 Recording… Describe the task, person, deadline. Tap "Stop" when done.
         </p>
       )}
 

@@ -1,10 +1,8 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 /**
- * Combined Whisper Transcription + LLM Field Extraction in a single call.
- * Supports English + Hindi (Hinglish) speech.
- * Saves recording URL for audit trail.
- * Returns { transcript, parsed: { task_name, task_details, assigned_to_email, end_date, end_time, is_important } }
+ * Whisper Transcription — takes an uploaded audio file URL,
+ * downloads it, sends to OpenAI Whisper, returns exact transcription.
  */
 Deno.serve(async (req) => {
   try {
@@ -14,7 +12,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { file_url, user_list, today, tomorrow, day_after, next_week } = await req.json();
+    const { file_url } = await req.json();
     if (!file_url) {
       return Response.json({ error: 'Missing file_url' }, { status: 400 });
     }
@@ -31,22 +29,22 @@ Deno.serve(async (req) => {
     }
     const audioBlob = await audioRes.blob();
 
-    // Send to Whisper — NO language lock so it handles Hindi, English, Hinglish
-    const whisperForm = new FormData();
-    whisperForm.append('file', audioBlob, 'voice_recording.webm');
-    whisperForm.append('model', 'whisper-1');
-    whisperForm.append('prompt', 'This is a task assignment in Hindi, English, or Hinglish. Common words: kal, aaj, parso, urgent, important, task, kaam, deadline, tak, ko, bolo, bhejo.');
+    // Send to Whisper
+    const formData = new FormData();
+    formData.append('file', audioBlob, 'voice_recording.webm');
+    formData.append('model', 'whisper-1');
+    formData.append('language', 'en');
 
     const whisperRes = await fetch('https://api.openai.com/v1/audio/transcriptions', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${openaiKey}` },
-      body: whisperForm,
+      body: formData,
     });
 
     if (!whisperRes.ok) {
       const errText = await whisperRes.text();
       console.error('[whisperTranscribe] Whisper error:', errText);
-      return Response.json({ error: 'Transcription failed' }, { status: 500 });
+      return Response.json({ error: 'Transcription failed: ' + errText }, { status: 500 });
     }
 
     const whisperData = await whisperRes.json();
@@ -57,66 +55,7 @@ Deno.serve(async (req) => {
     }
 
     console.log('[whisperTranscribe] Transcript:', transcript);
-
-    // LLM extraction — done server-side to save a round-trip
-    const currentYear = new Date().getFullYear();
-    const userListStr = user_list || '(no list available)';
-
-    const llmRes = await base44.asServiceRole.integrations.Core.InvokeLLM({
-      prompt: `You are a strict field extractor for task assignments. The transcript may be in Hindi, English, or Hinglish (mixed). Extract fields using ONLY what was spoken — do NOT invent or rephrase.
-
-TRANSCRIPT:
-"${transcript}"
-
-TODAY: ${today || ''}
-
-EXTRACT:
-1. task_name: Short title (max 100 chars) using the speaker's own words. If Hindi, keep in Hindi/transliterated form.
-2. task_details: Extra context from the speaker's words. If nothing extra, empty string.
-3. assigned_to_email: Match the speaker's mentioned person name to the closest name below. If no name mentioned, empty string.
-
-TEAM MEMBERS:
-${userListStr}
-
-4. end_date: Convert deadline to DD/MM/YYYY:
-   - "today"/"aaj" → ${today || ''}
-   - "tomorrow"/"kal"/"कल" → ${tomorrow || ''}
-   - "day after tomorrow"/"parso"/"परसों" → ${day_after || ''}
-   - "next week"/"agle hafte" → ${next_week || ''}
-   - Specific date like "15th May"/"15 May" → DD/MM/${currentYear}
-   - If NO deadline mentioned → empty string
-5. end_time: If time mentioned (e.g. "by 3pm"/"3 baje tak" → "15:00"), else empty string
-6. is_important: true ONLY if words like "urgent"/"zaruri"/"important"/"critical"/"ASAP"/"jaldi"/"turant"/"priority" were spoken
-
-RULES:
-- Do NOT generate content. Only extract from transcript.
-- If something is not mentioned, return empty string or false.
-- task_name must use the speaker's actual words.`,
-      response_json_schema: {
-        type: 'object',
-        properties: {
-          task_name: { type: 'string' },
-          task_details: { type: 'string' },
-          assigned_to_email: { type: 'string' },
-          end_date: { type: 'string' },
-          end_time: { type: 'string' },
-          is_important: { type: 'boolean' },
-        },
-        required: ['task_name'],
-      },
-    });
-
-    return Response.json({
-      transcript,
-      parsed: {
-        task_name: llmRes?.task_name || '',
-        task_details: llmRes?.task_details || '',
-        assigned_to_email: llmRes?.assigned_to_email || '',
-        end_date: llmRes?.end_date || '',
-        end_time: llmRes?.end_time || '',
-        is_important: llmRes?.is_important || false,
-      },
-    });
+    return Response.json({ transcript });
 
   } catch (error) {
     console.error('[whisperTranscribe] Error:', error.message);
