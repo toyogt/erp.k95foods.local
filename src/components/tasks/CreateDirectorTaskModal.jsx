@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, AlertTriangle, Layers, ClipboardList, GitBranch, X } from 'lucide-react';
 import { generateTaskNumber, logTaskAction, getEAsForDirector } from '@/lib/directorTaskHelpers';
 import DatePickerField from '@/components/tasks/DatePickerField';
+import AttachmentUploader from '@/components/tasks/AttachmentUploader';
 
 /**
  * CreateDirectorTaskModal
@@ -43,6 +44,7 @@ export default function CreateDirectorTaskModal({
     notification_time: '16:00',
     project_id: defaultProjectId || '',
     predecessor_task_ids: [],
+    attachments: [],
   });
 
   useEffect(() => {
@@ -66,6 +68,7 @@ export default function CreateDirectorTaskModal({
         end_date: '', end_time: '', notification_time: '16:00',
         project_id: defaultProjectId || '',
         predecessor_task_ids: [],
+        attachments: [],
       });
     }
   }, [open, directorEmail, defaultProjectId]);
@@ -141,6 +144,7 @@ export default function CreateDirectorTaskModal({
       status: initialStatus,
       overdue_notified: false,
       ea_emails: eaList.map(e => e.email),
+      attachments: form.attachments || [],
     });
 
     await logTaskAction(task, 'created', user,
@@ -281,6 +285,18 @@ export default function CreateDirectorTaskModal({
               <Label className="text-xs font-medium text-slate-700">Details</Label>
               <Textarea value={form.task_details} onChange={e => setField('task_details', e.target.value)}
                 placeholder="Describe the task in detail…" className="mt-1 min-h-[80px]" />
+            </div>
+
+            {/* Attachments */}
+            <div>
+              <Label className="text-xs font-medium text-slate-700">Attachments</Label>
+              <div className="mt-1">
+                <AttachmentUploader
+                  attachments={form.attachments}
+                  onChange={files => setField('attachments', files)}
+                />
+              </div>
+              <p className="text-xs text-slate-400 mt-1">Add photos or videos for reference</p>
             </div>
 
             {/* Assign To */}

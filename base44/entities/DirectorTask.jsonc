@@ -178,6 +178,24 @@
     "progress_updated_at": {
       "type": "string",
       "format": "date-time"
+    },
+    "attachments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Photos and videos attached to the task"
     }
   },
   "required": [

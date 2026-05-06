@@ -13,6 +13,7 @@ import { TASK_STATUS_CONFIG, isTaskOverdue, getTaskUrgency, logTaskAction, forma
 import { canEAManageTask } from '@/lib/eaPermissions';
 import DirectorTaskLogPanel from '@/components/tasks/DirectorTaskLogPanel';
 import DatePickerField from '@/components/tasks/DatePickerField';
+import AttachmentGallery from '@/components/tasks/AttachmentGallery';
 
 export default function DirectorTaskCard({ task, user, viewMode, onRefresh, supportedDirectorEmails = [] }) {
   const [expanded, setExpanded] = useState(false);
@@ -208,6 +209,28 @@ export default function DirectorTaskCard({ task, user, viewMode, onRefresh, supp
             </div>
           )}
 
+          {/* Attachment thumbnails preview */}
+          {task.attachments?.length > 0 && !expanded && (
+            <div className="mt-2">
+              <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
+                {task.attachments.slice(0, 4).map((att, idx) => (
+                  <div key={idx} className="w-12 h-12 rounded-lg overflow-hidden border border-slate-200 bg-slate-100 shrink-0">
+                    {att.type === 'video' ? (
+                      <video src={att.url} className="w-full h-full object-cover" muted />
+                    ) : (
+                      <img src={att.url} alt={att.name || 'Attachment'} className="w-full h-full object-cover" />
+                    )}
+                  </div>
+                ))}
+                {task.attachments.length > 4 && (
+                  <div className="w-12 h-12 rounded-lg border border-slate-200 bg-slate-100 flex items-center justify-center text-xs text-slate-500 font-medium shrink-0">
+                    +{task.attachments.length - 4}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Progress note preview */}
           {task.progress_note && !expanded && (
             <div className="mt-2 bg-blue-50 rounded-lg px-3 py-1.5 flex items-start gap-2">
@@ -385,6 +408,11 @@ export default function DirectorTaskCard({ task, user, viewMode, onRefresh, supp
                     {new Date(task.progress_updated_at).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                   </p>
                 )}
+              </div>
+            )}
+            {task.attachments?.length > 0 && (
+              <div className="bg-white rounded-lg p-3 border border-slate-100">
+                <AttachmentGallery attachments={task.attachments} />
               </div>
             )}
             {task.predecessor_task_numbers?.length > 0 && (
