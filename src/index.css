@@ -96,4 +96,8 @@
     -moz-appearance: textfield;
     appearance: textfield;
   }
+
+  /* Hide scrollbar for tab lists on mobile */
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 }

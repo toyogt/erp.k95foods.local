@@ -166,24 +166,24 @@ export default function DirectorDashboard() {
 
           {/* Tabs */}
           <Tabs value={tab} onValueChange={setTab}>
-            <TabsList className="grid grid-cols-6 w-full">
-              <TabsTrigger value="projects" className="text-xs sm:text-sm gap-1">
+            <TabsList className="flex w-full overflow-x-auto no-scrollbar md:grid md:grid-cols-6">
+              <TabsTrigger value="projects" className="text-xs sm:text-sm gap-1 whitespace-nowrap flex-shrink-0">
                 <Layers className="w-3.5 h-3.5 hidden sm:block" />
                 Projects ({projects.filter(p => p.status !== 'completed' && p.status !== 'cancelled').length})
               </TabsTrigger>
-              <TabsTrigger value="open" className="text-xs sm:text-sm">
+              <TabsTrigger value="open" className="text-xs sm:text-sm whitespace-nowrap flex-shrink-0">
                 Open ({openTasks.length})
               </TabsTrigger>
-              <TabsTrigger value="date_change" className="text-xs sm:text-sm">
+              <TabsTrigger value="date_change" className="text-xs sm:text-sm whitespace-nowrap flex-shrink-0">
                 Date Change ({dateChangeTasks.length})
               </TabsTrigger>
-              <TabsTrigger value="verify" className="text-xs sm:text-sm">
+              <TabsTrigger value="verify" className="text-xs sm:text-sm whitespace-nowrap flex-shrink-0">
                 Verify ({verifyTasks.length})
               </TabsTrigger>
-              <TabsTrigger value="done" className="text-xs sm:text-sm">
+              <TabsTrigger value="done" className="text-xs sm:text-sm whitespace-nowrap flex-shrink-0">
                 Done ({completedTasks.length})
               </TabsTrigger>
-              <TabsTrigger value="cancelled" className="text-xs sm:text-sm">
+              <TabsTrigger value="cancelled" className="text-xs sm:text-sm whitespace-nowrap flex-shrink-0">
                 Cancelled ({cancelledTasks.length})
               </TabsTrigger>
             </TabsList>

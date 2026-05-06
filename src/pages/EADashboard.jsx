@@ -187,28 +187,28 @@ export default function EADashboard() {
 
           {/* Tabs */}
           <Tabs value={tab} onValueChange={setTab}>
-            <TabsList className="grid grid-cols-6 w-full">
-              <TabsTrigger value="projects" className="gap-1.5 text-xs sm:text-sm">
+            <TabsList className="flex w-full overflow-x-auto no-scrollbar md:grid md:grid-cols-6">
+              <TabsTrigger value="projects" className="gap-1.5 text-xs sm:text-sm whitespace-nowrap flex-shrink-0">
                 <Layers className="w-3.5 h-3.5 hidden sm:block" />
                 Projects ({projects.filter(p => p.status !== 'completed' && p.status !== 'cancelled').length})
               </TabsTrigger>
-              <TabsTrigger value="pending" className="gap-1.5 text-xs sm:text-sm">
+              <TabsTrigger value="pending" className="gap-1.5 text-xs sm:text-sm whitespace-nowrap flex-shrink-0">
                 <ClipboardList className="w-3.5 h-3.5 hidden sm:block" />
                 Open ({pendingTasks.length})
               </TabsTrigger>
-              <TabsTrigger value="date_change" className="gap-1.5 text-xs sm:text-sm">
+              <TabsTrigger value="date_change" className="gap-1.5 text-xs sm:text-sm whitespace-nowrap flex-shrink-0">
                 <CalendarClock className="w-3.5 h-3.5 hidden sm:block" />
                 Date Change ({dateChangeRequests.length})
               </TabsTrigger>
-              <TabsTrigger value="verification" className="gap-1.5 text-xs sm:text-sm">
+              <TabsTrigger value="verification" className="gap-1.5 text-xs sm:text-sm whitespace-nowrap flex-shrink-0">
                 <Clock className="w-3.5 h-3.5 hidden sm:block" />
                 Verify ({verificationTasks.length})
               </TabsTrigger>
-              <TabsTrigger value="completed" className="gap-1.5 text-xs sm:text-sm">
+              <TabsTrigger value="completed" className="gap-1.5 text-xs sm:text-sm whitespace-nowrap flex-shrink-0">
                 <CheckCircle2 className="w-3.5 h-3.5 hidden sm:block" />
                 Done ({completedTasks.length})
               </TabsTrigger>
-              <TabsTrigger value="cancelled" className="text-xs sm:text-sm">
+              <TabsTrigger value="cancelled" className="text-xs sm:text-sm whitespace-nowrap flex-shrink-0">
                 Cancelled ({cancelledTasks.length})
               </TabsTrigger>
             </TabsList>
