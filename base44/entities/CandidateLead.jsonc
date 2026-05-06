@@ -80,6 +80,16 @@
       "maxLength": 50,
       "description": "Employee code of the linked Employee record (denormalized for fast lookup/display)"
     },
+    "department": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Department of the hired employee (denormalized for analytics)"
+    },
+    "designation": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Designation of the hired employee (denormalized for analytics)"
+    },
     "enrollment_date": {
       "type": "string",
       "format": "date",
@@ -94,6 +104,32 @@
       "type": "string",
       "maxLength": 500,
       "description": "Reason for the employee's exit"
+    },
+    "exit_type": {
+      "type": "string",
+      "enum": [
+        "Resignation",
+        "Termination",
+        "Absconded",
+        "Retirement",
+        "End of Contract",
+        "Other"
+      ],
+      "description": "Type of exit"
+    },
+    "last_working_day": {
+      "type": "string",
+      "format": "date",
+      "description": "Last working day of the employee (stored YYYY-MM-DD)"
+    },
+    "eligible_for_rehire": {
+      "type": "boolean",
+      "description": "Whether the employee is eligible to be rehired"
+    },
+    "exit_feedback": {
+      "type": "string",
+      "maxLength": 2000,
+      "description": "Free-form feedback / exit interview notes"
     },
     "days_employed": {
       "type": "number",

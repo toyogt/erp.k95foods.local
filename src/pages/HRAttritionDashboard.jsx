@@ -7,6 +7,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { TrendingDown, RefreshCw, Loader2 } from 'lucide-react';
 import AttritionKPICards from '@/components/hr/AttritionKPICards';
+import PeriodKPICards from '@/components/hr/PeriodKPICards';
+import ConversionFunnelChart from '@/components/hr/ConversionFunnelChart';
+import AttritionFunnelPanel from '@/components/hr/AttritionFunnelPanel';
+import ConversionBreakdownTable from '@/components/hr/ConversionBreakdownTable';
+import BIExportPanel from '@/components/hr/BIExportPanel';
 import {
   ReachVsConversionChart,
   CategoryBarChart,
@@ -20,6 +25,13 @@ import {
   groupByCategory,
   inDateRange,
 } from '@/lib/candidateAttritionStats';
+import {
+  buildTenureBucketsDetailed,
+  buildConversionFunnel,
+  buildAttritionFunnel,
+  computePeriodKPIs,
+  buildConversionBreakdown,
+} from '@/lib/hrAnalyticsHelpers';
 
 const ALLOWED_ROLES = ['admin', 'hr_manager', 'hr_supervisor', 'hr_user'];
 
@@ -44,17 +56,13 @@ export default function HRAttritionDashboard() {
     enabled: !!user && ALLOWED_ROLES.includes(user.role),
   });
 
-  // Filter by first_contact_date range for "reach" funnel; full set used for tenure
+  // Range-scoped subsets
   const reachedInRange = useMemo(
     () => candidates.filter((c) => inDateRange(c, 'first_contact_date', fromDate, toDate)),
     [candidates, fromDate, toDate]
   );
   const enrolledInRange = useMemo(
     () => candidates.filter((c) => inDateRange(c, 'enrollment_date', fromDate, toDate)),
-    [candidates, fromDate, toDate]
-  );
-  const terminatedInRange = useMemo(
-    () => candidates.filter((c) => inDateRange(c, 'attrition_date', fromDate, toDate)),
     [candidates, fromDate, toDate]
   );
 
@@ -68,34 +76,24 @@ export default function HRAttritionDashboard() {
   );
 
   const kpis = useMemo(() => computeKPIs(candidates), [candidates]);
-  const sourceBreakdown = useMemo(() => groupByCategory(candidates, 'source_type'), [candidates]);
-  const locationBreakdown = useMemo(
-    () => groupByCategory(candidates.filter((c) => c.location_area), 'location_area').slice(0, 8),
-    [candidates]
-  );
-  const roleBreakdown = useMemo(
-    () => groupByCategory(candidates.filter((c) => c.role_interested), 'role_interested').slice(0, 8),
-    [candidates]
-  );
-  const statusBreakdown = useMemo(() => groupByCategory(candidates, 'status'), [candidates]);
+  const periodKPIs = useMemo(() => computePeriodKPIs(candidates, fromDate, toDate), [candidates, fromDate, toDate]);
 
-  // Attrition by source (only among hired candidates)
-  const attritionBySource = useMemo(() => {
-    const hired = candidates.filter((c) => c.status === 'Hired' || c.status === 'Terminated');
-    const groups = {};
-    for (const c of hired) {
-      const k = c.source_type || 'Unknown';
-      groups[k] = groups[k] || { hired: 0, terminated: 0 };
-      groups[k].hired += 1;
-      if (c.status === 'Terminated') groups[k].terminated += 1;
-    }
-    return Object.entries(groups)
-      .map(([name, v]) => ({
-        name,
-        value: v.hired ? Math.round((v.terminated / v.hired) * 100) : 0,
-      }))
-      .sort((a, b) => b.value - a.value);
-  }, [candidates]);
+  // Funnel — across reached-in-range candidates
+  const conversionFunnel = useMemo(
+    () => buildConversionFunnel(reachedInRange.length ? reachedInRange : candidates),
+    [reachedInRange, candidates]
+  );
+  const attritionFunnel = useMemo(() => buildAttritionFunnel(candidates), [candidates]);
+  const tenureDetailed = useMemo(() => buildTenureBucketsDetailed(candidates), [candidates]);
+
+  // Successful conversion breakdowns
+  const conversionBySource = useMemo(() => buildConversionBreakdown(candidates, 'source_type'), [candidates]);
+  const conversionByRole = useMemo(() => buildConversionBreakdown(candidates.filter((c) => c.role_interested), 'role_interested'), [candidates]);
+  const conversionByLocation = useMemo(() => buildConversionBreakdown(candidates.filter((c) => c.location_area), 'location_area'), [candidates]);
+
+  // Distributions
+  const sourceBreakdown = useMemo(() => groupByCategory(candidates, 'source_type'), [candidates]);
+  const statusBreakdown = useMemo(() => groupByCategory(candidates, 'status'), [candidates]);
 
   if (user && !ALLOWED_ROLES.includes(user.role)) {
     return (
@@ -130,13 +128,13 @@ export default function HRAttritionDashboard() {
         </Button>
       </div>
 
-      {/* KPI Cards */}
       {isLoading ? (
         <div className="flex items-center justify-center py-16">
           <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
         </div>
       ) : (
         <>
+          {/* Lifetime KPI Cards */}
           <AttritionKPICards kpis={kpis} />
 
           {/* Date range filter */}
@@ -144,7 +142,7 @@ export default function HRAttritionDashboard() {
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Date Range Filter</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-3">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div className="space-y-1">
                   <Label className="text-xs font-medium text-slate-700">From Date</Label>
@@ -168,26 +166,16 @@ export default function HRAttritionDashboard() {
                   <Button variant="outline" onClick={() => { setFromDate(isoDaysAgo(7)); setToDate(new Date().toISOString().slice(0, 10)); }} className="h-11 md:h-9 flex-1">7D</Button>
                   <Button variant="outline" onClick={() => { setFromDate(isoDaysAgo(30)); setToDate(new Date().toISOString().slice(0, 10)); }} className="h-11 md:h-9 flex-1">30D</Button>
                   <Button variant="outline" onClick={() => { setFromDate(isoDaysAgo(90)); setToDate(new Date().toISOString().slice(0, 10)); }} className="h-11 md:h-9 flex-1">90D</Button>
+                  <Button variant="outline" onClick={() => { setFromDate(isoDaysAgo(365)); setToDate(new Date().toISOString().slice(0, 10)); }} className="h-11 md:h-9 flex-1">1Y</Button>
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-3 mt-3 text-center">
-                <div className="bg-slate-50 rounded-md p-2">
-                  <div className="text-xs text-slate-500">Reached</div>
-                  <div className="text-lg font-bold text-slate-900">{reachedInRange.length}</div>
-                </div>
-                <div className="bg-green-50 rounded-md p-2">
-                  <div className="text-xs text-slate-500">Converted</div>
-                  <div className="text-lg font-bold text-green-700">{enrolledInRange.length}</div>
-                </div>
-                <div className="bg-red-50 rounded-md p-2">
-                  <div className="text-xs text-slate-500">Exited</div>
-                  <div className="text-lg font-bold text-red-700">{terminatedInRange.length}</div>
-                </div>
-              </div>
+
+              {/* Period KPIs */}
+              <PeriodKPICards kpis={periodKPIs} />
             </CardContent>
           </Card>
 
-          {/* Reach vs Conversion */}
+          {/* Daily Reach vs Conversion */}
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Daily Reach vs Conversion</CardTitle>
@@ -197,14 +185,72 @@ export default function HRAttritionDashboard() {
             </CardContent>
           </Card>
 
-          {/* Tenure & Status */}
+          {/* Conversion Funnel — all stages */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Recruitment Conversion Funnel</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ConversionFunnelChart data={conversionFunnel} />
+            </CardContent>
+          </Card>
+
+          {/* Attrition Funnel — Hired → Active vs Exited (with reasons) */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">Tenure Distribution (Exited Employees)</CardTitle>
+                <CardTitle className="text-base">Attrition Funnel (Hired → Exit)</CardTitle>
               </CardHeader>
               <CardContent>
-                <TenureBucketChart data={kpis.tenureBuckets} />
+                <AttritionFunnelPanel funnel={attritionFunnel} />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Tenure Distribution (in days)</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <TenureBucketChart data={tenureDetailed} />
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Successful Conversion Breakdown */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Conversion by Source</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ConversionBreakdownTable data={conversionBySource} label="Source" />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Conversion by Role</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ConversionBreakdownTable data={conversionByRole} label="Role" />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Conversion by Location</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ConversionBreakdownTable data={conversionByLocation} label="Location" />
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Distributions */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Leads by Source</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CategoryBarChart data={sourceBreakdown} label="Leads" color="#3b82f6" />
               </CardContent>
             </Card>
             <Card>
@@ -217,41 +263,8 @@ export default function HRAttritionDashboard() {
             </Card>
           </div>
 
-          {/* Source / Location / Role / Attrition by source */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Leads by Source</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CategoryBarChart data={sourceBreakdown} label="Leads" color="#3b82f6" />
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Attrition Rate by Source (%)</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CategoryBarChart data={attritionBySource} label="Attrition %" color="#ef4444" />
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Top Locations</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CategoryBarChart data={locationBreakdown} label="Leads" color="#10b981" />
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Top Roles of Interest</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CategoryBarChart data={roleBreakdown} label="Leads" color="#8b5cf6" />
-              </CardContent>
-            </Card>
-          </div>
+          {/* BI Export */}
+          <BIExportPanel candidates={candidates} />
         </>
       )}
     </div>

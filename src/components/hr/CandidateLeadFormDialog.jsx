@@ -12,6 +12,7 @@ import CandidateEmployeeLinker from './CandidateEmployeeLinker';
 const SOURCE_TYPES = ['Market Visit', 'Walk-in', 'Incoming Call', 'Referral'];
 const CONTACT_MODES = ['In-person', 'Phone', 'WhatsApp'];
 const STATUSES = ['New', 'Contacted', 'Shortlisted', 'Interviewed', 'Hired', 'Rejected', 'On Hold', 'Terminated'];
+const EXIT_TYPES = ['Resignation', 'Termination', 'Absconded', 'Retirement', 'End of Contract', 'Other'];
 
 const EMPTY = {
   candidate_name: '',
@@ -25,9 +26,15 @@ const EMPTY = {
   status: 'New',
   employee_id: '',
   employee_code: '',
+  department: '',
+  designation: '',
   enrollment_date: '',
   attrition_date: '',
   attrition_reason: '',
+  exit_type: '',
+  last_working_day: '',
+  eligible_for_rehire: false,
+  exit_feedback: '',
   remarks: '',
   is_active: true,
 };
@@ -250,14 +257,59 @@ export default function CandidateLeadFormDialog({ open, onOpenChange, candidate,
               </div>
 
               {isTerminated && (
-                <Field label="Attrition Reason" full>
-                  <Input
-                    value={form.attrition_reason}
-                    onChange={(e) => set('attrition_reason', e.target.value)}
-                    placeholder="e.g. Absconded, Resigned, Personal reasons, Better opportunity"
-                    className="h-11 md:h-9 text-base md:text-sm"
-                  />
-                </Field>
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <Field label="Exit Type">
+                      <Select value={form.exit_type || ''} onValueChange={(v) => set('exit_type', v)}>
+                        <SelectTrigger className="h-11 md:h-9 text-base md:text-sm">
+                          <SelectValue placeholder="Select exit type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {EXIT_TYPES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </Field>
+
+                    <Field label="Last Working Day">
+                      <Input
+                        type="date"
+                        value={form.last_working_day || ''}
+                        onChange={(e) => set('last_working_day', e.target.value)}
+                        className="h-11 md:h-9 text-base md:text-sm"
+                      />
+                    </Field>
+                  </div>
+
+                  <Field label="Attrition Reason" full>
+                    <Input
+                      value={form.attrition_reason}
+                      onChange={(e) => set('attrition_reason', e.target.value)}
+                      placeholder="e.g. Absconded, Resigned, Personal reasons, Better opportunity"
+                      className="h-11 md:h-9 text-base md:text-sm"
+                    />
+                  </Field>
+
+                  <Field label="Exit Feedback / Interview Notes" full>
+                    <Textarea
+                      value={form.exit_feedback || ''}
+                      onChange={(e) => set('exit_feedback', e.target.value)}
+                      placeholder="Reason for leaving, work environment feedback, suggestions, etc."
+                      rows={3}
+                      className="text-base md:text-sm"
+                    />
+                  </Field>
+
+                  <div className="flex items-center justify-between border border-slate-200 rounded-md px-3 py-2 bg-white">
+                    <div>
+                      <Label className="text-xs font-medium text-slate-700">Eligible for Rehire</Label>
+                      <p className="text-xs text-slate-500">Mark if this employee can be considered for rehire in future</p>
+                    </div>
+                    <Switch
+                      checked={!!form.eligible_for_rehire}
+                      onCheckedChange={(v) => set('eligible_for_rehire', v)}
+                    />
+                  </div>
+                </>
               )}
             </div>
           )}
