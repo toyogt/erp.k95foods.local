@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
-import { Loader2, Plus, Layers, Search, Eye } from 'lucide-react';
+import { Loader2, Plus, Search, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
 import { PO_STATUS_COLOR, formatDateDDMMYYYY, formatINR } from '@/components/purchase/purchaseHelpers';
 import PODetailView from '@/components/purchase/PODetailView';
+import POCreateModal from '@/components/purchase/POCreateModal';
 import TablePagination from '@/components/store/TablePagination';
 
 export default function PurchaseOrderList() {
@@ -14,6 +14,7 @@ export default function PurchaseOrderList() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [selectedPO, setSelectedPO] = useState(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   useEffect(() => { base44.auth.me().then(u => setUser(u)).catch(() => {}); }, []);
 
@@ -46,10 +47,9 @@ export default function PurchaseOrderList() {
       </div>
 
       {isManager && (
-        <div className="flex flex-wrap gap-2">
-          <Link to="/PurchaseOrderCreate"><Button className="h-11 text-sm font-bold px-6"><Plus className="w-4 h-4 mr-2" /> New Purchase Order</Button></Link>
-          <Link to="/BulkPOCreate"><Button variant="outline" className="h-11 text-sm font-bold px-6"><Layers className="w-4 h-4 mr-2" /> Bulk Purchase Order</Button></Link>
-        </div>
+        <Button className="h-11 text-sm font-bold px-6" onClick={() => setShowCreateModal(true)}>
+          <Plus className="w-4 h-4 mr-2" /> New Purchase Order
+        </Button>
       )}
 
       <div className="relative">
@@ -120,6 +120,13 @@ export default function PurchaseOrderList() {
           <TablePagination total={filtered.length} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={s => { setPageSize(s); setPage(1); }} />
         </>
       )}
+
+      <POCreateModal
+        open={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        user={user}
+        onCreated={() => { refetch(); }}
+      />
     </div>
   );
 }
