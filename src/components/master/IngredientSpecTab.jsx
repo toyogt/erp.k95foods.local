@@ -152,6 +152,22 @@ function IngredientSpecForm({ initial, groups, uoms, allSpecs, onSave, onCancel,
         <span className="text-xs text-slate-400">(uncheck to force specific brand in recipes)</span>
       </label>
 
+      {/* Mandatory validation rules for ingredients */}
+      <div className="border border-blue-100 rounded-xl p-3 bg-blue-50/30 space-y-2">
+        <p className="text-xs font-semibold text-blue-700">Store Validation Rules (mandatory for Ingredients)</p>
+        {[
+          { key: 'batch_required', label: 'Batch Number Required' },
+          { key: 'expiry_required', label: 'Expiry Date Required' },
+          { key: 'mfg_date_required', label: 'Manufacture Date Required' },
+        ].map(({ key, label }) => (
+          <label key={key} className="flex items-center gap-2 cursor-not-allowed opacity-70">
+            <input type="checkbox" className="w-4 h-4 rounded" checked disabled />
+            <span className="text-sm text-slate-700">{label}</span>
+            <span className="text-xs text-blue-500 ml-1">(mandatory)</span>
+          </label>
+        ))}
+      </div>
+
       {!isNew && (
         <div>
           <label className="block text-xs font-semibold text-slate-500 mb-1">Barcode Value</label>

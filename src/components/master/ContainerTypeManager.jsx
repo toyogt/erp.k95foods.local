@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Trash2, Loader2, Package, Pencil, Upload, FileText, Search } from 'lucide-react';
+import CreatableUOMSelect from '@/components/store/CreatableUOMSelect';
 import TablePagination from '@/components/store/TablePagination';
 import { logAudit } from '@/components/AuditLogger';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -24,6 +25,7 @@ export default function ContainerTypeManager({ user }) {
     colour: '',
     vendor_nickname: '',
     bottles_per_crate: '',
+    uom: '',
     datasheet_url: ''
   });
 
@@ -76,6 +78,7 @@ export default function ContainerTypeManager({ user }) {
       bottles_per_crate: Number(bottles_per_crate),
     };
     if (form.datasheet_url) payload.datasheet_url = form.datasheet_url;
+    if (form.uom) payload.uom = form.uom;
 
     if (editingId) {
       await base44.entities.ContainerType.update(editingId, payload);
@@ -84,7 +87,7 @@ export default function ContainerTypeManager({ user }) {
       await base44.entities.ContainerType.create(payload);
       await logAudit({ action: 'Created container type: ' + payload.auto_generated_name, entity_type: 'ContainerType', entity_id: payload.container_code, user });
     }
-    setForm({ container_type: '', ml_per_container: '', colour: '', vendor_nickname: '', bottles_per_crate: '', datasheet_url: '' });
+    setForm({ container_type: '', ml_per_container: '', colour: '', vendor_nickname: '', bottles_per_crate: '', uom: '', datasheet_url: '' });
     setEditingId(null);
     setOpen(false);
     load();
@@ -97,6 +100,7 @@ export default function ContainerTypeManager({ user }) {
       colour: item.colour,
       vendor_nickname: item.vendor_nickname,
       bottles_per_crate: item.bottles_per_crate,
+      uom: item.uom || '',
       datasheet_url: item.datasheet_url || ''
     });
     setEditingId(item.id);
@@ -104,7 +108,7 @@ export default function ContainerTypeManager({ user }) {
   }
 
   function handleCancel() {
-    setForm({ container_type: '', ml_per_container: '', colour: '', vendor_nickname: '', bottles_per_crate: '', datasheet_url: '' });
+    setForm({ container_type: '', ml_per_container: '', colour: '', vendor_nickname: '', bottles_per_crate: '', uom: '', datasheet_url: '' });
     setEditingId(null);
     setOpen(false);
   }
@@ -176,6 +180,9 @@ export default function ContainerTypeManager({ user }) {
                 <Input type="number" placeholder="e.g. 24" value={form.bottles_per_crate} onChange={e => setForm({ ...form, bottles_per_crate: e.target.value })} className="mt-1 rounded-xl h-12" />
               </div>
               <div>
+                <CreatableUOMSelect value={form.uom} onChange={v => setForm({ ...form, uom: v })} />
+              </div>
+              <div>
                 <Label>Container Data Sheet (Optional)</Label>
                 <div className="mt-1 flex gap-2">
                   <label className="flex-1">
@@ -220,6 +227,7 @@ export default function ContainerTypeManager({ user }) {
                 <th className="px-3 py-2.5 text-center font-semibold">ML</th>
                 <th className="px-3 py-2.5 text-center font-semibold">Colour</th>
                 <th className="px-3 py-2.5 text-center font-semibold">Per Crate</th>
+                <th className="px-3 py-2.5 text-center font-semibold">UOM</th>
                 <th className="px-3 py-2.5 text-center font-semibold">Datasheet</th>
                 <th className="px-3 py-2.5 text-center font-semibold">Actions</th>
               </tr>
@@ -233,6 +241,7 @@ export default function ContainerTypeManager({ user }) {
                   <td className="px-3 py-2.5 text-center font-bold">{item.ml_per_container}</td>
                   <td className="px-3 py-2.5 text-center text-xs">{item.colour}</td>
                   <td className="px-3 py-2.5 text-center font-semibold">{item.bottles_per_crate}</td>
+                  <td className="px-3 py-2.5 text-center text-xs">{item.uom || '—'}</td>
                   <td className="px-3 py-2.5 text-center">
                     {item.datasheet_url ? (
                       <a href={item.datasheet_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-700"><FileText className="w-4 h-4 inline" /></a>
@@ -246,7 +255,7 @@ export default function ContainerTypeManager({ user }) {
                   </td>
                 </tr>
               ))}
-              {paged.length === 0 && <tr><td colSpan={8} className="text-center py-8 text-slate-400 text-sm">No container types found.</td></tr>}
+              {paged.length === 0 && <tr><td colSpan={9} className="text-center py-8 text-slate-400 text-sm">No container types found.</td></tr>}
             </tbody>
           </table>
         </div>
