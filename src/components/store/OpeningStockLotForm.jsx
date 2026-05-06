@@ -104,9 +104,11 @@ export default function OpeningStockLotForm({ item, locations = [], existingLots
       posted_at: new Date().toISOString(),
     });
 
-    // Update opening_stock on StoreItemMaster (accumulate)
-    const newOpeningTotal = (item.opening_stock || 0) + Number(form.quantity);
-    await base44.entities.StoreItemMaster.update(item.id, { opening_stock: newOpeningTotal });
+    // Update opening_stock on StoreItemMaster (only for store items, not purchase/sales items)
+    if (!item._entity_type) {
+      const newOpeningTotal = (item.opening_stock || 0) + Number(form.quantity);
+      await base44.entities.StoreItemMaster.update(item.id, { opening_stock: newOpeningTotal });
+    }
 
     setSaving(false);
     if (onSaved) onSaved(entry);

@@ -45,6 +45,7 @@ export default function OpeningStockItemsTable({ items, allLots, locations, onLo
              <th className="px-3 py-2.5 text-left font-semibold w-8"></th>
              <th className="px-3 py-2.5 text-left font-semibold">Item Code</th>
              <th className="px-3 py-2.5 text-left font-semibold min-w-[200px]">Item Name</th>
+             <th className="px-3 py-2.5 text-left font-semibold">Source</th>
              <th className="px-3 py-2.5 text-left font-semibold">Category</th>
              <th className="px-3 py-2.5 text-left font-semibold">UOM</th>
              <th className="px-3 py-2.5 text-left font-semibold">Rules</th>
@@ -78,7 +79,7 @@ export default function OpeningStockItemsTable({ items, allLots, locations, onLo
             })}
             {paginated.length === 0 && (
               <tr>
-                <td colSpan={10} className="px-3 py-12 text-center text-slate-400 text-sm">
+                <td colSpan={11} className="px-3 py-12 text-center text-slate-400 text-sm">
                   No items found.
                 </td>
               </tr>
@@ -113,8 +114,17 @@ function ItemTableRow({ item, itemLots, totalQty, isExpanded, showForm, location
           <span className="font-medium text-slate-900">{item.item_name}</span>
         </td>
         <td className="px-3 py-2.5">
+          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+            item._source === 'store' ? 'bg-teal-100 text-teal-700' :
+            item._source === 'sales' ? 'bg-rose-100 text-rose-700' :
+            'bg-violet-100 text-violet-700'
+          }`}>
+            {item._source === 'store' ? 'Store' : item._source === 'purchase' ? 'Purchase' : item._source === 'sales' ? 'Sales' : item._source || '—'}
+          </span>
+        </td>
+        <td className="px-3 py-2.5">
           <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
-            {CATEGORY_LABELS[item.item_category] || item.item_category}
+            {item._display_category || CATEGORY_LABELS[item.item_category] || item.item_category}
           </span>
         </td>
         <td className="px-3 py-2.5 text-slate-600">{item.uom || 'Nos'}</td>
@@ -155,7 +165,7 @@ function ItemTableRow({ item, itemLots, totalQty, isExpanded, showForm, location
 
       {isExpanded && (
         <tr>
-          <td colSpan={10} className="bg-slate-50/50 px-4 py-3">
+          <td colSpan={11} className="bg-slate-50/50 px-4 py-3">
             <div className="space-y-3">
               {showForm && (
                 <div className="border border-teal-200 bg-teal-50/30 rounded-xl p-4">
