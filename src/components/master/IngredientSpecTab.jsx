@@ -87,6 +87,9 @@ function IngredientSpecForm({ initial, groups, uoms, allSpecs, onSave, onCancel,
     is_active: initial?.is_active !== false,
     short_code: initial?.short_code || '',
     barcode_value: initial?.barcode_value || '',
+    batch_required: true,
+    expiry_required: true,
+    mfg_date_required: true,
   }));
 
   const selectedGroup = groups.find(g => g.group_id === form.group_id);
@@ -152,18 +155,17 @@ function IngredientSpecForm({ initial, groups, uoms, allSpecs, onSave, onCancel,
         <span className="text-xs text-slate-400">(uncheck to force specific brand in recipes)</span>
       </label>
 
-      {/* Mandatory validation rules for ingredients */}
-      <div className="border border-blue-100 rounded-xl p-3 bg-blue-50/30 space-y-2">
-        <p className="text-xs font-semibold text-blue-700">Store Validation Rules (mandatory for Ingredients)</p>
+      {/* Store Validation Rules */}
+      <div className="border border-slate-200 rounded-xl p-3 space-y-2">
+        <p className="text-xs font-semibold text-slate-600">Store Validation Rules</p>
         {[
           { key: 'batch_required', label: 'Batch Number Required' },
           { key: 'expiry_required', label: 'Expiry Date Required' },
           { key: 'mfg_date_required', label: 'Manufacture Date Required' },
         ].map(({ key, label }) => (
-          <label key={key} className="flex items-center gap-2 cursor-not-allowed opacity-70">
-            <input type="checkbox" className="w-4 h-4 rounded" checked disabled />
+          <label key={key} className="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" className="w-4 h-4 rounded" checked={!!form[key]} onChange={e => setForm(v => ({ ...v, [key]: e.target.checked }))} />
             <span className="text-sm text-slate-700">{label}</span>
-            <span className="text-xs text-blue-500 ml-1">(mandatory)</span>
           </label>
         ))}
       </div>
@@ -314,7 +316,7 @@ export default function IngredientSpecTab({ user }) {
       if (groupRec[0]) await base44.entities.IngredientGroup.update(groupRec[0].id, { next_seq: seq + 1 });
       const created = await base44.entities.IngredientMaster.create({ ...form, short_code, barcode_value, normalized_name });
 
-      // Auto-create Store Item Master entry with mandatory validation rules for ingredients
+      // Auto-create Store Item Master entry with validation rules from spec form
       const uomObj = uoms.find(u => u.uom_id === form.uom_id);
       await base44.entities.StoreItemMaster.create({
         item_name: `${form.ingredient_name} (${short_code})`,
@@ -324,9 +326,9 @@ export default function IngredientSpecTab({ user }) {
         source_id: created.id,
         uom: uomObj?.uom_code || 'Kg',
         is_active: true,
-        batch_required: true,
-        expiry_required: true,
-        mfg_date_required: true,
+        batch_required: !!form.batch_required,
+        expiry_required: !!form.expiry_required,
+        mfg_date_required: !!form.mfg_date_required,
       });
     } else {
       const rec = items.find(i => i.id === editing);

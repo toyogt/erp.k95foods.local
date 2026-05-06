@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Plus, Pencil, Trash2, Loader2, Upload, FileText, X, ExternalLink, Users } from 'lucide-react';
+import CreatableUOMSelect from '@/components/store/CreatableUOMSelect';
 import { logAudit } from '@/components/AuditLogger';
 
 export default function CapTypeManager({ user }) {
@@ -21,6 +22,7 @@ export default function CapTypeManager({ user }) {
     cap_colour: '',
     cap_photo_url: '',
     cap_nickname: '',
+    uom: '',
     datasheet_urls: []
   });
   const [vendorForm, setVendorForm] = useState({
@@ -108,6 +110,7 @@ export default function CapTypeManager({ user }) {
       cap_colour: form.cap_colour,
       cap_photo_url: form.cap_photo_url,
       cap_nickname: form.cap_nickname || '',
+      uom: form.uom || '',
       datasheet_urls: form.datasheet_urls || [],
       is_active: true
     };
@@ -149,13 +152,14 @@ export default function CapTypeManager({ user }) {
       cap_colour: cap.cap_colour,
       cap_photo_url: cap.cap_photo_url,
       cap_nickname: cap.cap_nickname || '',
+      uom: cap.uom || '',
       datasheet_urls: cap.datasheet_urls || []
     });
     setDialogOpen(true);
   }
 
   function resetForm() {
-    setForm({ cap_type: '', cap_colour: '', cap_photo_url: '', cap_nickname: '', datasheet_urls: [] });
+    setForm({ cap_type: '', cap_colour: '', cap_photo_url: '', cap_nickname: '', uom: '', datasheet_urls: [] });
   }
 
   async function addNewCapType() {
@@ -329,6 +333,9 @@ export default function CapTypeManager({ user }) {
               <div className="space-y-1 col-span-2">
                 <Label className="text-xs font-medium">Cap Nickname</Label>
                 <Input value={form.cap_nickname} onChange={e => setForm(f => ({ ...f, cap_nickname: e.target.value }))} placeholder="Internal reference name" className="h-11" />
+              </div>
+              <div className="space-y-1 col-span-2">
+                <CreatableUOMSelect value={form.uom} onChange={v => setForm(f => ({ ...f, uom: v }))} />
               </div>
               <div className="space-y-1 col-span-2">
                 <Label className="text-xs font-medium">Cap Photo *</Label>
