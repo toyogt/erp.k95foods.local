@@ -14,6 +14,7 @@ import { canEAManageTask } from '@/lib/eaPermissions';
 import DirectorTaskLogPanel from '@/components/tasks/DirectorTaskLogPanel';
 import DatePickerField from '@/components/tasks/DatePickerField';
 import AttachmentGallery from '@/components/tasks/AttachmentGallery';
+import ProgressHistoryPanel from '@/components/tasks/ProgressHistoryPanel';
 
 export default function DirectorTaskCard({ task, user, viewMode, onRefresh, supportedDirectorEmails = [] }) {
   const [expanded, setExpanded] = useState(false);
@@ -286,13 +287,13 @@ export default function DirectorTaskCard({ task, user, viewMode, onRefresh, supp
             </Button>
           )}
 
-          {/* Undo Done — assignee can revert pending_verification back to open */}
+          {/* Undo Done — small inline button for assignee */}
           {isAssignee && task.status === 'pending_verification' && (
-            <Button variant="outline" onClick={handleUndoDone} disabled={acting}
-              className="w-full min-h-[44px] gap-2 text-sm font-medium border-amber-300 text-amber-700 hover:bg-amber-50">
-              {acting ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
+            <button onClick={handleUndoDone} disabled={acting}
+              className="flex items-center gap-1 text-xs text-amber-600 hover:text-amber-700 hover:bg-amber-50 px-2.5 py-1.5 rounded-lg transition-colors font-medium">
+              {acting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
               Undo Done
-            </Button>
+            </button>
           )}
 
           {/* Verify completion — only if user can manage this task */}
@@ -394,18 +395,8 @@ export default function DirectorTaskCard({ task, user, viewMode, onRefresh, supp
               </div>
             )}
 
-            {/* 3. Latest Progress Update — with timestamp shown first, then note */}
-            {task.progress_note && (
-              <div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
-                <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-1">Latest Progress Update</p>
-                <p className="text-sm text-blue-800 whitespace-pre-wrap">{task.progress_note}</p>
-                {task.progress_updated_at && (
-                  <p className="text-xs text-blue-400 mt-1">
-                    {new Date(task.progress_updated_at).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true })}
-                  </p>
-                )}
-              </div>
-            )}
+            {/* 3. Progress History — latest first from task log */}
+            <ProgressHistoryPanel taskId={task.id} />
 
             {/* 4. Dates */}
             <div className="space-y-1.5 pt-1 border-t border-slate-100">
