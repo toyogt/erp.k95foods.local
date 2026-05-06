@@ -147,6 +147,20 @@ export default function QuickAssignTask() {
       `Task "${form.task_name}" assigned to ${selectedUser?.full_name || form.assigned_to_email}, due ${form.end_date}${form.end_time ? ' ' + form.end_time : ''}`
     );
 
+    // Send WhatsApp notification if assigned user has a phone number
+    if (selectedUser?.phone_number) {
+      base44.functions.invoke('sendWhatsAppTaskNotification', {
+        phone_number: selectedUser.phone_number,
+        task_name: form.task_name.trim(),
+        priority: form.is_important ? 'High' : 'Normal',
+        category: 'Single Task',
+        assigned_by: user.full_name || user.email,
+        due_date: form.end_date,
+        due_time: form.end_time || '4:00 PM',
+        description: form.task_details.trim() || 'No description provided',
+      }).catch(err => console.error('WhatsApp notification failed:', err));
+    }
+
     setSuccess(task.task_number);
     setSaving(false);
 
