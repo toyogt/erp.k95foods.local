@@ -2,7 +2,7 @@
   "name": "SupplierItemMapping",
   "type": "object",
   "title": "Supplier Item Mapping",
-  "description": "Maps suppliers to store items for GRN dropdown filtering",
+  "description": "Maps which supplier provides which item with rate history",
   "properties": {
     "supplier_id": {
       "type": "string",
@@ -26,6 +26,16 @@
       "type": "string",
       "maxLength": 300
     },
+    "last_rate": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Last purchased rate from this supplier"
+    },
+    "is_preferred": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this supplier is preferred for this item"
+    },
     "is_active": {
       "type": "boolean",
       "default": true
@@ -33,7 +43,6 @@
   },
   "required": [
     "supplier_id",
-    "item_id",
     "item_name"
   ]
 }

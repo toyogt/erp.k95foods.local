@@ -1,0 +1,52 @@
+{
+  "name": "PRComment",
+  "type": "object",
+  "title": "Purchase Request Comment",
+  "description": "Threaded comments for clarification on Purchase Request line items",
+  "properties": {
+    "pr_number": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Reference to PurchaseRequest.pr_number"
+    },
+    "line_number": {
+      "type": "number",
+      "minimum": 1,
+      "description": "Line number of the Purchase Request item"
+    },
+    "comment_type": {
+      "type": "string",
+      "enum": [
+        "clarification_request",
+        "reply",
+        "note",
+        "status_change"
+      ],
+      "default": "note",
+      "description": "Type of comment"
+    },
+    "message": {
+      "type": "string",
+      "maxLength": 2000,
+      "description": "Comment text"
+    },
+    "attachment_url": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "URL of attached file"
+    },
+    "author_email": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "author_name": {
+      "type": "string",
+      "maxLength": 200
+    }
+  },
+  "required": [
+    "pr_number",
+    "message",
+    "author_email"
+  ]
+}

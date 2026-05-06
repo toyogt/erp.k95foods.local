@@ -1,0 +1,70 @@
+{
+  "name": "PRQuotation",
+  "type": "object",
+  "title": "Purchase Request Quotation",
+  "description": "Quotation entries for approved Purchase Request items",
+  "properties": {
+    "pr_number": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Reference to PurchaseRequest.pr_number"
+    },
+    "line_number": {
+      "type": "number",
+      "minimum": 1,
+      "description": "Line number of the Purchase Request item"
+    },
+    "supplier_id": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Reference to Supplier.supplier_id"
+    },
+    "supplier_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "quoted_rate": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Quoted rate from supplier"
+    },
+    "quotation_document": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "URL of uploaded quotation document"
+    },
+    "sample_requested": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether physical sample was requested"
+    },
+    "expected_sample_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Expected date for sample arrival"
+    },
+    "sample_received": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether sample has been received"
+    },
+    "sample_photo": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "URL of sample photo"
+    },
+    "is_selected": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this quotation was selected as the winner"
+    },
+    "remarks": {
+      "type": "string",
+      "maxLength": 500
+    }
+  },
+  "required": [
+    "pr_number",
+    "line_number"
+  ]
+}

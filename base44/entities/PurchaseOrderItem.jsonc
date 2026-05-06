@@ -39,9 +39,24 @@
       "type": "number",
       "minimum": 0
     },
+    "gst_percent": {
+      "type": "number",
+      "minimum": 0,
+      "description": "GST percentage for this item"
+    },
+    "gst_amount": {
+      "type": "number",
+      "minimum": 0,
+      "description": "GST amount for this item"
+    },
     "amount": {
       "type": "number",
       "minimum": 0
+    },
+    "total_amount": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Amount including GST"
     },
     "total_price": {
       "type": "number",
@@ -54,6 +69,11 @@
     "pending_qty": {
       "type": "number",
       "minimum": 0
+    },
+    "supplier_id": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Supplier for this specific item"
     },
     "schedule_date": {
       "type": "string",

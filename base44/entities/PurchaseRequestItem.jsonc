@@ -51,6 +51,26 @@
       "type": "string",
       "maxLength": 500
     },
+    "sample_photo_requested": {
+      "type": "boolean",
+      "default": false,
+      "description": "Manager requested a sample photo"
+    },
+    "sample_photo_request_note": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "Note from manager when requesting sample photo"
+    },
+    "sample_photo_submitted": {
+      "type": "boolean",
+      "default": false,
+      "description": "Requester has submitted the sample photo"
+    },
+    "rejection_reason": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "Reason for rejecting this specific item"
+    },
     "remarks": {
       "type": "string",
       "maxLength": 500

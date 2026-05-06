@@ -8,6 +8,11 @@
       "minLength": 1,
       "maxLength": 50
     },
+    "pr_number": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Source Purchase Request number"
+    },
     "supplier_id": {
       "type": "string",
       "maxLength": 50
@@ -25,7 +30,7 @@
       "items": {
         "type": "string"
       },
-      "description": "Array of linked PR IDs for bulk POs"
+      "description": "Array of linked Purchase Request IDs for bulk orders"
     },
     "po_date": {
       "type": "string",
@@ -38,15 +43,15 @@
     "status": {
       "type": "string",
       "enum": [
-        "DRAFT",
-        "SUBMITTED",
-        "APPROVED",
-        "SENT",
-        "PART_RECEIVED",
-        "CLOSED",
-        "CANCELLED"
+        "Draft",
+        "Sent to Supplier",
+        "Acknowledged",
+        "In Transit",
+        "Partially Received",
+        "Delivered",
+        "Cancelled"
       ],
-      "default": "DRAFT"
+      "default": "Draft"
     },
     "total_amount": {
       "type": "number",
@@ -56,9 +61,10 @@
       "type": "number",
       "minimum": 0
     },
-    "gst_percent": {
+    "gst_rate": {
       "type": "number",
-      "minimum": 0
+      "minimum": 0,
+      "description": "GST rate percentage"
     },
     "gst_amount": {
       "type": "number",
@@ -68,38 +74,58 @@
       "type": "string",
       "maxLength": 500
     },
+    "custom_payment_terms": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "Custom payment terms if not standard"
+    },
+    "terms_and_conditions": {
+      "type": "string",
+      "maxLength": 5000,
+      "description": "Purchase Order terms and conditions"
+    },
+    "quotation_number": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Reference quotation number"
+    },
+    "ship_via": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Shipping method or transporter"
+    },
     "delivery_address": {
       "type": "string",
       "maxLength": 1000
+    },
+    "supplier_gstin": {
+      "type": "string",
+      "maxLength": 20,
+      "description": "Supplier GSTIN for this order"
+    },
+    "supplier_address": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Supplier address snapshot"
+    },
+    "supplier_contact": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Supplier contact person"
+    },
+    "supplier_email": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Supplier email"
     },
     "currency": {
       "type": "string",
       "maxLength": 10,
       "default": "INR"
     },
-    "terms": {
-      "type": "string",
-      "maxLength": 2000
-    },
-    "rejection_reason": {
+    "supplier_override_reason": {
       "type": "string",
       "maxLength": 500
-    },
-    "rejected_by": {
-      "type": "string",
-      "maxLength": 200
-    },
-    "rejected_at": {
-      "type": "string",
-      "format": "date-time"
-    },
-    "approved_by": {
-      "type": "string",
-      "maxLength": 200
-    },
-    "approved_at": {
-      "type": "string",
-      "format": "date-time"
     },
     "sent_at": {
       "type": "string",
@@ -113,9 +139,20 @@
       ],
       "maxLength": 20
     },
-    "supplier_override_reason": {
-      "type": "string",
-      "maxLength": 500
+    "estimated_freight": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Estimated freight cost at order creation"
+    },
+    "actual_freight": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Actual freight cost recorded at goods receipt"
+    },
+    "total_freight_paid": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Total freight paid across partial receipts"
     },
     "checklist_run_id": {
       "type": "string",
@@ -134,21 +171,6 @@
     "erp_name": {
       "type": "string",
       "maxLength": 100
-    },
-    "estimated_freight": {
-      "type": "number",
-      "minimum": 0,
-      "description": "Estimated freight cost at PO creation"
-    },
-    "actual_freight": {
-      "type": "number",
-      "minimum": 0,
-      "description": "Actual freight cost recorded at GRN"
-    },
-    "total_freight_paid": {
-      "type": "number",
-      "minimum": 0,
-      "description": "Total freight paid across partial GRNs"
     }
   },
   "required": [

@@ -1,0 +1,71 @@
+{
+  "name": "POFollowUp",
+  "type": "object",
+  "title": "Purchase Order Follow-Up",
+  "description": "Scheduled follow-ups with suppliers for purchase orders",
+  "properties": {
+    "po_id": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Reference to PurchaseOrder.po_id"
+    },
+    "follow_up_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Scheduled follow-up date"
+    },
+    "follow_up_mode": {
+      "type": "string",
+      "enum": [
+        "Call",
+        "Email",
+        "WhatsApp"
+      ],
+      "default": "Call",
+      "description": "Mode of follow-up"
+    },
+    "contact_person": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Person to contact"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Pending",
+        "Done",
+        "Rescheduled"
+      ],
+      "default": "Pending"
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 2000,
+      "description": "Follow-up notes or outcome"
+    },
+    "rescheduled_to": {
+      "type": "string",
+      "format": "date",
+      "description": "New date if rescheduled"
+    },
+    "reschedule_reason": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "Reason for rescheduling"
+    },
+    "completed_by": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Email of person who completed this follow-up"
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When follow-up was marked done"
+    }
+  },
+  "required": [
+    "po_id",
+    "follow_up_date"
+  ]
+}

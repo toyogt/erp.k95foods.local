@@ -50,18 +50,16 @@
     "status": {
       "type": "string",
       "enum": [
-        "DRAFT",
-        "SUBMITTED",
+        "Draft",
         "Pending Approval",
         "Approved",
         "Partially Approved",
         "Rejected",
-        "APPROVED",
-        "REJECTED",
-        "ORDERED",
-        "CLOSED"
+        "Quotation Stage",
+        "PO Created",
+        "Closed"
       ],
-      "default": "DRAFT"
+      "default": "Draft"
     },
     "overall_remarks": {
       "type": "string",
@@ -72,6 +70,25 @@
       "items": {
         "type": "string"
       }
+    },
+    "internal_notes": {
+      "type": "string",
+      "maxLength": 2000,
+      "description": "Manager-only internal notes"
+    },
+    "expected_delivery_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Manager-set expected delivery date"
+    },
+    "urgency_override": {
+      "type": "string",
+      "enum": [
+        "Normal",
+        "Expedite",
+        "Critical"
+      ],
+      "description": "Manager can override urgency"
     },
     "notes": {
       "type": "string",

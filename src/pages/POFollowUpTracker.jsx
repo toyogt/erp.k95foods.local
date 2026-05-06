@@ -1,54 +1,61 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2, Phone, Mail, MessageCircle, CheckCircle2, AlertTriangle, Clock, CalendarDays } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatDateDDMMYYYY } from '@/components/purchase/purchaseHelpers';
 
+const MODE_ICON = { Call: Phone, Email: Mail, WhatsApp: MessageCircle };
+
 export default function POFollowUpTracker() {
   const [user, setUser] = useState(null);
-  const [pos, setPos] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [followUps, setFollowUps] = useState([]);
   const [tab, setTab] = useState('overdue');
+  const [doneNotes, setDoneNotes] = useState({});
+  const [rescheduleData, setRescheduleData] = useState({});
+  const [acting, setActing] = useState(null);
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    async function load() {
-      const u = await base44.auth.me();
-      setUser(u);
-      const poList = await base44.entities.PurchaseOrder.filter({ status: 'SENT' }, '-created_date', 200).catch(() => []);
-      const poSentList = await base44.entities.PurchaseOrder.filter({ status: 'PART_RECEIVED' }, '-created_date', 200).catch(() => []);
-      setPos([...poList, ...poSentList]);
+  useEffect(() => { base44.auth.me().then(u => setUser(u)).catch(() => {}); }, []);
 
-      const fups = [...poList, ...poSentList].map(po => ({
-        id: po.id, po_id: po.po_id, supplier: po.supplier_name,
-        contact: '', mode: 'Call',
-        due_date: po.due_date || po.po_date,
-        notes: '', status: 'Pending',
-      }));
-      setFollowUps(fups);
-      setLoading(false);
-    }
-    load();
-  }, []);
+  const { data: followUps = [], isLoading } = useQuery({
+    queryKey: ['all-followups'],
+    queryFn: () => base44.entities.POFollowUp.list('follow_up_date', 500),
+    staleTime: 30000, enabled: !!user,
+  });
 
   const today = new Date().toISOString().split('T')[0];
   const in7Days = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
 
-  const overdue = followUps.filter(f => f.status === 'Pending' && f.due_date && f.due_date < today);
-  const dueToday = followUps.filter(f => f.status === 'Pending' && f.due_date === today);
-  const upcoming = followUps.filter(f => f.status === 'Pending' && f.due_date > today && f.due_date <= in7Days);
-  const completed = followUps.filter(f => f.status === 'Done');
+  const overdue = followUps.filter(f => f.status === 'Pending' && f.follow_up_date && f.follow_up_date < today);
+  const dueToday = followUps.filter(f => f.status === 'Pending' && f.follow_up_date === today);
+  const upcoming = followUps.filter(f => f.status === 'Pending' && f.follow_up_date > today && f.follow_up_date <= in7Days);
+  const completed = followUps.filter(f => f.status === 'Done' || f.status === 'Rescheduled');
 
   const tabData = { overdue, today: dueToday, upcoming, completed };
   const currentList = tabData[tab] || [];
 
-  const modeIcon = { Call: Phone, Email: Mail, WhatsApp: MessageCircle };
-
-  function markDone(id) {
-    setFollowUps(prev => prev.map(f => f.id === id ? { ...f, status: 'Done' } : f));
+  async function markDone(fu) {
+    setActing(fu.id);
+    await base44.entities.POFollowUp.update(fu.id, {
+      status: 'Done', notes: doneNotes[fu.id] || '',
+      completed_by: user?.email, completed_at: new Date().toISOString(),
+    });
+    setActing(null);
+    queryClient.invalidateQueries({ queryKey: ['all-followups'] });
   }
 
-  if (loading) return <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-slate-400" /></div>;
+  async function reschedule(fu) {
+    const rd = rescheduleData[fu.id];
+    if (!rd?.date) return;
+    setActing(fu.id);
+    await base44.entities.POFollowUp.update(fu.id, { status: 'Rescheduled', rescheduled_to: rd.date, reschedule_reason: rd.reason || '' });
+    await base44.entities.POFollowUp.create({ po_id: fu.po_id, follow_up_date: rd.date, follow_up_mode: fu.follow_up_mode, contact_person: fu.contact_person, status: 'Pending' });
+    setRescheduleData(prev => { const n = { ...prev }; delete n[fu.id]; return n; });
+    setActing(null);
+    queryClient.invalidateQueries({ queryKey: ['all-followups'] });
+  }
+
+  if (isLoading) return <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-slate-400" /></div>;
 
   return (
     <div className="space-y-4 pb-20">
@@ -74,22 +81,44 @@ export default function POFollowUpTracker() {
       ) : (
         <div className="space-y-3">
           {currentList.map(f => {
-            const MIcon = modeIcon[f.mode] || Phone;
+            const MIcon = MODE_ICON[f.follow_up_mode] || Phone;
+            const isOverdue = f.status === 'Pending' && f.follow_up_date < today;
+            const rd = rescheduleData[f.id];
             return (
-              <div key={f.id} className="bg-white border border-slate-200 rounded-xl p-4 space-y-2">
+              <div key={f.id} className={`bg-white border rounded-xl p-4 space-y-2 ${isOverdue ? 'border-red-200' : 'border-slate-200'}`}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-slate-900">{f.po_id}</span>
-                    {tab === 'overdue' && <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700">Overdue</span>}
+                    {isOverdue && <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700">Overdue</span>}
+                    {f.status === 'Done' && <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700">Done</span>}
+                    {f.status === 'Rescheduled' && <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">Rescheduled</span>}
                   </div>
                   <MIcon className="w-4 h-4 text-slate-400" />
                 </div>
-                <p className="text-sm text-slate-600">{f.supplier || '—'}</p>
-                <p className="text-xs text-slate-500">Due: {formatDateDDMMYYYY(f.due_date)}</p>
+                {f.contact_person && <p className="text-sm text-slate-600">Contact: {f.contact_person}</p>}
+                <p className="text-xs text-slate-500">Date: {formatDateDDMMYYYY(f.follow_up_date)}</p>
+                {f.notes && <p className="text-xs text-slate-500 bg-slate-50 rounded-lg px-2 py-1">{f.notes}</p>}
+                {f.rescheduled_to && <p className="text-xs text-slate-500">Rescheduled to: {formatDateDDMMYYYY(f.rescheduled_to)}{f.reschedule_reason ? ` — ${f.reschedule_reason}` : ''}</p>}
+
                 {f.status === 'Pending' && (
-                  <Button size="sm" onClick={() => markDone(f.id)} className="h-9 text-sm bg-green-600 hover:bg-green-700">
-                    <CheckCircle2 className="w-4 h-4 mr-1" /> Mark Done
-                  </Button>
+                  <div className="space-y-2 pt-1">
+                    <textarea className="w-full border border-slate-200 rounded-lg px-3 py-1.5 text-sm" placeholder="Notes..." rows={1} value={doneNotes[f.id] || ''} onChange={e => setDoneNotes(prev => ({ ...prev, [f.id]: e.target.value }))} />
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={() => markDone(f)} className="h-11 flex-1 bg-green-600 hover:bg-green-700 text-sm font-bold" disabled={acting === f.id}>
+                        <CheckCircle2 className="w-4 h-4 mr-1" /> Mark Done
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => setRescheduleData(prev => ({ ...prev, [f.id]: { date: '', reason: '' } }))} className="h-11 flex-1 text-sm font-bold" disabled={acting === f.id}>
+                        <CalendarDays className="w-4 h-4 mr-1" /> Reschedule
+                      </Button>
+                    </div>
+                    {rd && (
+                      <div className="flex items-end gap-2 bg-slate-50 rounded-lg p-2">
+                        <div className="flex-1"><label className="text-xs text-slate-600">New Date *</label><input type="date" className="w-full h-9 border border-slate-200 rounded px-2 text-sm mt-0.5" value={rd.date} onChange={e => setRescheduleData(prev => ({ ...prev, [f.id]: { ...prev[f.id], date: e.target.value } }))} /></div>
+                        <div className="flex-1"><label className="text-xs text-slate-600">Reason</label><input className="w-full h-9 border border-slate-200 rounded px-2 text-sm mt-0.5" value={rd.reason} onChange={e => setRescheduleData(prev => ({ ...prev, [f.id]: { ...prev[f.id], reason: e.target.value } }))} /></div>
+                        <Button size="sm" className="h-9" onClick={() => reschedule(f)} disabled={!rd.date || acting === f.id}>Save</Button>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             );
