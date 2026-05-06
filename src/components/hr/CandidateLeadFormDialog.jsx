@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import CreatableSelect from '@/components/ui/CreatableSelect';
 import { Loader2 } from 'lucide-react';
 import CandidateEmployeeLinker from './CandidateEmployeeLinker';
 
@@ -54,6 +57,42 @@ function daysBetween(fromISO, toISO) {
 export default function CandidateLeadFormDialog({ open, onOpenChange, candidate, onSubmit, saving }) {
   const [form, setForm] = useState(EMPTY);
   const [errors, setErrors] = useState({});
+  const queryClient = useQueryClient();
+
+  // Master lists for smart dropdowns (auto-grow when user adds new values)
+  const { data: locations = [], isLoading: locationsLoading } = useQuery({
+    queryKey: ['candidate-locations'],
+    queryFn: () => base44.entities.CandidateLocation.filter({ is_active: true }, 'location_name', 500),
+    enabled: open,
+  });
+  const { data: roles = [], isLoading: rolesLoading } = useQuery({
+    queryKey: ['candidate-roles'],
+    queryFn: () => base44.entities.CandidateRole.filter({ is_active: true }, 'role_name', 500),
+    enabled: open,
+  });
+
+  const locationOptions = locations.map((l) => ({ value: l.location_name, label: l.location_name }));
+  const roleOptions = roles.map((r) => ({ value: r.role_name, label: r.role_name }));
+
+  // Create-new handlers (case-insensitive duplicate guard)
+  const createLocation = async (text) => {
+    const trimmed = text.trim();
+    if (!trimmed) return '';
+    const dup = locations.find((l) => l.location_name.toLowerCase() === trimmed.toLowerCase());
+    if (dup) return dup.location_name;
+    await base44.entities.CandidateLocation.create({ location_name: trimmed, is_active: true });
+    queryClient.invalidateQueries({ queryKey: ['candidate-locations'] });
+    return trimmed;
+  };
+  const createRole = async (text) => {
+    const trimmed = text.trim();
+    if (!trimmed) return '';
+    const dup = roles.find((r) => r.role_name.toLowerCase() === trimmed.toLowerCase());
+    if (dup) return dup.role_name;
+    await base44.entities.CandidateRole.create({ role_name: trimmed, is_active: true });
+    queryClient.invalidateQueries({ queryKey: ['candidate-roles'] });
+    return trimmed;
+  };
 
   useEffect(() => {
     if (open) {
@@ -142,21 +181,27 @@ export default function CandidateLeadFormDialog({ open, onOpenChange, candidate,
           </Field>
 
           <Field label="Location / Area">
-            <Input
+            <CreatableSelect
               value={form.location_area}
-              onChange={(e) => set('location_area', e.target.value)}
-              placeholder="e.g. Bahadurgarh, Nangloi, Tikri"
-              className="h-11 md:h-9 text-base md:text-sm"
+              onChange={(v) => set('location_area', v)}
+              options={locationOptions}
+              onCreate={createLocation}
+              loading={locationsLoading}
+              placeholder="Select or add (e.g. Bahadurgarh, Nangloi, Tikri)"
             />
+            <p className="text-xs text-slate-500 mt-1">Type to search or add new</p>
           </Field>
 
           <Field label="Role Interested">
-            <Input
+            <CreatableSelect
               value={form.role_interested}
-              onChange={(e) => set('role_interested', e.target.value)}
-              placeholder="e.g. Helper, Packing, Loading, Operator"
-              className="h-11 md:h-9 text-base md:text-sm"
+              onChange={(v) => set('role_interested', v)}
+              options={roleOptions}
+              onCreate={createRole}
+              loading={rolesLoading}
+              placeholder="Select or add (e.g. Helper, Packing, Operator)"
             />
+            <p className="text-xs text-slate-500 mt-1">Type to search or add new</p>
           </Field>
 
           <Field label="Source Type">

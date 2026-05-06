@@ -1,0 +1,21 @@
+{
+  "name": "CandidateLocation",
+  "type": "object",
+  "title": "Candidate Location / Area",
+  "description": "Master list of working locations / areas used in the Candidate Lead form. Auto-populated when HR adds a new value via the smart dropdown.",
+  "properties": {
+    "location_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "Unique location / area name (e.g. Bahadurgarh, Nangloi, Tikri)"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "location_name"
+  ]
+}
