@@ -1,16 +1,19 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
-import { Loader2, Package, ChevronDown, ChevronUp, Check } from 'lucide-react';
+import { Loader2, Package, ChevronDown, ChevronUp, Check, Trash2, AlertTriangle } from 'lucide-react';
 import { formatDateDDMMYYYY, formatINR } from '@/components/purchase/purchaseHelpers';
 
 /**
- * Shows open Purchase Orders for the selected supplier.
- * User can expand POs, check items, enter received qty → parent gets items array.
+ * Shows open/partially received Purchase Orders for the selected supplier.
+ * User can expand POs, check items, enter received qty, remove items (with reason).
+ * Parent gets items array via onItemsSelected.
  */
 export default function GRNPOItemPicker({ supplierName, onItemsSelected }) {
   const [expandedPOs, setExpandedPOs] = useState({});
-  const [selectedItems, setSelectedItems] = useState({});  // key: `${po_id}__${line}` → { ...item, received_qty_input }
+  const [selectedItems, setSelectedItems] = useState({});
+  const [removedItems, setRemovedItems] = useState({});
+  const [removeReasonInput, setRemoveReasonInput] = useState({});
 
   // Fetch open POs for this supplier
   const { data: allPOs = [], isLoading: posLoading } = useQuery({
@@ -20,7 +23,7 @@ export default function GRNPOItemPicker({ supplierName, onItemsSelected }) {
     staleTime: 15000,
   });
 
-  // Filter to only open POs (not Delivered, not Cancelled)
+  // Filter to only open/partially received POs
   const openPOs = useMemo(() =>
     allPOs.filter(po => !['Delivered', 'Cancelled'].includes(po.status)),
     [allPOs]
@@ -49,6 +52,15 @@ export default function GRNPOItemPicker({ supplierName, onItemsSelected }) {
     return map;
   }, [allPOItems]);
 
+  // Reset selections when supplier changes
+  useEffect(() => {
+    setSelectedItems({});
+    setRemovedItems({});
+    setRemoveReasonInput({});
+    setExpandedPOs({});
+    onItemsSelected([]);
+  }, [supplierName]);
+
   function togglePO(poId) {
     setExpandedPOs(prev => ({ ...prev, [poId]: !prev[poId] }));
   }
@@ -76,7 +88,7 @@ export default function GRNPOItemPicker({ supplierName, onItemsSelected }) {
           ordered_qty: ordered,
           already_received: received,
           pending_qty: pending,
-          receive_now: pending, // default to full pending
+          receive_now: pending,
         };
       }
       notifyParent(next);
@@ -88,11 +100,25 @@ export default function GRNPOItemPicker({ supplierName, onItemsSelected }) {
     setSelectedItems(prev => {
       const next = { ...prev };
       if (next[key]) {
-        next[key] = { ...next[key], receive_now: Math.max(0, parseFloat(val) || 0) };
+        const numVal = Math.max(0, parseFloat(val) || 0);
+        next[key] = { ...next[key], receive_now: numVal };
       }
       notifyParent(next);
       return next;
     });
+  }
+
+  function handleRemoveItem(key) {
+    const reason = (removeReasonInput[key] || '').trim();
+    if (!reason) return;
+    setRemovedItems(prev => ({ ...prev, [key]: reason }));
+    setSelectedItems(prev => {
+      const next = { ...prev };
+      delete next[key];
+      notifyParent(next);
+      return next;
+    });
+    setRemoveReasonInput(prev => { const n = { ...prev }; delete n[key]; return n; });
   }
 
   function notifyParent(items) {
@@ -114,10 +140,11 @@ export default function GRNPOItemPicker({ supplierName, onItemsSelected }) {
 
   if (openPOs.length === 0) {
     return (
-      <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-center text-sm text-slate-500">
-        No open Purchase Orders found for <strong>{supplierName}</strong>.
-        <br />
-        <span className="text-xs text-slate-400">You can still add items manually below.</span>
+      <div className="text-center py-4">
+        <p className="text-sm text-slate-500">
+          No open Purchase Orders found for <strong>{supplierName}</strong>.
+        </p>
+        <p className="text-xs text-slate-400 mt-1">You can still add items manually below.</p>
       </div>
     );
   }
@@ -136,6 +163,9 @@ export default function GRNPOItemPicker({ supplierName, onItemsSelected }) {
           </span>
         )}
       </div>
+      <p className="text-xs text-slate-500 -mt-2">
+        Purchase Order selection is optional. Expand a Purchase Order to pick items and enter received quantities.
+      </p>
 
       {openPOs.map(po => {
         const poItems = itemsByPO[po.po_id] || [];
@@ -144,7 +174,6 @@ export default function GRNPOItemPicker({ supplierName, onItemsSelected }) {
 
         return (
           <div key={po.id} className="border border-slate-200 rounded-xl overflow-hidden">
-            {/* PO Header — clickable */}
             <button
               onClick={() => togglePO(po.po_id)}
               className="w-full flex items-center gap-3 px-4 py-3 bg-white hover:bg-slate-50 transition-colors text-left"
@@ -169,7 +198,6 @@ export default function GRNPOItemPicker({ supplierName, onItemsSelected }) {
               {isExpanded ? <ChevronUp className="w-4 h-4 text-slate-400 shrink-0" /> : <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />}
             </button>
 
-            {/* PO Items */}
             {isExpanded && (
               <div className="border-t border-slate-100">
                 {poItems.length === 0 ? (
@@ -179,11 +207,13 @@ export default function GRNPOItemPicker({ supplierName, onItemsSelected }) {
                     {poItems.map(it => {
                       const key = itemKey(po.po_id, it.line_number);
                       const isSelected = !!selectedItems[key];
+                      const isRemoved = !!removedItems[key];
                       const ordered = it.qty || it.quantity || 0;
                       const received = it.received_qty || 0;
                       const pending = Math.max(0, ordered - received);
                       const pct = ordered > 0 ? Math.round((received / ordered) * 100) : 0;
 
+                      // Fully received item
                       if (pending <= 0) {
                         return (
                           <div key={key} className="px-4 py-2.5 flex items-center gap-3 bg-green-50/50 opacity-60">
@@ -196,10 +226,25 @@ export default function GRNPOItemPicker({ supplierName, onItemsSelected }) {
                         );
                       }
 
+                      // Removed item
+                      if (isRemoved) {
+                        return (
+                          <div key={key} className="px-4 py-2.5 bg-red-50/50 opacity-70">
+                            <div className="flex items-center gap-2">
+                              <Trash2 className="w-3.5 h-3.5 text-red-400 shrink-0" />
+                              <p className="text-sm text-red-600 line-through">{it.item_name || it.item_code}</p>
+                            </div>
+                            <p className="text-xs text-red-500 mt-0.5 ml-6">Removed: {removedItems[key]}</p>
+                          </div>
+                        );
+                      }
+
+                      const selectedItem = selectedItems[key];
+                      const exceedsPending = selectedItem && selectedItem.receive_now > pending;
+
                       return (
                         <div key={key} className={`px-4 py-3 ${isSelected ? 'bg-blue-50/60' : 'bg-white'}`}>
                           <div className="flex items-start gap-3">
-                            {/* Checkbox */}
                             <button
                               onClick={() => toggleItem(po.po_id, it)}
                               className={`mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
@@ -218,19 +263,44 @@ export default function GRNPOItemPicker({ supplierName, onItemsSelected }) {
                                 {pct > 0 && <span className="text-slate-400">({pct}%)</span>}
                               </div>
 
-                              {/* Receive qty input — only if selected */}
+                              {/* Receive quantity input */}
                               {isSelected && (
-                                <div className="mt-2 flex items-center gap-2">
-                                  <label className="text-xs font-medium text-slate-700 whitespace-nowrap">Receive now:</label>
-                                  <input
-                                    type="number"
-                                    className="w-24 h-9 border border-slate-200 rounded-lg px-2 text-sm text-center font-bold"
-                                    value={selectedItems[key]?.receive_now || ''}
-                                    min={0}
-                                    max={pending}
-                                    onChange={e => updateReceiveQty(key, e.target.value)}
-                                  />
-                                  <span className="text-xs text-slate-500">of {pending} {it.uom_code} pending</span>
+                                <div className="mt-2 space-y-2">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <label className="text-xs font-medium text-slate-700 whitespace-nowrap">Receive now:</label>
+                                    <input
+                                      type="number"
+                                      className={`w-24 h-9 border rounded-lg px-2 text-sm text-center font-bold ${
+                                        exceedsPending ? 'border-red-400 bg-red-50 text-red-700' : 'border-slate-200'
+                                      }`}
+                                      value={selectedItem?.receive_now ?? ''}
+                                      min={0}
+                                      onChange={e => updateReceiveQty(key, e.target.value)}
+                                    />
+                                    <span className="text-xs text-slate-500">of {pending} {it.uom_code} pending</span>
+                                  </div>
+                                  {exceedsPending && (
+                                    <p className="flex items-center gap-1 text-xs text-red-600 font-medium">
+                                      <AlertTriangle className="w-3 h-3" /> Quantity exceeds pending ({pending})
+                                    </p>
+                                  )}
+
+                                  {/* Remove item button + reason */}
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <input
+                                      className="flex-1 min-w-[180px] h-8 text-xs border border-slate-200 rounded-lg px-2"
+                                      placeholder="Reason to remove this item..."
+                                      value={removeReasonInput[key] || ''}
+                                      onChange={e => setRemoveReasonInput(prev => ({ ...prev, [key]: e.target.value }))}
+                                    />
+                                    <button
+                                      onClick={() => handleRemoveItem(key)}
+                                      disabled={!(removeReasonInput[key] || '').trim()}
+                                      className="h-8 px-3 text-xs rounded-lg border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
+                                    >
+                                      <Trash2 className="w-3 h-3" /> Remove
+                                    </button>
+                                  </div>
                                 </div>
                               )}
                             </div>
