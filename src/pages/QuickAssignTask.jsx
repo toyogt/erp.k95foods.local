@@ -6,10 +6,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, AlertTriangle, CheckCircle2, ClipboardList, Factory } from 'lucide-react';
+import { Loader2, AlertTriangle, CheckCircle2, ClipboardList, Factory, Mic } from 'lucide-react';
 import { generateTaskNumber, logTaskAction, getEAsForDirector, getDirectorsForEA } from '@/lib/directorTaskHelpers';
 import DatePickerField from '@/components/tasks/DatePickerField';
 import AttachmentUploader from '@/components/tasks/AttachmentUploader';
+import VoiceTaskInput from '@/components/tasks/VoiceTaskInput';
 
 const ALLOWED_ROLES = ['admin', 'executive_assistant', 'director'];
 
@@ -27,6 +28,7 @@ export default function QuickAssignTask() {
   const [dataLoading, setDataLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(null);
+  const [voiceTranscript, setVoiceTranscript] = useState('');
 
   const [form, setForm] = useState({
     task_name: '',
@@ -85,6 +87,18 @@ export default function QuickAssignTask() {
   const selectedUser = users.find(u => u.email === form.assigned_to_email);
   const selectedDirector = directors.find(d => d.email === selectedDirectorEmail);
 
+  const handleVoiceParsed = (parsed) => {
+    setForm(prev => ({
+      ...prev,
+      task_name: parsed.task_name || prev.task_name,
+      task_details: parsed.task_details || prev.task_details,
+      end_date: parsed.end_date || prev.end_date,
+      end_time: parsed.end_time || prev.end_time,
+      is_important: parsed.is_important || prev.is_important,
+    }));
+    setVoiceTranscript(parsed.transcription || '');
+  };
+
   const isValid = form.task_name.trim() && form.assigned_to_email && form.end_date && selectedDirectorEmail;
 
   const handleSave = async () => {
@@ -133,6 +147,7 @@ export default function QuickAssignTask() {
         attachments: [],
       });
       setSuccess(null);
+      setVoiceTranscript('');
     }, 3000);
   };
 
@@ -217,6 +232,16 @@ export default function QuickAssignTask() {
             {directors.length === 1 && (
               <div className="text-xs text-slate-500 bg-slate-50 rounded-lg p-3">
                 Assigning on behalf of: <strong>{directors[0].name || directors[0].email}</strong>
+              </div>
+            )}
+
+            {/* Voice Input */}
+            <VoiceTaskInput onParsed={handleVoiceParsed} />
+
+            {voiceTranscript && (
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                <p className="text-xs font-medium text-slate-500 mb-1">Voice Transcript</p>
+                <p className="text-sm text-slate-700 italic">"{voiceTranscript}"</p>
               </div>
             )}
 
