@@ -45,7 +45,8 @@ export default function OpeningStockLotForm({ item, locations = [], existingLots
 
     // Generate entry ID
     const entryId = `OPEN-${Date.now().toString(36).toUpperCase()}`;
-    const lotId = `LOT-OPEN-${item.item_code}-${Date.now().toString(36).toUpperCase()}`;
+    const itemRef = item.item_code || item.source_id || item.id;
+    const lotId = `LOT-OPEN-${itemRef}-${Date.now().toString(36).toUpperCase()}`;
 
     // FIFO rank derived from already-loaded count — no extra API call needed
     const fifoRank = existingLotsCount + 1;
@@ -54,7 +55,7 @@ export default function OpeningStockLotForm({ item, locations = [], existingLots
     await base44.entities.StoreLot.create({
       lot_id: lotId,
       qr_code: lotId,
-      item_code: item.item_code,
+      item_code: item.item_code || '',
       item_name: item.item_name,
       uom: item.uom || 'Nos',
       original_quantity: Number(form.quantity),
@@ -74,7 +75,7 @@ export default function OpeningStockLotForm({ item, locations = [], existingLots
       location_id: form.location_id,
       location_code: form.location_code,
       lot_id: lotId,
-      item_code: item.item_code,
+      item_code: item.item_code || '',
       item_name: item.item_name,
       uom: item.uom || 'Nos',
       quantity: Number(form.quantity),
@@ -87,7 +88,7 @@ export default function OpeningStockLotForm({ item, locations = [], existingLots
     // Create StoreOpeningStock record
     const entry = await base44.entities.StoreOpeningStock.create({
       entry_id: entryId,
-      item_code: item.item_code,
+      item_code: item.item_code || '',
       item_name: item.item_name,
       uom: item.uom || 'Nos',
       lot_id: lotId,
@@ -102,13 +103,8 @@ export default function OpeningStockLotForm({ item, locations = [], existingLots
       status: 'posted',
       notes: form.notes || '',
       posted_at: new Date().toISOString(),
+      source_id: item.source_id || '', // Link lot back to source entity ID
     });
-
-    // Update opening_stock on StoreItemMaster (only for store items, not purchase/sales items)
-    if (!item._entity_type) {
-      const newOpeningTotal = (item.opening_stock || 0) + Number(form.quantity);
-      await base44.entities.StoreItemMaster.update(item.id, { opening_stock: newOpeningTotal });
-    }
 
     setSaving(false);
     if (onSaved) onSaved(entry);

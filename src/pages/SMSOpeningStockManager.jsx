@@ -6,26 +6,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import OpeningStockItemsTable from '@/components/store/OpeningStockItemsTable';
 import OpeningStockEntriesLog from '@/components/store/OpeningStockEntriesLog';
 import { Loader2, PackageOpen, Search } from 'lucide-react';
-
-const CATEGORY_LABELS = {
-  ingredient: 'Ingredient',
-  box_type: 'Box Type',
-  cap_type: 'Cap Type',
-  container: 'Container',
-  flavour: 'Flavour',
-  label_artwork: 'Label Artwork',
-  packaging: 'Packaging',
-  other: 'Other',
-};
+import { fetchAllSystemItems, CATEGORY_LABELS } from '@/lib/allItemsFetcher';
 
 export default function SMSOpeningStockManager() {
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
 
-  // Fetch StoreItemMaster — the ONLY source of truth
-  const { data: storeItems = [], isLoading: loadingStore, refetch: refetchStore } = useQuery({
-    queryKey: ['opening-stock-store-items'],
-    queryFn: () => base44.entities.StoreItemMaster.filter({ is_active: true }, 'item_name', 500),
+  // Fetch directly from All Items module source entities
+  const { data: systemItems = [], isLoading: loadingItems } = useQuery({
+    queryKey: ['opening-stock-system-items'],
+    queryFn: fetchAllSystemItems,
     staleTime: 60000,
   });
 
@@ -41,11 +31,11 @@ export default function SMSOpeningStockManager() {
     staleTime: 60000,
   });
 
-  const loading = loadingStore || loadingLots || loadingLocations;
+  const loading = loadingItems || loadingLots || loadingLocations;
 
-  const categories = ['all', ...Array.from(new Set(storeItems.map(i => i.item_category).filter(Boolean)))];
+  const categories = ['all', ...Array.from(new Set(systemItems.map(i => i.item_category).filter(Boolean)))];
 
-  const filtered = storeItems.filter(item => {
+  const filtered = systemItems.filter(item => {
     const matchSearch = !search.trim()
       || item.item_name?.toLowerCase().includes(search.toLowerCase())
       || item.item_code?.toLowerCase().includes(search.toLowerCase());
@@ -54,7 +44,6 @@ export default function SMSOpeningStockManager() {
   });
 
   function handleLotAdded() {
-    refetchStore();
     refetchLots();
   }
 
@@ -66,7 +55,7 @@ export default function SMSOpeningStockManager() {
           Opening Stock Management
         </h1>
         <p className="text-xs text-slate-500 mt-0.5">
-          Showing items from Store Item Master. To add items here, import them from the Store Item Master page first.
+          Showing all items directly from the All Items module. Adding stock here assigns it immediately to the selected location.
         </p>
       </div>
 
@@ -110,9 +99,6 @@ export default function SMSOpeningStockManager() {
             <div className="py-12 text-center space-y-2">
               <PackageOpen className="w-10 h-10 text-slate-300 mx-auto" />
               <p className="text-slate-500 text-sm">No items found.</p>
-              <p className="text-slate-400 text-xs">
-                Items need to be imported into Store Item Master first. Go to Store Item Master → Import from System.
-              </p>
             </div>
           ) : (
             <OpeningStockItemsTable
