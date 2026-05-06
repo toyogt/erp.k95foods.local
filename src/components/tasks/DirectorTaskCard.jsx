@@ -395,7 +395,14 @@ export default function DirectorTaskCard({ task, user, viewMode, onRefresh, supp
               </div>
             )}
 
-            {/* 3. Progress History — latest first from task log */}
+            {/* 3. Attachments — shown right after task details */}
+            {task.attachments?.length > 0 && (
+              <div className="bg-white rounded-lg p-3 border border-slate-100">
+                <AttachmentGallery attachments={task.attachments} />
+              </div>
+            )}
+
+            {/* 4. Progress History — latest first from task log */}
             <ProgressHistoryPanel taskId={task.id} />
 
             {/* 4. Dates */}
@@ -425,13 +432,6 @@ export default function DirectorTaskCard({ task, user, viewMode, onRefresh, supp
             {task.predecessor_task_numbers?.length > 0 && (
               <div className="text-xs text-slate-500">
                 Depends on: {task.predecessor_task_numbers.join(', ')}
-              </div>
-            )}
-
-            {/* 5. Attachments — shown last */}
-            {task.attachments?.length > 0 && (
-              <div className="bg-white rounded-lg p-3 border border-slate-100">
-                <AttachmentGallery attachments={task.attachments} />
               </div>
             )}
           </div>
