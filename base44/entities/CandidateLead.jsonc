@@ -28,13 +28,8 @@
     },
     "source_type": {
       "type": "string",
-      "enum": [
-        "Market Visit",
-        "Walk-in",
-        "Incoming Call",
-        "Referral"
-      ],
-      "description": "How the candidate was found"
+      "maxLength": 200,
+      "description": "How the candidate was found (e.g. Market Visit, Walk-in, Incoming Call, Referral) \u2014 sourced from CandidateSourceType master"
     },
     "source_details": {
       "type": "string",
@@ -43,12 +38,8 @@
     },
     "first_contact_mode": {
       "type": "string",
-      "enum": [
-        "In-person",
-        "Phone",
-        "WhatsApp"
-      ],
-      "description": "Mode of first contact with the candidate"
+      "maxLength": 200,
+      "description": "Mode of first contact with the candidate (e.g. In-person, Phone, WhatsApp) \u2014 sourced from CandidateContactMode master"
     },
     "first_contact_date": {
       "type": "string",

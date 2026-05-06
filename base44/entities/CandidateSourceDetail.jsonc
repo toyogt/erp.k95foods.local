@@ -1,0 +1,21 @@
+{
+  "name": "CandidateSourceDetail",
+  "type": "object",
+  "title": "Candidate Source Detail",
+  "description": "Master list of source detail snippets (e.g. labour chowk names, referrer names, factory gates). Auto-populated when HR adds a new value via the smart dropdown.",
+  "properties": {
+    "detail_text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500,
+      "description": "Unique source detail text"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "detail_text"
+  ]
+}

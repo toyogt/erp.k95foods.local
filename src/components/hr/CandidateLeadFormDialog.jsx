@@ -12,8 +12,6 @@ import CreatableSelect from '@/components/ui/CreatableSelect';
 import { Loader2 } from 'lucide-react';
 import CandidateEmployeeLinker from './CandidateEmployeeLinker';
 
-const SOURCE_TYPES = ['Market Visit', 'Walk-in', 'Incoming Call', 'Referral'];
-const CONTACT_MODES = ['In-person', 'Phone', 'WhatsApp'];
 const STATUSES = ['New', 'Contacted', 'Shortlisted', 'Interviewed', 'Hired', 'Rejected', 'On Hold', 'Terminated'];
 const EXIT_TYPES = ['Resignation', 'Termination', 'Absconded', 'Retirement', 'End of Contract', 'Other'];
 
@@ -70,9 +68,27 @@ export default function CandidateLeadFormDialog({ open, onOpenChange, candidate,
     queryFn: () => base44.entities.CandidateRole.filter({ is_active: true }, 'role_name', 500),
     enabled: open,
   });
+  const { data: sourceTypes = [], isLoading: sourceTypesLoading } = useQuery({
+    queryKey: ['candidate-source-types'],
+    queryFn: () => base44.entities.CandidateSourceType.filter({ is_active: true }, 'source_name', 500),
+    enabled: open,
+  });
+  const { data: contactModes = [], isLoading: contactModesLoading } = useQuery({
+    queryKey: ['candidate-contact-modes'],
+    queryFn: () => base44.entities.CandidateContactMode.filter({ is_active: true }, 'mode_name', 500),
+    enabled: open,
+  });
+  const { data: sourceDetails = [], isLoading: sourceDetailsLoading } = useQuery({
+    queryKey: ['candidate-source-details'],
+    queryFn: () => base44.entities.CandidateSourceDetail.filter({ is_active: true }, 'detail_text', 500),
+    enabled: open,
+  });
 
   const locationOptions = locations.map((l) => ({ value: l.location_name, label: l.location_name }));
   const roleOptions = roles.map((r) => ({ value: r.role_name, label: r.role_name }));
+  const sourceTypeOptions = sourceTypes.map((s) => ({ value: s.source_name, label: s.source_name }));
+  const contactModeOptions = contactModes.map((m) => ({ value: m.mode_name, label: m.mode_name }));
+  const sourceDetailOptions = sourceDetails.map((d) => ({ value: d.detail_text, label: d.detail_text }));
 
   // Create-new handlers (case-insensitive duplicate guard)
   const createLocation = async (text) => {
@@ -91,6 +107,33 @@ export default function CandidateLeadFormDialog({ open, onOpenChange, candidate,
     if (dup) return dup.role_name;
     await base44.entities.CandidateRole.create({ role_name: trimmed, is_active: true });
     queryClient.invalidateQueries({ queryKey: ['candidate-roles'] });
+    return trimmed;
+  };
+  const createSourceType = async (text) => {
+    const trimmed = text.trim();
+    if (!trimmed) return '';
+    const dup = sourceTypes.find((s) => s.source_name.toLowerCase() === trimmed.toLowerCase());
+    if (dup) return dup.source_name;
+    await base44.entities.CandidateSourceType.create({ source_name: trimmed, is_active: true });
+    queryClient.invalidateQueries({ queryKey: ['candidate-source-types'] });
+    return trimmed;
+  };
+  const createContactMode = async (text) => {
+    const trimmed = text.trim();
+    if (!trimmed) return '';
+    const dup = contactModes.find((m) => m.mode_name.toLowerCase() === trimmed.toLowerCase());
+    if (dup) return dup.mode_name;
+    await base44.entities.CandidateContactMode.create({ mode_name: trimmed, is_active: true });
+    queryClient.invalidateQueries({ queryKey: ['candidate-contact-modes'] });
+    return trimmed;
+  };
+  const createSourceDetail = async (text) => {
+    const trimmed = text.trim();
+    if (!trimmed) return '';
+    const dup = sourceDetails.find((d) => d.detail_text.toLowerCase() === trimmed.toLowerCase());
+    if (dup) return dup.detail_text;
+    await base44.entities.CandidateSourceDetail.create({ detail_text: trimmed, is_active: true });
+    queryClient.invalidateQueries({ queryKey: ['candidate-source-details'] });
     return trimmed;
   };
 
@@ -205,34 +248,39 @@ export default function CandidateLeadFormDialog({ open, onOpenChange, candidate,
           </Field>
 
           <Field label="Source Type">
-            <Select value={form.source_type || ''} onValueChange={(v) => set('source_type', v)}>
-              <SelectTrigger className="h-11 md:h-9 text-base md:text-sm">
-                <SelectValue placeholder="Select source" />
-              </SelectTrigger>
-              <SelectContent>
-                {SOURCE_TYPES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <CreatableSelect
+              value={form.source_type}
+              onChange={(v) => set('source_type', v)}
+              options={sourceTypeOptions}
+              onCreate={createSourceType}
+              loading={sourceTypesLoading}
+              placeholder="Select or add (e.g. Market Visit, Walk-in)"
+            />
+            <p className="text-xs text-slate-500 mt-1">Type to search or add new</p>
           </Field>
 
           <Field label="First Contact Mode">
-            <Select value={form.first_contact_mode || ''} onValueChange={(v) => set('first_contact_mode', v)}>
-              <SelectTrigger className="h-11 md:h-9 text-base md:text-sm">
-                <SelectValue placeholder="Select mode" />
-              </SelectTrigger>
-              <SelectContent>
-                {CONTACT_MODES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <CreatableSelect
+              value={form.first_contact_mode}
+              onChange={(v) => set('first_contact_mode', v)}
+              options={contactModeOptions}
+              onCreate={createContactMode}
+              loading={contactModesLoading}
+              placeholder="Select or add (e.g. In-person, Phone, WhatsApp)"
+            />
+            <p className="text-xs text-slate-500 mt-1">Type to search or add new</p>
           </Field>
 
           <Field label="Source Details" full>
-            <Input
+            <CreatableSelect
               value={form.source_details}
-              onChange={(e) => set('source_details', e.target.value)}
-              placeholder="e.g. Labour chowk near factory gate, referred by Suresh"
-              className="h-11 md:h-9 text-base md:text-sm"
+              onChange={(v) => set('source_details', v)}
+              options={sourceDetailOptions}
+              onCreate={createSourceDetail}
+              loading={sourceDetailsLoading}
+              placeholder="Select or add (e.g. Labour chowk near factory gate, referred by Suresh)"
             />
+            <p className="text-xs text-slate-500 mt-1">Type to search or add new</p>
           </Field>
 
           <Field label="First Contact Date">
