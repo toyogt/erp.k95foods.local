@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { Input } from '@/components/ui/input';
@@ -6,12 +6,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import OpeningStockItemsTable from '@/components/store/OpeningStockItemsTable';
 import OpeningStockEntriesLog from '@/components/store/OpeningStockEntriesLog';
 import { Loader2, PackageOpen, Search } from 'lucide-react';
-
-const SOURCE_LABELS = {
-  store: 'Store Items',
-  purchase: 'Purchase Items',
-  sales: 'Sales Products',
-};
 
 const CATEGORY_LABELS = {
   ingredient: 'Ingredient',
@@ -22,88 +16,16 @@ const CATEGORY_LABELS = {
   label_artwork: 'Label Artwork',
   packaging: 'Packaging',
   other: 'Other',
-  INGREDIENT: 'Ingredient',
-  PACKAGING_BOX: 'Packaging Box',
-  CONTAINER: 'Container',
-  CAP: 'Cap',
-  CONSUMABLE: 'Consumable',
-  sales: 'Sales Product',
 };
-
-function normalizeItems(storeItems, masterItems, products) {
-  const normalized = [];
-
-  storeItems.forEach(i => {
-    normalized.push({
-      ...i,
-      _source: 'store',
-      _display_category: CATEGORY_LABELS[i.item_category] || i.item_category || 'Other',
-    });
-  });
-
-  masterItems.forEach(i => {
-    // Skip if already exists in store items (by item_code)
-    if (storeItems.some(s => s.item_code === i.item_code)) return;
-    normalized.push({
-      id: i.id,
-      item_code: i.item_code,
-      item_name: i.item_name,
-      item_category: i.category?.toLowerCase() || 'other',
-      uom: i.base_uom || 'Nos',
-      is_active: i.is_active !== false,
-      batch_required: false,
-      expiry_required: false,
-      mfg_date_required: false,
-      opening_stock: 0,
-      _source: 'purchase',
-      _display_category: CATEGORY_LABELS[i.category] || i.category || 'Other',
-      _entity_type: 'ItemMaster',
-    });
-  });
-
-  products.forEach(i => {
-    if (storeItems.some(s => s.item_code === i.item_code)) return;
-    if (masterItems.some(m => m.item_code === i.item_code)) return;
-    normalized.push({
-      id: i.id,
-      item_code: i.item_code,
-      item_name: i.product_name || i.item_code,
-      item_category: 'sales',
-      uom: 'Nos',
-      is_active: i.is_active !== false,
-      batch_required: false,
-      expiry_required: false,
-      mfg_date_required: false,
-      opening_stock: 0,
-      _source: 'sales',
-      _display_category: 'Sales Product',
-      _entity_type: 'ProductMaster',
-    });
-  });
-
-  return normalized;
-}
 
 export default function SMSOpeningStockManager() {
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
-  const [sourceFilter, setSourceFilter] = useState('all');
 
+  // Fetch StoreItemMaster — the ONLY source of truth
   const { data: storeItems = [], isLoading: loadingStore, refetch: refetchStore } = useQuery({
-    queryKey: ['opening-stock-store'],
+    queryKey: ['opening-stock-store-items'],
     queryFn: () => base44.entities.StoreItemMaster.filter({ is_active: true }, 'item_name', 500),
-    staleTime: 60000,
-  });
-
-  const { data: masterItems = [], isLoading: loadingMaster } = useQuery({
-    queryKey: ['opening-stock-master'],
-    queryFn: () => base44.entities.ItemMaster.list('-created_date', 500).catch(() => []),
-    staleTime: 60000,
-  });
-
-  const { data: products = [], isLoading: loadingProducts } = useQuery({
-    queryKey: ['opening-stock-products'],
-    queryFn: () => base44.entities.ProductMaster.list('-created_date', 500).catch(() => []),
     staleTime: 60000,
   });
 
@@ -119,20 +41,16 @@ export default function SMSOpeningStockManager() {
     staleTime: 60000,
   });
 
-  const loading = loadingStore || loadingMaster || loadingProducts || loadingLots || loadingLocations;
+  const loading = loadingStore || loadingLots || loadingLocations;
 
-  const allItems = normalizeItems(storeItems, masterItems, products);
+  const categories = ['all', ...Array.from(new Set(storeItems.map(i => i.item_category).filter(Boolean)))];
 
-  const categories = ['all', ...Array.from(new Set(allItems.map(i => i.item_category).filter(Boolean)))];
-  const sources = ['all', ...Array.from(new Set(allItems.map(i => i._source).filter(Boolean)))];
-
-  const filtered = allItems.filter(item => {
+  const filtered = storeItems.filter(item => {
     const matchSearch = !search.trim()
       || item.item_name?.toLowerCase().includes(search.toLowerCase())
       || item.item_code?.toLowerCase().includes(search.toLowerCase());
     const matchCat = categoryFilter === 'all' || item.item_category === categoryFilter;
-    const matchSource = sourceFilter === 'all' || item._source === sourceFilter;
-    return matchSearch && matchCat && matchSource;
+    return matchSearch && matchCat;
   });
 
   function handleLotAdded() {
@@ -148,7 +66,7 @@ export default function SMSOpeningStockManager() {
           Opening Stock Management
         </h1>
         <p className="text-xs text-slate-500 mt-0.5">
-          Items are fetched from All Items module (Store Items, Purchase Items, Sales Products). Assign opening stock lots per item.
+          Showing items from Store Item Master. To add items here, import them from the Store Item Master page first.
         </p>
       </div>
 
@@ -175,15 +93,6 @@ export default function SMSOpeningStockManager() {
             </div>
             <select
               className="h-9 border border-slate-200 rounded-md px-3 text-sm bg-white min-w-[140px]"
-              value={sourceFilter}
-              onChange={e => setSourceFilter(e.target.value)}
-            >
-              {sources.map(s => (
-                <option key={s} value={s}>{s === 'all' ? 'All Sources' : (SOURCE_LABELS[s] || s)}</option>
-              ))}
-            </select>
-            <select
-              className="h-9 border border-slate-200 rounded-md px-3 text-sm bg-white min-w-[140px]"
               value={categoryFilter}
               onChange={e => setCategoryFilter(e.target.value)}
             >
@@ -196,6 +105,14 @@ export default function SMSOpeningStockManager() {
           {loading ? (
             <div className="flex justify-center py-16">
               <Loader2 className="w-7 h-7 animate-spin text-slate-400" />
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="py-12 text-center space-y-2">
+              <PackageOpen className="w-10 h-10 text-slate-300 mx-auto" />
+              <p className="text-slate-500 text-sm">No items found.</p>
+              <p className="text-slate-400 text-xs">
+                Items need to be imported into Store Item Master first. Go to Store Item Master → Import from System.
+              </p>
             </div>
           ) : (
             <OpeningStockItemsTable
