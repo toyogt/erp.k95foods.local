@@ -61,7 +61,6 @@ export default function AttachmentUploader({ attachments = [], onChange }) {
           type="file"
           accept="image/*,video/*"
           multiple
-          capture="environment"
           className="hidden"
           onChange={handleFiles}
         />
