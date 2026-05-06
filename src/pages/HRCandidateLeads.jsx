@@ -10,9 +10,73 @@ import { useToast } from '@/components/ui/use-toast';
 import { UserPlus, Plus, RefreshCw, Search } from 'lucide-react';
 import CandidateLeadTable from '@/components/hr/CandidateLeadTable';
 import CandidateLeadFormDialog from '@/components/hr/CandidateLeadFormDialog';
+import { fireFMSEvent, triggerFMSProcess } from '@/lib/useFMSAutoComplete';
 
 const ALLOWED_ROLES = ['admin', 'hr_manager', 'hr_supervisor', 'hr_user'];
 const STATUSES = ['New', 'Contacted', 'Shortlisted', 'Interviewed', 'Hired', 'Rejected', 'On Hold'];
+
+/**
+ * Fires the appropriate HR FMS events based on status transitions.
+ * - On create: candidate_lead_created (always) + maybe candidate_hired
+ * - On update: fire only when status actually transitions
+ */
+async function fireHRLifecycleEvents({ before, after }) {
+  try {
+    if (!before) {
+      // New candidate
+      await triggerFMSProcess({
+        triggerSource: 'candidate_lead_created',
+        triggerRefId: after.id,
+        title: `Candidate Lead: ${after.candidate_name}`,
+        triggerData: { mobile: after.mobile_number, source: after.source_type },
+      });
+      if (after.status === 'Hired') {
+        await fireFMSEvent('candidate_hired', after.id);
+      }
+      if (after.status === 'Terminated') {
+        await fireFMSEvent('employee_exit_initiated', after.id);
+      }
+      return;
+    }
+
+    if (before.status === after.status) return;
+
+    // Status transitions
+    const map = {
+      Shortlisted: 'candidate_shortlisted',
+      Interviewed: 'candidate_interviewed',
+      Hired: 'candidate_hired',
+      Terminated: 'employee_exit_initiated',
+    };
+    const eventKey = map[after.status];
+    if (!eventKey) return;
+
+    // For 'Hired', start onboarding process (auto-trigger)
+    if (after.status === 'Hired') {
+      await triggerFMSProcess({
+        triggerSource: 'candidate_hired',
+        triggerRefId: after.id,
+        title: `Onboarding: ${after.candidate_name}`,
+        triggerData: { employee_code: after.employee_code, department: after.department },
+      });
+    }
+
+    // For 'Terminated', start exit process
+    if (after.status === 'Terminated') {
+      await triggerFMSProcess({
+        triggerSource: 'employee_exit_initiated',
+        triggerRefId: after.id,
+        title: `Exit: ${after.candidate_name}`,
+        triggerData: { exit_type: after.exit_type, attrition_date: after.attrition_date },
+      });
+    }
+
+    // Always also fire as auto-complete event for any active steps
+    await fireFMSEvent(eventKey, after.id);
+  } catch (err) {
+    console.warn('[HR] FMS event fire failed:', err?.message);
+  }
+}
 
 export default function HRCandidateLeads() {
   const [user, setUser] = useState(null);
@@ -45,10 +109,16 @@ export default function HRCandidateLeads() {
           throw new Error(`Mobile number already exists for "${duplicate.candidate_name}"`);
         }
       }
+      const before = editing ? { ...editing } : null;
+      let saved;
       if (editing?.id) {
-        return base44.entities.CandidateLead.update(editing.id, payload);
+        saved = await base44.entities.CandidateLead.update(editing.id, payload);
+      } else {
+        saved = await base44.entities.CandidateLead.create(payload);
       }
-      return base44.entities.CandidateLead.create(payload);
+      // Fire HR FMS lifecycle events (non-blocking — best-effort)
+      await fireHRLifecycleEvents({ before, after: saved });
+      return saved;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['candidate-leads'] });

@@ -63,6 +63,17 @@ export const FMS_APP_EVENTS = [
   { key: 'manual_punch_approved',     label: 'Manual Punch Request Approved',  category: 'HR',           canTrigger: false, canComplete: true  },
   { key: 'manual_punch_rejected',     label: 'Manual Punch Request Rejected',  category: 'HR',           canTrigger: false, canComplete: true  },
 
+  // ── HR / Onboarding & Exit ──────────────────────────────────────────────────
+  { key: 'candidate_lead_created',    label: 'Candidate Lead Created',         category: 'HR Onboarding', canTrigger: true,  canComplete: true  },
+  { key: 'candidate_shortlisted',     label: 'Candidate Shortlisted',          category: 'HR Onboarding', canTrigger: false, canComplete: true  },
+  { key: 'candidate_interviewed',     label: 'Candidate Interviewed',          category: 'HR Onboarding', canTrigger: false, canComplete: true  },
+  { key: 'candidate_hired',           label: 'Candidate Hired (Onboarding Started)', category: 'HR Onboarding', canTrigger: true,  canComplete: true  },
+  { key: 'employee_documents_collected', label: 'Employee Documents Collected', category: 'HR Onboarding', canTrigger: false, canComplete: true  },
+  { key: 'employee_account_provisioned', label: 'Employee Account / ID Provisioned', category: 'HR Onboarding', canTrigger: false, canComplete: true  },
+  { key: 'employee_onboarding_completed', label: 'Employee Onboarding Completed', category: 'HR Onboarding', canTrigger: false, canComplete: true  },
+  { key: 'employee_exit_initiated',   label: 'Employee Exit Initiated',        category: 'HR Onboarding', canTrigger: true,  canComplete: true  },
+  { key: 'employee_exit_completed',   label: 'Employee Exit Completed',        category: 'HR Onboarding', canTrigger: false, canComplete: true  },
+
   // ── Sales ─────────────────────────────────────────────────────────────────────
   // SO Minimal Workflow: Draft → Under Logistics Review → Ready to Pick & Pack → Cancelled
   { key: 'sales_order_created',           label: 'Sales Order Created',                category: 'Sales', canTrigger: true,  canComplete: true  },
