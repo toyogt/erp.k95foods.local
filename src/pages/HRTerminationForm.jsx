@@ -223,7 +223,6 @@ export default function HRTerminationForm() {
 
   return (
     <div className="p-3 md:p-4 lg:p-6 space-y-4 max-w-3xl mx-auto">
-      {/* Header */}
       <div className="flex items-center gap-3">
         <Button
           variant="outline"
@@ -244,7 +243,6 @@ export default function HRTerminationForm() {
         </div>
       </div>
 
-      {/* Candidate summary */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Employee Details</CardTitle>
@@ -280,7 +278,6 @@ export default function HRTerminationForm() {
         </div>
       )}
 
-      {/* Termination Form */}
       <Card className="border-red-200">
         <CardHeader className="pb-3 bg-red-50/50">
           <CardTitle className="text-base text-red-900">Termination Details</CardTitle>
@@ -370,7 +367,6 @@ export default function HRTerminationForm() {
         </CardContent>
       </Card>
 
-      {/* Actions */}
       <div className="flex flex-col md:flex-row md:justify-end gap-2 sticky bottom-0 bg-slate-50 py-3">
         <Button
           variant="outline"
