@@ -671,10 +671,10 @@ export default function GRNReceive() {
             </div>
           </div>
 
-          <div className="bg-white/60 backdrop-blur-xl border border-white/40 rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] p-4 md:p-5" style={{ overflow: 'visible' }}>
+          <div className="bg-white/60 backdrop-blur-xl border border-white/40 rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] p-4 md:p-5 overflow-visible">
             <p className="text-sm font-semibold text-slate-900 uppercase tracking-wide mb-3">Supplier & Invoice Details</p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3" style={{ overflow: 'visible' }}>
-              <div style={{ overflow: 'visible', position: 'relative', zIndex: 50 }}>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 overflow-visible">
+              <div className="relative z-50">
                 <GRNManualSupplierSelect
                   value={supplierName}
                   onChange={(name) => setSupplierName(name)}
