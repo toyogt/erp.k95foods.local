@@ -60,7 +60,7 @@ export default function PRCreateForm({ user, onDone, onCancel, isHindi, t }) {
   }
   function removeDoc(index) { setSupportingDocs(prev => prev.filter((_, i) => i !== index)); }
 
-  const validItems = items.filter(it => it.item_name?.trim() && Number(it.quantity) > 0);
+  const validItems = items.filter(it => it.item_name?.trim() && Number(it.quantity) > 0 && it.unit?.trim());
 
   function handleItemAdded(newItem) {
     setIngredients(prev => [...prev, newItem]);
@@ -104,7 +104,7 @@ export default function PRCreateForm({ user, onDone, onCancel, isHindi, t }) {
       })
     ));
 
-    await logPurchaseAudit({ action: `Purchase Request ${prNumber} created`, entity_type: 'PurchaseRequest', entity_id: prNumber, user });
+    await logPurchaseAudit({ action: `Purchase Request ${prNumber} created and submitted for approval`, action_type: 'create', entity_type: 'PurchaseRequest', entity_id: prNumber, user });
     await triggerFMSProcess({ triggerSource: 'purchase_request_created', triggerRefId: pr.id, title: `Purchase Request ${prNumber} — ${title}`, triggerData: { pr_number: prNumber, department, requested_by: user?.email || '' } });
 
     setLoading(false);

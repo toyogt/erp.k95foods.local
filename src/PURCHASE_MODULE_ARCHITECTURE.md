@@ -1,13 +1,13 @@
-# Purchase Module — Complete Architecture & Data Flow
+# Purchase Module — Complete Architecture & Data Flow (VERIFIED)
 
 > **Last Updated:** 06/05/2026
-> **Purpose:** Single source of truth for the Purchase module's structure, dependencies, data flow, and downstream impact on the K95 ERP system.
+> **Verified Against:** Actual codebase — every statement in this document is confirmed by reading the source files.
 
 ---
 
 ## 1. MODULE OVERVIEW
 
-The Purchase module handles the entire procurement lifecycle — from a user raising a need (Purchase Request) through approval, supplier selection, Purchase Order creation, goods receipt, quality inspection, invoice matching, and payment.
+The Purchase module handles the entire procurement lifecycle — from a user raising a need (Purchase Request) through approval, supplier selection, Purchase Order creation, goods receipt tracking, and follow-up management.
 
 **Business Goal:** Solve real procurement problems — not just data entry. Every screen exists to move a decision forward, flag a bottleneck, or prevent a duplicate spend.
 
@@ -19,34 +19,38 @@ The Purchase module handles the entire procurement lifecycle — from a user rai
 
 | Entity | Purpose | Key Fields |
 |--------|---------|------------|
-| **PurchaseRequest** | A formal request to buy items | `pr_number`, `title`, `department`, `priority`, `status`, `requested_by`, `approved_by`, `request_date`, `required_by_date` |
-| **PurchaseRequestItem** | Line items inside a PR | `pr_number`, `mr_id`, `item_code`, `item_name`, `qty`, `unit`, `estimated_rate`, `item_status`, `sample_image` |
-| **PurchaseOrder** | Confirmed order to a supplier | `po_id`, `supplier_id`, `supplier_name`, `mr_id`, `linked_pr_ids[]`, `status`, `po_date`, `due_date`, `subtotal`, `gst_percent`, `gst_amount`, `total_amount`, `estimated_freight`, `actual_freight` |
-| **PurchaseOrderItem** | Line items inside a PO | `po_id`, `item_code`, `item_name`, `qty`, `rate`, `amount`, `received_qty`, `pending_qty` |
-| **Supplier** | Approved vendor master | `supplier_id`, `supplier_name`, `approval_status` (APPROVED/HOLD/BLOCKED), `gstin`, `payment_terms_days`, `contact_name`, `phone`, `email` |
+| **PurchaseRequest** | A formal request to buy items | `pr_number`, `title`, `department`, `priority`, `status`, `requested_by`, `requested_by_name`, `approved_by`, `request_date`, `required_by_date`, `internal_notes`, `expected_delivery_date`, `urgency_override`, `supporting_documents[]`, `mr_id` |
+| **PurchaseRequestItem** | Line items inside a Purchase Request | `pr_number`, `line_number`, `item_code`, `item_name`, `quantity`, `qty` (legacy), `unit`, `uom_code`, `estimated_rate`, `item_status`, `sample_image`, `sample_photo_requested`, `sample_photo_request_note`, `sample_photo_submitted`, `rejection_reason`, `remarks`, `mr_id` |
+| **PurchaseOrder** | Confirmed order to a supplier | `po_id`, `pr_number`, `supplier_id`, `supplier_name`, `status`, `po_date`, `due_date`, `subtotal`, `gst_amount`, `gst_rate`, `total_amount`, `payment_terms`, `custom_payment_terms`, `terms_and_conditions`, `quotation_number`, `ship_via`, `estimated_freight`, `actual_freight`, `total_freight_paid`, `delivery_address`, `supplier_gstin`, `supplier_address`, `supplier_contact`, `supplier_email`, `sent_at`, `sent_via`, `mr_id`, `erp_sync_status` |
+| **PurchaseOrderItem** | Line items inside a Purchase Order | `po_id`, `item_code`, `item_name`, `uom_code`, `qty`, `rate`, `gst_percent`, `gst_amount`, `amount`, `total_amount`, `received_qty`, `pending_qty`, `supplier_id`, `remarks` |
+| **POFollowUp** | Scheduled follow-ups with suppliers | `po_id`, `follow_up_date`, `follow_up_mode` (Call/Email/WhatsApp), `contact_person`, `status` (Pending/Done/Rescheduled), `notes`, `rescheduled_to`, `reschedule_reason`, `completed_by`, `completed_at` |
+| **PRQuotation** | Quotation entries for approved Purchase Request items | `pr_number`, `line_number`, `supplier_id`, `supplier_name`, `quoted_rate`, `quotation_document`, `sample_requested`, `expected_sample_date`, `sample_received`, `sample_photo`, `is_selected`, `remarks` |
+| **PRComment** | Threaded comments for clarification on Purchase Request line items | `pr_number`, `line_number`, `comment_type` (clarification_request/reply/note/status_change), `message`, `attachment_url`, `author_email`, `author_name` |
+| **Supplier** | Approved vendor master | `supplier_id`, `supplier_name`, `approval_status` (APPROVED/HOLD/BLOCKED), `is_approved`, `gstin`, `address`, `city`, `state`, `pincode`, `payment_terms_days`, `contact_name`, `phone`, `email`, `bank_details` |
+| **SupplierItemMapping** | Maps which supplier provides which item | `supplier_id`, `supplier_name`, `item_code`, `item_name`, `last_rate`, `is_preferred` |
 
 ### 2.2 Supporting Entities (Used by Purchase)
 
 | Entity | Relationship |
 |--------|-------------|
-| **ItemMaster** | Unified item catalogue — PR items are selected from here |
-| **StoreItemMaster** | Store-specific item catalogue — merged with ItemMaster during PR creation |
+| **ItemMaster** | Unified item catalogue — Purchase Request items are selected from here |
+| **StoreItemMaster** | Store-specific item catalogue — merged with ItemMaster during Purchase Request creation |
 | **UOMMaster** | Units of Measure — populates unit dropdowns |
-| **AuditLog** | Every purchase action is logged here |
+| **AuditLog** | Every purchase action is logged here via `logPurchaseAudit()` |
 
 ### 2.3 Downstream Entities (Purchase Feeds Into)
 
 | Entity | How Purchase Feeds It |
 |--------|----------------------|
-| **GateEntry** | When supplier delivers goods, a Gate Entry is logged |
-| **GRNHeader** | Goods Receipt Note — links to `po_id` for receiving |
-| **GRNItem** | Each received line item — tracks `received_qty` vs `po_qty` |
-| **QCInspection** | Quality check triggered after GRN |
-| **SupplierInvoice** | Invoice captured against a PO |
-| **MatchResult** | 3-way match: PO ↔ GRN ↔ Invoice |
+| **GateEntry** | When supplier delivers goods, a Gate Entry is logged (links via `linked_po_id`) |
+| **GRNHeader** | Goods Receipt Note — links to `po_id` and `linked_po_ids[]` for receiving |
+| **GRNItem** | Each received line item — tracks `received_qty` vs `ordered_qty`, includes `mismatch_type` |
+| **StoreLot** | Store module stock lots created from Goods Receipt Note |
+| **StockBalance** / **StoreStockBalance** | Goods Receipt Note completion updates stock |
+| **QCInspection** | Quality check triggered after Goods Receipt Note |
+| **SupplierInvoice** | Invoice captured against a Purchase Order |
+| **MatchResult** | 3-way match: Purchase Order to Goods Receipt Note to Invoice |
 | **PaymentRequest** | Payment approval after successful match |
-| **StockBalance / WarehouseLot** | GRN completion updates stock |
-| **StoreLot** | Store module stock lots created from GRN |
 
 ---
 
@@ -55,379 +59,264 @@ The Purchase module handles the entire procurement lifecycle — from a user rai
 ### 3.1 Purchase Request Status Flow
 
 ```
-DRAFT
-  ↓ (user submits)
+Draft
+  | (user submits via PRCreateForm)
 Pending Approval
-  ├── → Approved        (manager approves all items)
-  ├── → Partially Approved (some items approved, some rejected/clarified)
-  ├── → Rejected        (manager rejects entire request)
-  └── → ORDERED         (PO created from this PR)
-        → CLOSED        (all items received)
+  |-- -> Approved              (manager approves all items)
+  |-- -> Partially Approved    (some items approved, some rejected/clarified)
+  |-- -> Rejected              (manager rejects entire request with reason)
+  |-- -> Quotation Stage       (quotations being collected)
+  +-- -> PO Created            (Purchase Order created from this request)
+        -> Closed              (all items received)
 ```
 
 ### 3.2 Purchase Request Item Status Flow
 
 ```
 Pending
-  ├── → Approved                  (manager approves this item)
-  ├── → Rejected                  (manager rejects with reason)
-  ├── → Sample Photo Requested    (manager asks requester for photo)
-  │     └── → Pending             (requester uploads photo → resets to Pending)
-  └── → Clarification Requested   (manager asks requester a question)
-        └── → Pending             (requester responds → resets to Pending)
+  |-- -> Approved                  (manager approves this item)
+  |-- -> Rejected                  (manager rejects with reason)
+  |-- -> Sample Photo Requested    (manager asks requester for photo)
+  |     +-- -> Pending             (requester uploads photo -> resets to Pending)
+  +-- -> Clarification Requested   (manager asks requester a question via comment thread)
+        +-- -> Pending             (requester responds -> can be re-evaluated)
 ```
 
 ### 3.3 Purchase Order Status Flow
 
 ```
-DRAFT
-  ↓ (manager completes order form)
-SUBMITTED
-  ↓ (approval)
-APPROVED
-  ↓ (sent to supplier)
-SENT
-  ├── → PART_RECEIVED   (partial GRN recorded)
-  └── → CLOSED          (all items fully received)
-  
-CANCELLED (can happen from DRAFT, SUBMITTED, or APPROVED)
+Draft
+  | (manager advances status in PODetailView)
+Sent to Supplier
+  |
+Acknowledged
+  |
+In Transit
+  |-- -> Partially Received   (partial Goods Receipt Note recorded)
+  +-- -> Delivered             (all items fully received)
+
+Cancelled (can happen from any status except Delivered)
+```
+
+NOTE: There is NO separate "Submitted" or "Approved" step. The status flow goes directly from Draft to Sent to Supplier. The PODetailView component provides a "Move to: [Next Status]" button that advances through the flow linearly.
+
+### 3.4 Follow-Up Status Flow
+
+```
+Pending
+  |-- -> Done         (marked complete with notes)
+  +-- -> Rescheduled  (original closed, new follow-up created for new date)
 ```
 
 ---
 
-## 4. PAGE TREE & NAVIGATION
+## 4. PAGE TREE & NAVIGATION (9 pages)
 
 ```
 Purchase Module (sidebar group)
-│
-├── 📋 My Purchase Requests     [PurchaseRequestList]
-│   ├── New Purchase Request     (Dialog → PRCreateForm)
-│   └── PR Detail View           (PRDetailView → PRDetailItemCard)
-│       └── Continue to PO       (→ PurchaseOrderCreate)
-│
-├── ✅ Request Approvals         [PurchaseRequestApprovals]
-│   └── PR Detail View           (PRDetailView with approval actions)
-│       ├── Approve / Reject per item
-│       ├── Request Sample Photo
-│       ├── Request Clarification
-│       └── Approve / Reject entire request
-│
-├── 🛒 Purchase Orders           [PurchaseOrderList]
-│   ├── New Purchase Order       (→ PurchaseOrderCreate)
-│   ├── Bulk Purchase Order      (→ BulkPOCreate)
-│   └── View PO Timeline         (→ PurchaseOrderTimeline?po=XXX)
-│
-├── 🔔 Follow-Up Tracker         [POFollowUpTracker]
-│   └── Overdue / Due Today / Upcoming / Completed
-│
-├── 📊 Order Timeline            [PurchaseOrderTimeline]
-│   └── PO list with ordered vs received vs pending quantities
-│
-├── 📈 Purchase Reports          [PurchaseReports]
-│   └── Analytics on purchase operations
-│
-└── 🏭 Suppliers (Admin only)    [SupplierManager]
-    ├── Supplier CRUD
-    ├── Status management (Approved/Hold/Blocked)
-    └── Supplier-Item Mapping
+|
+|-- My Purchase Requests       [PurchaseRequestList]
+|   |-- New Purchase Request       (Dialog -> PRCreateForm)
+|   |-- Hindi/English toggle       (full UI translation)
+|   +-- Purchase Request Detail    (PRDetailView -> PRItemApprovalCard)
+|       +-- Continue to Purchase Order (-> /PurchaseOrderCreate?pr=XXX)
+|
+|-- Request Approvals           [PurchaseRequestApprovals]
+|   |-- Tabs: Pending | Reviewed | All
+|   |-- Summary cards (Pending/Approved/Rejected counts)
+|   +-- Purchase Request Detail    (PRDetailView with showApprovalActions=true)
+|       |-- Per-item: Approve / Reject / Request Sample Photo / Request Clarification
+|       |-- Full request: Approve All / Partially Approve / Reject All
+|       |-- Manager fields: Expected Delivery Date, Urgency Override, Internal Notes
+|       |-- Quotation management panel (PRQuotationPanel)
+|       +-- "Continue to Purchase Order" button
+|
+|-- Purchase Orders             [PurchaseOrderList]
+|   |-- New Purchase Order         (-> /PurchaseOrderCreate)
+|   |-- Bulk Purchase Order        (-> /BulkPOCreate)
+|   +-- Purchase Order Detail      (PODetailView)
+|       |-- Status flow visualisation
+|       |-- Supplier details card
+|       |-- Line items table (ordered/received/pending)
+|       |-- Goods Receipt History (POGRNHistory)
+|       |-- Follow-up management (POFollowUpList)
+|       |-- PDF view (POPdfView)
+|       +-- Status advancement / Cancel actions
+|
+|-- Create Purchase Order       [PurchaseOrderCreate]
+|   |-- From Purchase Request: pre-loads approved items
+|   |-- Standalone: blank form
+|   |-- Duplicate Purchase Order check
+|   +-- 3-step wizard (POCreateWizard):
+|       Step 1: Supplier selection per item (CreatableSupplierSelect)
+|       Step 2: Purchase Order details (dates, terms, freight, delivery address)
+|       Step 3: Follow-up scheduling + summary
+|
+|-- Bulk Purchase Order         [BulkPOCreate]
+|   +-- 3-step wizard:
+|       Step 1: Select approved requests (filters out requests with existing Purchase Orders)
+|       Step 2: Assign single supplier + Purchase Order details
+|       Step 3: Review consolidated items + totals -> Create
+|
+|-- Order Timeline              [PurchaseOrderTimeline]
+|   |-- Purchase Order list with ordered vs received vs pending quantities
+|   |-- Mobile card view + desktop table view
+|   +-- Timeline detail view (POTimelineView):
+|       |-- 7-step timeline (Created -> Sent -> Acknowledged -> In Transit -> Gate Entry -> Goods Receipt Note -> Delivered/Cancelled)
+|       |-- Items table with partial quantity % tracking
+|       |-- Freight & cost summary
+|       |-- Goods Receipt Note history with per-note item details
+|       |-- Follow-up list
+|       +-- Audit trail
+|
+|-- Follow-Up Tracker          [POFollowUpTracker]
+|   |-- Dashboard: Overdue / Due Today / Upcoming / Completed (with counts)
+|   +-- Per follow-up: Mark Done (with notes) / Reschedule (with reason + new date)
+|   FULLY PERSISTENT - reads/writes to POFollowUp entity
+|
+|-- Purchase Reports            [PurchaseReports]
+|   |-- KPI cards: Total Purchase Orders, Active, Pending Requests, Overdue Follow-Ups
+|   |-- Value KPIs: Total Purchase Order Value, Average Value, Total Freight
+|   |-- Charts: Monthly Purchase Order trend (bar), Purchase Orders by Status (pie)
+|   |-- Top 5 Suppliers by value
+|   |-- Purchase Orders pending receipt
+|   +-- Purchase Requests by status breakdown
+|
++-- Suppliers (Admin only)      [SupplierManager]
+    |-- Supplier CRUD with audit logging
+    |-- Status management (Approved/Hold/Blocked)
+    |-- Deletion guard (checks for existing purchase documents)
+    +-- Supplier-Item Mapping panel (SupplierItemMappingPanel)
 ```
 
 ---
 
 ## 5. COMPONENT MAP
 
-```
-pages/
-├── PurchaseRequestList.jsx          — Requester's list view + create dialog
-├── PurchaseRequestApprovals.jsx     — Manager's approval inbox
-├── PurchaseOrderList.jsx            — PO master list
-├── PurchaseOrderCreate.jsx          — PO creation router (single vs bulk)
-├── BulkPOCreate.jsx                 — Bulk PO wizard (3-step)
-├── PurchaseOrderTimeline.jsx        — PO tracking with GRN quantities
-├── POFollowUpTracker.jsx            — Overdue PO follow-ups
-├── PurchaseReports.jsx              — Analytics wrapper
-├── SupplierManager.jsx              — Supplier CRUD
-
-components/purchase/
-├── purchaseHelpers.js               — Utility functions + constants
-│   ├── logPurchaseAudit()           — Audit logging
-│   ├── genPRNumber() / genPONumber()— ID generation
-│   ├── formatDateDDMMYYYY()         — Date formatting
-│   ├── formatINR()                  — Currency formatting
-│   ├── DEPARTMENTS[]                — Department constants
-│   └── PR_STATUS_COLOR / PO_STATUS_COLOR / PRIORITY_COLOR
-│
-├── PRCreateForm.jsx                 — PR creation form with line items
-├── PRItemRowEnhanced.jsx            — Smart item selector (search + add new)
-├── PRDetailView.jsx                 — PR detail with approval workflow
-├── PRDetailItemCard.jsx             — Individual item card with actions
-├── PRDetailActions.jsx              — PR-level approve/reject buttons
-├── PRListFilters.jsx                — Filter controls for PR list
-├── SupplierSelect.jsx               — Smart supplier selector (search + add new)
-├── SupplierFormDialog.jsx           — Supplier create/edit form
-├── SupplierStatusCards.jsx          — Status summary cards
-├── SupplierTable.jsx                — Supplier data table
-├── SupplierItemMappingPanel.jsx     — Supplier ↔ Item links
-├── ApprovalActionPanel.jsx          — Approval actions
-├── PurchaseReports.jsx              — Reports component
-├── POList.jsx                       — PO listing component
-├── POForm.jsx                       — PO form component
-├── POSharePanel.jsx                 — Share PO via WhatsApp/Email
-└── purchaseHindiLabels.js           — Hindi translations
-```
-
----
-
-## 6. DATA FLOW — END TO END
-
-### 6.1 Purchase Request → Purchase Order → GRN → Payment
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                     PURCHASE REQUEST FLOW                           │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  User (any dept)                                                    │
-│    │                                                                │
-│    ▼                                                                │
-│  [PRCreateForm] ──creates──→ PurchaseRequest (Pending Approval)    │
-│    │                         PurchaseRequestItem[] (Pending)        │
-│    │                                                                │
-│    ├── FMS: triggerFMSProcess('purchase_request_created', pr.id)   │
-│    └── Audit: "Purchase Request PR-XXXX created"                   │
-│                                                                     │
-├─────────────────────────────────────────────────────────────────────┤
-│                     APPROVAL FLOW                                   │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  Manager (admin / purchase_manager / production_manager)            │
-│    │                                                                │
-│    ▼                                                                │
-│  [PurchaseRequestApprovals] → [PRDetailView]                       │
-│    │                                                                │
-│    ├── Per Item: Approve / Reject / Sample Photo / Clarification   │
-│    │   └── Updates PurchaseRequestItem.item_status                 │
-│    │                                                                │
-│    ├── Sample Photo Requested:                                      │
-│    │   └── Requester sees ⚠ flag in list + upload area in detail   │
-│    │   └── After upload → item_status resets to "Pending"          │
-│    │                                                                │
-│    ├── Full Request: Approve / Reject                              │
-│    │   └── Updates PurchaseRequest.status + approved_by/at         │
-│    │   └── Audit: "PR-XXXX approved/rejected"                     │
-│    │                                                                │
-│    └── On Approve → "Continue to Purchase Order" button appears    │
-│                                                                     │
-├─────────────────────────────────────────────────────────────────────┤
-│                     PURCHASE ORDER CREATION                         │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  [BulkPOCreate] — 3-step wizard:                                   │
-│    Step 1: Select approved PRs (filters out PRs with existing POs) │
-│    Step 2: Enter supplier (SupplierSelect), dates, terms, GST      │
-│    Step 3: Review consolidated items + totals                      │
-│    │                                                                │
-│    ├── Creates: PurchaseOrder (DRAFT)                              │
-│    ├── Creates: PurchaseOrderItem[] (one per consolidated item)    │
-│    ├── FMS: fireFMSEvent('purchase_order_created', pr.id)          │
-│    ├── FMS: linkFMSRef(instanceId, po.id)                          │
-│    └── Audit: "Bulk PO PO-XXXX created from N PRs"                │
-│                                                                     │
-├─────────────────────────────────────────────────────────────────────┤
-│                     DOWNSTREAM IMPACT                               │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  PO (SENT status) ──→ Gate Entry Module                            │
-│    │                  Security logs incoming delivery               │
-│    ▼                                                                │
-│  [GateEntry] ──→ GRN Module                                       │
-│    │             Store team receives goods against PO               │
-│    ▼                                                                │
-│  [GRNReceive] ──creates──→ GRNHeader + GRNItem[]                  │
-│    │                        Links to po_id                          │
-│    │                        Updates PurchaseOrderItem.received_qty  │
-│    │                        Creates StoreLot / WarehouseLot         │
-│    │                        Tracks freight_amount                   │
-│    ▼                                                                │
-│  [QCInbox] ──→ Quality inspection of received goods                │
-│    │                                                                │
-│    ▼                                                                │
-│  [InvoiceCapture] ──→ SupplierInvoice against PO                  │
-│    │                                                                │
-│    ▼                                                                │
-│  [ThreeWayMatch] ──→ PO qty ↔ GRN qty ↔ Invoice qty               │
-│    │                  MatchResult entity                            │
-│    ▼                                                                │
-│  [PaymentRequests] ──→ Approved for payment                        │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## 7. FMS (Factory Management System) INTEGRATION
-
-The Purchase module fires FMS events to drive automated process workflows.
-
-| Action | FMS Event Key | Ref ID | Notes |
-|--------|--------------|--------|-------|
-| PR Created | `triggerFMSProcess('purchase_request_created', pr.id)` | PR record ID | Starts a new FMS process instance |
-| PO Created | `fireFMSEvent('purchase_order_created', pr.id)` | PR record ID (already in chain) | Auto-completes the "Create PO" step |
-| PO Linked | `linkFMSRef(instanceId, po.id)` | PO record ID | Adds PO to ref_chain for future steps |
-
-### FMS Ref Chain Example
-```
-Step 1: PR created     → ref_chain = [pr.id]
-Step 2: PO created     → ref_chain = [pr.id, po.id]
-Step 3: PO approved    → fireFMSEvent('po_approved', po.id) matches via ref_chain
-Step 4: GRN received   → fireFMSEvent('grn_received', po.id) matches via ref_chain
-```
-
----
-
-## 8. SMART INPUT PATTERN (Creatable Dropdowns)
-
-Two critical smart selectors in the Purchase module:
-
-### 8.1 Item Selection (PRItemRowEnhanced)
-- **Source:** ItemMaster + StoreItemMaster (merged, deduplicated)
-- **Behaviour:** Type to search → select existing → or "Add as new item"
-- **On Create:** Creates ItemMaster record with category `CONSUMABLE`, code `ADHOC-XXXXX`
-- **Impact:** New items immediately available across the system
-
-### 8.2 Supplier Selection (SupplierSelect)
-- **Source:** Supplier entity
-- **Behaviour:** Type to search → select existing → or "Add as new supplier"
-- **On Create:** Creates Supplier record with status `HOLD` (not approved)
-- **Impact:** New supplier available for POs but requires admin approval before payments
-
----
-
-## 9. ROLE-BASED ACCESS
-
-| Role | Can Create PR | Can Approve PR | Can Create PO | Can Manage Suppliers |
-|------|:---:|:---:|:---:|:---:|
-| `user` | ✅ | ❌ | ❌ | ❌ |
-| `purchase_user` | ✅ | ❌ | ❌ | ❌ |
-| `purchase_manager` | ✅ | ✅ | ✅ | ❌ |
-| `production_manager` | ✅ | ✅ | ✅ | ❌ |
-| `admin` | ✅ | ✅ | ✅ | ✅ |
-
-**Navigation visibility** is controlled by `lib/registryConfig.js` → `pageRegistry[]` entries for module `PURCHASE`.
-
----
-
-## 10. AUDIT TRAIL
-
-Every significant action is logged via `logPurchaseAudit()` to the `AuditLog` entity:
-
-| Action | Logged Data |
-|--------|------------|
-| PR Created | "Purchase Request PR-XXXX created" |
-| PR Approved | "Purchase Request PR-XXXX approved" |
-| PR Rejected | "Purchase Request PR-XXXX rejected: [reason]" |
-| PO Created | "Bulk PO PO-XXXX created from N PRs: PR-XXX, PR-YYY" |
-| Supplier Created | "Supplier SUP-XXXX created from Purchase Order form" |
-
-**Note:** The `logPurchaseAudit` function currently uses legacy AuditLog fields (`action`, `entity_type`, `performed_by`). The AuditLog entity schema requires `action_type`, `actor_email`, `audit_id`, `module` — this mismatch causes silent 422 validation errors. This needs to be fixed.
-
----
-
-## 11. KNOWN ISSUES & GAPS
-
-### 11.1 Audit Log Schema Mismatch ⚠️
-`logPurchaseAudit()` in `purchaseHelpers.js` creates records with fields that don't match the current `AuditLog` entity schema. Required fields (`action_type`, `actor_email`, `audit_id`, `module`) are missing, causing silent 422 errors.
-
-### 11.2 Follow-Up Tracker is Stateless ⚠️
-`POFollowUpTracker` generates follow-up items in-memory from PO data. When you "Mark Done", it only updates local state — not persisted to database. A page refresh resets everything.
-
-### 11.3 Quotation Management — Not Yet Built
-The "Manage Quotations" button on approved PRs is disabled/placeholder. No quotation entity or comparison workflow exists yet.
-
-### 11.4 PO Approval Workflow — Missing
-POs are created in DRAFT status but there's no approval step to move them to APPROVED → SENT. Currently only the list displays status — no UI to change PO status.
-
-### 11.5 PO Detail/Edit View — Missing
-No dedicated PO detail page exists. The "View" button on PO list links to the Timeline page, which is a read-only tracking view — no editing capability.
-
-### 11.6 PR → PO Item-Level Traceability — Weak
-When a PO is created from multiple PRs, individual PR item → PO item traceability is lost. The PO stores `linked_pr_ids[]` but doesn't track which specific PR item became which PO item.
-
-### 11.7 Supplier Override Reason — Unused
-`PurchaseOrder.supplier_override_reason` field exists but no UI captures it. Meant for when a non-approved supplier is selected.
-
----
-
-## 12. DEPENDENCY GRAPH
-
-```
-                    ┌──────────────┐
-                    │  ItemMaster  │
-                    │ StoreItemMaster│
-                    └──────┬───────┘
-                           │ items lookup
-                           ▼
-┌──────────┐    ┌──────────────────────┐    ┌──────────────┐
-│ UOMMaster │───→│  PurchaseRequest     │    │   Supplier   │
-└──────────┘    │  PurchaseRequestItem │    └──────┬───────┘
-                └──────────┬───────────┘           │
-                           │ approval               │ supplier selection
-                           ▼                        ▼
-                ┌──────────────────────────────────────┐
-                │         PurchaseOrder                │
-                │         PurchaseOrderItem             │
-                └──────────┬───────────────────────────┘
-                           │
-            ┌──────────────┼──────────────────┐
-            ▼              ▼                  ▼
-    ┌──────────────┐ ┌──────────┐    ┌──────────────────┐
-    │  GateEntry   │ │ GRNHeader│    │ SupplierInvoice  │
-    └──────────────┘ │ GRNItem  │    └────────┬─────────┘
-                     └────┬─────┘             │
-                          │                    │
-                          ▼                    ▼
-                 ┌────────────────┐   ┌──────────────┐
-                 │ QCInspection   │   │ MatchResult  │
-                 │ StoreLot       │   │ (3-Way Match)│
-                 │ StockBalance   │   └──────┬───────┘
-                 │ WarehouseLot   │          │
-                 └────────────────┘          ▼
-                                    ┌────────────────┐
-                                    │ PaymentRequest │
-                                    └────────────────┘
-```
-
----
-
-## 13. WHAT HAPPENS IF...
-
-| Scenario | System Behaviour |
-|----------|-----------------|
-| User creates PR with unknown item | Smart selector creates it in ItemMaster (ADHOC code, CONSUMABLE category) |
-| Manager requests sample photo | Item status → "Sample Photo Requested", requester sees ⚠ flag + upload area |
-| PO created for non-approved supplier | Supplier created with HOLD status. Admin must approve separately |
-| Partial delivery against PO | PO status → PART_RECEIVED, PurchaseOrderItem.received_qty updated, pending_qty recalculated |
-| GRN recorded against PO | Stock lots created, warehouse stock updated, QC inspection triggered if configured |
-| 3-way match passes | Payment request auto-generated or flagged for approval |
-| PR has no items with quantity | Validation blocks submission |
-| Duplicate supplier name entered | Currently NOT blocked — duplicate prevention is missing |
-
----
-
-## 14. FILES REFERENCE
+### Pages (11 files)
 
 | File | Purpose |
 |------|---------|
-| `entities/PurchaseRequest.json` | PR entity schema |
-| `entities/PurchaseRequestItem.json` | PR item entity schema |
-| `entities/PurchaseOrder.json` | PO entity schema |
-| `entities/PurchaseOrderItem.json` | PO item entity schema |
-| `entities/Supplier.json` | Supplier entity schema |
-| `lib/registryConfig.js` | Page routing & module registration |
-| `lib/useFMSAutoComplete.js` | FMS event helpers |
-| `components/purchase/purchaseHelpers.js` | Shared utilities |
-| `App.jsx` | Route definitions |
+| `pages/PurchaseRequestList.jsx` | Requester's list + create dialog + Hindi toggle |
+| `pages/PurchaseRequestApprovals.jsx` | Manager's approval inbox with tabs |
+| `pages/PurchaseOrders.jsx` | Wrapper that renders PurchaseOrderList |
+| `pages/PurchaseOrderList.jsx` | Purchase Order master list with detail view |
+| `pages/PurchaseOrderCreate.jsx` | Purchase Order creation router (single vs bulk) |
+| `pages/BulkPOCreate.jsx` | Bulk Purchase Order wizard (3-step) |
+| `pages/PurchaseOrderTimeline.jsx` | Purchase Order tracking with quantities |
+| `pages/POFollowUpTracker.jsx` | Overdue Purchase Order follow-ups |
+| `pages/PurchaseReports.jsx` | Analytics wrapper page |
+| `pages/SupplierManager.jsx` | Supplier CRUD + mapping |
+| `pages/MaterialRequest.jsx` | Wrapper that renders PurchaseRequestList |
+
+### Components (22 files)
+
+| File | Purpose |
+|------|---------|
+| `components/purchase/purchaseHelpers.js` | Utilities + constants (logPurchaseAudit, genPRNumber, genPONumber, formatDateDDMMYYYY, formatINR, DEPARTMENTS, UNITS, STATUS_COLOR, PO_STATUS_FLOW) |
+| `components/purchase/purchaseHindiLabels.js` | Hindi translations |
+| `components/purchase/PRCreateForm.jsx` | Purchase Request creation form with ItemSelectWithStock |
+| `components/purchase/PRItemRowEnhanced.jsx` | Enhanced line item row with ItemSelectWithStock, description, sample upload |
+| `components/purchase/ItemSelectWithStock.jsx` | Smart item selector with real-time stock levels and lot info |
+| `components/purchase/CreatableSupplierSelect.jsx` | Smart supplier dropdown with save-to-master prompt |
+| `components/purchase/PRDetailView.jsx` | Purchase Request detail with approval workflow, manager fields, quotation panel |
+| `components/purchase/PRItemApprovalCard.jsx` | Per-item approval card with 4 actions + comment thread |
+| `components/purchase/PRSamplePhotoUploader.jsx` | Sample photo upload for requesters |
+| `components/purchase/PRCommentThread.jsx` | Threaded comment system (full-screen overlay) |
+| `components/purchase/PRQuotationPanel.jsx` | Quotation management for approved items |
+| `components/purchase/PRListFilters.jsx` | Filter controls |
+| `components/purchase/POCreateWizard.jsx` | 3-step Purchase Order creation wizard with per-item supplier |
+| `components/purchase/PODetailView.jsx` | Purchase Order detail (status flow, supplier card, items, GRN history, follow-ups) |
+| `components/purchase/POTimelineView.jsx` | 7-step timeline with items tracking, freight, GRN history, audit trail |
+| `components/purchase/POGRNHistory.jsx` | Goods Receipt Note history (dual search: po_id + linked_po_ids) |
+| `components/purchase/POFollowUpList.jsx` | Follow-up CRUD within Purchase Order detail |
+| `components/purchase/POFollowUpForm.jsx` | Follow-up scheduling form (used in POCreateWizard step 3) |
+| `components/purchase/POPdfView.jsx` | Purchase Order PDF generation (print window) |
+| `components/purchase/POSharePanel.jsx` | Share via WhatsApp/Email |
+| `components/purchase/POPartialReceive.jsx` | Partial goods receiving (creates GRN, updates PO items/status) |
+| `components/purchase/PurchaseReports.jsx` | Analytics component (KPIs, charts, top suppliers) |
 
 ---
 
-*This document covers the Purchase module as it exists today. Review against your business requirements and flag any gaps or changes needed.*
+## 6. FMS INTEGRATION
+
+| Action | FMS Call | Ref ID |
+|--------|---------|--------|
+| Purchase Request Created | `triggerFMSProcess('purchase_request_created', pr.id)` | Purchase Request record ID |
+| Purchase Order Created (single) | `fireFMSEvent('purchase_order_created', sourcePR.id)` | Source Purchase Request ID |
+| Purchase Order Linked | `linkFMSRef(instanceId, po.id)` | Purchase Order record ID |
+| Goods Received | `fireFMSEvent('grn_received', po.id)` | Purchase Order record ID |
+
+### FMS Ref Chain Example
+```
+Step 1: Purchase Request created  -> ref_chain = [pr.id]
+Step 2: Purchase Order created    -> ref_chain = [pr.id, po.id]
+Step 3: Goods Received            -> fireFMSEvent('grn_received', po.id) matches via ref_chain
+```
+
+---
+
+## 7. SMART INPUT PATTERNS
+
+### 7.1 Item Selection (ItemSelectWithStock)
+- Source: ItemMaster + StoreItemMaster (merged, deduplicated)
+- Modes: search | selected | manual
+- Shows stock per location, active lots with expiry warnings (color-coded)
+- "Add [text] as new item" for manual entry
+
+### 7.2 Supplier Selection (CreatableSupplierSelect)
+- Source: Supplier entity
+- Shows approval_status badge for non-approved suppliers
+- "Save to master?" prompt after manual entry
+- In POCreateWizard: shows SupplierItemMapping suggestions
+
+---
+
+## 8. ROLE-BASED ACCESS
+
+| Role | Create PR | Approve PR | Create PO | Manage Suppliers |
+|------|:---------:|:----------:|:---------:|:----------------:|
+| user | Yes | No | No | No |
+| purchase_manager | Yes | Yes | Yes | No |
+| production_manager | Yes | Yes | Yes | No |
+| admin | Yes | Yes | Yes | Yes |
+
+Manager check: `user.role === 'admin' || user.role === 'purchase_manager' || user.role === 'production_manager'`
+
+PR list visibility: Managers see ALL, regular users see only their own.
+
+---
+
+## 9. AUDIT TRAIL
+
+`logPurchaseAudit()` creates AuditLog records with: `audit_id`, `action`, `action_type`, `module: 'PURCHASE'`, `entity_type`, `entity_id`, `actor_email`, `actor_name`, `actor_role`, `notes`.
+
+Logged actions: PR created/approved/rejected, item-level actions, PO created/status changes/cancelled, supplier created, goods received.
+
+---
+
+## 10. KNOWN GAPS
+
+| # | Gap | Severity |
+|---|-----|----------|
+| 1 | No Purchase Order edit capability | Medium |
+| 2 | No Purchase Order approval step | Low |
+| 3 | Weak PR to PO item traceability | Medium |
+| 4 | Supplier override reason unused | Low |
+| 5 | No duplicate supplier prevention | Low |
+
+---
+
+## 11. ENTITY SCHEMAS
+
+| File | Purpose |
+|------|---------|
+| `entities/PurchaseRequest.json` | Purchase Request |
+| `entities/PurchaseRequestItem.json` | Purchase Request item |
+| `entities/PurchaseOrder.json` | Purchase Order |
+| `entities/PurchaseOrderItem.json` | Purchase Order item |
+| `entities/POFollowUp.json` | Follow-up |
+| `entities/PRQuotation.json` | Quotation |
+| `entities/PRComment.json` | Comment |
+| `entities/Supplier.json` | Supplier |
+| `entities/SupplierItemMapping.json` | Supplier-item mapping |

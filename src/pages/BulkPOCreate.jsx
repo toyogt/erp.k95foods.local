@@ -3,16 +3,16 @@ import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Loader2, CheckCircle2, ChevronRight, ChevronLeft, ArrowLeft } from 'lucide-react';
-import { genPONumber, logPurchaseAudit, formatINR, DEPARTMENTS } from '@/components/purchase/purchaseHelpers';
+import { genPONumber, logPurchaseAudit, formatINR } from '@/components/purchase/purchaseHelpers';
 import { fireFMSEvent, findFMSInstanceByRef, linkFMSRef } from '@/lib/useFMSAutoComplete';
 import { Link, useNavigate } from 'react-router-dom';
-import SupplierSelect from '@/components/purchase/SupplierSelect';
+import CreatableSupplierSelect from '@/components/purchase/CreatableSupplierSelect';
 
 export default function BulkPOCreate() {
   const [user, setUser] = useState(null);
   const [step, setStep] = useState(1);
   const [selectedPRs, setSelectedPRs] = useState(new Set());
-  const [supplierName, setSupplierName] = useState('');
+  const [supplier, setSupplier] = useState({ supplier_id: '', supplier_name: '' });
   const [poDate, setPoDate] = useState(new Date().toISOString().split('T')[0]);
   const [dueDate, setDueDate] = useState('');
   const [paymentTerms, setPaymentTerms] = useState('');
@@ -24,24 +24,21 @@ export default function BulkPOCreate() {
   useEffect(() => { base44.auth.me().then(u => setUser(u)).catch(() => {}); }, []);
 
   const { data: prs = [], isLoading } = useQuery({
-    queryKey: ['bulk-po-prs'],
-    queryFn: () => base44.entities.PurchaseRequest.list('-created_date', 300),
+    queryKey: ['bulk-po-prs'], queryFn: () => base44.entities.PurchaseRequest.list('-created_date', 300),
     staleTime: 30000, enabled: !!user,
   });
 
   const { data: existingPOs = [] } = useQuery({
-    queryKey: ['bulk-po-existing'],
-    queryFn: () => base44.entities.PurchaseOrder.list('-created_date', 500),
+    queryKey: ['bulk-po-existing'], queryFn: () => base44.entities.PurchaseOrder.list('-created_date', 500),
     staleTime: 30000, enabled: !!user,
   });
 
   const { data: allPRItems = [] } = useQuery({
-    queryKey: ['bulk-po-pr-items'],
-    queryFn: () => base44.entities.PurchaseRequestItem.list('-created_date', 2000),
+    queryKey: ['bulk-po-pr-items'], queryFn: () => base44.entities.PurchaseRequestItem.list('-created_date', 2000),
     staleTime: 30000, enabled: !!user,
   });
 
-  const poLinkedPRs = new Set(existingPOs.flatMap(po => [po.mr_id, ...(po.linked_pr_ids || [])]).filter(Boolean));
+  const poLinkedPRs = new Set(existingPOs.flatMap(po => [po.mr_id, po.pr_number, ...(po.linked_pr_ids || [])]).filter(Boolean));
   const eligiblePRs = prs.filter(pr => {
     const isApproved = ['Approved', 'Partially Approved', 'APPROVED'].includes(pr.status);
     const prKey = pr.pr_number || pr.mr_id;
@@ -59,29 +56,24 @@ export default function BulkPOCreate() {
   const total = subtotal + gstAmount;
 
   function togglePR(id) {
-    setSelectedPRs(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
+    setSelectedPRs(prev => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; });
   }
-
   function toggleAll() {
     if (selectedPRs.size === eligiblePRs.length) setSelectedPRs(new Set());
     else setSelectedPRs(new Set(eligiblePRs.map(p => p.id)));
   }
 
   async function handleCreate() {
-    if (!supplierName.trim() || !dueDate || selectedPRs.size === 0) return;
+    if (!supplier.supplier_name?.trim() || !dueDate || selectedPRs.size === 0) return;
     setLoading(true);
     const poId = genPONumber();
     const prKeys = selectedPRList.map(pr => pr.pr_number || pr.mr_id);
 
-    await base44.entities.PurchaseOrder.create({
-      po_id: poId, supplier_id: supplierName, supplier_name: supplierName,
-      mr_id: prKeys[0], linked_pr_ids: prKeys,
-      po_date: poDate, due_date: dueDate, status: 'DRAFT',
-      subtotal, gst_percent: gstPercent, gst_amount: gstAmount, total_amount: total,
+    const po = await base44.entities.PurchaseOrder.create({
+      po_id: poId, supplier_id: supplier.supplier_id || supplier.supplier_name, supplier_name: supplier.supplier_name,
+      pr_number: prKeys[0], mr_id: prKeys[0], linked_pr_ids: prKeys,
+      po_date: poDate, due_date: dueDate, status: 'Draft',
+      subtotal, gst_rate: gstPercent, gst_amount: gstAmount, total_amount: total,
       payment_terms: paymentTerms, delivery_address: deliveryAddress,
     });
 
@@ -89,19 +81,23 @@ export default function BulkPOCreate() {
       base44.entities.PurchaseOrderItem.create({
         po_id: poId, line_number: i + 1,
         item_code: it.item_code || '', item_name: it.item_name || '',
-        qty: it.qty || it.quantity || 0, quantity: it.qty || it.quantity || 0,
-        uom_code: it.unit || it.uom_code || '', unit_price: it.estimated_rate || 0,
-        total_price: (it.estimated_rate || 0) * (it.qty || it.quantity || 0),
+        qty: it.qty || it.quantity || 0, rate: it.estimated_rate || 0,
+        uom_code: it.unit || it.uom_code || '',
+        amount: (it.estimated_rate || 0) * (it.qty || it.quantity || 0),
+        pending_qty: it.qty || it.quantity || 0, received_qty: 0,
+        remarks: `From ${it.pr_number || it.mr_id || ''}`,
       })
     ));
 
+    // Update PR statuses
     for (const pr of selectedPRList) {
+      await base44.entities.PurchaseRequest.update(pr.id, { status: 'PO Created' });
       await fireFMSEvent('purchase_order_created', pr.id);
       const instances = await findFMSInstanceByRef(pr.id);
-      if (instances?.[0]) await linkFMSRef(instances[0].id, poId);
+      if (instances?.[0]) await linkFMSRef(instances[0].id, po.id);
     }
 
-    await logPurchaseAudit({ action: `Bulk PO ${poId} created from ${prKeys.length} PRs: ${prKeys.join(', ')}`, entity_type: 'PurchaseOrder', entity_id: poId, user });
+    await logPurchaseAudit({ action: `Bulk Purchase Order ${poId} created from ${prKeys.length} Purchase Requests: ${prKeys.join(', ')}`, action_type: 'create', entity_type: 'PurchaseOrder', entity_id: poId, user });
     setLoading(false);
     navigate('/PurchaseOrderList');
   }
@@ -127,7 +123,7 @@ export default function BulkPOCreate() {
                 <p className="text-sm font-semibold text-slate-700">{eligiblePRs.length} eligible Purchase Requests</p>
                 <button onClick={toggleAll} className="text-xs text-blue-600 font-medium">{selectedPRs.size === eligiblePRs.length ? 'Deselect All' : 'Select All'}</button>
               </div>
-              {eligiblePRs.length === 0 ? <p className="text-center py-8 text-slate-400">No approved PRs without a PO found.</p> : (
+              {eligiblePRs.length === 0 ? <p className="text-center py-8 text-slate-400">No approved Purchase Requests without a Purchase Order found.</p> : (
                 <div className="space-y-2">
                   {eligiblePRs.map(pr => (
                     <label key={pr.id} className={`flex items-center gap-3 p-3 border rounded-xl cursor-pointer transition-colors ${selectedPRs.has(pr.id) ? 'border-blue-300 bg-blue-50' : 'border-slate-200 bg-white hover:bg-slate-50'}`}>
@@ -150,7 +146,7 @@ export default function BulkPOCreate() {
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="md:col-span-2">
-              <SupplierSelect value={supplierName} onChange={(name) => setSupplierName(name)} user={user} />
+              <CreatableSupplierSelect value={supplier.supplier_name} onChange={s => setSupplier(s)} user={user} showClear />
             </div>
             <div><label className="text-xs font-medium text-slate-700">Purchase Order Date</label><input type="date" className="w-full h-11 md:h-9 border border-slate-200 rounded-xl px-3 text-sm mt-1" value={poDate} onChange={e => setPoDate(e.target.value)} /></div>
             <div><label className="text-xs font-medium text-slate-700">Due Date *</label><input type="date" className="w-full h-11 md:h-9 border border-slate-200 rounded-xl px-3 text-sm mt-1" value={dueDate} onChange={e => setDueDate(e.target.value)} /></div>
@@ -160,7 +156,7 @@ export default function BulkPOCreate() {
           <div><label className="text-xs font-medium text-slate-700">Delivery Address</label><textarea rows={2} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm mt-1 resize-none" value={deliveryAddress} onChange={e => setDeliveryAddress(e.target.value)} /></div>
           <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
             <div className="px-4 py-2 bg-slate-50 text-xs font-semibold text-slate-600">Consolidated Items ({consolidatedItems.length})</div>
-            <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="bg-slate-50 text-xs text-slate-500"><th className="text-left px-3 py-2">Item</th><th className="text-right px-3 py-2">Qty</th><th className="text-left px-3 py-2">Unit</th><th className="text-right px-3 py-2">Rate</th><th className="text-right px-3 py-2">Amount</th></tr></thead>
+            <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="bg-slate-50 text-xs text-slate-500"><th className="text-left px-3 py-2">Item</th><th className="text-right px-3 py-2">Quantity</th><th className="text-left px-3 py-2">Unit</th><th className="text-right px-3 py-2">Rate</th><th className="text-right px-3 py-2">Amount</th></tr></thead>
               <tbody className="divide-y divide-slate-100">{consolidatedItems.map((it, i) => (
                 <tr key={i}><td className="px-3 py-2">{it.item_name || it.item_code}</td><td className="px-3 py-2 text-right">{it.qty || it.quantity || 0}</td><td className="px-3 py-2">{it.unit || it.uom_code || '—'}</td><td className="px-3 py-2 text-right">{formatINR(it.estimated_rate)}</td><td className="px-3 py-2 text-right font-bold">{formatINR((it.estimated_rate || 0) * (it.qty || it.quantity || 0))}</td></tr>
               ))}</tbody></table></div>
@@ -173,7 +169,7 @@ export default function BulkPOCreate() {
           <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-2">
             <h3 className="font-bold text-slate-900">Order Summary</h3>
             <div className="grid grid-cols-2 gap-2 text-sm">
-              <span className="text-slate-500">Supplier</span><span className="font-medium">{supplierName}</span>
+              <span className="text-slate-500">Supplier</span><span className="font-medium">{supplier.supplier_name}</span>
               <span className="text-slate-500">Selected Requests</span><span className="font-medium">{selectedPRList.map(p => p.pr_number || p.mr_id).join(', ')}</span>
               <span className="text-slate-500">Items</span><span className="font-medium">{consolidatedItems.length}</span>
               <span className="text-slate-500">Subtotal</span><span className="font-medium">{formatINR(subtotal)}</span>
@@ -189,7 +185,7 @@ export default function BulkPOCreate() {
           <ChevronLeft className="w-4 h-4 mr-1" />{step === 1 ? 'Back' : 'Previous'}
         </Button>
         {step < 3 ? (
-          <Button onClick={() => setStep(s => s + 1)} disabled={step === 1 ? selectedPRs.size === 0 : !supplierName.trim() || !dueDate} className="flex-1 h-11 bg-blue-600 hover:bg-blue-700">
+          <Button onClick={() => setStep(s => s + 1)} disabled={step === 1 ? selectedPRs.size === 0 : !supplier.supplier_name?.trim() || !dueDate} className="flex-1 h-11 bg-blue-600 hover:bg-blue-700">
             Next <ChevronRight className="w-4 h-4 ml-1" />
           </Button>
         ) : (

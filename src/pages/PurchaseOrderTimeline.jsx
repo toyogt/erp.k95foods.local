@@ -1,21 +1,22 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
-import { Loader2, Search, Eye } from 'lucide-react';
+import { Loader2, Search } from 'lucide-react';
 import { PO_STATUS_COLOR, formatDateDDMMYYYY, formatINR } from '@/components/purchase/purchaseHelpers';
 import TablePagination from '@/components/store/TablePagination';
-import { Link } from 'react-router-dom';
+import POTimelineView from '@/components/purchase/POTimelineView';
 
 export default function PurchaseOrderTimeline() {
   const [user, setUser] = useState(null);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
+  const [selectedPO, setSelectedPO] = useState(null);
 
   useEffect(() => { base44.auth.me().then(u => setUser(u)).catch(() => {}); }, []);
 
   const urlParams = new URLSearchParams(window.location.search);
-  const selectedPoId = urlParams.get('po');
+  const poParam = urlParams.get('po');
 
   const { data: pos = [], isLoading } = useQuery({
     queryKey: ['po-timeline'], queryFn: () => base44.entities.PurchaseOrder.list('-created_date', 500),
@@ -27,10 +28,17 @@ export default function PurchaseOrderTimeline() {
     staleTime: 30000, enabled: !!user,
   });
 
-  const { data: grnItems = [] } = useQuery({
-    queryKey: ['grn-items-all'], queryFn: () => base44.entities.GRNItem.list('-created_date', 2000).catch(() => []),
-    staleTime: 30000, enabled: !!user,
-  });
+  // Auto-select PO from URL param
+  useEffect(() => {
+    if (poParam && pos.length > 0 && !selectedPO) {
+      const found = pos.find(p => p.po_id === poParam);
+      if (found) setSelectedPO(found);
+    }
+  }, [poParam, pos, selectedPO]);
+
+  if (selectedPO) {
+    return <POTimelineView po={selectedPO} user={user} onBack={() => setSelectedPO(null)} />;
+  }
 
   const filtered = pos.filter(po => {
     if (!search) return true;
@@ -43,21 +51,21 @@ export default function PurchaseOrderTimeline() {
   function getPoStats(poId) {
     const items = poItems.filter(i => i.po_id === poId);
     const totalOrdered = items.reduce((s, i) => s + (i.qty || i.quantity || 0), 0);
-    const received = grnItems.filter(g => g.po_id === poId).reduce((s, g) => s + (g.received_qty || 0), 0);
-    return { itemCount: items.length, ordered: totalOrdered, received, pending: Math.max(0, totalOrdered - received) };
+    const totalReceived = items.reduce((s, i) => s + (i.received_qty || 0), 0);
+    return { itemCount: items.length, ordered: totalOrdered, received: totalReceived, pending: Math.max(0, totalOrdered - totalReceived) };
   }
 
   return (
     <div className="space-y-4 pb-20">
       <div>
-        <h1 className="text-xl md:text-2xl font-bold text-slate-900">Purchase Order Master</h1>
+        <h1 className="text-xl md:text-2xl font-bold text-slate-900">Purchase Order Timeline</h1>
         <p className="text-sm text-slate-500">Track orders, deliveries, and quantities</p>
       </div>
 
       <div className="relative">
         <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
         <input className="w-full border border-slate-200 rounded-xl pl-10 pr-4 h-11 text-sm bg-white"
-          placeholder="Search by PO number or supplier..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
+          placeholder="Search by Purchase Order number or supplier..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
       </div>
 
       {isLoading ? (
@@ -79,13 +87,12 @@ export default function PurchaseOrderTimeline() {
                   <th className="text-right px-3 py-3 font-medium whitespace-nowrap">Received</th>
                   <th className="text-right px-3 py-3 font-medium whitespace-nowrap">Pending</th>
                   <th className="text-right px-3 py-3 font-medium whitespace-nowrap">Total</th>
-                  <th className="text-center px-3 py-3 font-medium whitespace-nowrap">Action</th>
                 </tr></thead>
                 <tbody className="divide-y divide-slate-100">
                   {paged.map(po => {
                     const stats = getPoStats(po.po_id);
                     return (
-                      <tr key={po.id} className="hover:bg-slate-50">
+                      <tr key={po.id} className="hover:bg-slate-50 cursor-pointer" onClick={() => setSelectedPO(po)}>
                         <td className="px-3 py-3 font-bold text-slate-900 whitespace-nowrap">{po.po_id}</td>
                         <td className="px-3 py-3 text-slate-700 whitespace-nowrap">{po.supplier_name || '—'}</td>
                         <td className="px-3 py-3 whitespace-nowrap"><span className={`text-xs font-bold px-2 py-0.5 rounded-full ${PO_STATUS_COLOR[po.status] || 'bg-slate-100 text-slate-600'}`}>{po.status}</span></td>
@@ -96,11 +103,6 @@ export default function PurchaseOrderTimeline() {
                         <td className="px-3 py-3 text-right whitespace-nowrap text-green-700 font-medium">{stats.received}</td>
                         <td className="px-3 py-3 text-right whitespace-nowrap text-amber-600 font-medium">{stats.pending}</td>
                         <td className="px-3 py-3 text-right font-bold whitespace-nowrap">{formatINR(po.total_amount)}</td>
-                        <td className="px-3 py-3 text-center">
-                          <Link to={`/PurchaseOrderTimeline?po=${po.po_id}`}>
-                            <button className="p-1.5 rounded hover:bg-slate-100 text-slate-500"><Eye className="w-4 h-4" /></button>
-                          </Link>
-                        </td>
                       </tr>
                     );
                   })}
@@ -114,7 +116,7 @@ export default function PurchaseOrderTimeline() {
             {paged.map(po => {
               const stats = getPoStats(po.po_id);
               return (
-                <Link key={po.id} to={`/PurchaseOrderTimeline?po=${po.po_id}`} className="block bg-white border border-slate-200 rounded-xl p-4 space-y-2">
+                <div key={po.id} onClick={() => setSelectedPO(po)} className="bg-white border border-slate-200 rounded-xl p-4 space-y-2 cursor-pointer active:bg-slate-50">
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-slate-900">{po.po_id}</span>
                     <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${PO_STATUS_COLOR[po.status] || 'bg-slate-100 text-slate-600'}`}>{po.status}</span>
@@ -126,7 +128,7 @@ export default function PurchaseOrderTimeline() {
                     <span className="text-amber-600">Pending: <strong>{stats.pending}</strong></span>
                   </div>
                   <p className="text-sm font-bold text-slate-900">{formatINR(po.total_amount)}</p>
-                </Link>
+                </div>
               );
             })}
           </div>
