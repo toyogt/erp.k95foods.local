@@ -75,9 +75,8 @@ export const pageRegistry = [
    { pageKey: 'PurchaseRequestApprovals', title: 'Request Approvals', moduleKey: 'PURCHASE', icon: ClipboardCheck, roles: ['admin', 'purchase_manager', 'production_manager', 'user'], sortOrder: 2 },
    { pageKey: 'PurchaseOrderList', title: 'Purchase Orders', moduleKey: 'PURCHASE', icon: ShoppingCart, roles: ['admin', 'purchase_user', 'purchase_manager', 'production_manager', 'user'], sortOrder: 3 },
    { pageKey: 'POFollowUpTracker', title: 'Follow-Up Tracker', moduleKey: 'PURCHASE', icon: Bell, roles: ['admin', 'purchase_manager', 'production_manager', 'user'], sortOrder: 4 },
-   { pageKey: 'PurchaseOrderTimeline', title: 'Order Timeline', moduleKey: 'PURCHASE', icon: ListChecks, roles: ['admin', 'purchase_manager', 'production_manager', 'user'], sortOrder: 5 },
-   { pageKey: 'PurchaseReports', title: 'Purchase Reports', moduleKey: 'PURCHASE', icon: BarChart3, roles: ['admin', 'purchase_manager', 'production_manager', 'user'], sortOrder: 6 },
-   { pageKey: 'SupplierManager', title: 'Suppliers', moduleKey: 'PURCHASE', icon: Truck, roles: ['admin', 'purchase_manager'], adminOnly: true, sortOrder: 7 },
+   { pageKey: 'PurchaseReports', title: 'Purchase Reports', moduleKey: 'PURCHASE', icon: BarChart3, roles: ['admin', 'purchase_manager', 'production_manager', 'user'], sortOrder: 5 },
+   { pageKey: 'SupplierManager', title: 'Suppliers', moduleKey: 'PURCHASE', icon: Truck, roles: ['admin', 'purchase_manager'], adminOnly: true, sortOrder: 6 },
 
   // GRN pages moved to STORE module above
 

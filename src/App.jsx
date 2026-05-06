@@ -388,7 +388,7 @@ const AuthenticatedApp = () => {
       <Route path="/PurchaseOrderCreate" element={<LayoutWrapper currentPageName="PurchaseOrderCreate"><PurchaseOrderCreate /></LayoutWrapper>} />
       <Route path="/POFollowUpTracker" element={<LayoutWrapper currentPageName="POFollowUpTracker"><POFollowUpTracker /></LayoutWrapper>} />
       <Route path="/PurchaseRequestApprovals" element={<LayoutWrapper currentPageName="PurchaseRequestApprovals"><PurchaseRequestApprovals /></LayoutWrapper>} />
-      <Route path="/PurchaseOrderTimeline" element={<LayoutWrapper currentPageName="PurchaseOrderTimeline"><PurchaseOrderTimeline /></LayoutWrapper>} />
+
       <Route path="/CentralItemHub" element={<LayoutWrapper currentPageName="CentralItemHub"><CentralItemHub /></LayoutWrapper>} />
       <Route path="/BulkPOCreate" element={<LayoutWrapper currentPageName="BulkPOCreate"><BulkPOCreate /></LayoutWrapper>} />
       <Route path="/PurchaseRequestList" element={<LayoutWrapper currentPageName="PurchaseRequestList"><PurchaseRequestList /></LayoutWrapper>} />
