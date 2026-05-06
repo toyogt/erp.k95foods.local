@@ -150,7 +150,7 @@ import HRNotificationSettings from './pages/HRNotificationSettings';
 import HRAttendanceAlerts from './pages/HRAttendanceAlerts';
 import HRCandidateLeads from './pages/HRCandidateLeads';
 import HRAttritionDashboard from './pages/HRAttritionDashboard';
-import HRTerminationForm from './pages/HRTerminationForm.jsx';
+import HRTerminationForm from './pages/HRTerminationForm';
 import ExitInterviewSurvey from './pages/ExitInterviewSurvey';
 
 // Page component lookup table
