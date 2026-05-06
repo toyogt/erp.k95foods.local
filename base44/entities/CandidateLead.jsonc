@@ -2,7 +2,7 @@
   "name": "CandidateLead",
   "type": "object",
   "title": "Candidate Lead",
-  "description": "Profile of a manpower candidate for recruitment tracking. Captures name, contact details, area, role of interest, and how they were sourced.",
+  "description": "Profile of a manpower candidate for recruitment tracking, including post-hire conversion and attrition tracking.",
   "properties": {
     "candidate_name": {
       "type": "string",
@@ -64,10 +64,41 @@
         "Interviewed",
         "Hired",
         "Rejected",
-        "On Hold"
+        "On Hold",
+        "Terminated"
       ],
       "default": "New",
       "description": "Current pipeline status of the candidate"
+    },
+    "employee_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "ID of the linked Employee record (set when candidate is hired)"
+    },
+    "employee_code": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Employee code of the linked Employee record (denormalized for fast lookup/display)"
+    },
+    "enrollment_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date when the candidate was successfully enrolled as an employee (stored YYYY-MM-DD; displayed DD/MM/YYYY)"
+    },
+    "attrition_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date when the employee left the company, if applicable (stored YYYY-MM-DD; displayed DD/MM/YYYY)"
+    },
+    "attrition_reason": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "Reason for the employee's exit"
+    },
+    "days_employed": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Number of days between enrollment_date and attrition_date (computed at attrition)"
     },
     "remarks": {
       "type": "string",

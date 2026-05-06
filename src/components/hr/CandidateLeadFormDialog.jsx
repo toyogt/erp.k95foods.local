@@ -7,10 +7,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Loader2 } from 'lucide-react';
+import CandidateEmployeeLinker from './CandidateEmployeeLinker';
 
 const SOURCE_TYPES = ['Market Visit', 'Walk-in', 'Incoming Call', 'Referral'];
 const CONTACT_MODES = ['In-person', 'Phone', 'WhatsApp'];
-const STATUSES = ['New', 'Contacted', 'Shortlisted', 'Interviewed', 'Hired', 'Rejected', 'On Hold'];
+const STATUSES = ['New', 'Contacted', 'Shortlisted', 'Interviewed', 'Hired', 'Rejected', 'On Hold', 'Terminated'];
 
 const EMPTY = {
   candidate_name: '',
@@ -22,9 +23,26 @@ const EMPTY = {
   first_contact_mode: '',
   first_contact_date: '',
   status: 'New',
+  employee_id: '',
+  employee_code: '',
+  enrollment_date: '',
+  attrition_date: '',
+  attrition_reason: '',
   remarks: '',
   is_active: true,
 };
+
+function todayISO() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function daysBetween(fromISO, toISO) {
+  if (!fromISO || !toISO) return 0;
+  const a = new Date(fromISO).getTime();
+  const b = new Date(toISO).getTime();
+  if (isNaN(a) || isNaN(b)) return 0;
+  return Math.max(0, Math.round((b - a) / (1000 * 60 * 60 * 24)));
+}
 
 export default function CandidateLeadFormDialog({ open, onOpenChange, candidate, onSubmit, saving }) {
   const [form, setForm] = useState(EMPTY);
@@ -39,11 +57,31 @@ export default function CandidateLeadFormDialog({ open, onOpenChange, candidate,
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
+  // Auto-fill enrollment_date when status flips to Hired
+  useEffect(() => {
+    if (form.status === 'Hired' && !form.enrollment_date) {
+      set('enrollment_date', todayISO());
+    }
+    if (form.status === 'Terminated' && !form.attrition_date) {
+      set('attrition_date', todayISO());
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.status]);
+
+  const isHired = form.status === 'Hired' || form.status === 'Terminated';
+  const isTerminated = form.status === 'Terminated';
+
   const validate = () => {
     const e = {};
     if (!form.candidate_name?.trim()) e.candidate_name = 'Candidate name is required';
     if (!form.mobile_number?.trim()) e.mobile_number = 'Mobile number is required';
     else if (!/^[0-9+\-\s()]{6,20}$/.test(form.mobile_number.trim())) e.mobile_number = 'Invalid mobile number';
+    if (isHired && !form.employee_id) e.employee_id = 'Link an employee when status is Hired or Terminated';
+    if (isHired && !form.enrollment_date) e.enrollment_date = 'Enrollment date is required';
+    if (isTerminated && !form.attrition_date) e.attrition_date = 'Attrition date is required';
+    if (isTerminated && form.enrollment_date && form.attrition_date && form.attrition_date < form.enrollment_date) {
+      e.attrition_date = 'Attrition date cannot be before enrollment date';
+    }
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -58,7 +96,15 @@ export default function CandidateLeadFormDialog({ open, onOpenChange, candidate,
       role_interested: form.role_interested?.trim() || '',
       source_details: form.source_details?.trim() || '',
       remarks: form.remarks?.trim() || '',
+      attrition_reason: form.attrition_reason?.trim() || '',
+      // Compute days_employed if both dates present
+      days_employed:
+        form.enrollment_date && form.attrition_date
+          ? daysBetween(form.enrollment_date, form.attrition_date)
+          : undefined,
     };
+    // Strip undefined to avoid wiping
+    if (payload.days_employed === undefined) delete payload.days_employed;
     onSubmit(payload);
   };
 
@@ -157,6 +203,64 @@ export default function CandidateLeadFormDialog({ open, onOpenChange, candidate,
               </SelectContent>
             </Select>
           </Field>
+
+          {/* Hired / Terminated section */}
+          {isHired && (
+            <div className="md:col-span-2 border border-slate-200 rounded-md p-3 bg-slate-50 space-y-3">
+              <div className="text-xs font-semibold text-slate-700 uppercase tracking-wide">
+                Conversion & Tenure
+              </div>
+
+              <CandidateEmployeeLinker
+                employeeId={form.employee_id}
+                employeeCode={form.employee_code}
+                candidateMobile={form.mobile_number}
+                onLink={(id, code) => {
+                  set('employee_id', id || '');
+                  set('employee_code', code || '');
+                }}
+              />
+              {errors.employee_id && <p className="text-xs text-red-600">{errors.employee_id}</p>}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <Field label="Enrollment Date *" error={errors.enrollment_date}>
+                  <Input
+                    type="date"
+                    value={form.enrollment_date || ''}
+                    onChange={(e) => set('enrollment_date', e.target.value)}
+                    className="h-11 md:h-9 text-base md:text-sm"
+                  />
+                </Field>
+
+                {isTerminated && (
+                  <Field label="Attrition Date *" error={errors.attrition_date}>
+                    <Input
+                      type="date"
+                      value={form.attrition_date || ''}
+                      onChange={(e) => set('attrition_date', e.target.value)}
+                      className="h-11 md:h-9 text-base md:text-sm"
+                    />
+                    {form.enrollment_date && form.attrition_date && (
+                      <p className="text-xs text-slate-500 mt-1">
+                        Tenure: {daysBetween(form.enrollment_date, form.attrition_date)} days
+                      </p>
+                    )}
+                  </Field>
+                )}
+              </div>
+
+              {isTerminated && (
+                <Field label="Attrition Reason" full>
+                  <Input
+                    value={form.attrition_reason}
+                    onChange={(e) => set('attrition_reason', e.target.value)}
+                    placeholder="e.g. Absconded, Resigned, Personal reasons, Better opportunity"
+                    className="h-11 md:h-9 text-base md:text-sm"
+                  />
+                </Field>
+              )}
+            </div>
+          )}
 
           <Field label="Remarks" full>
             <Textarea

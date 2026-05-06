@@ -170,6 +170,7 @@ export const pageRegistry = [
   { pageKey: 'HRLeaveTypes', title: 'Leave Types', moduleKey: 'HR', icon: CalendarDays, roles: ['admin', 'hr_manager'], sortOrder: 24 },
   { pageKey: 'HRNotificationSettings', title: 'Notification Settings', moduleKey: 'HR', icon: Bell, roles: ['admin', 'hr_manager'], sortOrder: 25 },
   { pageKey: 'HRCandidateLeads', title: 'Candidate Leads', moduleKey: 'HR', icon: UserPlus, roles: ['admin', 'hr_manager', 'hr_supervisor', 'hr_user'], sortOrder: 30 },
+  { pageKey: 'HRAttritionDashboard', title: 'Attrition Analytics', moduleKey: 'HR', icon: TrendingDown, roles: ['admin', 'hr_manager', 'hr_supervisor', 'hr_user'], sortOrder: 31 },
 
   // ─── USER MANAGEMENT ───
   { pageKey: 'UserManagement', title: 'Users', moduleKey: 'USER_MANAGEMENT', icon: Users, roles: ['admin'], adminOnly: true },

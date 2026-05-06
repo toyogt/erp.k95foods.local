@@ -149,6 +149,7 @@ import HRLeaveTypes from './pages/HRLeaveTypes';
 import HRNotificationSettings from './pages/HRNotificationSettings';
 import HRAttendanceAlerts from './pages/HRAttendanceAlerts';
 import HRCandidateLeads from './pages/HRCandidateLeads';
+import HRAttritionDashboard from './pages/HRAttritionDashboard';
 
 // Page component lookup table
 const PAGE_COMPONENTS = {
@@ -380,6 +381,7 @@ const AuthenticatedApp = () => {
       <Route path="/HRNotificationSettings" element={<LayoutWrapper currentPageName="HRNotificationSettings"><HRNotificationSettings /></LayoutWrapper>} />
       <Route path="/HRAttendanceAlerts" element={<LayoutWrapper currentPageName="HRAttendanceAlerts"><HRAttendanceAlerts /></LayoutWrapper>} />
       <Route path="/HRCandidateLeads" element={<LayoutWrapper currentPageName="HRCandidateLeads"><HRCandidateLeads /></LayoutWrapper>} />
+      <Route path="/HRAttritionDashboard" element={<LayoutWrapper currentPageName="HRAttritionDashboard"><HRAttritionDashboard /></LayoutWrapper>} />
 
       {/* Store Management System Routes */}
       {[
