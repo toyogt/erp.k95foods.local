@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, AlertTriangle, CheckCircle2, ClipboardList, Factory, Mic } from 'lucide-react';
+import { Loader2, AlertTriangle, CheckCircle2, ClipboardList, Factory, RotateCcw } from 'lucide-react';
 import { generateTaskNumber, logTaskAction, getEAsForDirector, getDirectorsForEA } from '@/lib/directorTaskHelpers';
 import DatePickerField from '@/components/tasks/DatePickerField';
 import AttachmentUploader from '@/components/tasks/AttachmentUploader';
@@ -92,11 +92,23 @@ export default function QuickAssignTask() {
       ...prev,
       task_name: parsed.task_name || prev.task_name,
       task_details: parsed.task_details || prev.task_details,
+      assigned_to_email: parsed.assigned_to_email || prev.assigned_to_email,
       end_date: parsed.end_date || prev.end_date,
       end_time: parsed.end_time || prev.end_time,
-      is_important: parsed.is_important || prev.is_important,
+      is_important: parsed.is_important ?? prev.is_important,
     }));
     setVoiceTranscript(parsed.transcription || '');
+  };
+
+  const resetForm = () => {
+    setForm({
+      task_name: '', task_details: '', assigned_to_email: '',
+      is_important: false, start_date: '', start_time: '',
+      end_date: '', end_time: '', notification_time: '16:00',
+      attachments: [],
+    });
+    setVoiceTranscript('');
+    setSuccess(null);
   };
 
   const isValid = form.task_name.trim() && form.assigned_to_email && form.end_date && selectedDirectorEmail;
@@ -140,14 +152,7 @@ export default function QuickAssignTask() {
 
     // Reset form after short delay
     setTimeout(() => {
-      setForm({
-        task_name: '', task_details: '', assigned_to_email: '',
-        is_important: false, start_date: '', start_time: '',
-        end_date: '', end_time: '', notification_time: '16:00',
-        attachments: [],
-      });
-      setSuccess(null);
-      setVoiceTranscript('');
+      resetForm();
     }, 3000);
   };
 
@@ -236,7 +241,7 @@ export default function QuickAssignTask() {
             )}
 
             {/* Voice Input */}
-            <VoiceTaskInput onParsed={handleVoiceParsed} />
+            <VoiceTaskInput onParsed={handleVoiceParsed} users={users} />
 
             {voiceTranscript && (
               <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
@@ -328,11 +333,17 @@ export default function QuickAssignTask() {
               </div>
             )}
 
-            {/* Submit */}
-            <Button onClick={handleSave} disabled={!isValid || saving} className="w-full h-12 text-base gap-2 mt-2">
-              {saving && <Loader2 className="w-5 h-5 animate-spin" />}
-              Assign Task
-            </Button>
+            {/* Submit + Clear */}
+            <div className="flex gap-3 mt-2">
+              <Button onClick={handleSave} disabled={!isValid || saving} className="flex-1 h-12 text-base gap-2">
+                {saving && <Loader2 className="w-5 h-5 animate-spin" />}
+                Assign Task
+              </Button>
+              <Button type="button" variant="outline" onClick={resetForm} className="h-12 px-4 gap-2 text-sm text-slate-500">
+                <RotateCcw className="w-4 h-4" />
+                Clear
+              </Button>
+            </div>
           </div>
         )}
       </div>

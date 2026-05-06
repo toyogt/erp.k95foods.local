@@ -1,15 +1,15 @@
 import { useState, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
-import { Mic, Square, Loader2, Sparkles } from 'lucide-react';
+import { Mic, Square, Loader2 } from 'lucide-react';
 import moment from 'moment';
 
 /**
  * VoiceTaskInput
- * Records audio → Whisper transcription via UploadFile + InvokeLLM → fills form fields
- * Does NOT create the task — only returns parsed data for the parent to apply.
+ * Records audio → OpenAI Whisper (exact transcription via backend) → LLM parses transcript → fills form fields.
+ * The transcription is shown verbatim. LLM only structures the exact words spoken into fields.
  */
-export default function VoiceTaskInput({ onParsed }) {
+export default function VoiceTaskInput({ onParsed, users }) {
   const [recording, setRecording] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [processingStep, setProcessingStep] = useState('');
@@ -36,7 +36,7 @@ export default function VoiceTaskInput({ onParsed }) {
 
       mediaRecorder.start();
       setRecording(true);
-    } catch (err) {
+    } catch {
       setError('Microphone access denied. Please allow microphone permission.');
     }
   };
@@ -60,65 +60,85 @@ export default function VoiceTaskInput({ onParsed }) {
       // Upload file
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
 
-      // Transcribe + parse using LLM with file attachment
-      setProcessingStep('Understanding your voice…');
+      // Step 1: Get exact transcription from Whisper via backend
+      setProcessingStep('Transcribing your voice…');
+      const whisperRes = await base44.functions.invoke('whisperTranscribe', { file_url });
+      const transcript = whisperRes.data?.transcript;
 
-      const todayStr = moment().format('DD/MM/YYYY');
-      const defaultEndStr = moment().add(3, 'days').format('DD/MM/YYYY');
-
-      const result = await base44.integrations.Core.InvokeLLM({
-        prompt: `You are a task extraction assistant. 
-The attached audio file is a voice recording of someone describing a task they want to assign.
-
-Today's date is: ${todayStr}
-
-STEPS:
-1. First transcribe the audio into text.
-2. Then extract task details from the transcription.
-
-RULES:
-- Extract a clear task_name (short title, max 100 chars)
-- Extract task_details (detailed description of what needs to be done)
-- Extract end_date in DD/MM/YYYY format:
-  - "today" → ${todayStr}
-  - "tomorrow" → ${moment().add(1, 'day').format('DD/MM/YYYY')}
-  - "next week" → ${moment().add(7, 'days').format('DD/MM/YYYY')}
-  - "day after tomorrow" → ${moment().add(2, 'days').format('DD/MM/YYYY')}
-  - specific date like "15th May" → use current year ${moment().year()}
-  - If no deadline mentioned → ${defaultEndStr}
-- Extract end_time in HH:MM 24h format if mentioned (e.g. "by 3pm" → "15:00"), else empty string
-- Set is_important to true if words like urgent, important, critical, ASAP, priority are mentioned
-- transcription: the raw transcribed text
-
-All dates MUST be DD/MM/YYYY format.`,
-        file_urls: [file_url],
-        response_json_schema: {
-          type: 'object',
-          properties: {
-            transcription: { type: 'string' },
-            task_name: { type: 'string' },
-            task_details: { type: 'string' },
-            end_date: { type: 'string' },
-            end_time: { type: 'string' },
-            is_important: { type: 'boolean' },
-          },
-          required: ['task_name', 'transcription'],
-        },
-      });
-
-      if (!result || !result.task_name) {
-        setError('Could not understand the recording. Please try again or speak more clearly.');
+      if (!transcript || !transcript.trim()) {
+        setError('No speech detected. Please speak clearly and try again.');
         setProcessing(false);
         return;
       }
 
+      // Step 2: Parse the exact transcript into structured form fields using LLM
+      setProcessingStep('Extracting task details…');
+
+      const todayStr = moment().format('DD/MM/YYYY');
+      const tomorrowStr = moment().add(1, 'day').format('DD/MM/YYYY');
+      const nextWeekStr = moment().add(7, 'days').format('DD/MM/YYYY');
+      const dayAfterStr = moment().add(2, 'days').format('DD/MM/YYYY');
+      const defaultEndStr = moment().add(3, 'days').format('DD/MM/YYYY');
+
+      // Build user name list for matching
+      const userList = (users || [])
+        .filter(u => u.email && u.full_name)
+        .map(u => `${u.full_name} (${u.email})`)
+        .join('\n');
+
+      const result = await base44.integrations.Core.InvokeLLM({
+        prompt: `You are a strict field extractor. You MUST only use the exact words from the transcript below — do NOT add, rephrase, or invent any information.
+
+TRANSCRIPT:
+"${transcript}"
+
+TODAY: ${todayStr}
+
+EXTRACT these fields using ONLY what is spoken:
+
+1. task_name: A short title (max 100 chars) using the speaker's own words. Do NOT rephrase.
+2. task_details: Longer description if the speaker gave extra context. Use their exact words. If nothing extra was said, leave empty.
+3. assigned_to_email: If the speaker mentioned a person's name, match it to the closest name below and return their email. If no name mentioned, return empty string.
+
+TEAM MEMBERS:
+${userList || '(no list available)'}
+
+4. end_date: If a deadline was mentioned, convert to DD/MM/YYYY:
+   - "today" → ${todayStr}
+   - "tomorrow" → ${tomorrowStr}
+   - "day after tomorrow" → ${dayAfterStr}
+   - "next week" → ${nextWeekStr}
+   - Specific date like "15th May" → DD/MM/${moment().year()}
+   - If NO deadline mentioned → empty string
+5. end_time: If a time was mentioned (e.g. "by 3pm" → "15:00"), else empty string
+6. is_important: true ONLY if words like "urgent", "important", "critical", "ASAP", "priority" were actually spoken
+
+CRITICAL RULES:
+- Do NOT generate or invent content. Only extract from the transcript.
+- If something is not mentioned, leave the field as empty string or false.
+- task_name must use the speaker's actual words, not your interpretation.`,
+        response_json_schema: {
+          type: 'object',
+          properties: {
+            task_name: { type: 'string' },
+            task_details: { type: 'string' },
+            assigned_to_email: { type: 'string' },
+            end_date: { type: 'string' },
+            end_time: { type: 'string' },
+            is_important: { type: 'boolean' },
+          },
+          required: ['task_name'],
+        },
+      });
+
       onParsed({
-        task_name: result.task_name,
-        task_details: result.task_details || '',
-        end_date: result.end_date || defaultEndStr,
-        end_time: result.end_time || '',
-        is_important: result.is_important || false,
-        transcription: result.transcription || '',
+        task_name: result?.task_name || '',
+        task_details: result?.task_details || '',
+        assigned_to_email: result?.assigned_to_email || '',
+        end_date: result?.end_date || '',
+        end_time: result?.end_time || '',
+        is_important: result?.is_important || false,
+        transcription: transcript,
       });
 
       setProcessing(false);
@@ -163,13 +183,12 @@ All dates MUST be DD/MM/YYYY format.`,
         >
           <Mic className="w-5 h-5" />
           Record Voice to Auto-Fill Task
-          <Sparkles className="w-4 h-4" />
         </Button>
       )}
 
       {recording && (
         <p className="text-xs text-center text-red-500 font-medium">
-          🔴 Recording… Describe the task, deadline, and urgency. Tap "Stop" when done.
+          🔴 Recording… Describe the task, person, deadline. Tap "Stop" when done.
         </p>
       )}
 
