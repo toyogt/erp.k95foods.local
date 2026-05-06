@@ -4,8 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Loader2, Plus, ClipboardList,
-  CheckCircle2, Clock, User, Layers, CalendarClock
+  CheckCircle2, Clock, User, Layers, CalendarClock, ExternalLink
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import CreateDirectorTaskModal from '@/components/tasks/CreateDirectorTaskModal';
 import DirectorTaskCard from '@/components/tasks/DirectorTaskCard';
 import ProjectFormModal from '@/components/tasks/ProjectFormModal';
@@ -128,7 +129,12 @@ export default function EADashboard() {
           </p>
         </div>
         {createDirector && (
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+            <Button variant="outline" asChild className="h-11 px-3 gap-2">
+              <Link to="/QuickAssignTask" target="_blank">
+                <ExternalLink className="w-4 h-4" /> Quick Assign
+              </Link>
+            </Button>
             <Button variant="outline" onClick={() => setShowCreateProject(true)} className="h-11 px-4 gap-2">
               <Layers className="w-4 h-4" /> New Project
             </Button>

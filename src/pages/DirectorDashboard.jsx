@@ -6,8 +6,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Loader2, Plus, Search, ClipboardList,
-  CheckCircle2, Clock, Smartphone, Layers
+  CheckCircle2, Clock, Smartphone, Layers, ExternalLink
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import CreateDirectorTaskModal from '@/components/tasks/CreateDirectorTaskModal';
 import DirectorTaskCard from '@/components/tasks/DirectorTaskCard';
 import VoiceShortcutGuide from '@/components/tasks/VoiceShortcutGuide';
@@ -98,6 +99,11 @@ export default function DirectorDashboard() {
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" asChild className="h-11 px-3 gap-2">
+            <Link to="/QuickAssignTask" target="_blank">
+              <ExternalLink className="w-4 h-4" /> Quick Assign
+            </Link>
+          </Button>
           <Button variant="outline" onClick={() => setShowVoiceGuide(v => !v)} className="h-11 px-3 gap-2">
             <Smartphone className="w-4 h-4" /> Voice Shortcut
           </Button>

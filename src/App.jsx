@@ -131,6 +131,7 @@ import EADashboard from './pages/EADashboard';
 import DirectorDashboard from './pages/DirectorDashboard';
 import ProjectManager from './pages/ProjectManager';
 import DelegationScore from './pages/DelegationScore';
+import QuickAssignTask from './pages/QuickAssignTask';
 
 // Page component lookup table
 const PAGE_COMPONENTS = {
@@ -164,6 +165,7 @@ const PAGE_COMPONENTS = {
   DirectorDashboard,
   ProjectManager,
   DelegationScore,
+  QuickAssignTask,
 };
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -349,6 +351,9 @@ const AuthenticatedApp = () => {
 
       {/* Delegation Score */}
       <Route path="/DelegationScore" element={<LayoutWrapper currentPageName="DelegationScore"><DelegationScore /></LayoutWrapper>} />
+
+      {/* Quick Assign Task — standalone, no layout wrapper */}
+      <Route path="/QuickAssignTask" element={<QuickAssignTask />} />
 
       {/* Store Management System Routes */}
       {[

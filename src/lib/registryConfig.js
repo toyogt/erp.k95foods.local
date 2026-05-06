@@ -97,6 +97,7 @@ export const pageRegistry = [
   { pageKey: 'DirectorDashboard', title: 'Director Dashboard', moduleKey: 'FMS', icon: ClipboardList, roles: ['admin'], sortOrder: 8 },
   { pageKey: 'ProjectManager', title: 'Project Manager', moduleKey: 'FMS', icon: ClipboardList, roles: ['admin', 'executive_assistant', 'user'], sortOrder: 9 },
   { pageKey: 'DelegationScore', title: 'Delegation Score', moduleKey: 'FMS', icon: BarChart3, roles: ['admin', 'executive_assistant', 'user'], sortOrder: 10 },
+  { pageKey: 'QuickAssignTask', title: 'Quick Assign Task', moduleKey: 'FMS', icon: ClipboardList, roles: ['admin', 'executive_assistant', 'director'], sortOrder: 11 },
 
   // ─── ADMIN / MASTER DATA ───
   { pageKey: 'MasterData', title: 'Master Data', moduleKey: 'ADMIN', icon: Settings, roles: ['admin', 'production_manager', 'user'] },
