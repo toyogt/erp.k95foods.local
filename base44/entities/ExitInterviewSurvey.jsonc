@@ -1,0 +1,114 @@
+{
+  "name": "ExitInterviewSurvey",
+  "type": "object",
+  "title": "Exit Interview Survey",
+  "description": "Stores secure, link-based exit interview surveys sent to terminated employees. Token-validated submission auto-updates the linked CandidateLead.exit_feedback.",
+  "properties": {
+    "candidate_lead_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "description": "ID of the linked CandidateLead record"
+    },
+    "candidate_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "employee_code": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "token": {
+      "type": "string",
+      "minLength": 16,
+      "maxLength": 100,
+      "description": "Secure random token used in the public survey URL"
+    },
+    "survey_url": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Full public survey URL sent to the employee"
+    },
+    "sent_to": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Email or contact channel where the link was sent"
+    },
+    "sent_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "SENT",
+        "OPENED",
+        "SUBMITTED",
+        "EXPIRED"
+      ],
+      "default": "SENT"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Token expiry timestamp (default 30 days from send)"
+    },
+    "submitted_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "reason_for_leaving": {
+      "type": "string",
+      "maxLength": 1000
+    },
+    "work_environment_rating": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "1 (Very Poor) to 5 (Excellent)"
+    },
+    "management_rating": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5
+    },
+    "compensation_rating": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5
+    },
+    "would_recommend": {
+      "type": "string",
+      "enum": [
+        "Yes",
+        "No",
+        "Maybe"
+      ]
+    },
+    "suggestions": {
+      "type": "string",
+      "maxLength": 2000
+    },
+    "additional_comments": {
+      "type": "string",
+      "maxLength": 2000
+    },
+    "submitted_from_ip": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "hr_alerted": {
+      "type": "boolean",
+      "default": false
+    },
+    "hr_alerted_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "candidate_lead_id",
+    "token",
+    "status"
+  ]
+}

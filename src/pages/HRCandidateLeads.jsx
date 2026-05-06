@@ -61,7 +61,7 @@ async function fireHRLifecycleEvents({ before, after }) {
       });
     }
 
-    // For 'Terminated', start exit process
+    // For 'Terminated', start exit process AND auto-send the exit interview survey
     if (after.status === 'Terminated') {
       await triggerFMSProcess({
         triggerSource: 'employee_exit_initiated',
@@ -69,6 +69,16 @@ async function fireHRLifecycleEvents({ before, after }) {
         title: `Exit: ${after.candidate_name}`,
         triggerData: { exit_type: after.exit_type, attrition_date: after.attrition_date },
       });
+      // Fire-and-forget: send the exit interview survey link
+      try {
+        await base44.functions.invoke('sendExitInterviewSurvey', {
+          candidate_lead_id: after.id,
+          app_origin: window.location.origin,
+        });
+        await fireFMSEvent('exit_interview_sent', after.id);
+      } catch (e) {
+        console.warn('[HR] Exit interview send failed:', e?.message);
+      }
     }
 
     // Always also fire as auto-complete event for any active steps

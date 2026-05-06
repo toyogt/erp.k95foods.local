@@ -150,6 +150,7 @@ import HRNotificationSettings from './pages/HRNotificationSettings';
 import HRAttendanceAlerts from './pages/HRAttendanceAlerts';
 import HRCandidateLeads from './pages/HRCandidateLeads';
 import HRAttritionDashboard from './pages/HRAttritionDashboard';
+import ExitInterviewSurvey from './pages/ExitInterviewSurvey';
 
 // Page component lookup table
 const PAGE_COMPONENTS = {
@@ -382,6 +383,8 @@ const AuthenticatedApp = () => {
       <Route path="/HRAttendanceAlerts" element={<LayoutWrapper currentPageName="HRAttendanceAlerts"><HRAttendanceAlerts /></LayoutWrapper>} />
       <Route path="/HRCandidateLeads" element={<LayoutWrapper currentPageName="HRCandidateLeads"><HRCandidateLeads /></LayoutWrapper>} />
       <Route path="/HRAttritionDashboard" element={<LayoutWrapper currentPageName="HRAttritionDashboard"><HRAttritionDashboard /></LayoutWrapper>} />
+      {/* Public exit interview survey — no layout, no auth gate (token-validated) */}
+      <Route path="/ExitInterviewSurvey" element={<ExitInterviewSurvey />} />
 
       {/* Store Management System Routes */}
       {[
