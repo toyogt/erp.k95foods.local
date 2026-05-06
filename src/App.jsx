@@ -132,6 +132,13 @@ import DirectorDashboard from './pages/DirectorDashboard';
 import ProjectManager from './pages/ProjectManager';
 import DelegationScore from './pages/DelegationScore';
 import QuickAssignTask from './pages/QuickAssignTask';
+import AllItemsIngredients from './pages/AllItemsIngredients';
+import AllItemsUOM from './pages/AllItemsUOM';
+import AllItemsBoxTypes from './pages/AllItemsBoxTypes';
+import AllItemsLabelArtworks from './pages/AllItemsLabelArtworks';
+import AllItemsContainers from './pages/AllItemsContainers';
+import AllItemsCaps from './pages/AllItemsCaps';
+import AllItemsFlavours from './pages/AllItemsFlavours';
 
 // Page component lookup table
 const PAGE_COMPONENTS = {
@@ -166,6 +173,13 @@ const PAGE_COMPONENTS = {
   ProjectManager,
   DelegationScore,
   QuickAssignTask,
+  AllItemsIngredients,
+  AllItemsUOM,
+  AllItemsBoxTypes,
+  AllItemsLabelArtworks,
+  AllItemsContainers,
+  AllItemsCaps,
+  AllItemsFlavours,
 };
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -337,8 +351,7 @@ const AuthenticatedApp = () => {
       <Route path="/LblMasterData" element={<LayoutWrapper currentPageName="LblMasterData"><LblMasterData /></LayoutWrapper>} />
       <Route path="/LblDocTypePermissions" element={<LayoutWrapper currentPageName="LblDocTypePermissions"><LblDocTypePermissions /></LayoutWrapper>} />
 
-      {/* Item Module */}
-      <Route path="/ItemModule" element={<LayoutWrapper currentPageName="ItemModule"><ItemModule /></LayoutWrapper>} />
+      {/* ItemModule removed — replaced by All Items module pages */}
 
       {/* EA Dashboard */}
       <Route path="/EADashboard" element={<LayoutWrapper currentPageName="EADashboard"><EADashboard /></LayoutWrapper>} />
@@ -355,11 +368,21 @@ const AuthenticatedApp = () => {
       {/* Quick Assign Task — standalone, no layout wrapper */}
       <Route path="/QuickAssignTask" element={<QuickAssignTask />} />
 
+      {/* All Items Module */}
+      <Route path="/AllItemsIngredients" element={<LayoutWrapper currentPageName="AllItemsIngredients"><AllItemsIngredients /></LayoutWrapper>} />
+      <Route path="/AllItemsUOM" element={<LayoutWrapper currentPageName="AllItemsUOM"><AllItemsUOM /></LayoutWrapper>} />
+      <Route path="/AllItemsBoxTypes" element={<LayoutWrapper currentPageName="AllItemsBoxTypes"><AllItemsBoxTypes /></LayoutWrapper>} />
+      <Route path="/AllItemsLabelArtworks" element={<LayoutWrapper currentPageName="AllItemsLabelArtworks"><AllItemsLabelArtworks /></LayoutWrapper>} />
+      <Route path="/AllItemsContainers" element={<LayoutWrapper currentPageName="AllItemsContainers"><AllItemsContainers /></LayoutWrapper>} />
+      <Route path="/AllItemsCaps" element={<LayoutWrapper currentPageName="AllItemsCaps"><AllItemsCaps /></LayoutWrapper>} />
+      <Route path="/AllItemsFlavours" element={<LayoutWrapper currentPageName="AllItemsFlavours"><AllItemsFlavours /></LayoutWrapper>} />
+
       {/* Store Management System Routes */}
       {[
         ['SMSDashboard', SMSDashboard], ['SMSLocationManager', SMSLocationManager],
         ['SMSLotManager', SMSLotManager], ['SMSPutaway', SMSPutaway],
         ['SMSStockOut', SMSStockOut], ['SMSTransfer', SMSTransfer],
+        // StoreItemCreator removed — items created directly in All Items module
         ['SMSReorderConfig', SMSReorderConfig],
         ['SMSCycleCount', SMSCycleCount], ['SMSAdjustments', SMSAdjustments],
         ['SMSReports', SMSReports], ['SMSItemMaster', SMSItemMaster],

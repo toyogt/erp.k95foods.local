@@ -105,7 +105,7 @@ export const pageRegistry = [
   { pageKey: 'RecipeBuilder', title: 'Recipe Builder', moduleKey: 'ADMIN', icon: FlaskConical, roles: ['admin', 'production_manager', 'user'] },
   { pageKey: 'ItemMasterManager', title: 'Item Master', moduleKey: 'ADMIN', icon: PackageSearch, roles: ['admin', 'store_manager', 'purchase_manager', 'user'] },
   { pageKey: 'SKUBOMConfig', title: 'Material Planning Config', moduleKey: 'ADMIN', icon: PackageSearch, roles: ['admin', 'production_manager', 'user'] },
-  { pageKey: 'ItemModule', title: 'Item Module', moduleKey: 'ADMIN', icon: PackageSearch, roles: ['admin', 'production_manager', 'user'] },
+  // ItemModule removed — replaced by ALL_ITEMS module pages
   { pageKey: 'IngredientManager', title: 'Ingredients', moduleKey: 'ADMIN', icon: Zap, roles: ['admin', 'production_manager', 'user'] },
   // IngredientGroupManager is now a tab inside IngredientManager — not a standalone page
   { pageKey: 'UOMManager', title: 'UOMs', moduleKey: 'ADMIN', icon: Tag, roles: ['admin', 'production_manager', 'user'] },
@@ -129,7 +129,7 @@ export const pageRegistry = [
   { pageKey: 'SMSPutaway',         title: 'Putaway',            moduleKey: 'STORE', icon: Archive,         roles: ['admin', 'store_manager', 'store_receiver', 'user'], sortOrder: 4 },
   { pageKey: 'SMSStockOut',        title: 'Stock Issue',        moduleKey: 'STORE', icon: PackageOpen,     roles: ['admin', 'store_manager', 'user'], sortOrder: 5 },
   { pageKey: 'SMSItemMaster',      title: 'Item Master',        moduleKey: 'STORE', icon: PackageSearch,   roles: ['admin', 'store_manager', 'user'], sortOrder: 10 },
-  { pageKey: 'StoreItemCreator',   title: 'Create Store Item',  moduleKey: 'STORE', icon: PackageSearch,   roles: ['admin', 'store_manager', 'store_receiver', 'user'], sortOrder: 11 },
+  // StoreItemCreator removed — items are created directly in All Items module pages
   { pageKey: 'SMSLotManager',      title: 'Lot Manager',        moduleKey: 'STORE', icon: QrCode,          roles: ['admin', 'store_manager', 'store_receiver', 'qc_inspector', 'user'], sortOrder: 11 },
   { pageKey: 'SMSLocationManager', title: 'Locations',          moduleKey: 'STORE', icon: MapPin,          roles: ['admin', 'store_manager'], sortOrder: 25 },
   { pageKey: 'SMSTransfer',        title: 'Internal Transfer',  moduleKey: 'STORE', icon: ArrowLeftRight,  roles: ['admin', 'store_manager', 'store_receiver', 'user'], sortOrder: 20 },
@@ -152,6 +152,15 @@ export const pageRegistry = [
   { pageKey: 'SalesPicklists',         title: 'Picklists',            moduleKey: 'SALES', icon: ClipboardList, roles: ['admin', 'sales_manager', 'sales_user', 'user'] },
   { pageKey: 'SalesInvoices',          title: 'Invoices',             moduleKey: 'SALES', icon: FileText,     roles: ['admin', 'sales_manager', 'sales_user', 'user'] },
   { pageKey: 'SalesSKUManagement',      title: 'Products (SKU)',        moduleKey: 'SALES', icon: PackageSearch, roles: ['admin', 'sales_manager', 'sales_user', 'user'] },
+
+  // ─── ALL ITEMS ───
+  { pageKey: 'AllItemsIngredients',   title: 'Ingredients',      moduleKey: 'ALL_ITEMS', icon: Zap,           roles: ['admin', 'store_manager', 'production_manager', 'user'], sortOrder: 1 },
+  { pageKey: 'AllItemsUOM',           title: 'Units of Measure', moduleKey: 'ALL_ITEMS', icon: Tag,           roles: ['admin', 'store_manager', 'production_manager', 'user'], sortOrder: 2 },
+  { pageKey: 'AllItemsBoxTypes',      title: 'Box Types',        moduleKey: 'ALL_ITEMS', icon: Box,           roles: ['admin', 'store_manager', 'production_manager', 'user'], sortOrder: 3 },
+  { pageKey: 'AllItemsLabelArtworks', title: 'Label Artworks',   moduleKey: 'ALL_ITEMS', icon: Printer,       roles: ['admin', 'store_manager', 'production_manager', 'user'], sortOrder: 4 },
+  { pageKey: 'AllItemsContainers',    title: 'Containers',       moduleKey: 'ALL_ITEMS', icon: PackageSearch,  roles: ['admin', 'store_manager', 'production_manager', 'user'], sortOrder: 5 },
+  { pageKey: 'AllItemsCaps',          title: 'Caps',             moduleKey: 'ALL_ITEMS', icon: Archive,        roles: ['admin', 'store_manager', 'production_manager', 'user'], sortOrder: 6 },
+  { pageKey: 'AllItemsFlavours',      title: 'Flavours',         moduleKey: 'ALL_ITEMS', icon: Droplets,       roles: ['admin', 'store_manager', 'production_manager', 'user'], sortOrder: 7 },
 
   // ─── USER MANAGEMENT ───
   { pageKey: 'UserManagement', title: 'Users', moduleKey: 'USER_MANAGEMENT', icon: Users, roles: ['admin'], adminOnly: true },
@@ -286,6 +295,15 @@ export const moduleRegistry = [
     bgColor: 'bg-rose-50',
     adminOnly: false,
     sortOrder: 45,
+  },
+  {
+    moduleKey: 'ALL_ITEMS',
+    label: 'All Items',
+    icon: PackageSearch,
+    color: 'text-cyan-600',
+    bgColor: 'bg-cyan-50',
+    adminOnly: false,
+    sortOrder: 5.5,
   },
   {
     moduleKey: 'ADMIN',

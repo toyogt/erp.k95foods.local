@@ -296,7 +296,22 @@ export default function IngredientSpecTab({ user }) {
       const barcode_value = short_code;
       const groupRec = await base44.entities.IngredientGroup.filter({ group_id: group.group_id });
       if (groupRec[0]) await base44.entities.IngredientGroup.update(groupRec[0].id, { next_seq: seq + 1 });
-      await base44.entities.IngredientMaster.create({ ...form, short_code, barcode_value, normalized_name });
+      const created = await base44.entities.IngredientMaster.create({ ...form, short_code, barcode_value, normalized_name });
+
+      // Auto-create Store Item Master entry with mandatory validation rules for ingredients
+      const uomObj = uoms.find(u => u.uom_id === form.uom_id);
+      await base44.entities.StoreItemMaster.create({
+        item_name: `${form.ingredient_name} (${short_code})`,
+        item_code: form.ingredient_id || short_code,
+        item_category: 'ingredient',
+        source_entity: 'IngredientMaster',
+        source_id: created.id,
+        uom: uomObj?.uom_code || 'Kg',
+        is_active: true,
+        batch_required: true,
+        expiry_required: true,
+        mfg_date_required: true,
+      });
     } else {
       const rec = items.find(i => i.id === editing);
       if (rec) await base44.entities.IngredientMaster.update(rec.id, { ...form, normalized_name });
