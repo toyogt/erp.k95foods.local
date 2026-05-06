@@ -2,16 +2,18 @@ import { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Loader2, ChevronRight, MapPin, Phone, Mail, FileText, AlertTriangle, Package } from 'lucide-react';
+import { ArrowLeft, Loader2, ChevronRight, MapPin, Phone, Mail, FileText, AlertTriangle, Package, Download } from 'lucide-react';
 import { PO_STATUS_COLOR, PO_STATUS_FLOW, getNextPOStatus, formatDateDDMMYYYY, formatINR, logPurchaseAudit } from './purchaseHelpers';
 import POGRNHistory from './POGRNHistory';
 import POFollowUpList from './POFollowUpList';
+import POPdfView from './POPdfView';
 import { Link } from 'react-router-dom';
 
 export default function PODetailView({ po, user, isManager, onBack, onRefresh }) {
   const [acting, setActing] = useState(null);
   const [showGRN, setShowGRN] = useState(false);
   const [showFollowUps, setShowFollowUps] = useState(false);
+  const [showPdf, setShowPdf] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: poItems = [] } = useQuery({
@@ -134,6 +136,12 @@ export default function PODetailView({ po, user, isManager, onBack, onRefresh })
 
       {/* Toggle Sections */}
       <div className="space-y-2">
+        <button onClick={() => setShowPdf(!showPdf)} className="w-full text-left bg-white border border-blue-200 rounded-xl px-4 py-3 flex items-center justify-between hover:bg-blue-50">
+          <span className="text-sm font-semibold text-blue-700 flex items-center gap-2"><Download className="w-4 h-4" /> View / Download Purchase Order</span>
+          <ChevronRight className={`w-4 h-4 text-blue-400 transition-transform ${showPdf ? 'rotate-90' : ''}`} />
+        </button>
+        {showPdf && <div className="pl-2"><POPdfView po={po} /></div>}
+
         <button onClick={() => setShowGRN(!showGRN)} className="w-full text-left bg-white border border-slate-200 rounded-xl px-4 py-3 flex items-center justify-between hover:bg-slate-50">
           <span className="text-sm font-semibold text-slate-700 flex items-center gap-2"><Package className="w-4 h-4" /> Goods Receipt History</span>
           <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform ${showGRN ? 'rotate-90' : ''}`} />
