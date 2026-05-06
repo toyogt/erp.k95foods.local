@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Users, Loader2, UserPlus, Mail, Search } from 'lucide-react';
+import { Users, Loader2, UserPlus, Mail, Search, Trash2 } from 'lucide-react';
 import { auditUserInvited, auditUserRoleChanged } from '@/lib/auditAdminActions';
 import EADirectorMappingPanel from '@/components/admin/EADirectorMappingPanel';
 import TelegramConfigPanel from '@/components/admin/TelegramConfigPanel';
@@ -22,6 +22,7 @@ export default function UserManagement() {
   const [inviting, setInviting] = useState(false);
   const [inviteError, setInviteError] = useState('');
   const [savingRole, setSavingRole] = useState(null);
+  const [deletingUser, setDeletingUser] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -53,6 +54,19 @@ export default function UserManagement() {
       setInviteError(e?.message || 'Failed to invite user');
     }
     setInviting(false);
+  };
+
+  const deleteUser = async (u) => {
+    if (!confirm(`Are you sure you want to delete user "${u.full_name || u.email}"? This action cannot be undone.`)) return;
+    setDeletingUser(u.id);
+    try {
+      await base44.entities.User.delete(u.id);
+      load();
+    } catch (e) {
+      console.error('Error deleting user:', e);
+      alert(e?.message || 'Failed to delete user');
+    }
+    setDeletingUser(null);
   };
 
   const updateRole = async (u, newRole) => {
@@ -131,8 +145,8 @@ export default function UserManagement() {
 
           {/* User list */}
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="hidden sm:grid grid-cols-[2fr_2fr_1.5fr_1.5fr] gap-4 px-5 py-3 bg-slate-50 border-b border-slate-100 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              <span>Name</span><span>Email</span><span>Current Role</span><span>Change Role</span>
+            <div className="hidden sm:grid grid-cols-[2fr_2fr_1.5fr_1.5fr_auto] gap-4 px-5 py-3 bg-slate-50 border-b border-slate-100 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              <span>Name</span><span>Email</span><span>Current Role</span><span>Change Role</span><span></span>
             </div>
             <div className="divide-y divide-slate-100">
               {filtered.length === 0 && (
@@ -141,7 +155,7 @@ export default function UserManagement() {
               {filtered.map(u => {
                 const roleRecord = getRoleRecord(u.role);
                 return (
-                  <div key={u.id} className="grid grid-cols-1 sm:grid-cols-[2fr_2fr_1.5fr_1.5fr] gap-2 sm:gap-4 px-5 py-4 items-center">
+                  <div key={u.id} className="grid grid-cols-1 sm:grid-cols-[2fr_2fr_1.5fr_1.5fr_auto] gap-2 sm:gap-4 px-5 py-4 items-center">
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 text-sm font-bold shrink-0">
                         {(u.full_name || u.email)[0]?.toUpperCase()}
@@ -175,6 +189,18 @@ export default function UserManagement() {
                             ))}
                           </SelectContent>
                         </Select>
+                      )}
+                    </div>
+                    <div>
+                      {u.id !== user?.id && (
+                        <button
+                          onClick={() => deleteUser(u)}
+                          disabled={deletingUser === u.id}
+                          className="p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors min-h-[40px]"
+                          title="Delete user"
+                        >
+                          {deletingUser === u.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                        </button>
                       )}
                     </div>
                   </div>

@@ -52,6 +52,18 @@ export default function DirectorTaskCard({ task, user, viewMode, onRefresh, supp
     onRefresh?.();
   };
 
+  const handleUndoDone = async () => {
+    setActing(true);
+    await base44.entities.DirectorTask.update(task.id, {
+      status: 'open',
+      completed_at: '',
+      completed_by_email: '',
+    });
+    await logTaskAction(task, 'reopened', user, `Assignee reverted task to open`);
+    setActing(false);
+    onRefresh?.();
+  };
+
   const handleVerify = async () => {
     setActing(true);
     await base44.entities.DirectorTask.update(task.id, {
@@ -209,35 +221,7 @@ export default function DirectorTaskCard({ task, user, viewMode, onRefresh, supp
             </div>
           )}
 
-          {/* Attachment thumbnails preview */}
-          {task.attachments?.length > 0 && !expanded && (
-            <div className="mt-2">
-              <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
-                {task.attachments.slice(0, 4).map((att, idx) => (
-                  <div key={idx} className="w-12 h-12 rounded-lg overflow-hidden border border-slate-200 bg-slate-100 shrink-0">
-                    {att.type === 'video' ? (
-                      <video src={att.url} className="w-full h-full object-cover" muted />
-                    ) : (
-                      <img src={att.url} alt={att.name || 'Attachment'} className="w-full h-full object-cover" />
-                    )}
-                  </div>
-                ))}
-                {task.attachments.length > 4 && (
-                  <div className="w-12 h-12 rounded-lg border border-slate-200 bg-slate-100 flex items-center justify-center text-xs text-slate-500 font-medium shrink-0">
-                    +{task.attachments.length - 4}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Progress note preview */}
-          {task.progress_note && !expanded && (
-            <div className="mt-2 bg-blue-50 rounded-lg px-3 py-1.5 flex items-start gap-2">
-              <MessageSquare className="w-3.5 h-3.5 text-blue-400 mt-0.5 shrink-0" />
-              <p className="text-xs text-blue-700 line-clamp-1">{task.progress_note}</p>
-            </div>
-          )}
+          {/* Attachment thumbnails and progress note hidden when collapsed — shown only in expanded details */}
 
           {/* Date change request info */}
           {task.status === 'date_change_requested' && isEAOrDirector && (
@@ -276,7 +260,7 @@ export default function DirectorTaskCard({ task, user, viewMode, onRefresh, supp
             </div>
           )}
 
-          {/* Progress input inline */}
+          {/* Progress input inline — Mark Done hidden while updating progress */}
           {showProgressInput && (
             <div className="flex gap-2">
               <Input value={progressNote} onChange={e => setProgressNote(e.target.value)}
@@ -293,12 +277,21 @@ export default function DirectorTaskCard({ task, user, viewMode, onRefresh, supp
             </div>
           )}
 
-          {/* Row 2: Mark Done (full width below) */}
-          {isAssignee && task.status === 'open' && (
+          {/* Mark Done — hidden when progress input is open */}
+          {isAssignee && task.status === 'open' && !showProgressInput && (
             <Button onClick={handleMarkDone} disabled={acting}
               className="w-full min-h-[44px] gap-2 bg-green-600 hover:bg-green-700 text-sm font-medium">
               {acting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
               Mark Done
+            </Button>
+          )}
+
+          {/* Undo Done — assignee can revert pending_verification back to open */}
+          {isAssignee && task.status === 'pending_verification' && (
+            <Button variant="outline" onClick={handleUndoDone} disabled={acting}
+              className="w-full min-h-[44px] gap-2 text-sm font-medium border-amber-300 text-amber-700 hover:bg-amber-50">
+              {acting ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
+              Undo Done
             </Button>
           )}
 
@@ -373,75 +366,83 @@ export default function DirectorTaskCard({ task, user, viewMode, onRefresh, supp
         {/* Expanded details */}
         {expanded && (
           <div className="border-t border-slate-100 px-4 py-3 space-y-3 bg-slate-50">
-            {/* Reference info as clean labelled rows */}
+            {/* 1. Reference info — Task ID, Assigned by */}
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-medium text-slate-400 w-20 shrink-0">Task ID</span>
+                <span className="text-xs font-medium text-slate-400 w-24 shrink-0">Task ID</span>
                 <span className="text-sm text-slate-700 font-medium">{task.task_number}</span>
               </div>
-              {task.task_type === 'project' && task.project_name && (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-slate-400 w-20 shrink-0">Project</span>
-                  <span className="text-sm text-slate-700">{task.project_name}</span>
-                </div>
-              )}
               {(task.assigned_by_name || task.director_name) && (
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-slate-400 w-20 shrink-0">Assigned by</span>
+                  <span className="text-xs font-medium text-slate-400 w-24 shrink-0">Assigned by</span>
                   <span className="text-sm text-slate-700">{task.assigned_by_name || task.director_name}</span>
+                </div>
+              )}
+              {task.task_type === 'project' && task.project_name && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-slate-400 w-24 shrink-0">Project</span>
+                  <span className="text-sm text-slate-700">{task.project_name}</span>
                 </div>
               )}
             </div>
 
+            {/* 2. What to do */}
             {task.task_details && (
               <div className="bg-white rounded-lg p-3 border border-slate-100">
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">What to do</p>
                 <p className="text-sm text-slate-700 whitespace-pre-wrap">{task.task_details}</p>
               </div>
             )}
+
+            {/* 3. Latest Progress Update — with timestamp shown first, then note */}
             {task.progress_note && (
               <div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
                 <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-1">Latest Progress Update</p>
                 <p className="text-sm text-blue-800 whitespace-pre-wrap">{task.progress_note}</p>
                 {task.progress_updated_at && (
                   <p className="text-xs text-blue-400 mt-1">
-                    {new Date(task.progress_updated_at).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                    {new Date(task.progress_updated_at).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true })}
                   </p>
                 )}
               </div>
             )}
-            {task.attachments?.length > 0 && (
-              <div className="bg-white rounded-lg p-3 border border-slate-100">
-                <AttachmentGallery attachments={task.attachments} />
-              </div>
-            )}
-            {task.predecessor_task_numbers?.length > 0 && (
-              <div className="text-xs text-slate-500">
-                Depends on: {task.predecessor_task_numbers.join(', ')}
-              </div>
-            )}
+
+            {/* 4. Dates */}
             <div className="space-y-1.5 pt-1 border-t border-slate-100">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-medium text-slate-400 w-20 shrink-0">Start</span>
+                <span className="text-xs font-medium text-slate-400 w-24 shrink-0">Start</span>
                 <span className="text-sm text-slate-600">{formatTaskDate(task.start_date, task.start_time) || '—'}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-medium text-slate-400 w-20 shrink-0">End</span>
+                <span className="text-xs font-medium text-slate-400 w-24 shrink-0">End</span>
                 <span className="text-sm text-slate-600">{formatTaskDate(task.end_date, task.end_time)}</span>
               </div>
               {!isAssignee && task.assigned_to_name && (
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-slate-400 w-20 shrink-0">Assigned to</span>
+                  <span className="text-xs font-medium text-slate-400 w-24 shrink-0">Assigned to</span>
                   <span className="text-sm text-slate-600">{task.assigned_to_name}</span>
                 </div>
               )}
               {task.verified_by_name && (
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-slate-400 w-20 shrink-0">Verified by</span>
+                  <span className="text-xs font-medium text-slate-400 w-24 shrink-0">Verified by</span>
                   <span className="text-sm text-slate-600">{task.verified_by_name}</span>
                 </div>
               )}
             </div>
+
+            {task.predecessor_task_numbers?.length > 0 && (
+              <div className="text-xs text-slate-500">
+                Depends on: {task.predecessor_task_numbers.join(', ')}
+              </div>
+            )}
+
+            {/* 5. Attachments — shown last */}
+            {task.attachments?.length > 0 && (
+              <div className="bg-white rounded-lg p-3 border border-slate-100">
+                <AttachmentGallery attachments={task.attachments} />
+              </div>
+            )}
           </div>
         )}
 
