@@ -19,8 +19,12 @@
 export const FMS_APP_EVENTS = [
   // ── Purchase & GRN ──────────────────────────────────────────────────────────
   { key: 'purchase_request_created',  label: 'Purchase Request Created',   category: 'Purchase & GRN', canTrigger: true,  canComplete: true  },
+  { key: 'purchase_request_approved', label: 'Purchase Request Approved',  category: 'Purchase & GRN', canTrigger: true,  canComplete: true  },
+  { key: 'purchase_request_rejected', label: 'Purchase Request Rejected',  category: 'Purchase & GRN', canTrigger: false, canComplete: true  },
   { key: 'purchase_order_created',    label: 'Purchase Order Created',      category: 'Purchase & GRN', canTrigger: true,  canComplete: true  },
   { key: 'purchase_order_approved',   label: 'Purchase Order Approved',     category: 'Purchase & GRN', canTrigger: true,  canComplete: true  },
+  { key: 'purchase_order_sent',       label: 'Purchase Order Sent to Supplier', category: 'Purchase & GRN', canTrigger: false, canComplete: true  },
+  { key: 'purchase_order_delivered',  label: 'Purchase Order Delivered',    category: 'Purchase & GRN', canTrigger: false, canComplete: true  },
   { key: 'gate_entry_created',        label: 'Gate Entry Created',          category: 'Purchase & GRN', canTrigger: true,  canComplete: true  },
   { key: 'grn_received',              label: 'GRN Received',                category: 'Purchase & GRN', canTrigger: true,  canComplete: true  },
   { key: 'grn_qc_approved',           label: 'GRN QC Approved',             category: 'Purchase & GRN', canTrigger: false, canComplete: true  },
