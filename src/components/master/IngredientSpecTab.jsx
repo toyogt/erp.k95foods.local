@@ -87,9 +87,9 @@ function IngredientSpecForm({ initial, groups, uoms, allSpecs, onSave, onCancel,
     is_active: initial?.is_active !== false,
     short_code: initial?.short_code || '',
     barcode_value: initial?.barcode_value || '',
-    batch_required: true,
-    expiry_required: true,
-    mfg_date_required: true,
+    batch_number: initial?.batch_number || '',
+    expiry_date: initial?.expiry_date || '',
+    manufacture_date: initial?.manufacture_date || '',
   }));
 
   const selectedGroup = groups.find(g => g.group_id === form.group_id);
@@ -155,19 +155,56 @@ function IngredientSpecForm({ initial, groups, uoms, allSpecs, onSave, onCancel,
         <span className="text-xs text-slate-400">(uncheck to force specific brand in recipes)</span>
       </label>
 
-      {/* Store Validation Rules */}
-      <div className="border border-slate-200 rounded-xl p-3 space-y-2">
-        <p className="text-xs font-semibold text-slate-600">Store Validation Rules</p>
-        {[
-          { key: 'batch_required', label: 'Batch Number Required' },
-          { key: 'expiry_required', label: 'Expiry Date Required' },
-          { key: 'mfg_date_required', label: 'Manufacture Date Required' },
-        ].map(({ key, label }) => (
-          <label key={key} className="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" className="w-4 h-4 rounded" checked={!!form[key]} onChange={e => setForm(v => ({ ...v, [key]: e.target.checked }))} />
-            <span className="text-sm text-slate-700">{label}</span>
-          </label>
-        ))}
+      {/* Traceability Details */}
+      <div className="border border-slate-200 rounded-xl p-3 space-y-3">
+        <p className="text-xs font-semibold text-slate-600">Traceability Details</p>
+        <div>
+          <label className="block text-xs font-semibold text-slate-500 mb-1">Batch Number *</label>
+          <input
+            className="w-full h-9 md:h-11 px-3 rounded-lg border border-slate-300 text-sm focus:outline-none focus:border-blue-500"
+            placeholder="Enter batch number"
+            value={form.batch_number}
+            onChange={e => setForm(v => ({ ...v, batch_number: e.target.value }))}
+          />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-semibold text-slate-500 mb-1">Manufacture Date *</label>
+            <input
+              type="date"
+              className="w-full h-9 md:h-11 px-3 rounded-lg border border-slate-300 text-sm focus:outline-none focus:border-blue-500"
+              value={form.manufacture_date ? form.manufacture_date.split('/').reverse().join('-') : ''}
+              onChange={e => {
+                const val = e.target.value;
+                if (val) {
+                  const [y, m, d] = val.split('-');
+                  setForm(v => ({ ...v, manufacture_date: `${d}/${m}/${y}` }));
+                } else {
+                  setForm(v => ({ ...v, manufacture_date: '' }));
+                }
+              }}
+            />
+            {form.manufacture_date && <p className="text-xs text-slate-400 mt-0.5">{form.manufacture_date}</p>}
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-500 mb-1">Expiry Date *</label>
+            <input
+              type="date"
+              className="w-full h-9 md:h-11 px-3 rounded-lg border border-slate-300 text-sm focus:outline-none focus:border-blue-500"
+              value={form.expiry_date ? form.expiry_date.split('/').reverse().join('-') : ''}
+              onChange={e => {
+                const val = e.target.value;
+                if (val) {
+                  const [y, m, d] = val.split('-');
+                  setForm(v => ({ ...v, expiry_date: `${d}/${m}/${y}` }));
+                } else {
+                  setForm(v => ({ ...v, expiry_date: '' }));
+                }
+              }}
+            />
+            {form.expiry_date && <p className="text-xs text-slate-400 mt-0.5">{form.expiry_date}</p>}
+          </div>
+        </div>
       </div>
 
       {!isNew && (
@@ -188,7 +225,7 @@ function IngredientSpecForm({ initial, groups, uoms, allSpecs, onSave, onCancel,
       </label>
 
       <div className="flex gap-2 pt-1">
-        <Button size="sm" onClick={() => onSave(form)} disabled={saving || !form.ingredient_name.trim() || !form.group_id || !form.uom_id || !!exactDup}>
+        <Button size="sm" onClick={() => onSave(form)} disabled={saving || !form.ingredient_name.trim() || !form.group_id || !form.uom_id || !form.batch_number.trim() || !form.expiry_date || !form.manufacture_date || !!exactDup}>
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Spec'}
         </Button>
         <Button size="sm" variant="ghost" onClick={() => onCancel(null)}>Cancel</Button>
@@ -316,7 +353,7 @@ export default function IngredientSpecTab({ user }) {
       if (groupRec[0]) await base44.entities.IngredientGroup.update(groupRec[0].id, { next_seq: seq + 1 });
       const created = await base44.entities.IngredientMaster.create({ ...form, short_code, barcode_value, normalized_name });
 
-      // Auto-create Store Item Master entry with validation rules from spec form
+      // Auto-create Store Item Master entry — always require batch/expiry/mfg for ingredients
       const uomObj = uoms.find(u => u.uom_id === form.uom_id);
       await base44.entities.StoreItemMaster.create({
         item_name: `${form.ingredient_name} (${short_code})`,
@@ -326,9 +363,9 @@ export default function IngredientSpecTab({ user }) {
         source_id: created.id,
         uom: uomObj?.uom_code || 'Kg',
         is_active: true,
-        batch_required: !!form.batch_required,
-        expiry_required: !!form.expiry_required,
-        mfg_date_required: !!form.mfg_date_required,
+        batch_required: true,
+        expiry_required: true,
+        mfg_date_required: true,
       });
     } else {
       const rec = items.find(i => i.id === editing);
