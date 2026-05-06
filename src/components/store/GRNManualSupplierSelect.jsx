@@ -101,7 +101,7 @@ export default function GRNManualSupplierSelect({ value, onChange }) {
   const hasResults = filteredApproved.length > 0 || filteredManual.length > 0 || showAddNew;
 
   return (
-    <div className="relative" ref={containerRef}>
+    <div className="relative" ref={containerRef} style={{ zIndex: 99999 }}>
       <label className="text-xs font-medium text-slate-700">
         Supplier Name <span className="text-red-500">*</span>
       </label>
@@ -121,8 +121,8 @@ export default function GRNManualSupplierSelect({ value, onChange }) {
       {open && (
         <div
           ref={dropdownRef}
-          className="absolute left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-64 overflow-y-auto"
-          style={{ zIndex: 9999 }}
+          className="absolute left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-64 overflow-y-auto"
+          style={{ zIndex: 99999, position: 'absolute', top: '100%' }}
         >
           {filteredApproved.length > 0 && (
             <>
