@@ -147,6 +147,7 @@ import CentralItemHub from './pages/CentralItemHub';
 import BulkPOCreate from './pages/BulkPOCreate';
 import PurchaseRequestList from './pages/PurchaseRequestList';
 import PurchaseOrderList from './pages/PurchaseOrderList';
+import WhatsAppTemplateManager from './pages/WhatsAppTemplateManager';
 
 // Page component lookup table
 const PAGE_COMPONENTS = {
@@ -196,6 +197,7 @@ const PAGE_COMPONENTS = {
   BulkPOCreate,
   PurchaseRequestList,
   PurchaseOrderList,
+  WhatsAppTemplateManager,
 };
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -393,6 +395,9 @@ const AuthenticatedApp = () => {
       <Route path="/BulkPOCreate" element={<LayoutWrapper currentPageName="BulkPOCreate"><BulkPOCreate /></LayoutWrapper>} />
       <Route path="/PurchaseRequestList" element={<LayoutWrapper currentPageName="PurchaseRequestList"><PurchaseRequestList /></LayoutWrapper>} />
       <Route path="/PurchaseOrderList" element={<LayoutWrapper currentPageName="PurchaseOrderList"><PurchaseOrderList /></LayoutWrapper>} />
+
+      {/* WhatsApp Template Manager */}
+      <Route path="/WhatsAppTemplateManager" element={<LayoutWrapper currentPageName="WhatsAppTemplateManager"><WhatsAppTemplateManager /></LayoutWrapper>} />
 
       {/* All Items Module */}
       <Route path="/AllItemsIngredients" element={<LayoutWrapper currentPageName="AllItemsIngredients"><AllItemsIngredients /></LayoutWrapper>} />

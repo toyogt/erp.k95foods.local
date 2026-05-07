@@ -18,9 +18,13 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { action } = body;
 
+    const wabaId = body.waba_id === '__FROM_ENV__' ? Deno.env.get('WHATSAPP_BUSINESS_ACCOUNT_ID') : body.waba_id;
+    const phoneNumId = body.phone_number_id === '__FROM_ENV__' ? Deno.env.get('WHATSAPP_PHONE_NUMBER_ID') : body.phone_number_id;
+
     // ─── ACTION: Create template on Meta ───
     if (action === 'create_template') {
-      const { waba_id, template_name, category, language, header_text, body_text, footer_text, example_values } = body;
+      const { template_name, category, language, header_text, body_text, footer_text, example_values } = body;
+      const waba_id = wabaId;
       if (!waba_id || !template_name || !body_text) {
         return Response.json({ error: 'waba_id, template_name, and body_text are required' }, { status: 400 });
       }
@@ -85,7 +89,8 @@ Deno.serve(async (req) => {
 
     // ─── ACTION: Send message using a template ───
     if (action === 'send_message') {
-      const { phone_number_id, phone_number, template_name, language, parameters } = body;
+      const { phone_number, template_name, language, parameters } = body;
+      const phone_number_id = phoneNumId;
       if (!phone_number_id || !phone_number || !template_name) {
         return Response.json({ error: 'phone_number_id, phone_number, and template_name are required' }, { status: 400 });
       }
@@ -134,7 +139,8 @@ Deno.serve(async (req) => {
 
     // ─── ACTION: Check template status ───
     if (action === 'check_status') {
-      const { waba_id, template_name } = body;
+      const { template_name } = body;
+      const waba_id = wabaId;
       if (!waba_id) {
         return Response.json({ error: 'waba_id is required' }, { status: 400 });
       }
@@ -157,7 +163,8 @@ Deno.serve(async (req) => {
 
     // ─── ACTION: Delete template from Meta ───
     if (action === 'delete_template') {
-      const { waba_id, template_name } = body;
+      const { template_name } = body;
+      const waba_id = wabaId;
       if (!waba_id || !template_name) {
         return Response.json({ error: 'waba_id and template_name are required' }, { status: 400 });
       }

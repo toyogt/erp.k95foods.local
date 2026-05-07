@@ -182,6 +182,7 @@ export const pageRegistry = [
   { pageKey: 'SLAEscalationDashboard', title: 'SLA Escalations', moduleKey: 'ADMIN', icon: AlertTriangle, roles: ['admin'], adminOnly: true },
   { pageKey: 'SystemSettings', title: 'System Settings', moduleKey: 'ADMIN', icon: Settings, roles: ['admin', 'accounts_manager', 'sales_manager', 'user'] },
   { pageKey: 'RoutesDiagnostics', title: 'Routes Diagnostics', moduleKey: 'ADMIN', icon: Activity, roles: ['admin', 'user'] },
+  { pageKey: 'WhatsAppTemplateManager', title: 'WhatsApp Templates', moduleKey: 'ADMIN', icon: Activity, roles: ['admin'], adminOnly: true },
 ];
 
 /**
