@@ -19,9 +19,14 @@ import { fireFMSEvent, triggerFMSProcess } from '@/lib/useFMSAutoComplete';
  * Logs a status transition for a candidate, computing how long they spent in the previous status.
  * Best-effort — failures are warned but never block the save.
  */
-async function logCandidateStatusChange({ candidate, oldStatus, newStatus, userEmail, remarks }) {
+async function logCandidateStatusChange({ candidate, oldStatus, newStatus, userEmail, remarks, effectiveDateISO }) {
   try {
-    const now = new Date().toISOString();
+    // If user picked an effective date (YYYY-MM-DD), anchor it to noon IST so the
+    // ISO timestamp falls cleanly on that calendar day; otherwise use "now".
+    const changedAtISO = effectiveDateISO
+      ? new Date(`${effectiveDateISO}T12:00:00`).toISOString()
+      : new Date().toISOString();
+
     let durationMinutes;
     if (oldStatus) {
       const lastLog = await base44.entities.CandidateLeadStatusLog.filter(
@@ -31,7 +36,7 @@ async function logCandidateStatusChange({ candidate, oldStatus, newStatus, userE
       );
       const startISO = lastLog?.[0]?.changed_at || candidate.created_date;
       if (startISO) {
-        const diffMs = new Date(now).getTime() - new Date(startISO).getTime();
+        const diffMs = new Date(changedAtISO).getTime() - new Date(startISO).getTime();
         durationMinutes = Math.max(0, Math.round(diffMs / 60000));
       }
     }
@@ -40,7 +45,7 @@ async function logCandidateStatusChange({ candidate, oldStatus, newStatus, userE
       candidate_name: candidate.candidate_name,
       old_status: oldStatus || '',
       new_status: newStatus,
-      changed_at: now,
+      changed_at: changedAtISO,
       changed_by: userEmail || 'system',
       duration_in_previous_status_minutes: durationMinutes,
       remarks: remarks || '',
@@ -152,17 +157,18 @@ export default function HRCandidateLeads() {
   // Dedicated mutation for status-only changes via the guided dialog.
   // Reuses the existing logging + FMS event firing logic for full consistency.
   const statusChangeMutation = useMutation({
-    mutationFn: async ({ candidate, newStatus, remarks }) => {
+    mutationFn: async ({ candidate, newStatus, remarks, effectiveDate }) => {
       const before = { ...candidate };
+      const dateISO = effectiveDate || new Date().toISOString().slice(0, 10);
       const updatePayload = { status: newStatus };
 
-      // Auto-fill enrollment_date when transitioning to Hired
+      // Auto-fill enrollment_date when transitioning to Hired (use effective date)
       if (newStatus === 'Hired' && !candidate.enrollment_date) {
-        updatePayload.enrollment_date = new Date().toISOString().slice(0, 10);
+        updatePayload.enrollment_date = dateISO;
       }
-      // Auto-fill attrition_date when transitioning to Terminated
+      // Auto-fill attrition_date when transitioning to Terminated (use effective date)
       if (newStatus === 'Terminated' && !candidate.attrition_date) {
-        updatePayload.attrition_date = new Date().toISOString().slice(0, 10);
+        updatePayload.attrition_date = dateISO;
       }
 
       const saved = await base44.entities.CandidateLead.update(candidate.id, updatePayload);
@@ -173,6 +179,7 @@ export default function HRCandidateLeads() {
         newStatus,
         userEmail: user?.email,
         remarks,
+        effectiveDateISO: dateISO,
       });
 
       await fireHRLifecycleEvents({ before, after: saved });
@@ -411,11 +418,12 @@ export default function HRCandidateLeads() {
         onOpenChange={(o) => { if (!o) setStatusChangeCandidate(null); }}
         candidate={statusChangeCandidate}
         saving={statusChangeMutation.isPending}
-        onSubmit={({ newStatus, remarks }) =>
+        onSubmit={({ newStatus, remarks, effectiveDate }) =>
           statusChangeMutation.mutate({
             candidate: statusChangeCandidate,
             newStatus,
             remarks,
+            effectiveDate,
           })
         }
       />

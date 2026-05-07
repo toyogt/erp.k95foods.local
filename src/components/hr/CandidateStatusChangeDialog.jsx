@@ -1,11 +1,22 @@
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { ArrowRight, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, Loader2, AlertCircle, CheckCircle2, Calendar } from 'lucide-react';
 import { getAllowedNextStatuses, getStatusMeta } from '@/lib/candidateStatusTransitions';
+
+function todayISO() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function formatDDMMYYYY(iso) {
+  if (!iso) return '';
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
 
 /**
  * Guided dialog for changing a candidate lead's status.
@@ -23,12 +34,14 @@ export default function CandidateStatusChangeDialog({
 }) {
   const [selectedStatus, setSelectedStatus] = useState('');
   const [remarks, setRemarks] = useState('');
+  const [effectiveDate, setEffectiveDate] = useState(todayISO());
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (open) {
       setSelectedStatus('');
       setRemarks('');
+      setEffectiveDate(todayISO());
       setError('');
     }
   }, [open, candidate?.id]);
@@ -48,9 +61,18 @@ export default function CandidateStatusChangeDialog({
       setError('Please add remarks explaining this status change');
       return;
     }
+    if (!effectiveDate) {
+      setError('Please pick the effective date of this status change');
+      return;
+    }
+    if (effectiveDate > todayISO()) {
+      setError('Effective date cannot be in the future');
+      return;
+    }
     onSubmit({
       newStatus: selectedStatus,
       remarks: remarks.trim(),
+      effectiveDate,
     });
   };
 
@@ -141,6 +163,26 @@ export default function CandidateStatusChangeDialog({
               <div className="text-xs text-blue-800">
                 Remember to link an <strong>Employee record</strong> in the Edit form after marking as Hired.
               </div>
+            </div>
+          )}
+
+          {/* Effective Date */}
+          {allowedNext.length > 0 && (
+            <div className="space-y-1">
+              <Label className="text-xs font-medium text-slate-700 flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5" />
+                Effective Date of Change <span className="text-red-600">*</span>
+              </Label>
+              <Input
+                type="date"
+                value={effectiveDate}
+                max={todayISO()}
+                onChange={(e) => { setEffectiveDate(e.target.value); setError(''); }}
+                className="h-11 md:h-9 text-base md:text-sm"
+              />
+              <p className="text-xs text-slate-500">
+                Defaults to today ({formatDDMMYYYY(todayISO())}). Edit only if the change actually happened on a different day. Used for funnel & attrition analytics.
+              </p>
             </div>
           )}
 
