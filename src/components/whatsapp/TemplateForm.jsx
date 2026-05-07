@@ -154,11 +154,10 @@ export default function TemplateForm({ template, onBack, onSaved }) {
     }
 
     // Meta rejects headers with emojis, newlines, asterisks, or formatting characters
-    const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{2B55}\u{200D}\u{FE0F}]/u;
-    if (form.header_text && (emojiRegex.test(form.header_text) || /[*\n\r]/.test(form.header_text))) {
+    if (form.header_text && /[\n\r*]/.test(form.header_text)) {
       toast({
         title: 'Invalid Header',
-        description: 'Header text cannot contain emojis, asterisks, or new lines. Meta will reject it.',
+        description: 'Header text cannot contain asterisks or new lines. Meta will reject it.',
         variant: 'destructive',
       });
       return;
