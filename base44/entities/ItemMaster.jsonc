@@ -1,0 +1,60 @@
+{
+  "name": "ItemMaster",
+  "type": "object",
+  "title": "Item Master",
+  "description": "Unified master data for all purchasable items",
+  "properties": {
+    "item_code": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "description": "Unique item code (e.g., ING-SUGAR-001, BOX-CASE6-001, BTL-PET-200ML)"
+    },
+    "item_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "Display name of the item"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "INGREDIENT",
+        "PACKAGING_BOX",
+        "CONTAINER",
+        "CAP",
+        "CONSUMABLE"
+      ],
+      "description": "Item category"
+    },
+    "base_uom": {
+      "type": "string",
+      "maxLength": 20,
+      "description": "Base unit of measure (KG, LTR, PCS, etc.)"
+    },
+    "barcode": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Barcode value for scanning"
+    },
+    "specifications": {
+      "type": "object",
+      "description": "Category-specific attributes (brand, dimensions, technical specs, etc.)",
+      "properties": {}
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 1000
+    }
+  },
+  "required": [
+    "item_code",
+    "item_name",
+    "category",
+    "base_uom"
+  ]
+}

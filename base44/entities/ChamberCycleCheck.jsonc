@@ -1,0 +1,44 @@
+{
+  "name": "ChamberCycleCheck",
+  "type": "object",
+  "title": "Chamber Cycle Check",
+  "properties": {
+    "cycle_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "check_type": {
+      "type": "string",
+      "enum": [
+        "BEFORE_LOAD",
+        "IN_CYCLE",
+        "STAGE_END",
+        "END_CYCLE"
+      ]
+    },
+    "stage_name": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "due_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "checklist_run_id": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "completed_by": {
+      "type": "string",
+      "maxLength": 200
+    }
+  },
+  "required": [
+    "cycle_id",
+    "check_type"
+  ]
+}

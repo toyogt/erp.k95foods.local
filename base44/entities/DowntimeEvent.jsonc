@@ -1,0 +1,74 @@
+{
+  "name": "DowntimeEvent",
+  "type": "object",
+  "title": "Downtime Event",
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "station_type": {
+      "type": "string",
+      "enum": [
+        "FILLING",
+        "LABELLING",
+        "CHAMBER"
+      ]
+    },
+    "machine_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "wo_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "cycle_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "ended_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "started_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "ended_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "reason_code": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "duration_minutes": {
+      "type": "number",
+      "minimum": 0
+    },
+    "is_micro_stop": {
+      "type": "boolean",
+      "default": false
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 1000
+    },
+    "photo": {
+      "type": "string",
+      "format": "uri",
+      "maxLength": 500
+    }
+  },
+  "required": [
+    "event_id",
+    "station_type",
+    "machine_id"
+  ]
+}

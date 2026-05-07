@@ -1,0 +1,60 @@
+{
+  "name": "WarehouseDispatch",
+  "type": "object",
+  "title": "Warehouse Dispatch",
+  "properties": {
+    "dispatch_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "dispatch_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "dispatched_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "channel": {
+      "type": "string",
+      "enum": [
+        "SHOPIFY",
+        "AMAZON",
+        "PICKLIST",
+        "SALES_ORDER",
+        "OTHER"
+      ],
+      "default": "OTHER"
+    },
+    "order_reference": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "doc_photo": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "URL of dispatch document photo"
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 1000
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "DRAFT",
+        "CONFIRMED"
+      ],
+      "default": "DRAFT"
+    },
+    "shift_session_id": {
+      "type": "string",
+      "maxLength": 100
+    }
+  },
+  "required": [
+    "dispatch_id",
+    "dispatch_date"
+  ]
+}

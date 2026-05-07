@@ -1,0 +1,110 @@
+/**
+ * labelFieldComputer.js
+ * Computes all label POD field values from job + product data.
+ * Used by LblLabelPreviewCard and demo/bulk print command builders.
+ *
+ * POD Field definitions (based on Rynan middleware):
+ *   POD1  — MRP                              key: mrp               e.g. "69.00"
+ *   POD2  — MRP with USP                     key: mrpWithUsp        e.g. "₹69.00 (USP: ₹0.35/ml)"
+ *   POD3  — Incl. of all taxes               key: taxLine           e.g. "Incl. of all taxes"
+ *   POD4  — Batch No.                        key: batchNo           e.g. "GB46119-1"
+ *   POD5  — Manufacturing Date               key: mfgDate           DD/MM/YYYY
+ *   POD6  — Expiry Date/Use By Date          key: expiryDate        DD/MM/YYYY
+ *   POD7  — USP (Product variant)            key: usp               e.g. "0.35"
+ *   POD8  — Manufacturing Date (Product)     key: mfgDateOffset     DD/MM/YYYY  (MFG −1 day)
+ *   POD9  — Expiry Date/Use By Date (Prod.)  key: expiryDateOffset  DD/MM/YYYY  (Expiry −1 day)
+ *   POD10 — Net Weight                       key: netWeight         e.g. "200 ml"
+ *   POD11 — USP                              key: uspWithUnit       e.g. "₹0.35/ml"
+ *   POD12 — MRP and USP                      key: mrpAndUsp         e.g. "69.00 / 0.35"
+ */
+
+import moment from 'moment';
+
+/**
+ * @param {object} params
+ * @param {string|number} params.mrp           – MRP in INR (e.g. 69)
+ * @param {number}        params.mlPerBottle   – Volume in ml (e.g. 200)
+ * @param {string}        params.mfgDate       – DD/MM/YYYY or YYYY-MM-DD
+ * @param {string}        params.labellingDate – DD/MM/YYYY or YYYY-MM-DD (optional)
+ * @param {number}        params.shelfLifeDays – Shelf life value (number)
+ * @param {string}        params.shelfLifeUnit – Unit: 'days' | 'months' | 'years' (default: 'days')
+ * @param {string}        params.batchNo       – Batch number string
+ * @param {string}        params.productName   – Product display name
+ * @returns {object} computed label fields
+ */
+export function computeLabelFields({ mrp, mlPerBottle, mfgDate, labellingDate, shelfLifeDays, shelfLifeUnit, batchNo, productName }) {
+  // Parse MFG date
+  let mfgMoment = null;
+  if (mfgDate) {
+    mfgMoment = mfgDate.includes('/')
+      ? moment(mfgDate, 'DD/MM/YYYY', true)
+      : moment(mfgDate, 'YYYY-MM-DD', true);
+    if (!mfgMoment.isValid()) mfgMoment = null;
+  }
+
+  // Parse labelling date (stored for reference only — NOT used as expiry base)
+  let labellingMoment = null;
+  if (labellingDate) {
+    labellingMoment = labellingDate.includes('/')
+      ? moment(labellingDate, 'DD/MM/YYYY', true)
+      : moment(labellingDate, 'YYYY-MM-DD', true);
+    if (!labellingMoment.isValid()) labellingMoment = null;
+  }
+
+  // Expiry is ALWAYS calculated from Manufacturing Date (not labelling date)
+  const expiryBase = mfgMoment;
+
+  // Compute expiry — honour shelf life unit (days / months / years)
+  // Convention: "Best Before" = MFG + shelf_life − 1 day
+  // moment handles leap years and variable month lengths automatically.
+  // e.g. MFG 16/04/2026 + 12 months = 16/04/2027 − 1 day = 15/04/2027
+  // e.g. MFG 01/03/2024 + 12 months = 01/03/2025 − 1 day = 28/02/2025 (leap-safe)
+  let expiryMoment = null;
+  if (expiryBase && shelfLifeDays && Number(shelfLifeDays) > 0) {
+    const unit = shelfLifeUnit || 'months';
+    expiryMoment = expiryBase.clone().add(Number(shelfLifeDays), unit).subtract(1, 'day');
+  }
+
+  // USP = MRP / ml
+  let uspValue = null;
+  if (mrp && mlPerBottle && Number(mlPerBottle) > 0) {
+    uspValue = (Number(mrp) / Number(mlPerBottle)).toFixed(2);
+  }
+
+  const mrpFormatted = mrp ? Number(mrp).toFixed(2) : '';
+  const mfgFormatted = mfgMoment ? mfgMoment.format('DD/MM/YYYY') : '';
+  const expiryFormatted = expiryMoment ? expiryMoment.format('DD/MM/YYYY') : '';
+
+  // Offset dates (-1 day) for variant SKU (e.g. Swiggy Noice variant)
+  const mfgOffsetFormatted = mfgMoment ? mfgMoment.clone().subtract(1, 'day').format('DD/MM/YYYY') : '';
+  const expiryOffsetFormatted = expiryMoment ? expiryMoment.clone().subtract(1, 'day').format('DD/MM/YYYY') : '';
+
+  return {
+    // POD1
+    mrp: mrpFormatted,
+    // POD2
+    mrpWithUsp: mrpFormatted && uspValue ? `₹${mrpFormatted} (USP: ₹${uspValue}/ml)` : mrpFormatted ? `₹${mrpFormatted}` : '',
+    // POD3
+    taxLine: 'Incl. of all taxes',
+    // POD4
+    batchNo: batchNo || '',
+    // POD5
+    mfgDate: mfgFormatted,
+    // POD6
+    expiryDate: expiryFormatted,
+    // POD7
+    usp: uspValue || '',
+    // POD8
+    mfgDateOffset: mfgOffsetFormatted,
+    // POD9
+    expiryDateOffset: expiryOffsetFormatted,
+    // POD10
+    netWeight: mlPerBottle ? `${mlPerBottle} ml` : '',
+    // POD11
+    uspWithUnit: uspValue ? `₹${uspValue}/ml` : '',
+    // POD12
+    mrpAndUsp: mrpFormatted && uspValue ? `${mrpFormatted} / ${uspValue}` : '',
+    // Meta
+    productName: productName || '',
+  };
+}

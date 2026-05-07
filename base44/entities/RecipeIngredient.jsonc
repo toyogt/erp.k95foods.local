@@ -1,0 +1,53 @@
+{
+  "name": "RecipeIngredient",
+  "type": "object",
+  "title": "Recipe Ingredient",
+  "properties": {
+    "recipe_id": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "ingredient_code": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "ingredient_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "qty": {
+      "type": "number",
+      "minimum": 0
+    },
+    "uom": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "phase": {
+      "type": "string",
+      "enum": [
+        "BREW",
+        "SYRUP",
+        "MIX",
+        "FLAVOR",
+        "COLOR",
+        "PRESERVATIVE",
+        "OTHER"
+      ],
+      "default": "MIX"
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 500
+    }
+  },
+  "required": [
+    "recipe_id",
+    "ingredient_code",
+    "ingredient_name",
+    "qty",
+    "uom"
+  ]
+}

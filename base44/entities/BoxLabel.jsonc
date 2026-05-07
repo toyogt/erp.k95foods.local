@@ -1,0 +1,85 @@
+{
+  "name": "BoxLabel",
+  "type": "object",
+  "title": "Box Label",
+  "properties": {
+    "box_serial": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "item_code": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "product_name": {
+      "type": "string",
+      "maxLength": 300
+    },
+    "batch_no": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "mfg_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "exp_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "qr_payload": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "PRINTED_UNREGISTERED",
+        "ON_PALLET_REGISTERED",
+        "RECEIVED",
+        "IN_STOCK",
+        "OUT",
+        "VOID"
+      ],
+      "default": "PRINTED_UNREGISTERED"
+    },
+    "wo_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "product_code": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "label_variant_id": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "registered_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "registered_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "printed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "printed_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "current_location": {
+      "type": "string",
+      "maxLength": 200
+    }
+  },
+  "required": [
+    "box_serial",
+    "item_code",
+    "batch_no"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "name": "UnloadSession",
+  "type": "object",
+  "title": "Unload Session",
+  "properties": {
+    "session_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "ended_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "received_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "crate_count": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "OPEN",
+        "CLOSED"
+      ],
+      "default": "OPEN"
+    }
+  },
+  "required": [
+    "session_id"
+  ]
+}

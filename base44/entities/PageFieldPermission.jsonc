@@ -1,0 +1,35 @@
+{
+  "name": "PageFieldPermission",
+  "type": "object",
+  "title": "Page Field Permission",
+  "description": "Per-role, per-page capability map. Admins can grant or deny individual fields/actions on a page for each role. Overrides the hard-coded defaults in code.",
+  "properties": {
+    "page_key": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "description": "Page identifier (e.g. LblPlanningDashboard)"
+    },
+    "role_key": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "description": "AppRole.role_key this override applies to"
+    },
+    "capabilities": {
+      "type": "object",
+      "description": "Map of capability_key -> boolean (true = granted). Capability keys are defined per page in pageFieldPermissionsRegistry.js",
+      "additionalProperties": {
+        "type": "boolean"
+      }
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 500
+    }
+  },
+  "required": [
+    "page_key",
+    "role_key"
+  ]
+}

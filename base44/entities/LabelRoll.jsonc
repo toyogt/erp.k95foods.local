@@ -1,0 +1,52 @@
+{
+  "name": "LabelRoll",
+  "type": "object",
+  "title": "Label Roll",
+  "properties": {
+    "roll_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "sku_code": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Reference to ProductMaster.item_code"
+    },
+    "artwork_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Reference to LabelArtwork.artwork_id"
+    },
+    "declared_qty_labels": {
+      "type": "number",
+      "minimum": 0
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "AVAILABLE",
+        "ACTIVE",
+        "LEFTOVER",
+        "FINISHED",
+        "QUARANTINED"
+      ],
+      "default": "AVAILABLE"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "created_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 1000
+    }
+  },
+  "required": [
+    "roll_id"
+  ]
+}

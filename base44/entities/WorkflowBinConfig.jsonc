@@ -1,0 +1,34 @@
+{
+  "name": "WorkflowBinConfig",
+  "type": "object",
+  "title": "Workflow Bin Config",
+  "properties": {
+    "purpose": {
+      "type": "string",
+      "enum": [
+        "QC_HOLD",
+        "RECEIVING",
+        "REJECTED",
+        "RTV",
+        "DEFAULT_PUTAWAY"
+      ],
+      "description": "Purpose of this bin in the workflow"
+    },
+    "bin_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "bin_code": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "purpose",
+    "bin_id"
+  ]
+}

@@ -1,9 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import LblBatchSelect from '@/components/labelling/LblBatchSelect';
+import LblLabelPreviewCard from '@/components/labelling/LblLabelPreviewCard';
 import { GripVertical, Trash2, Lock, Unlock } from 'lucide-react';
 import moment from 'moment';
 
@@ -12,6 +15,31 @@ const BOTTLES_PER_CASE = 12;
 export default function LblJobRowEditor({ index, job, products, planDate, onUpdate, onRemove, dragHandleProps }) {
   const [casesManuallyEdited, setCasesManuallyEdited] = useState(false);
 
+  // Load full product master record for this SKU
+  const { data: productDetails = [] } = useQuery({
+    queryKey: ['product-detail-row', job?.sku_code],
+    queryFn: () => base44.entities.ProductMaster.filter({ item_code: job.sku_code }),
+    enabled: !!job?.sku_code,
+  });
+  const productMaster = productDetails[0];
+
+  // Load ALL active print templates
+  const { data: allTemplates = [] } = useQuery({
+    queryKey: ['lbl-print-templates-active'],
+    queryFn: () => base44.entities.LblPrintTemplate.filter({ is_active: true }),
+    staleTime: 60000,
+  });
+
+  // Load available templates for this SKU
+  const { data: skuTemplates = [] } = useQuery({
+    queryKey: ['sku-available-templates', job?.sku_code],
+    queryFn: async () => {
+      const mappings = await base44.entities.SKUPrintMapping.filter({ sku_code: job.sku_code, is_active: true });
+      return mappings || [];
+    },
+    enabled: !!job?.sku_code,
+  });
+
   const handleProductChange = (productId) => {
     const prod = products.find(p => p.id === productId);
     if (prod) {
@@ -19,8 +47,19 @@ export default function LblJobRowEditor({ index, job, products, planDate, onUpda
       onUpdate(index, 'product_name', prod.product_name || prod.item_name || '');
       onUpdate(index, 'bottle_type', prod.bottle_type || prod.container_type || '');
       onUpdate(index, 'mrp', prod.mrp || '');
+      // Template will auto-fetch via skuMapping query above
     }
   };
+
+  // Auto-assign default template when SKU mapping is fetched
+  useEffect(() => {
+    if (job.sku_code && !job.printer_template_id && skuTemplates.length > 0) {
+      const defaultMapping = skuTemplates.find(m => m.is_default);
+      if (defaultMapping?.template_id) {
+        onUpdate(index, 'printer_template_id', defaultMapping.template_id);
+      }
+    }
+  }, [job.sku_code, job.printer_template_id, skuTemplates, index, onUpdate]);
 
   const handleBottlesChange = (value) => {
     const bottles = Number(value) || 0;
@@ -114,13 +153,66 @@ export default function LblJobRowEditor({ index, job, products, planDate, onUpda
         </div>
       </div>
 
-      {/* Product summary */}
-      {job.product_name && (
-        <div className="flex gap-4 text-xs text-slate-500 flex-wrap">
-          <span>Product: {job.product_name}</span>
-          {job.bottle_type && <span>Bottle: {job.bottle_type}</span>}
-          {job.mrp && <span>MRP: ₹{job.mrp}</span>}
+      {/* Template Selection — choose from SKU's available templates */}
+      {job.sku_code && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <Label className="text-xs font-medium text-slate-700">Print Template <span className="text-red-500">*</span></Label>
+            {skuTemplates.length === 0 ? (
+              <div className="h-11 md:h-9 flex items-center px-3 bg-amber-50 border border-amber-200 rounded-md">
+                <span className="text-xs text-amber-700">No templates available for this SKU — configure in SKU Setup</span>
+              </div>
+            ) : (
+              <Select value={job.printer_template_id || ''} onValueChange={(val) => onUpdate(index, 'printer_template_id', val)}>
+                <SelectTrigger className="h-11 md:h-9">
+                  <SelectValue placeholder="Select a template" />
+                </SelectTrigger>
+                <SelectContent>
+                  {skuTemplates.map(mapping => {
+                    const template = allTemplates.find(t => t.id === mapping.template_id);
+                    return (
+                      <SelectItem key={mapping.id} value={mapping.template_id || ''}>
+                        {template?.name} {mapping.is_default ? '(Default)' : ''}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            )}
+            <p className="text-xs text-slate-500">Available templates for this SKU</p>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs font-medium text-slate-700">MRP (₹)</Label>
+            <Input
+              type="number"
+              value={job.mrp || ''}
+              onChange={e => onUpdate(index, 'mrp', e.target.value)}
+              placeholder="Auto-filled from product"
+              className="h-11 md:h-9"
+            />
+            <p className="text-xs text-slate-500">
+              {productMaster?.ml_per_bottle ? `${productMaster.ml_per_bottle} ml · USP shown in preview below` : 'Auto-filled from product master'}
+            </p>
+          </div>
         </div>
+      )}
+
+      {/* Label Preview Card — MRP, Mfg Date, Expiry (from mfg date + shelf life) set at plan time */}
+      {job.sku_code && (
+        <LblLabelPreviewCard
+          productName={job.product_name}
+          batchNo={job.batch_no}
+          mrp={job.mrp}
+          mlPerBottle={productMaster?.ml_per_bottle}
+          mfgDate={job.manufacturing_date ? moment(job.manufacturing_date).format('DD/MM/YYYY') : (planDate ? moment(planDate).format('DD/MM/YYYY') : '')}
+          labellingDate={''}
+          shelfLifeDays={productMaster?.shelf_life_days}
+          fssaiNo={productMaster?.fssai_no}
+          bottleType={job.bottle_type}
+          templateName={job.printer_template_id
+            ? allTemplates.find(t => t.id === job.printer_template_id)?.name
+            : productMaster?.label_template_4x6 || ''}
+        />
       )}
     </div>
   );

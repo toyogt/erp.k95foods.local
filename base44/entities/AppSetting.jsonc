@@ -1,0 +1,23 @@
+{
+  "name": "AppSetting",
+  "type": "object",
+  "title": "App Setting",
+  "properties": {
+    "key": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "value": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 500
+    }
+  },
+  "required": [
+    "key",
+    "value"
+  ]
+}

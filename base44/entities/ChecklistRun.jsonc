@@ -1,0 +1,70 @@
+{
+  "name": "ChecklistRun",
+  "type": "object",
+  "title": "Checklist Run",
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "template_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "version": {
+      "type": "number"
+    },
+    "station_type": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "stage": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "reference_type": {
+      "type": "string",
+      "enum": [
+        "Batch",
+        "Pallet",
+        "Crate",
+        "PackingWO",
+        "LineSession",
+        "FGPallet"
+      ]
+    },
+    "reference_id": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "responses_json": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "completed_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "PENDING",
+        "COMPLETED",
+        "FAILED"
+      ],
+      "default": "PENDING"
+    }
+  },
+  "required": [
+    "station_type",
+    "stage",
+    "reference_type",
+    "reference_id"
+  ]
+}

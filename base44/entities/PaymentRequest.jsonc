@@ -1,0 +1,78 @@
+{
+  "name": "PaymentRequest",
+  "type": "object",
+  "title": "Payment Request",
+  "properties": {
+    "payreq_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "inv_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "supplier_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "supplier_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "requested_amount": {
+      "type": "number",
+      "minimum": 0
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "DRAFT",
+        "SUBMITTED",
+        "APPROVED",
+        "REJECTED",
+        "PAID"
+      ],
+      "default": "DRAFT"
+    },
+    "requested_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "approved_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "approved_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "rejection_reason": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 2000
+    },
+    "erp_sync_status": {
+      "type": "string",
+      "enum": [
+        "NOT_SYNCED",
+        "QUEUED",
+        "SYNCED",
+        "FAILED"
+      ],
+      "default": "NOT_SYNCED"
+    },
+    "erp_name": {
+      "type": "string",
+      "maxLength": 100
+    }
+  },
+  "required": [
+    "payreq_id",
+    "inv_id",
+    "supplier_id"
+  ]
+}

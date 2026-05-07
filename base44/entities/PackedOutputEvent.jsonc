@@ -1,0 +1,79 @@
+{
+  "name": "PackedOutputEvent",
+  "type": "object",
+  "title": "Packed Output Event",
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "description": "Unique event identifier"
+    },
+    "pallet_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Reference to Pallet.pallet_id"
+    },
+    "sealed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When pallet was sealed"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "ACTIVE",
+        "VOID"
+      ],
+      "default": "ACTIVE",
+      "description": "ACTIVE=packed, VOID=unseal/cancelled"
+    },
+    "wo_id": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Reference to PackingWO.wo_id"
+    },
+    "allocation_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Reference to SKUAllocation.allocation_id"
+    },
+    "plan_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Reference to LiquidBatchPlan.plan_id"
+    },
+    "order_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Reference to ProductionOrder.order_id (nullable)"
+    },
+    "sku_code": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "SKU code (item_code)"
+    },
+    "boxes_count": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Number of boxes in this pallet for this SKU"
+    },
+    "bottles_per_box": {
+      "type": "number",
+      "minimum": 1,
+      "description": "Bottles per box"
+    },
+    "packed_bottles": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Computed: boxes_count * bottles_per_box"
+    }
+  },
+  "required": [
+    "event_id",
+    "pallet_id",
+    "sku_code",
+    "boxes_count",
+    "bottles_per_box"
+  ]
+}

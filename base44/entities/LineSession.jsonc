@@ -1,0 +1,68 @@
+{
+  "name": "LineSession",
+  "type": "object",
+  "title": "Line Session",
+  "properties": {
+    "session_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "wo_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "line_machine_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "ended_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "SETUP",
+        "READY",
+        "RUNNING",
+        "SOFT_STOP",
+        "HARD_STOP",
+        "COMPLETED"
+      ],
+      "default": "SETUP"
+    },
+    "reason": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "current_crate_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "crates_used": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0
+    },
+    "bottles_counted": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0
+    },
+    "cases_counted": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0
+    }
+  },
+  "required": [
+    "session_id",
+    "wo_id",
+    "line_machine_id"
+  ]
+}

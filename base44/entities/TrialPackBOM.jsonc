@@ -1,0 +1,32 @@
+{
+  "name": "TrialPackBOM",
+  "type": "object",
+  "title": "Trial Pack BOM",
+  "properties": {
+    "trial_pack_sku": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Trial pack SKU (ProductMaster.item_code where is_trial_pack=true)"
+    },
+    "component_sku": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Component SKU (ProductMaster.item_code) needed for this trial pack"
+    },
+    "bottles_required": {
+      "type": "number",
+      "minimum": 1,
+      "description": "Number of bottles of this component needed per trial pack"
+    },
+    "display_order": {
+      "type": "number",
+      "minimum": 1,
+      "default": 1
+    }
+  },
+  "required": [
+    "trial_pack_sku",
+    "component_sku",
+    "bottles_required"
+  ]
+}

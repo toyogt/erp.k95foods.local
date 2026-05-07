@@ -1,0 +1,92 @@
+{
+  "name": "BoxPallet",
+  "type": "object",
+  "title": "Box Pallet",
+  "properties": {
+    "pallet_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "DRAFT",
+        "OPEN",
+        "SEALED",
+        "HANDED_OVER",
+        "RECEIVED",
+        "QUARANTINE"
+      ],
+      "default": "OPEN"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "created_by_user": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "opened_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "sealed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "sealed_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "handover_from_user": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "handover_to_user": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "handover_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "staging_location": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "total_boxes": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0
+    },
+    "item_code": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "product_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "batch_no": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "handover_photo_pallet": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "handover_photo_manifest": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "handover_timestamp": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "pallet_id"
+  ]
+}

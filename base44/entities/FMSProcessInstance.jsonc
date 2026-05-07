@@ -1,0 +1,78 @@
+{
+  "name": "FMSProcessInstance",
+  "type": "object",
+  "title": "FMS Process Instance",
+  "properties": {
+    "process_id": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "process_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "completed",
+        "cancelled",
+        "on_hold"
+      ],
+      "default": "active"
+    },
+    "triggered_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "triggered_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "trigger_data": {
+      "type": "object",
+      "description": "Key-value pairs from trigger form"
+    },
+    "current_step_order": {
+      "type": "number",
+      "default": 1
+    },
+    "total_steps": {
+      "type": "number",
+      "default": 0
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "trigger_source": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "trigger_ref_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "ID of the record that originally started this process (e.g. Purchase Request ID)"
+    },
+    "ref_chain": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "All record IDs linked to this instance across steps (trigger_ref_id + every step completion ref). Used for matching auto-complete events to the right instance."
+    },
+    "title": {
+      "type": "string",
+      "maxLength": 300,
+      "description": "Human-readable title for this instance"
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 1000
+    }
+  },
+  "required": [
+    "process_id",
+    "process_name"
+  ]
+}

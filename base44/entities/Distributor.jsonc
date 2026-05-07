@@ -1,0 +1,71 @@
+{
+  "name": "Distributor",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "title": "Distributor Name"
+    },
+    "code": {
+      "type": "string",
+      "title": "Distributor Code"
+    },
+    "contact_name": {
+      "type": "string",
+      "title": "Contact Name"
+    },
+    "phone": {
+      "type": "string",
+      "title": "Phone"
+    },
+    "email": {
+      "type": "string",
+      "title": "Email"
+    },
+    "gstin": {
+      "type": "string",
+      "title": "GSTIN"
+    },
+    "pan": {
+      "type": "string",
+      "title": "PAN"
+    },
+    "address": {
+      "type": "string",
+      "title": "Address"
+    },
+    "region": {
+      "type": "string",
+      "title": "Region"
+    },
+    "credit_limit": {
+      "type": "number",
+      "title": "Credit Limit (INR)"
+    },
+    "utilized_limit": {
+      "type": "number",
+      "title": "Utilized Credit (INR)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "inactive",
+        "suspended"
+      ],
+      "title": "Status"
+    },
+    "payment_terms": {
+      "type": "string",
+      "title": "Payment Terms"
+    },
+    "notes": {
+      "type": "string",
+      "title": "Notes"
+    }
+  },
+  "required": [
+    "name",
+    "status"
+  ]
+}

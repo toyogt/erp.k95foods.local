@@ -1,0 +1,147 @@
+{
+  "name": "ReconciliationSnapshot",
+  "type": "object",
+  "title": "Daily Reconciliation Snapshot",
+  "description": "Daily mismatch detection across modules",
+  "properties": {
+    "snapshot_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of reconciliation"
+    },
+    "module": {
+      "type": "string",
+      "enum": [
+        "PRODUCTION",
+        "WAREHOUSE",
+        "LABELLING",
+        "GRN",
+        "SYNC",
+        "APPROVAL"
+      ],
+      "description": "Module being reconciled"
+    },
+    "reconciliation_type": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Type of reconciliation (planned_vs_produced, stock_vs_pallet, etc.)"
+    },
+    "entity_type": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Entity being reconciled (Batch, Pallet, Lot, etc.)"
+    },
+    "entity_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "ID of entity"
+    },
+    "entity_code": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "User-friendly code (batch ID, pallet ID, etc.)"
+    },
+    "sku": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Product code"
+    },
+    "shift_id": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Associated shift"
+    },
+    "warehouse_id": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Associated warehouse"
+    },
+    "expected_value": {
+      "type": "number",
+      "description": "What we expected"
+    },
+    "actual_value": {
+      "type": "number",
+      "description": "What we found"
+    },
+    "difference": {
+      "type": "number",
+      "description": "Expected - Actual"
+    },
+    "variance_percent": {
+      "type": "number",
+      "description": "% variance"
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "critical",
+        "high",
+        "medium",
+        "low"
+      ],
+      "default": "medium",
+      "description": "How serious the mismatch is"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "open",
+        "investigating",
+        "resolved",
+        "false_positive"
+      ],
+      "default": "open",
+      "description": "Resolution status"
+    },
+    "root_cause": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "Why the mismatch occurred"
+    },
+    "corrective_action": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "What was done to fix it"
+    },
+    "details": {
+      "type": "object",
+      "description": "Detailed breakdown (e.g., planned qty, produced qty, rejected qty)"
+    },
+    "assigned_to": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Email of person assigned to resolve"
+    },
+    "assigned_to_name": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Name of assignee"
+    },
+    "resolved_by": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Email of resolver"
+    },
+    "resolved_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When resolved"
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Additional notes"
+    }
+  },
+  "required": [
+    "snapshot_date",
+    "module",
+    "reconciliation_type",
+    "entity_type",
+    "entity_id",
+    "expected_value",
+    "actual_value",
+    "difference"
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "name": "LabelRollEvent",
+  "type": "object",
+  "title": "Label Roll Event",
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "roll_id": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "wo_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "line_machine_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "RECEIVED",
+        "INSTALLED",
+        "SETUP_WASTE",
+        "TEST_PRINT",
+        "RUN_WASTE",
+        "REMOVED_LEFTOVER",
+        "REMOVED_FINISHED",
+        "ADJUSTMENT"
+      ]
+    },
+    "qty_labels": {
+      "type": "number"
+    },
+    "reason": {
+      "type": "string",
+      "maxLength": 1000
+    },
+    "photo": {
+      "type": "string",
+      "format": "uri",
+      "maxLength": 500
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "created_by": {
+      "type": "string",
+      "maxLength": 200
+    }
+  },
+  "required": [
+    "event_id",
+    "roll_id",
+    "event_type"
+  ]
+}

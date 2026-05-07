@@ -40,6 +40,7 @@
       "default": true,
       "description": "If false, recipes must use a specific brand item; substitutions not allowed"
     },
+<<<<<<< HEAD
     "batch_number": {
       "type": "string",
       "maxLength": 100,
@@ -55,6 +56,8 @@
       "maxLength": 20,
       "description": "Manufacture date in DD/MM/YYYY format"
     },
+=======
+>>>>>>> kunal/main
     "legacy_brand_name": {
       "type": "string",
       "maxLength": 200,

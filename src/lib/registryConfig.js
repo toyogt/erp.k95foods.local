@@ -19,6 +19,7 @@ import {
   Activity, BarChart4, AlertCircle, AlertTriangle,
   Store, MapPin, QrCode, ArrowLeftRight, TrendingDown,
   RotateCcw, SlidersHorizontal, CalendarDays, Eye,
+  Send, UserCheck, UserPlus, UserMinus,
 } from 'lucide-react';
 
 /**
@@ -64,6 +65,8 @@ export const pageRegistry = [
   { pageKey: 'LblEventLogPage', title: 'Event Log', moduleKey: 'LBL_DEPT', icon: ScrollText, roles: ['admin', 'lbl_supervisor', 'production_manager'], sortOrder: 11 },
   { pageKey: 'LblMasterData', title: 'Lines & Printers', moduleKey: 'LBL_DEPT', icon: Settings, roles: ['admin', 'lbl_supervisor', 'production_manager'], sortOrder: 12 },
   { pageKey: 'LblDocTypePermissions', title: 'Document Permissions', moduleKey: 'LBL_DEPT', icon: ShieldCheck, roles: ['admin'], adminOnly: true, sortOrder: 13 },
+  { pageKey: 'RynanPrinterCenter', title: 'Rynan Printer Center', moduleKey: 'LBL_DEPT', icon: Printer, roles: ['admin', 'lbl_supervisor', 'production_manager'], sortOrder: 14 },
+  { pageKey: 'BoxLabelTemplateManager', title: 'Box Label Templates', moduleKey: 'LBL_DEPT', icon: Layers, roles: ['admin', 'lbl_supervisor', 'production_manager'], sortOrder: 15 },
 
   // ─── WAREHOUSE & FG ───
   { pageKey: 'TransferReceiving', title: 'Transfer / Receiving', moduleKey: 'WAREHOUSE', icon: Truck, roles: ['admin', 'labelling_receiver', 'labelling_supervisor', 'warehouse_ops', 'user'] },
@@ -121,6 +124,12 @@ export const pageRegistry = [
   { pageKey: 'TraceabilityExplorer', title: 'Traceability Explorer', moduleKey: 'ADMIN', icon: Search, roles: ['admin', 'production_manager', 'qa', 'warehouse_ops', 'user'] },
   { pageKey: 'ReconciliationDashboard', title: 'Reconciliation Dashboard', moduleKey: 'ADMIN', icon: AlertTriangle, roles: ['admin', 'production_manager', 'warehouse_ops', 'supervisor', 'user'] },
 
+  // ─── PRINT MANAGEMENT ───
+  { pageKey: 'PrintManagementDashboard', title: 'Print Dashboard', moduleKey: 'PRINT_MGMT', icon: Printer, roles: ['admin', 'production_manager', 'lbl_supervisor', 'user'], sortOrder: 1 },
+  { pageKey: 'PrintJobCreate', title: 'New Print Job', moduleKey: 'PRINT_MGMT', icon: Send, roles: ['admin', 'production_manager', 'lbl_supervisor', 'lbl_operator', 'user'], sortOrder: 2 },
+  { pageKey: 'PrintJobs', title: 'Print Jobs', moduleKey: 'PRINT_MGMT', icon: ListChecks, roles: ['admin', 'production_manager', 'lbl_supervisor', 'lbl_operator', 'user'], sortOrder: 3 },
+  { pageKey: 'PrintManagementAdmin', title: 'Print Admin', moduleKey: 'PRINT_MGMT', icon: Settings, roles: ['admin'], adminOnly: true, sortOrder: 10 },
+
   // ─── STORE MANAGEMENT ───
   { pageKey: 'SMSDashboard',       title: 'Store Dashboard',    moduleKey: 'STORE', icon: Store,           roles: ['admin', 'store_manager', 'store_receiver', 'user'], sortOrder: 1 },
   { pageKey: 'GateEntry',          title: 'Gate Entry',         moduleKey: 'STORE', icon: ShieldCheck,     roles: ['admin', 'security_guard', 'store_receiver', 'user'], sortOrder: 2 },
@@ -154,6 +163,7 @@ export const pageRegistry = [
   { pageKey: 'SalesInvoices',          title: 'Invoices',             moduleKey: 'SALES', icon: FileText,     roles: ['admin', 'sales_manager', 'sales_user', 'user'] },
   { pageKey: 'SalesSKUManagement',      title: 'Products (SKU)',        moduleKey: 'SALES', icon: PackageSearch, roles: ['admin', 'sales_manager', 'sales_user', 'user'] },
 
+<<<<<<< HEAD
   // ─── ALL ITEMS ───
   { pageKey: 'AllItemsIngredients',   title: 'Ingredients',      moduleKey: 'ALL_ITEMS', icon: Zap,           roles: ['admin', 'store_manager', 'production_manager', 'user'], sortOrder: 1 },
   { pageKey: 'AllItemsUOM',           title: 'Units of Measure', moduleKey: 'ALL_ITEMS', icon: Tag,           roles: ['admin', 'store_manager', 'production_manager', 'user'], sortOrder: 2 },
@@ -162,6 +172,27 @@ export const pageRegistry = [
   { pageKey: 'AllItemsContainers',    title: 'Containers',       moduleKey: 'ALL_ITEMS', icon: PackageSearch,  roles: ['admin', 'store_manager', 'production_manager', 'user'], sortOrder: 5 },
   { pageKey: 'AllItemsCaps',          title: 'Caps',             moduleKey: 'ALL_ITEMS', icon: Archive,        roles: ['admin', 'store_manager', 'production_manager', 'user'], sortOrder: 6 },
   { pageKey: 'AllItemsFlavours',      title: 'Flavours',         moduleKey: 'ALL_ITEMS', icon: Droplets,       roles: ['admin', 'store_manager', 'production_manager', 'user'], sortOrder: 7 },
+=======
+  // ─── HR ───
+  { pageKey: 'HREmployees', title: 'Employees', moduleKey: 'HR', icon: Users, roles: ['admin', 'hr_manager', 'hr_supervisor', 'hr_user'], sortOrder: 0 },
+  { pageKey: 'HRAttendanceLogs', title: 'Attendance Logs', moduleKey: 'HR', icon: UserCheck, roles: ['admin', 'hr_manager', 'hr_supervisor', 'hr_user', 'user'], sortOrder: 1 },
+  { pageKey: 'HRAttendanceSummary', title: 'Attendance Summary', moduleKey: 'HR', icon: ClipboardList, roles: ['admin', 'hr_manager', 'hr_supervisor', 'hr_user'], sortOrder: 2 },
+  { pageKey: 'HREmployeeDailyHours', title: 'Employee Daily Hours', moduleKey: 'HR', icon: BarChart3, roles: ['admin', 'hr_manager', 'hr_supervisor', 'hr_user', 'supervisor'], sortOrder: 3 },
+  { pageKey: 'HRManualPunchRequest', title: 'Punch Requests', moduleKey: 'HR', icon: ClipboardList, roles: ['admin', 'hr_manager', 'hr_supervisor', 'hr_user', 'user'], sortOrder: 4 },
+  { pageKey: 'HRManualPunchApprovals', title: 'Punch Approvals', moduleKey: 'HR', icon: ClipboardCheck, roles: ['admin', 'hr_manager', 'hr_supervisor', 'supervisor'], sortOrder: 5 },
+  { pageKey: 'HRAttendanceAlerts', title: 'Attendance Alerts', moduleKey: 'HR', icon: Bell, roles: ['admin', 'hr_manager', 'hr_supervisor', 'hr_user'], sortOrder: 6 },
+  { pageKey: 'HRShiftTimings', title: 'Shift Timings', moduleKey: 'HR', icon: Settings, roles: ['admin', 'hr_manager'], sortOrder: 10 },
+  { pageKey: 'HRHolidays', title: 'Holidays', moduleKey: 'HR', icon: CalendarDays, roles: ['admin', 'hr_manager'], sortOrder: 11 },
+  { pageKey: 'HRDepartments', title: 'Departments', moduleKey: 'HR', icon: Users, roles: ['admin', 'hr_manager', 'hr_supervisor'], sortOrder: 20 },
+  { pageKey: 'HRDesignations', title: 'Designations', moduleKey: 'HR', icon: Tag, roles: ['admin', 'hr_manager', 'hr_supervisor'], sortOrder: 21 },
+  { pageKey: 'HRBranches', title: 'Branches', moduleKey: 'HR', icon: MapPin, roles: ['admin', 'hr_manager', 'hr_supervisor'], sortOrder: 22 },
+  { pageKey: 'HRCompanies', title: 'Companies', moduleKey: 'HR', icon: Factory, roles: ['admin', 'hr_manager'], sortOrder: 23 },
+  { pageKey: 'HRLeaveTypes', title: 'Leave Types', moduleKey: 'HR', icon: CalendarDays, roles: ['admin', 'hr_manager'], sortOrder: 24 },
+  { pageKey: 'HRNotificationSettings', title: 'Notification Settings', moduleKey: 'HR', icon: Bell, roles: ['admin', 'hr_manager'], sortOrder: 25 },
+  { pageKey: 'HRCandidateLeads', title: 'Candidate Leads', moduleKey: 'HR', icon: UserPlus, roles: ['admin', 'hr_manager', 'hr_supervisor', 'hr_user'], sortOrder: 30 },
+  { pageKey: 'HRAttritionDashboard', title: 'Attrition Analytics', moduleKey: 'HR', icon: TrendingDown, roles: ['admin', 'hr_manager', 'hr_supervisor', 'hr_user'], sortOrder: 31 },
+  { pageKey: 'HRTerminationForm', title: 'Termination Form', moduleKey: 'HR', icon: UserMinus, roles: ['admin', 'hr_manager', 'hr_supervisor'], sortOrder: 32, hideFromNav: true },
+>>>>>>> kunal/main
 
   // ─── USER MANAGEMENT ───
   { pageKey: 'UserManagement', title: 'Users', moduleKey: 'USER_MANAGEMENT', icon: Users, roles: ['admin'], adminOnly: true },
@@ -281,6 +312,15 @@ export const moduleRegistry = [
     sortOrder: 9,
   },
   {
+    moduleKey: 'HR',
+    label: 'Human Resources',
+    icon: UserCheck,
+    color: 'text-amber-600',
+    bgColor: 'bg-amber-50',
+    adminOnly: false,
+    sortOrder: 50,
+  },
+  {
     moduleKey: 'USER_MANAGEMENT',
     label: 'User Management',
     icon: Users,
@@ -288,6 +328,15 @@ export const moduleRegistry = [
     bgColor: 'bg-indigo-50',
     adminOnly: true,
     sortOrder: 99,
+  },
+  {
+    moduleKey: 'PRINT_MGMT',
+    label: 'Print Management',
+    icon: Printer,
+    color: 'text-cyan-600',
+    bgColor: 'bg-cyan-50',
+    adminOnly: false,
+    sortOrder: 3.7,
   },
   {
     moduleKey: 'SALES',
@@ -371,6 +420,7 @@ export function getVisiblePagesInModule(moduleKey, userRole) {
   const isAdmin = userRole === 'admin';
   
   return pages.filter(p => {
+    if (p.hideFromNav) return false;
     if (p.adminOnly && !isAdmin) return false;
     return p.roles.includes(userRole) || p.roles.includes('user');
   }).sort((a, b) => (a.sortOrder || 99) - (b.sortOrder || 99));

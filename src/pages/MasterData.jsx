@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 // Advanced masters (SKUs, Recipes, Ingredients, BoxTypes, UOMs, Artworks) live in side-menu pages
 import ContainerTypeManager from '@/components/master/ContainerTypeManager';
 import CapTypeManager from '@/components/master/CapTypeManager';
+import BoxTypeManager from '@/components/master/BoxTypeManager';
 import LocationManager from '@/components/master/LocationManager';
 import MachineManager from '@/components/master/MachineManager';
 import AppSettingsManager from '@/components/master/AppSettingsManager.jsx';
@@ -54,6 +55,7 @@ export default function MasterData() {
             {isAdmin   && <TabsTrigger value="sku-barcodes"  className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">SKU Barcodes</TabsTrigger>}
             <TabsTrigger value="bottles"    className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Containers</TabsTrigger>
             <TabsTrigger value="caps"       className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Caps</TabsTrigger>
+            {isAdmin && <TabsTrigger value="boxtypes"   className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Box Types</TabsTrigger>}
             <TabsTrigger value="locations"  className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Locations</TabsTrigger>
             <TabsTrigger value="machines"   className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">Machines</TabsTrigger>
             <TabsTrigger value="wos"        className="rounded-lg text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm px-3">WOs</TabsTrigger>
@@ -71,6 +73,7 @@ export default function MasterData() {
         {isAdmin   && <TabsContent value="sku-barcodes"  className="mt-4"><SKUCustomerBarcodeManager /></TabsContent>}
         <TabsContent value="bottles"    className="mt-4"><ContainerTypeManager user={user} /></TabsContent>
         <TabsContent value="caps"       className="mt-4"><CapTypeManager user={user} /></TabsContent>
+        {isAdmin && <TabsContent value="boxtypes"   className="mt-4"><BoxTypeManager user={user} /></TabsContent>}
         <TabsContent value="locations"  className="mt-4"><LocationManager user={user} /></TabsContent>
         <TabsContent value="machines"   className="mt-4"><MachineManager user={user} /></TabsContent>
         <TabsContent value="wos"        className="mt-4"><PackingWOManager /></TabsContent>

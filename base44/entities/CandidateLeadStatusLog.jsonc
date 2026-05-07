@@ -1,0 +1,55 @@
+{
+  "name": "CandidateLeadStatusLog",
+  "type": "object",
+  "title": "Candidate Lead Status Change Log",
+  "description": "Records every status transition for a CandidateLead with timestamp and user \u2014 used to build the candidate journey timeline and stage-duration analytics.",
+  "properties": {
+    "candidate_lead_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "description": "ID of the CandidateLead this entry belongs to"
+    },
+    "candidate_name": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Snapshot of candidate name at time of change"
+    },
+    "old_status": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Status before the change (empty for the first 'created' entry)"
+    },
+    "new_status": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50,
+      "description": "Status after the change"
+    },
+    "changed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the status changed"
+    },
+    "changed_by": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Email of the user who made the change"
+    },
+    "duration_in_previous_status_minutes": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Minutes the candidate spent in old_status before this transition"
+    },
+    "remarks": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Optional remarks about why the status changed"
+    }
+  },
+  "required": [
+    "candidate_lead_id",
+    "new_status",
+    "changed_at"
+  ]
+}

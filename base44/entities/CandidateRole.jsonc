@@ -1,0 +1,21 @@
+{
+  "name": "CandidateRole",
+  "type": "object",
+  "title": "Candidate Role of Interest",
+  "description": "Master list of job roles candidates can express interest in. Auto-populated when HR adds a new value via the smart dropdown.",
+  "properties": {
+    "role_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "Unique role name (e.g. Helper, Packing, Loading, Operator)"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "role_name"
+  ]
+}

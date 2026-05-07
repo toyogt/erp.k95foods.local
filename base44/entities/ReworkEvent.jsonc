@@ -1,0 +1,58 @@
+{
+  "name": "ReworkEvent",
+  "type": "object",
+  "title": "Rework Event",
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "tote_id": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "wo_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "line_machine_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "reason_code": {
+      "type": "string",
+      "enum": [
+        "WRONG_LABEL",
+        "SKEWED_LABEL",
+        "BAD_PRINT",
+        "DAMAGE",
+        "OTHER"
+      ],
+      "default": "SKEWED_LABEL"
+    },
+    "qty_bottles": {
+      "type": "number",
+      "minimum": 0
+    },
+    "photo": {
+      "type": "string",
+      "format": "uri",
+      "maxLength": 500
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "created_by": {
+      "type": "string",
+      "maxLength": 200
+    }
+  },
+  "required": [
+    "event_id",
+    "tote_id",
+    "reason_code",
+    "qty_bottles"
+  ]
+}

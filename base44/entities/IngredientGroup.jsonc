@@ -1,0 +1,44 @@
+{
+  "name": "IngredientGroup",
+  "type": "object",
+  "title": "Ingredient Group",
+  "properties": {
+    "group_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50,
+      "description": "Unique group identifier (auto-generated)"
+    },
+    "group_code": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 2,
+      "description": "Exactly 2 uppercase letters e.g. FL, AC, SW"
+    },
+    "group_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "description": "e.g. Flavour, Acid, Sweetener"
+    },
+    "next_seq": {
+      "type": "number",
+      "minimum": 1,
+      "default": 1,
+      "description": "Next sequence number for short_code generation"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 500
+    }
+  },
+  "required": [
+    "group_id",
+    "group_code",
+    "group_name"
+  ]
+}

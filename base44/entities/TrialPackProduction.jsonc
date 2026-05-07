@@ -1,0 +1,83 @@
+{
+  "name": "TrialPackProduction",
+  "type": "object",
+  "title": "Trial Pack Production",
+  "properties": {
+    "production_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "trial_pack_sku": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "trial_pack_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "quantity_produced": {
+      "type": "number",
+      "minimum": 1
+    },
+    "batch_code": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Generated trial pack batch"
+    },
+    "mfg_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Oldest component manufacturing date"
+    },
+    "exp_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Oldest component expiry date"
+    },
+    "source_lots": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Source lot IDs used"
+    },
+    "source_batches": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Source batch codes used"
+    },
+    "production_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "produced_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "lot_id": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Created warehouse lot for trial packs"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "DRAFT",
+        "CONFIRMED"
+      ],
+      "default": "DRAFT"
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 1000
+    }
+  },
+  "required": [
+    "production_id",
+    "trial_pack_sku",
+    "quantity_produced"
+  ]
+}

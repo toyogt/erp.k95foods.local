@@ -1,0 +1,32 @@
+{
+  "name": "WorkstationFallback",
+  "type": "object",
+  "title": "Workstation Fallback",
+  "description": "Ranked fallback chain. Routing engine tries fallback workstations in ascending rank order.",
+  "properties": {
+    "primary_workstation_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "fallback_workstation_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "rank": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 999
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "primary_workstation_id",
+    "fallback_workstation_id",
+    "rank"
+  ]
+}

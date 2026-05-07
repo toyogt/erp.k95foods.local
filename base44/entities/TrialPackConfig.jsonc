@@ -1,0 +1,40 @@
+{
+  "name": "TrialPackConfig",
+  "type": "object",
+  "title": "Trial Pack Configuration",
+  "properties": {
+    "trial_pack_sku": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "display_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "total_bottles": {
+      "type": "number",
+      "minimum": 1,
+      "description": "Total bottles in trial pack"
+    },
+    "label_template_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Ryan printer template ID"
+    },
+    "print_variables": {
+      "type": "object",
+      "description": "Dynamic label field mapping"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "trial_pack_sku",
+    "display_name",
+    "total_bottles"
+  ]
+}

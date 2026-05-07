@@ -1,0 +1,35 @@
+{
+  "name": "LabelVariant",
+  "type": "object",
+  "title": "Label Variant",
+  "properties": {
+    "label_variant_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "product_code": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "brand": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "mrp_variant": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "label_template_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "label_variant_id"
+  ]
+}

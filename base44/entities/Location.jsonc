@@ -1,0 +1,29 @@
+{
+  "name": "Location",
+  "type": "object",
+  "title": "Location",
+  "properties": {
+    "code": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "display_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "zone": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "code",
+    "display_name"
+  ]
+}

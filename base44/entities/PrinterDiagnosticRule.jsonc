@@ -1,0 +1,91 @@
+{
+  "name": "PrinterDiagnosticRule",
+  "type": "object",
+  "title": "Printer Diagnostic Rule",
+  "description": "Configurable rules for intelligent printer error diagnosis. Rules are matched against LblPrintCommand logs to provide actionable suggestions to operators.",
+  "properties": {
+    "rule_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50,
+      "description": "Unique rule identifier"
+    },
+    "rule_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "Human-readable rule name"
+    },
+    "error_pattern": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "Regex or substring to match against error_message or response payload fields"
+    },
+    "match_field": {
+      "type": "string",
+      "enum": [
+        "error_message",
+        "response_payload_error",
+        "printer_protocol_error_code",
+        "status",
+        "any"
+      ],
+      "default": "error_message",
+      "description": "Which field on LblPrintCommand to apply error_pattern against"
+    },
+    "context_condition": {
+      "type": "string",
+      "enum": [
+        "none",
+        "prior_star_failed",
+        "prior_star_succeeded",
+        "prior_network_error",
+        "all_commands_failed",
+        "zero_out_of_zero",
+        "count_not_incremented"
+      ],
+      "default": "none",
+      "description": "Additional context check from recent command history"
+    },
+    "recommendation_type": {
+      "type": "string",
+      "enum": [
+        "Connectivity",
+        "Template",
+        "PrinterState",
+        "DataIssue",
+        "Consumable",
+        "General"
+      ],
+      "default": "General",
+      "description": "Category for UI colour coding"
+    },
+    "suggested_action": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "Short, actionable instruction shown prominently to operator"
+    },
+    "diagnostic_message": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Detailed explanation of probable cause"
+    },
+    "confidence_score": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 100,
+      "default": 50,
+      "description": "Higher score = higher priority when multiple rules match"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "rule_id",
+    "rule_name",
+    "suggested_action",
+    "diagnostic_message"
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "name": "BoxLabelContent",
+  "type": "object",
+  "title": "Box Label Content",
+  "properties": {
+    "box_serial": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "item_code": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "batch_no": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "mfg_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "exp_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "qty_bottles": {
+      "type": "number",
+      "minimum": 0
+    }
+  },
+  "required": [
+    "box_serial",
+    "item_code",
+    "qty_bottles"
+  ]
+}

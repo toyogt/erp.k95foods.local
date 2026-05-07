@@ -1,0 +1,43 @@
+{
+  "name": "WorkflowChecklistConfig",
+  "type": "object",
+  "title": "Workflow Checklist Config",
+  "properties": {
+    "doc_type": {
+      "type": "string",
+      "enum": [
+        "MR",
+        "PO",
+        "GRN",
+        "QC",
+        "INVOICE",
+        "PAYMENT"
+      ],
+      "description": "Document type"
+    },
+    "step": {
+      "type": "string",
+      "enum": [
+        "SUBMIT",
+        "APPROVAL",
+        "RECEIVE",
+        "QC",
+        "PAYMENT"
+      ],
+      "description": "Workflow step"
+    },
+    "checklist_template_id": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "doc_type",
+    "step",
+    "checklist_template_id"
+  ]
+}

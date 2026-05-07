@@ -1,0 +1,146 @@
+{
+  "name": "OfflineTransaction",
+  "type": "object",
+  "title": "Offline Transaction Queue",
+  "properties": {
+    "transaction_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "description": "Unique transaction identifier"
+    },
+    "idempotency_key": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "Key to prevent duplicate transactions on replay"
+    },
+    "user_id": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "User email who created transaction"
+    },
+    "device_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Device identifier (prevents cross-device conflicts)"
+    },
+    "site_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Factory/site identifier"
+    },
+    "module": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Module name (PRODUCTION, WAREHOUSE, QC, etc.)"
+    },
+    "entity_type": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Entity being modified (Crate, Pallet, StockBalance, etc.)"
+    },
+    "entity_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "ID of entity being modified (if known)"
+    },
+    "action_type": {
+      "type": "string",
+      "enum": [
+        "create",
+        "update",
+        "delete",
+        "approve",
+        "reject",
+        "receive",
+        "dispatch",
+        "scan",
+        "status_change",
+        "custom"
+      ],
+      "description": "Type of action being performed"
+    },
+    "payload": {
+      "type": "object",
+      "description": "Transaction payload - what data to sync"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "queued",
+        "processing",
+        "confirmed",
+        "failed",
+        "conflict",
+        "cancelled"
+      ],
+      "default": "queued",
+      "description": "Current sync status"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When transaction was created (offline)"
+    },
+    "synced_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When transaction was successfully synced"
+    },
+    "retry_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of sync attempts"
+    },
+    "last_error": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "Last error message from failed sync"
+    },
+    "error_code": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Error classification: NETWORK, VALIDATION, CONFLICT, TIMEOUT, SERVER_ERROR"
+    },
+    "conflict_details": {
+      "type": "object",
+      "description": "Details if status is 'conflict': {field, local_value, server_value, resolution}"
+    },
+    "sync_result": {
+      "type": "object",
+      "description": "Result from successful sync: {created_id, updated_id, fms_event_fired}"
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "Supervisor notes on conflict resolution"
+    },
+    "supervisor_action_by": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Supervisor email who resolved conflict"
+    },
+    "supervisor_action_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When supervisor took action"
+    },
+    "is_critical": {
+      "type": "boolean",
+      "default": false,
+      "description": "Critical factory transaction requiring audit"
+    }
+  },
+  "required": [
+    "transaction_id",
+    "idempotency_key",
+    "user_id",
+    "device_id",
+    "module",
+    "entity_type",
+    "action_type",
+    "payload",
+    "created_at"
+  ]
+}

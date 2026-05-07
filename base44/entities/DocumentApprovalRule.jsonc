@@ -1,0 +1,64 @@
+{
+  "name": "DocumentApprovalRule",
+  "type": "object",
+  "title": "Document Approval Rule",
+  "properties": {
+    "doc_type": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Entity name e.g. PurchaseRequest, PurchaseOrder, GRNHeader, QCInspection, SupplierInvoice, PaymentRequest"
+    },
+    "from_state": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Document status to transition FROM (e.g. SUBMITTED, RECEIVED)"
+    },
+    "to_state": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Document status to transition TO (e.g. APPROVED, REJECTED)"
+    },
+    "action_label": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Button label shown to user (e.g. Approve, Reject, Send Back)"
+    },
+    "action_style": {
+      "type": "string",
+      "enum": [
+        "approve",
+        "reject",
+        "neutral"
+      ],
+      "default": "neutral",
+      "description": "Controls button color: approve=green, reject=red, neutral=outline"
+    },
+    "allowed_roles": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of role_keys that can perform this transition"
+    },
+    "require_reason": {
+      "type": "boolean",
+      "default": false,
+      "description": "If true, user must enter a reason/note before the action"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "sort_order": {
+      "type": "number",
+      "default": 10
+    }
+  },
+  "required": [
+    "doc_type",
+    "from_state",
+    "to_state",
+    "action_label",
+    "allowed_roles"
+  ]
+}

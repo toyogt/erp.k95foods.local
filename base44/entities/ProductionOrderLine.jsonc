@@ -1,0 +1,59 @@
+{
+  "name": "ProductionOrderLine",
+  "type": "object",
+  "title": "Production Order Line",
+  "properties": {
+    "order_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Reference to ProductionOrder.order_id"
+    },
+    "sku_code": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "SKU code from ProductMaster.item_code"
+    },
+    "target_bottles_requested": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Target bottles requested"
+    },
+    "bottles_per_box": {
+      "type": "number",
+      "minimum": 1,
+      "description": "Snapshot of bottles per box from SKU"
+    },
+    "target_boxes": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Computed: ceil(target_bottles_requested / bottles_per_box)"
+    },
+    "required_bottles": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Computed: target_boxes * bottles_per_box"
+    },
+    "produced_bottles_packed": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0,
+      "description": "Packed bottles from sealed pallets"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "OPEN",
+        "PARTIAL",
+        "DONE"
+      ],
+      "default": "OPEN",
+      "description": "Line status: DONE when produced >= required"
+    }
+  },
+  "required": [
+    "order_id",
+    "sku_code",
+    "target_bottles_requested",
+    "bottles_per_box"
+  ]
+}

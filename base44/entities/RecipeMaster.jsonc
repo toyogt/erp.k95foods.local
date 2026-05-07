@@ -1,0 +1,34 @@
+{
+  "name": "RecipeMaster",
+  "type": "object",
+  "title": "Recipe Master",
+  "properties": {
+    "recipe_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "recipe_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "version": {
+      "type": "number",
+      "minimum": 1,
+      "default": 1
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 1000
+    }
+  },
+  "required": [
+    "recipe_id",
+    "recipe_name"
+  ]
+}

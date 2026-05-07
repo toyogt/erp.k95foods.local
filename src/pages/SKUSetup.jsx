@@ -4,12 +4,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Save, CheckCircle2, AlertTriangle, Plus, Pencil, Copy, X, ExternalLink, Info } from 'lucide-react';
+import { Loader2, Save, CheckCircle2, AlertTriangle, Plus, Pencil, Copy, X, ExternalLink, Info, ArrowLeft } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import SKUList from '@/components/sku/SKUList';
 import SetupChecklist, { isSetupComplete } from '@/components/sku/SetupChecklist';
-import PayloadMapBuilder from '@/components/sku/PayloadMapBuilder';
+import PODFieldMappingEditor from '@/components/labelling/PODFieldMappingEditor';
+
+import SKUTemplatePODMappingPreview from '@/components/sku/SKUTemplatePODMappingPreview';
 import ArtworkTab from '@/components/sku/ArtworkTab';
 import BatchRuleBuilder from '@/components/batch/BatchRuleBuilder';
 import BatchRulePreview from '@/components/batch/BatchRulePreview.jsx';
@@ -22,16 +24,17 @@ function genId(prefix) { return prefix + '-' + Date.now().toString(36).toUpperCa
 
 const EMPTY_SKU = {
   item_code: '', product_name: '', brand_name: '', product_family: '', flavour: '',
-  ml_per_bottle: '', mrp: '', mrp_box: '', shelf_life_days: '', shelf_life_unit: 'days', bottle_type: '',
+  ml_per_bottle: '', mrp: '', mrp_box: '', gross_weight_kg: '', filled_bottle_weight_kg: '', shelf_life_days: '', shelf_life_unit: 'days', bottle_type: '',
   recipe_group_id: '', default_recipe_option_id: '', box_type_id: '', bottles_per_box: '',
   default_artwork_id: '', is_active: false, is_trial_pack: false,
   fssai_no: '', manufacturer_name: '', address_1: '', address_2: '',
   customer_care_email: '', customer_care_phone: '', product_barcode: '', box_barcode: '',
   hsn_code: '', swiggy_item_id: '', bigbasket_item_id: '', zepto_item_id: '', amazon_item_id: '',
+  print_template_mappings: {},
 };
 
 const EMPTY_MAPPING = {
-  ryan_template_id: '', batch_format_rule_id: '',
+  ryan_template_id: '', printer_template_id: '', batch_format_rule_id: '',
   payload_map_json: '[]',
 };
 
@@ -45,8 +48,10 @@ export default function SKUSetup() {
   const [containerTypes, setContainerTypes] = useState([]);
   const [capTypes, setCapTypes] = useState([]);
   const [ryanTemplates, setRyanTemplates] = useState([]);
+  const [printTemplates, setPrintTemplates] = useState([]);
   const [batchRules, setBatchRules] = useState([]);
   const [artworks, setArtworks] = useState([]);
+  const [boxLabelTemplates, setBoxLabelTemplates] = useState([]);
   const [brands, setBrands] = useState([]);
   const [families, setFamilies] = useState([]);
   const [flavours, setFlavours] = useState([]);
@@ -67,12 +72,13 @@ export default function SKUSetup() {
   // Bulk edit
   const [bulkEditOpen, setBulkEditOpen] = useState(false);
   const [bulkEditSkus, setBulkEditSkus] = useState([]);
+  const [mobileView, setMobileView] = useState('list'); // 'list' | 'editor'
 
   const isAdmin = user?.role === 'admin';
 
   const loadAll = useCallback(async () => {
     setLoading(true);
-    const [u, s, m, rg, ct, cap, bx, bo, rt, br, art, brnd, fam, flav] = await Promise.all([
+    const [u, s, m, rg, ct, cap, bx, bo, rt, pt, br, art, blt, brnd, fam, flav] = await Promise.all([
       base44.auth.me().catch(() => null),
       base44.entities.ProductMaster.list('-created_date', 500),
       base44.entities.SKUPrintMapping.list('-created_date', 500).catch(() => []),
@@ -82,8 +88,10 @@ export default function SKUSetup() {
       base44.entities.BoxType.filter({ is_active: true }, '-created_date', 200).catch(() => []),
       base44.entities.RecipeOption.list('-created_date', 500).catch(() => []),
       base44.entities.RyanTemplate.filter({ is_active: true }, '-created_date', 200).catch(() => []),
+      base44.entities.LblPrintTemplate.filter({ is_active: true }, '-created_date', 200).catch(() => []),
       base44.entities.BatchFormatRule.filter({ is_active: true }, '-created_date', 200).catch(() => []),
       base44.entities.LabelArtwork.filter({ is_active: true }, '-created_date', 500).catch(() => []),
+      base44.entities.BoxLabelTemplate.filter({ is_active: true }, '-created_date', 200).catch(() => []),
       base44.entities.BrandMaster.filter({ is_active: true }).catch(() => []),
       base44.entities.ProductFamilyMaster.filter({ is_active: true }).catch(() => []),
       base44.entities.FlavourMaster.filter({ is_active: true }).catch(() => []),
@@ -97,8 +105,10 @@ export default function SKUSetup() {
     setBoxTypes(bx);
     setRecipeOptions(bo);
     setRyanTemplates(rt);
+    setPrintTemplates(pt);
     setBatchRules(br);
     setArtworks(art);
+    setBoxLabelTemplates(blt);
     setBrands(brnd);
     setFamilies(fam);
     setFlavours(flav);
@@ -110,15 +120,23 @@ export default function SKUSetup() {
   // Load a SKU into the editor
   const openSku = useCallback((sku) => {
     setSelected(sku);
-    setSkuForm({ ...EMPTY_SKU, ...sku });
+    // Sanitize null values
+    const sanitized = Object.fromEntries(
+      Object.entries(sku).map(([k, v]) => [k, v === null || v === undefined ? '' : v])
+    );
+    setSkuForm({ ...EMPTY_SKU, ...sanitized });
     const mapping = mappings.find(m => (m.sku_code || m.product_code) === sku.item_code);
     if (mapping) {
-      setMappingForm({ ...EMPTY_MAPPING, ...mapping });
+      const sanitizedMapping = Object.fromEntries(
+        Object.entries(mapping).map(([k, v]) => [k, v === null || v === undefined ? '' : v])
+      );
+      setMappingForm({ ...EMPTY_MAPPING, ...sanitizedMapping });
       setPayloadRows(mapping.payload_map_json ? JSON.parse(mapping.payload_map_json) : []);
     } else {
       setMappingForm(EMPTY_MAPPING);
       setPayloadRows([]);
     }
+    setMobileView('editor');
   }, [mappings]);
 
   const openNew = () => {
@@ -126,6 +144,7 @@ export default function SKUSetup() {
     setSkuForm(EMPTY_SKU);
     setMappingForm(EMPTY_MAPPING);
     setPayloadRows([]);
+    setMobileView('editor');
   };
 
   // Re-open when mappings change (after save)
@@ -233,10 +252,7 @@ export default function SKUSetup() {
       return;
     }
     
-    if (skuForm.is_active && !complete) {
-      alert('Cannot activate: setup is incomplete. Please complete all required fields first.');
-      return;
-    }
+
 
     setSaving(true);
     const bt = boxTypes.find(b => b.box_type_id === skuForm.box_type_id);
@@ -244,7 +260,7 @@ export default function SKUSetup() {
     // Build SKU payload
     const skuPayload = { ...skuForm };
     if (bt) skuPayload.bottles_per_box = bt.bottles_per_box;
-    ['ml_per_bottle','bottles_per_box','mrp','mrp_box','shelf_life_days','gross_weight_kg'].forEach(k => {
+    ['ml_per_bottle','bottles_per_box','mrp','mrp_box','shelf_life_days','gross_weight_kg','filled_bottle_weight_kg'].forEach(k => {
       if (skuPayload[k] !== '' && skuPayload[k] !== undefined && !isNaN(skuPayload[k])) skuPayload[k] = Number(skuPayload[k]);
       else if (skuPayload[k] === '') delete skuPayload[k];
     });
@@ -260,6 +276,7 @@ export default function SKUSetup() {
     // Upsert SKUPrintMapping
     const mappingPayload = {
       ...mappingForm,
+      template_id: mappingForm.printer_template_id || '', // Map printer_template_id to template_id (required field)
       product_code: skuForm.item_code,
       sku_code: skuForm.item_code,
       payload_map_json: JSON.stringify(payloadRows),
@@ -268,7 +285,7 @@ export default function SKUSetup() {
 
     if (currentMapping) {
       await base44.entities.SKUPrintMapping.update(currentMapping.id, mappingPayload);
-    } else if (mappingForm.ryan_template_id || mappingForm.batch_format_rule_id) {
+    } else if (mappingForm.printer_template_id || mappingForm.ryan_template_id || mappingForm.batch_format_rule_id) {
       await base44.entities.SKUPrintMapping.create({
         ...mappingPayload,
         mapping_id: genId('MAP'),
@@ -300,8 +317,10 @@ export default function SKUSetup() {
 
   return (
     <div className="h-[calc(100vh-80px)] flex flex-col lg:flex-row gap-0 overflow-hidden rounded-xl border border-slate-200 bg-white">
-      {/* Left: SKU List */}
-      <div className="lg:w-72 xl:w-80 border-b lg:border-b-0 lg:border-r border-slate-200 flex flex-col overflow-hidden">
+      {/* Left: SKU List — hidden on mobile when editor is open */}
+      <div className={`lg:w-72 xl:w-80 border-b lg:border-b-0 lg:border-r border-slate-200 flex flex-col overflow-hidden ${
+        mobileView === 'editor' ? 'hidden lg:flex' : 'flex'
+      }`}>
         <div className="px-4 py-3 border-b border-slate-200 space-y-3">
           <div>
             <h1 className="text-base font-bold text-slate-900">SKU Setup</h1>
@@ -319,15 +338,26 @@ export default function SKUSetup() {
         />
       </div>
 
-      {/* Right: Editor */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      {/* Right: Editor — hidden on mobile when list is shown */}
+      <div className={`flex-1 flex flex-col overflow-hidden ${
+        mobileView === 'list' ? 'hidden lg:flex' : 'flex'
+      }`}>
         {/* Editor header */}
-        <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-slate-200 bg-slate-50">
-          <div className="min-w-0">
-            <p className="text-sm font-bold text-slate-900 truncate">
-              {skuForm.item_code || <span className="text-slate-400 font-normal">New SKU</span>}
-              {skuForm.product_name && <span className="font-normal text-slate-500 ml-2">— {skuForm.product_name}</span>}
-            </p>
+        <div className="flex items-center justify-between gap-3 px-3 md:px-5 py-3 border-b border-slate-200 bg-slate-50">
+          <div className="flex items-center gap-2 min-w-0">
+            {/* Back button — mobile only */}
+            <button
+              onClick={() => setMobileView('list')}
+              className="lg:hidden h-9 w-9 flex items-center justify-center rounded-lg border border-slate-200 hover:bg-slate-100 shrink-0"
+            >
+              <ArrowLeft className="w-4 h-4 text-slate-700" />
+            </button>
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-slate-900 truncate">
+                {skuForm.item_code || <span className="text-slate-400 font-normal">New Product Code</span>}
+                {skuForm.product_name && <span className="font-normal text-slate-500 ml-2 hidden md:inline">— {skuForm.product_name}</span>}
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {savedMsg && <span className="text-xs text-green-600 font-semibold flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" />{savedMsg}</span>}
@@ -428,7 +458,7 @@ export default function SKUSetup() {
                 <p className="text-sm font-bold text-slate-700">🏷️ Product Classification</p>
                 <div className="grid grid-cols-1 gap-4">
 
-                  <Field label="Brand Name *">
+                  <Field label="Brand Name">
                     <select 
                       value={skuForm.brand_name} 
                       onChange={e => setSkuForm(f => ({ ...f, brand_name: e.target.value, product_family: '', flavour: '' }))}
@@ -439,7 +469,7 @@ export default function SKUSetup() {
                     </select>
                   </Field>
 
-                  <Field label="Product Family *">
+                  <Field label="Product Family">
                     <select 
                       value={skuForm.product_family} 
                       onChange={e => setSkuForm(f => ({ ...f, product_family: e.target.value, flavour: '' }))}
@@ -456,7 +486,7 @@ export default function SKUSetup() {
                     )}
                   </Field>
 
-                  <Field label="Flavour *">
+                  <Field label="Flavour">
                     <select 
                       value={skuForm.flavour} 
                       onChange={e => setSkuForm(f => ({ ...f, flavour: e.target.value }))}
@@ -481,7 +511,7 @@ export default function SKUSetup() {
                 <div className="grid grid-cols-1 gap-4">
                   {!skuForm.is_trial_pack && (
                     <>
-                      <Field label="Container Type *">
+                      <Field label="Container Type">
                         {containerTypes.length > 0 ? (
                           <select
                             value={containerTypes.find(c => c.auto_generated_name === skuForm.bottle_type)?.container_code || ''}
@@ -502,7 +532,7 @@ export default function SKUSetup() {
                         )}
                       </Field>
 
-                      <Field label="ML per Container *" info="Volume per container (auto-filled from container type selection, cannot be edited)">
+                      <Field label="ML per Container" info="Volume per container (auto-filled from container type selection, cannot be edited)">
                         <Input 
                           type="text" 
                           value={
@@ -514,7 +544,7 @@ export default function SKUSetup() {
                         />
                       </Field>
 
-                      <Field label="Cap Type *">
+                      <Field label="Cap Type">
                         {capTypes.length > 0 ? (
                           <select
                             value={skuForm.cap_sku_code || ''}
@@ -537,7 +567,7 @@ export default function SKUSetup() {
                     </>
                   )}
 
-                  <Field label="Box Type *">
+                  <Field label="Box Type">
                     <select
                       value={skuForm.box_type_id}
                       onChange={e => handleBoxTypeChange(e.target.value)}
@@ -569,7 +599,29 @@ export default function SKUSetup() {
                     </div>
                   )}
 
-                  <Field label="Gross Weight per Box (kg)" info="Total weight of a filled box (used for logistics weight calculation)">
+                  <Field label="Filled Bottle Weight (kg)" info="Weight of a single filled bottle. Used to auto-compute box gross weight on labels = (bottles per box × filled bottle weight) + empty box weight.">
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      value={skuForm.filled_bottle_weight_kg || ''}
+                      onChange={e => setSkuForm(f => ({ ...f, filled_bottle_weight_kg: e.target.value.replace(/[^0-9.]/g, '') }))}
+                      placeholder="e.g. 0.62"
+                      className="h-12 text-base"
+                    />
+                    {skuForm.filled_bottle_weight_kg && skuForm.bottles_per_box && (
+                      <p className="text-xs text-slate-500 mt-1">
+                        Computed box weight: {(
+                          Number(skuForm.filled_bottle_weight_kg) * Number(skuForm.bottles_per_box)
+                          + Number(selectedBoxType?.empty_weight_kg || 0)
+                        ).toFixed(2)} kg
+                        {selectedBoxType?.empty_weight_kg
+                          ? ` (${skuForm.bottles_per_box} × ${skuForm.filled_bottle_weight_kg} + ${selectedBoxType.empty_weight_kg} empty box)`
+                          : ' (add empty box weight in Box Type for full calculation)'}
+                      </p>
+                    )}
+                  </Field>
+
+                  <Field label="Gross Weight per Box (kg)" info="Optional override / fallback used when filled bottle weight is not set. Also used for logistics weight calculation.">
                     <Input
                       type="text"
                       inputMode="decimal"
@@ -581,7 +633,7 @@ export default function SKUSetup() {
                   </Field>
 
                   {!skuForm.is_trial_pack && (
-                    <Field label="Shelf Life *">
+                    <Field label="Shelf Life">
                     <div className="grid grid-cols-2 gap-2">
                       <Input 
                         type="text" 
@@ -618,7 +670,7 @@ export default function SKUSetup() {
                       <Field label="Box Barcode" info="Barcode printed on shipping boxes/cartons for warehouse and logistics scanning">
                         <Input value={skuForm.box_barcode} onChange={e => setSkuForm(f => ({ ...f, box_barcode: e.target.value }))} placeholder="8901234567999" className="h-12 text-base font-mono" />
                       </Field>
-                      <Field label="MRP per Bottle (₹) *">
+                      <Field label="MRP per Bottle (₹)">
                         <Input 
                           type="text" 
                           inputMode="decimal" 
@@ -650,6 +702,61 @@ export default function SKUSetup() {
 
 
 
+              {/* Regulatory / Label Info */}
+              <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-4">
+                <p className="text-sm font-bold text-slate-700">🏭 Regulatory & Label Information</p>
+                <div className="grid grid-cols-1 gap-4">
+                  <Field label="FSSAI Number" info="FSSAI licence number printed on the label">
+                    <Input value={skuForm.fssai_no} onChange={e => setSkuForm(f => ({ ...f, fssai_no: e.target.value }))} placeholder="e.g. 10017011002659" className="h-12 text-base font-mono" />
+                  </Field>
+                  <Field label="Manufacturer Name" info="Full legal name of the manufacturer as printed on the label">
+                    <Input value={skuForm.manufacturer_name} onChange={e => setSkuForm(f => ({ ...f, manufacturer_name: e.target.value }))} placeholder="e.g. ABC Beverages Pvt Ltd" className="h-12 text-base" />
+                  </Field>
+                  <Field label="Address Line 1">
+                    <Input value={skuForm.address_1} onChange={e => setSkuForm(f => ({ ...f, address_1: e.target.value }))} placeholder="e.g. 123, Industrial Area" className="h-12 text-base" />
+                  </Field>
+                  <Field label="Address Line 2">
+                    <Input value={skuForm.address_2} onChange={e => setSkuForm(f => ({ ...f, address_2: e.target.value }))} placeholder="e.g. Phase 2, Delhi — 110001" className="h-12 text-base" />
+                  </Field>
+                  <div className="grid grid-cols-2 gap-4">
+                    <Field label="Customer Care Email">
+                      <Input type="email" value={skuForm.customer_care_email} onChange={e => setSkuForm(f => ({ ...f, customer_care_email: e.target.value }))} placeholder="care@brand.com" className="h-12 text-base" />
+                    </Field>
+                    <Field label="Customer Care Phone">
+                      <Input value={skuForm.customer_care_phone} onChange={e => setSkuForm(f => ({ ...f, customer_care_phone: e.target.value }))} placeholder="1800-123-456" className="h-12 text-base" />
+                    </Field>
+                  </div>
+                </div>
+              </div>
+
+              {/* Batch Number Config */}
+              <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-4">
+                <p className="text-sm font-bold text-slate-700">🔢 Batch Number Configuration</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <Field label="Product Prefix Code" info="Short code used in batch number generation, e.g. '02' for Toyo Zero Sugar">
+                    <Input value={skuForm.product_prefix_code || ''} onChange={e => setSkuForm(f => ({ ...f, product_prefix_code: e.target.value }))} placeholder="e.g. 02 or KFB" className="h-12 text-base font-mono" />
+                  </Field>
+                  <Field label="Flavour Code" info="Short flavour abbreviation used in batch numbers, e.g. 'GL' for Ginger Lemon">
+                    <Input value={skuForm.flavour_code || ''} onChange={e => setSkuForm(f => ({ ...f, flavour_code: e.target.value }))} placeholder="e.g. GL or L" className="h-12 text-base font-mono" />
+                  </Field>
+                </div>
+                <Field label="Batch Number Scheme">
+                  <select
+                    value={skuForm.batch_scheme || 'excel_date'}
+                    onChange={e => setSkuForm(f => ({ ...f, batch_scheme: e.target.value }))}
+                    className="w-full border border-slate-200 rounded-lg px-4 py-3 text-base h-12 bg-white"
+                  >
+                    <option value="excel_date">Standard — Excel Date (e.g. 02GL46022)</option>
+                    <option value="day_year_seq">Day / Year / Sequence (e.g. KFB31L2501)</option>
+                  </select>
+                  <p className="text-xs text-slate-500 mt-1">
+                    {(skuForm.batch_scheme || 'excel_date') === 'day_year_seq'
+                      ? 'Format: Prefix + DD (fill day) + Flavour initial + YY + sequence. Example: KFB31L2501'
+                      : 'Format: Prefix + Flavour Code + Excel serial of manufacturing date. Example: 02GL46022'}
+                  </p>
+                </Field>
+              </div>
+
               {/* Status toggle */}
               <div className={`border rounded-xl p-4 ${skuForm.is_active ? 'bg-green-50 border-green-300' : 'bg-slate-50 border-slate-200'}`}>
                 <p className="text-xs font-bold text-slate-700 mb-3">Status</p>
@@ -657,10 +764,7 @@ export default function SKUSetup() {
                   <button
                     type="button"
                     onClick={() => {
-                      if (!skuForm.is_active && !complete && !skuForm.is_trial_pack) {
-                        alert('Cannot activate: setup is incomplete. Fill all required fields first.');
-                        return;
-                      }
+  
                       setSkuForm(f => ({ ...f, is_active: !f.is_active }));
                     }}
                     className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors ${skuForm.is_active ? 'bg-green-600' : 'bg-slate-400'}`}
@@ -690,7 +794,7 @@ export default function SKUSetup() {
                 <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-4">
                   <p className="text-sm font-bold text-slate-700">🧪 Recipe Configuration</p>
                   <div className="grid grid-cols-1 gap-4">
-                    <Field label="Recipe Group *">
+                    <Field label="Recipe Group">
                       <select
                         value={skuForm.recipe_group_id}
                         onChange={e => setSkuForm(f => ({ ...f, recipe_group_id: e.target.value, default_recipe_option_id: '' }))}
@@ -706,7 +810,7 @@ export default function SKUSetup() {
                       )}
                     </Field>
 
-                    <Field label="Default Recipe Option *">
+                    <Field label="Default Recipe Option">
                       <select
                         value={skuForm.default_recipe_option_id}
                         onChange={e => setSkuForm(f => ({ ...f, default_recipe_option_id: e.target.value }))}
@@ -739,27 +843,14 @@ export default function SKUSetup() {
                 <p className="text-sm font-bold text-blue-900 mb-2">📋 How Printing & Batch Works</p>
                 <p className="text-xs text-blue-800 leading-relaxed">
                   This tab configures how labels are printed and batch codes are generated for this SKU. 
-                  <strong> Ryan Template</strong> defines the label design and placeholders (e.g., BATCH, MFG, EXP). 
-                  <strong> Batch Format Rule</strong> determines how batch IDs are structured (e.g., date formats, sequences, prefixes). 
-                  <strong> Payload Mapping</strong> links SKU data to template placeholders for dynamic label printing.
+                  <strong> Print Template</strong> defines the label design with POD field mappings that auto-populate product data. 
+                  <strong> Batch Format Rule</strong> determines how batch IDs are structured (e.g., date formats, sequences, prefixes).
                 </p>
               </div>
 
               <div className="grid grid-cols-1 gap-4">
-                <Field label="Ryan Template *">
-                  <RyanTemplateField
-                    value={mappingForm.ryan_template_id}
-                    onChange={v => setMappingForm(f => ({ ...f, ryan_template_id: v }))}
-                    templates={ryanTemplates}
-                    templatePlaceholders={templatePlaceholders}
-                    activeTpl={activeTpl}
-                    isAdmin={isAdmin}
-                    onTemplateUpdated={loadAll}
-                    onCreateNew={() => window.open('/RyanTemplateManager', '_blank')}
-                  />
-                </Field>
 
-                <Field label="Batch Format Rule *">
+                <Field label="Batch Format Rule">
                   <div className="flex gap-2 items-start">
                     <div className="flex-1 min-w-0">
                       <select
@@ -810,23 +901,57 @@ export default function SKUSetup() {
                 </Field>
               </div>
 
-              {/* Payload Map Builder */}
-               <div className="space-y-2">
-                 <p className="text-sm font-semibold text-slate-700">Ryan Payload Mapping</p>
-                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
-                  <PayloadMapBuilder
-                    rows={payloadRows}
-                    onChange={setPayloadRows}
-                    templatePlaceholders={templatePlaceholders}
-                    sku={skuForm}
-                    batchRule={batchRules.find(r => r.rule_id === mappingForm.batch_format_rule_id)}
-                    brands={brands}
-                    families={families}
-                    flavours={flavours}
-                  />
+              {/* Print Template Selection — new LblPrintTemplate based */}
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium text-slate-700">Print Template</Label>
+                  <select
+                    value={mappingForm.printer_template_id || ''}
+                    onChange={e => setMappingForm(f => ({ ...f, printer_template_id: e.target.value }))}
+                    className="w-full border border-slate-200 rounded-lg px-4 py-3 text-base h-12 bg-white"
+                  >
+                    <option value="">— Select print template —</option>
+                    {printTemplates.map(t => (
+                      <option key={t.id} value={t.id}>
+                        {t.name} [{t.middleware_template_name}]
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-slate-500">
+                    Select a template to see the POD field mappings below
+                  </p>
                 </div>
+
+                {/* POD Mapping Preview — shows template's field mappings */}
+                {mappingForm.printer_template_id && (
+                  <SKUTemplatePODMappingPreview templateId={mappingForm.printer_template_id} />
+                )}
               </div>
-            </TabsContent>
+
+              {/* Box Label Template — used for stock-transfer / box labels */}
+              <div className="space-y-2 pt-2 border-t border-slate-200">
+                <Label className="text-xs font-medium text-slate-700">Box Label Template</Label>
+                <select
+                  value={skuForm.box_label_template_id || ''}
+                  onChange={e => setSkuForm(f => ({ ...f, box_label_template_id: e.target.value }))}
+                  className="w-full border border-slate-200 rounded-lg px-4 py-3 text-base h-12 bg-white"
+                >
+                  <option value="">— Select box label template —</option>
+                  {boxLabelTemplates.map(t => (
+                    <option key={t.id} value={t.id}>
+                      {t.template_name} ({t.page_width}×{t.page_height} {t.page_unit})
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-slate-500">
+                  Used for box/stock-transfer label printing. Manage templates in{' '}
+                  <a href="/BoxLabelTemplateManager" className="text-blue-600 hover:underline inline-flex items-center gap-1">
+                    Box Label Templates <ExternalLink className="w-3 h-3" />
+                  </a>.
+                </p>
+              </div>
+
+              </TabsContent>
 
             {/* ─── Tab 4: Artwork ───────────────────────────── */}
             <TabsContent value="artwork" className="mt-4">
@@ -924,130 +1049,7 @@ function Field({ label, children, className = '', info }) {
   );
 }
 
-/**
- * Ryan Template selector with inline placeholder editor when placeholders_json is empty.
- */
-function RyanTemplateField({ value, onChange, templates, templatePlaceholders, activeTpl, isAdmin, onTemplateUpdated, onCreateNew }) {
-  const [showAddPlaceholders, setShowAddPlaceholders] = useState(false);
-  const [chipInput, setChipInput] = useState('');
-  const [chips, setChips] = useState([]);
-  const [saving, setSaving] = useState(false);
 
-  // When template changes, reset
-  useEffect(() => {
-    setShowAddPlaceholders(false);
-    setChips([]);
-    setChipInput('');
-  }, [value]);
-
-  function addChip(raw) {
-    const val = raw.trim().toUpperCase().replace(/[^A-Z0-9_]/g, '');
-    if (!val || chips.includes(val)) { setChipInput(''); return; }
-    setChips(prev => [...prev, val]);
-    setChipInput('');
-  }
-
-  async function savePlaceholders() {
-    if (!activeTpl || chips.length === 0) return;
-    setSaving(true);
-    await base44.entities.RyanTemplate.update(activeTpl.id, {
-      placeholders_json: JSON.stringify(chips),
-    });
-    setSaving(false);
-    setShowAddPlaceholders(false);
-    onTemplateUpdated && onTemplateUpdated();
-  }
-
-  const noPlaceholders = value && activeTpl && templatePlaceholders.length === 0;
-
-  return (
-    <div className="space-y-2">
-      <div className="flex gap-2">
-        <select
-          value={value}
-          onChange={e => {
-            if (e.target.value === '__CREATE_NEW__') {
-              onCreateNew && onCreateNew();
-            } else {
-              onChange(e.target.value);
-            }
-          }}
-          className="flex-1 border border-slate-200 rounded-md px-3 py-2 text-sm bg-white h-9"
-        >
-          <option value="">— Select template —</option>
-          <option value="__CREATE_NEW__" className="font-semibold text-blue-600">+ Create New Ryan Template</option>
-          <option disabled>──────────────</option>
-          {templates.map(t => (
-            <option key={t.ryan_template_id} value={t.ryan_template_id}>
-              {t.ryan_template_id}{t.description ? ` — ${t.description}` : ''}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Show placeholders chips */}
-      {value && templatePlaceholders.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 items-center">
-          <span className="text-xs text-slate-400">Placeholders:</span>
-          {templatePlaceholders.map(p => (
-            <span key={p} className="bg-blue-50 text-blue-700 font-mono text-xs px-2 py-0.5 rounded-md font-semibold">{p}</span>
-          ))}
-        </div>
-      )}
-
-      {/* Warning + inline editor when no placeholders */}
-      {noPlaceholders && !showAddPlaceholders && (
-        <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-          <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
-          <p className="text-xs text-amber-700 flex-1">No placeholders configured for this template.</p>
-          {isAdmin && (
-            <button
-              onClick={() => { setChips([]); setShowAddPlaceholders(true); }}
-              className="text-xs text-amber-700 font-semibold underline shrink-0"
-            >Add now</button>
-          )}
-        </div>
-      )}
-
-      {noPlaceholders && showAddPlaceholders && isAdmin && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-3 space-y-2">
-          <p className="text-xs font-semibold text-amber-800">Add placeholders for <span className="font-mono">{value}</span></p>
-          <div
-            className="min-h-[36px] flex flex-wrap gap-1.5 items-center border border-amber-300 rounded-lg px-2 py-1.5 bg-white cursor-text"
-            onClick={() => document.getElementById('inline-chip-input')?.focus()}
-          >
-            {chips.map(p => (
-              <span key={p} className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 text-xs font-mono font-bold px-2 py-0.5 rounded-md">
-                {p}
-                <button type="button" onClick={(e) => { e.stopPropagation(); setChips(prev => prev.filter(c => c !== p)); }}>
-                  <X className="w-3 h-3" />
-                </button>
-              </span>
-            ))}
-            <input
-              id="inline-chip-input"
-              value={chipInput}
-              onChange={e => setChipInput(e.target.value.toUpperCase())}
-              onKeyDown={e => {
-                if (e.key === 'Enter' || e.key === ',' || e.key === ' ') { e.preventDefault(); addChip(chipInput); }
-                else if (e.key === 'Backspace' && chipInput === '' && chips.length > 0) setChips(prev => prev.slice(0, -1));
-              }}
-              onBlur={() => chipInput && addChip(chipInput)}
-              className="flex-1 min-w-[80px] outline-none text-xs font-mono bg-transparent"
-              placeholder="BATCH, MFG …"
-            />
-          </div>
-          <div className="flex gap-2">
-            <Button size="sm" onClick={savePlaceholders} disabled={saving || chips.length === 0} className="h-7 text-xs">
-              {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Save Placeholders'}
-            </Button>
-            <Button size="sm" variant="ghost" onClick={() => setShowAddPlaceholders(false)} className="h-7 text-xs">Cancel</Button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
 
 function SelectInput({ value, onChange, placeholder, options, empty, disabled }) {
   if (empty && options.length === 0) {

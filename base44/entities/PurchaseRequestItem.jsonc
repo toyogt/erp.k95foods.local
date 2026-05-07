@@ -7,6 +7,7 @@
       "type": "string",
       "maxLength": 50
     },
+<<<<<<< HEAD
     "pr_number": {
       "type": "string",
       "maxLength": 50
@@ -15,6 +16,8 @@
       "type": "number",
       "minimum": 1
     },
+=======
+>>>>>>> kunal/main
     "item_code": {
       "type": "string",
       "maxLength": 100
@@ -23,22 +26,29 @@
       "type": "string",
       "maxLength": 200
     },
+<<<<<<< HEAD
     "description": {
       "type": "string",
       "maxLength": 500
     },
+=======
+>>>>>>> kunal/main
     "uom_code": {
       "type": "string",
       "maxLength": 50
     },
+<<<<<<< HEAD
     "unit": {
       "type": "string",
       "maxLength": 50
     },
+=======
+>>>>>>> kunal/main
     "qty": {
       "type": "number",
       "minimum": 0
     },
+<<<<<<< HEAD
     "quantity": {
       "type": "number",
       "minimum": 0
@@ -70,10 +80,16 @@
       "type": "string",
       "maxLength": 500,
       "description": "Reason for rejecting this specific item"
+=======
+    "required_by": {
+      "type": "string",
+      "format": "date"
+>>>>>>> kunal/main
     },
     "remarks": {
       "type": "string",
       "maxLength": 500
+<<<<<<< HEAD
     },
     "item_status": {
       "type": "string",
@@ -86,6 +102,12 @@
     }
   },
   "required": [
+=======
+    }
+  },
+  "required": [
+    "mr_id",
+>>>>>>> kunal/main
     "item_code",
     "qty"
   ]

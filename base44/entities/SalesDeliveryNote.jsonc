@@ -1,0 +1,114 @@
+{
+  "name": "SalesDeliveryNote",
+  "type": "object",
+  "properties": {
+    "sales_order_id": {
+      "type": "string",
+      "title": "Sales Order ID"
+    },
+    "so_number": {
+      "type": "string",
+      "title": "Sales Order Number"
+    },
+    "picklist_id": {
+      "type": "string",
+      "title": "Picklist ID"
+    },
+    "dn_number": {
+      "type": "string",
+      "title": "Delivery Note Number"
+    },
+    "customer_name": {
+      "type": "string",
+      "title": "Customer Name"
+    },
+    "customer_gstin": {
+      "type": "string",
+      "title": "Customer GSTIN"
+    },
+    "shipping_address": {
+      "type": "string",
+      "title": "Shipping Address"
+    },
+    "transporter_name": {
+      "type": "string",
+      "title": "Transporter Name"
+    },
+    "vehicle_number": {
+      "type": "string",
+      "title": "Vehicle Number"
+    },
+    "lr_number": {
+      "type": "string",
+      "title": "LR Number"
+    },
+    "packaging_type": {
+      "type": "string",
+      "title": "Packaging Type"
+    },
+    "dispatch_date": {
+      "type": "string",
+      "title": "Dispatch Date"
+    },
+    "appointment_date": {
+      "type": "string",
+      "title": "Appointment Date"
+    },
+    "expiry_date": {
+      "type": "string",
+      "title": "Expiry Date"
+    },
+    "total_qty": {
+      "type": "number",
+      "title": "Total Quantity"
+    },
+    "total_boxes": {
+      "type": "number",
+      "title": "Total Boxes"
+    },
+    "total_weight_kg": {
+      "type": "number",
+      "title": "Total Weight (kg)"
+    },
+    "workflow_state": {
+      "type": "string",
+      "enum": [
+        "waiting_for_transporter",
+        "waiting_for_loading",
+        "loading_completed",
+        "bills_generated",
+        "cancelled"
+      ],
+      "title": "Workflow State"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "loading",
+        "loaded",
+        "dispatched",
+        "delivered",
+        "cancelled"
+      ],
+      "title": "Status"
+    },
+    "cancellation_reason": {
+      "type": "string",
+      "title": "Cancellation Reason"
+    },
+    "notes": {
+      "type": "string",
+      "title": "Notes"
+    },
+    "created_by_email": {
+      "type": "string",
+      "title": "Created By"
+    }
+  },
+  "required": [
+    "sales_order_id",
+    "customer_name",
+    "status"
+  ]
+}

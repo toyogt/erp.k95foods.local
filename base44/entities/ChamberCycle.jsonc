@@ -1,0 +1,66 @@
+{
+  "name": "ChamberCycle",
+  "type": "object",
+  "title": "Chamber Cycle",
+  "properties": {
+    "cycle_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "chamber_machine_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "pallet_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "template_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "RUNNING",
+        "COMPLETED",
+        "ABORTED"
+      ],
+      "default": "RUNNING"
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "started_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "ended_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "ended_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "current_stage": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "next_check_due_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 1000
+    }
+  },
+  "required": [
+    "cycle_id",
+    "chamber_machine_id",
+    "pallet_id"
+  ]
+}

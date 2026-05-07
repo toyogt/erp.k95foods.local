@@ -1,0 +1,116 @@
+{
+  "name": "BlockedAttempt",
+  "type": "object",
+  "title": "Blocked Transaction Attempt",
+  "description": "Audit log for prevented transactions",
+  "properties": {
+    "attempt_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "description": "Unique attempt identifier"
+    },
+    "rule_key": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Which rule blocked this"
+    },
+    "module": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Module (WAREHOUSE, PRODUCTION, etc.)"
+    },
+    "entity_type": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "What was being modified"
+    },
+    "entity_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "ID of entity being modified"
+    },
+    "action_type": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "What action was attempted"
+    },
+    "user_email": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Who attempted the action"
+    },
+    "user_name": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "User's display name"
+    },
+    "device_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Device identifier"
+    },
+    "error_message": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "Why action was blocked"
+    },
+    "payload": {
+      "type": "object",
+      "description": "Data that was attempted"
+    },
+    "validation_details": {
+      "type": "object",
+      "description": "Technical details of validation failure"
+    },
+    "block_status": {
+      "type": "string",
+      "enum": [
+        "blocked",
+        "overridden",
+        "escalated"
+      ],
+      "default": "blocked",
+      "description": "What happened after block"
+    },
+    "override_by": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Supervisor email who overrode"
+    },
+    "override_reason_code": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Why override was approved"
+    },
+    "override_comment": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "Additional context"
+    },
+    "override_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When override was approved"
+    },
+    "is_critical": {
+      "type": "boolean",
+      "default": false,
+      "description": "Needs immediate review?"
+    },
+    "escalation_notes": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Notes if escalated"
+    }
+  },
+  "required": [
+    "attempt_id",
+    "rule_key",
+    "module",
+    "entity_type",
+    "action_type",
+    "user_email",
+    "error_message"
+  ]
+}

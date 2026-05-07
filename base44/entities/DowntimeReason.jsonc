@@ -1,0 +1,47 @@
+{
+  "name": "DowntimeReason",
+  "type": "object",
+  "title": "Downtime Reason",
+  "properties": {
+    "reason_code": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "station_type": {
+      "type": "string",
+      "enum": [
+        "FILLING",
+        "LABELLING",
+        "CHAMBER"
+      ]
+    },
+    "reason_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "MECHANICAL",
+        "MATERIAL",
+        "QUALITY",
+        "PLANNING",
+        "CHANGEOVER",
+        "MICRO_STOP",
+        "OTHER"
+      ],
+      "default": "OTHER"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "reason_code",
+    "station_type",
+    "reason_name"
+  ]
+}

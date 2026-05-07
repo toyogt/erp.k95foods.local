@@ -1,0 +1,31 @@
+{
+  "name": "RecipeGroup",
+  "type": "object",
+  "title": "Recipe Group",
+  "properties": {
+    "recipe_group_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50,
+      "description": "Unique recipe group identifier (auto-generated, e.g. REC-xxxxx)"
+    },
+    "recipe_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "Recipe display name"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 1000
+    }
+  },
+  "required": [
+    "recipe_group_id",
+    "recipe_name"
+  ]
+}

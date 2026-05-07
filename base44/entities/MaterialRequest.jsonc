@@ -1,0 +1,43 @@
+{
+  "name": "MaterialRequest",
+  "type": "object",
+  "title": "Material Request",
+  "properties": {
+    "request_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "request_type": {
+      "type": "string",
+      "enum": [
+        "RECIPE",
+        "PACKING"
+      ]
+    },
+    "reference_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "DRAFT",
+        "RELEASED",
+        "ISSUED",
+        "CLOSED"
+      ],
+      "default": "DRAFT"
+    },
+    "priority": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 10,
+      "default": 5
+    }
+  },
+  "required": [
+    "request_id",
+    "request_type"
+  ]
+}

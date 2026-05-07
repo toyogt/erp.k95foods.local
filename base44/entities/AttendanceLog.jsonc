@@ -1,0 +1,89 @@
+{
+  "name": "AttendanceLog",
+  "type": "object",
+  "title": "Attendance Log",
+  "description": "Decoded, deduplicated attendance punch records. One row per unique (employee_code, log_datetime, device_sn). Source of truth for the dashboard and outbox delivery.",
+  "properties": {
+    "employee_code": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50,
+      "description": "Canonical employee code (resolved from Employee master if matched)"
+    },
+    "employee_name": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Employee name (enriched from Employee master when available)"
+    },
+    "log_datetime": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Full punch timestamp (ISO 8601)"
+    },
+    "log_date": {
+      "type": "string",
+      "maxLength": 20,
+      "description": "Date portion of punch in DD/MM/YYYY format"
+    },
+    "log_time": {
+      "type": "string",
+      "maxLength": 20,
+      "description": "Time portion of punch (HH:mm:ss)"
+    },
+    "downloaded_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Server local timestamp (Asia/Calcutta) when the punch was received/downloaded"
+    },
+    "device_sn": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Serial number of the biometric device that captured the punch"
+    },
+    "device_no": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Device number assigned by the cloud platform"
+    },
+    "device_name": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Friendly name of the device (e.g. Main Gate, Production Entry)"
+    },
+    "punch_direction": {
+      "type": "string",
+      "maxLength": 20,
+      "description": "Punch type if reported by device (e.g. IN, OUT)"
+    },
+    "dedup_key": {
+      "type": "string",
+      "maxLength": 300,
+      "description": "Deterministic dedup key: employee_code|log_datetime|device_sn"
+    },
+    "raw_punch_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Reference to AttendanceRawPunch.id this log was decoded from (if ingested via glog listener)"
+    },
+    "delivery_status": {
+      "type": "string",
+      "enum": [
+        "PENDING",
+        "PROCESSING",
+        "SENT",
+        "FAILED",
+        "NOT_QUEUED"
+      ],
+      "default": "PENDING",
+      "description": "Latest delivery status from the outbox worker"
+    },
+    "raw_payload": {
+      "type": "object",
+      "description": "Full original payload from the biometric machine for audit/debugging"
+    }
+  },
+  "required": [
+    "employee_code",
+    "log_datetime"
+  ]
+}

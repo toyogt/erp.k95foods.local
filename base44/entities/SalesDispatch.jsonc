@@ -1,0 +1,81 @@
+{
+  "name": "SalesDispatch",
+  "type": "object",
+  "properties": {
+    "sales_order_id": {
+      "type": "string",
+      "title": "Sales Order ID"
+    },
+    "so_number": {
+      "type": "string",
+      "title": "Sales Order Number"
+    },
+    "picklist_id": {
+      "type": "string",
+      "title": "Picklist ID"
+    },
+    "dispatch_number": {
+      "type": "string",
+      "title": "Dispatch Number"
+    },
+    "transporter_name": {
+      "type": "string",
+      "title": "Transporter Name"
+    },
+    "vehicle_number": {
+      "type": "string",
+      "title": "Vehicle Number"
+    },
+    "lr_number": {
+      "type": "string",
+      "title": "LR Number"
+    },
+    "packing_type": {
+      "type": "string",
+      "title": "Packing / Box Type"
+    },
+    "planned_dispatch_date": {
+      "type": "string",
+      "title": "Planned Dispatch Date"
+    },
+    "actual_dispatch_date": {
+      "type": "string",
+      "title": "Actual Dispatch Date"
+    },
+    "delay_days": {
+      "type": "number",
+      "title": "Delay (Days)"
+    },
+    "delay_reason": {
+      "type": "string",
+      "title": "Delay Reason"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "dispatched",
+        "delivered",
+        "cancelled"
+      ],
+      "title": "Status"
+    },
+    "total_boxes": {
+      "type": "number",
+      "title": "Total Boxes"
+    },
+    "total_weight_kg": {
+      "type": "number",
+      "title": "Total Weight (kg)"
+    },
+    "notes": {
+      "type": "string",
+      "title": "Notes"
+    }
+  },
+  "required": [
+    "sales_order_id",
+    "transporter_name",
+    "packing_type"
+  ]
+}

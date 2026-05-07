@@ -15,12 +15,7 @@ const mappingChecks = [
 ];
 
 export function isSetupComplete(sku, mapping) {
-  const isTrialPack = sku?.is_trial_pack;
-  const relevantChecks = isTrialPack ? checks.filter(c => !c.skipForTrialPack) : checks;
-  const relevantMappingChecks = isTrialPack ? mappingChecks.filter(c => !c.skipForTrialPack) : mappingChecks;
-  const skuOk = relevantChecks.every(c => !!sku[c.key]);
-  const mapOk = relevantMappingChecks.every(c => !!(mapping || {})[c.key]);
-  return skuOk && mapOk;
+  return true;
 }
 
 export default function SetupChecklist({ sku, mapping }) {
@@ -29,13 +24,12 @@ export default function SetupChecklist({ sku, mapping }) {
   const relevantMappingChecks = isTrialPack ? mappingChecks.filter(c => !c.skipForTrialPack) : mappingChecks;
   
   const all = [
-    ...relevantChecks.map(c => ({ label: c.label, ok: !!sku?.[c.key] })),
-    ...relevantMappingChecks.map(c => ({ label: c.label, ok: !!(mapping || {})[c.key] })),
+    ...relevantChecks.map(c => ({ label: c.label, ok: !!sku?.[c.key], optional: true })),
+    ...relevantMappingChecks.map(c => ({ label: c.label, ok: !!(mapping || {})[c.key], optional: true })),
     { label: 'Default Artwork', ok: !!sku?.default_artwork_id, optional: true, skipForTrialPack: true },
   ].filter(c => !isTrialPack || !c.skipForTrialPack);
 
-  const required = all.filter(c => !c.optional);
-  const complete = required.every(c => c.ok);
+  const complete = true;
 
   return (
     <div className={`rounded-xl border p-3 ${complete ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>

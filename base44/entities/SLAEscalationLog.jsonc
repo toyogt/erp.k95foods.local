@@ -1,0 +1,102 @@
+{
+  "name": "SLAEscalationLog",
+  "type": "object",
+  "title": "SLA Escalation Log",
+  "description": "Track SLA escalations for aging items",
+  "properties": {
+    "escalation_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "description": "Unique escalation ID"
+    },
+    "workflow_type": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Type of workflow"
+    },
+    "entity_type": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Entity being tracked (PurchaseOrder, GRNHeader, etc.)"
+    },
+    "entity_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "ID of entity"
+    },
+    "entity_code": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "User-friendly code"
+    },
+    "escalation_level": {
+      "type": "number",
+      "minimum": 1,
+      "description": "Which escalation level (1=first)"
+    },
+    "escalated_to_role": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Role escalated to"
+    },
+    "escalated_to_email": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Email of escalated user"
+    },
+    "escalated_to_name": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Name of escalated user"
+    },
+    "hours_overdue": {
+      "type": "number",
+      "minimum": 0,
+      "description": "How many hours past SLA"
+    },
+    "escalation_reason": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "Why it was escalated"
+    },
+    "acknowledged": {
+      "type": "boolean",
+      "default": false,
+      "description": "Has person acknowledged escalation?"
+    },
+    "acknowledged_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When acknowledged"
+    },
+    "acknowledged_by": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Who acknowledged"
+    },
+    "action_taken": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "What action was taken"
+    },
+    "resolved_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When resolved"
+    },
+    "site_id": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Factory/site identifier"
+    }
+  },
+  "required": [
+    "escalation_id",
+    "workflow_type",
+    "entity_type",
+    "entity_id",
+    "escalation_level",
+    "escalated_to_email"
+  ]
+}

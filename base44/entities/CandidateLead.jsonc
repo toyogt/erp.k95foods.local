@@ -1,0 +1,144 @@
+{
+  "name": "CandidateLead",
+  "type": "object",
+  "title": "Candidate Lead",
+  "description": "Profile of a manpower candidate for recruitment tracking, including post-hire conversion and attrition tracking.",
+  "properties": {
+    "candidate_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "Full name of the candidate"
+    },
+    "mobile_number": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50,
+      "description": "Primary contact number"
+    },
+    "location_area": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "Preferred working location / area (e.g. Bahadurgarh, Nangloi, Tikri)"
+    },
+    "role_interested": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "Job role(s) the candidate is interested in (e.g. Helper, Packing, Loading, Operator)"
+    },
+    "source_type": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "How the candidate was found (e.g. Market Visit, Walk-in, Incoming Call, Referral) \u2014 sourced from CandidateSourceType master"
+    },
+    "source_details": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Additional source context (e.g. labour chowk name, referrer name, factory gate)"
+    },
+    "first_contact_mode": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Mode of first contact with the candidate (e.g. In-person, Phone, WhatsApp) \u2014 sourced from CandidateContactMode master"
+    },
+    "first_contact_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of first contact (stored as YYYY-MM-DD; displayed as DD/MM/YYYY)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "New",
+        "Contacted",
+        "Shortlisted",
+        "Interviewed",
+        "Hired",
+        "Rejected",
+        "On Hold",
+        "Terminated"
+      ],
+      "default": "New",
+      "description": "Current pipeline status of the candidate"
+    },
+    "employee_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "ID of the linked Employee record (set when candidate is hired)"
+    },
+    "employee_code": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Employee code of the linked Employee record (denormalized for fast lookup/display)"
+    },
+    "department": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Department of the hired employee (denormalized for analytics)"
+    },
+    "designation": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Designation of the hired employee (denormalized for analytics)"
+    },
+    "enrollment_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date when the candidate was successfully enrolled as an employee (stored YYYY-MM-DD; displayed DD/MM/YYYY)"
+    },
+    "attrition_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date when the employee left the company, if applicable (stored YYYY-MM-DD; displayed DD/MM/YYYY)"
+    },
+    "attrition_reason": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "Reason for the employee's exit"
+    },
+    "exit_type": {
+      "type": "string",
+      "enum": [
+        "Resignation",
+        "Termination",
+        "Absconded",
+        "Retirement",
+        "End of Contract",
+        "Other"
+      ],
+      "description": "Type of exit"
+    },
+    "last_working_day": {
+      "type": "string",
+      "format": "date",
+      "description": "Last working day of the employee (stored YYYY-MM-DD)"
+    },
+    "eligible_for_rehire": {
+      "type": "boolean",
+      "description": "Whether the employee is eligible to be rehired"
+    },
+    "exit_feedback": {
+      "type": "string",
+      "maxLength": 2000,
+      "description": "Free-form feedback / exit interview notes"
+    },
+    "days_employed": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Number of days between enrollment_date and attrition_date (computed at attrition)"
+    },
+    "remarks": {
+      "type": "string",
+      "maxLength": 2000,
+      "description": "Free-form notes about the candidate"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "candidate_name",
+    "mobile_number"
+  ]
+}

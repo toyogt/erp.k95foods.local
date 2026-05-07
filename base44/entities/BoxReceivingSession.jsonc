@@ -1,0 +1,64 @@
+{
+  "name": "BoxReceivingSession",
+  "type": "object",
+  "title": "Box Receiving Session",
+  "properties": {
+    "session_id": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "pallet_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "box_pallet_record_id": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "started_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "completed_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "OPEN",
+        "COMPLETED"
+      ],
+      "default": "OPEN"
+    },
+    "expected_count": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0
+    },
+    "received_count": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0
+    },
+    "has_discrepancy": {
+      "type": "boolean",
+      "default": false
+    },
+    "warehouse_location": {
+      "type": "string",
+      "maxLength": 200
+    }
+  },
+  "required": [
+    "pallet_id"
+  ]
+}

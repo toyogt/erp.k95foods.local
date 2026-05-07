@@ -6,24 +6,7 @@ import { Button } from '@/components/ui/button';
 const FILTERS = ['All', 'Active', 'Inactive', 'Missing Setup'];
 
 function setupComplete(sku, mapping) {
-  const isTrialPack = sku?.is_trial_pack;
-  
-  // For trial packs: only box_type_id is required
-  if (isTrialPack) {
-    return !!(sku.box_type_id);
-  }
-  
-  // For regular SKUs: all fields required
-  return !!(
-    sku.recipe_group_id &&
-    sku.default_recipe_option_id &&
-    sku.bottle_type &&
-    sku.cap_sku_code &&
-    sku.box_type_id &&
-    sku.shelf_life_days &&
-    mapping?.ryan_template_id &&
-    mapping?.batch_format_rule_id
-  );
+  return !!(sku?.item_code && sku?.product_name);
 }
 
 export default function SKUList({ skus, mappings, selected, onSelect, onNew, onBulkEdit }) {

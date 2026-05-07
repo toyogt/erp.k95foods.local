@@ -30,6 +30,56 @@
       "type": "string",
       "maxLength": 50
     },
+    "entry_date": {
+      "type": "string",
+      "maxLength": 20,
+      "description": "Date the job was entered/added to the plan DD/MM/YYYY \u2014 defaults to today, editable only with permission"
+    },
+    "manufacturing_date": {
+      "type": "string",
+      "maxLength": 20,
+      "description": "Manufacturing date DD/MM/YYYY"
+    },
+    "labelling_date": {
+      "type": "string",
+      "maxLength": 20,
+      "description": "Actual labelling start date DD/MM/YYYY \u2014 set at stock transfer step"
+    },
+    "batch_no": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Generated batch number for this labelling run"
+    },
+    "batch_seq": {
+      "type": "number",
+      "minimum": 1,
+      "default": 1,
+      "description": "Sequence number used in batch generation (for day_year_seq scheme)"
+    },
+    "batch_prefix_code": {
+      "type": "string",
+      "maxLength": 20,
+      "description": "Product prefix code used in batch number (copied from ProductMaster.product_prefix_code)"
+    },
+    "flavour_code": {
+      "type": "string",
+      "maxLength": 10,
+      "description": "Flavour abbreviation used in batch number (copied from ProductMaster.flavour_code)"
+    },
+    "batch_scheme": {
+      "type": "string",
+      "enum": [
+        "excel_date",
+        "day_year_seq"
+      ],
+      "default": "excel_date",
+      "description": "Batch generation scheme"
+    },
+    "printer_template_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Selected LblPrintTemplate ID for this job's label printing"
+    },
     "quantity_bottles_planned": {
       "type": "number",
       "minimum": 0
@@ -69,16 +119,24 @@
         "active",
         "stock_transferred",
         "demo_print_sent",
+        "demo_print_verified",
         "checklist_submitted",
         "demo_pending_approval",
         "demo_approved",
         "demo_rejected",
         "bulk_printing",
         "paused",
+        "bulk_printing_awaiting_printer_reset",
         "completed",
-        "cancelled"
+        "cancelled",
+        "on_hold"
       ],
       "default": "pending"
+    },
+    "previous_status": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Status the job was in before being put on hold \u2014 used to restore the correct workflow step on resume"
     },
     "stock_transfer_qty": {
       "type": "number",
@@ -101,6 +159,26 @@
     "demo_image_url": {
       "type": "string",
       "maxLength": 1000
+    },
+    "demo_print_command_id": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Command ID of the demo print command sent to middleware"
+    },
+    "demo_print_middleware_job_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Job ID returned by middleware for demo print"
+    },
+    "demo_print_verified_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when demo print was physically verified by operator"
+    },
+    "demo_print_verified_by": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Email of operator who verified demo print"
     },
     "current_printed_qty": {
       "type": "number",

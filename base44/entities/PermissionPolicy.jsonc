@@ -1,0 +1,101 @@
+{
+  "name": "PermissionPolicy",
+  "type": "object",
+  "title": "Permission Policy",
+  "properties": {
+    "role_key": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "description": "Role identifier (e.g. admin, production_manager)"
+    },
+    "module_access": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Modules this role can access (e.g. [PRODUCTION, WAREHOUSE])"
+    },
+    "page_overrides": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "page_key": {
+            "type": "string",
+            "description": "Page name to override (e.g. Dashboard, CustomReport)"
+          },
+          "allow": {
+            "type": "boolean",
+            "description": "Explicitly allow this page even if module not granted"
+          }
+        }
+      },
+      "description": "Explicit page access overrides beyond module defaults"
+    },
+    "action_permissions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "action_key": {
+            "type": "string",
+            "description": "Action identifier (e.g. create_purchase_order, approve_invoice)"
+          },
+          "entity_type": {
+            "type": "string",
+            "description": "Entity type this action applies to (e.g. PurchaseOrder)"
+          },
+          "workflow_stages": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Document statuses where action is allowed"
+          },
+          "allow": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      },
+      "description": "Fine-grained action-level permissions"
+    },
+    "field_restrictions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "entity_type": {
+            "type": "string"
+          },
+          "field_name": {
+            "type": "string"
+          },
+          "can_view": {
+            "type": "boolean",
+            "default": true
+          },
+          "can_edit": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "description": "Field-level access restrictions"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "is_system": {
+      "type": "boolean",
+      "default": false,
+      "description": "System policies (admin, user) cannot be deleted"
+    }
+  },
+  "required": [
+    "role_key",
+    "module_access"
+  ]
+}

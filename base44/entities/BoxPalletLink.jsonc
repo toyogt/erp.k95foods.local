@@ -1,0 +1,31 @@
+{
+  "name": "BoxPalletLink",
+  "type": "object",
+  "title": "Box Pallet Link",
+  "properties": {
+    "pallet_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "box_pallet_record_id": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "box_serial": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "scanned_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "scanned_by": {
+      "type": "string",
+      "maxLength": 200
+    }
+  },
+  "required": [
+    "pallet_id",
+    "box_serial"
+  ]
+}

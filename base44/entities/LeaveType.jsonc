@@ -1,0 +1,58 @@
+{
+  "name": "LeaveType",
+  "type": "object",
+  "title": "Leave Type",
+  "description": "Master list of leave types (e.g. Casual Leave, Sick Leave, Earned Leave). Used by the leave management workflow.",
+  "properties": {
+    "leave_code": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 20,
+      "description": "Short unique code (e.g. CL, SL, EL)"
+    },
+    "leave_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "description": "Full leave name (e.g. Casual Leave)"
+    },
+    "include_weekly_off": {
+      "type": "boolean",
+      "default": false,
+      "description": "If true, weekly off days are counted within the leave duration"
+    },
+    "include_holiday": {
+      "type": "boolean",
+      "default": false,
+      "description": "If true, registered holidays are counted within the leave duration"
+    },
+    "leave_period": {
+      "type": "string",
+      "enum": [
+        "Yearly",
+        "Monthly",
+        "Quarterly",
+        "OneTime"
+      ],
+      "default": "Yearly"
+    },
+    "annual_quota": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0,
+      "description": "Default annual quota (days) for this leave type"
+    },
+    "is_paid": {
+      "type": "boolean",
+      "default": true
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "leave_code",
+    "leave_name"
+  ]
+}
