@@ -440,4 +440,570 @@ Items where the merging engineer should confirm intent with the original branch 
 
 ---
 
+**End of Merge Blueprint (narrative section).**
+
+---
+
+# 📎 ANNEX A — Entity Schemas (Full JSON)
+
+> All HR entity schemas at their current state. Each block can be copy-pasted into `entities/<Name>.json` in the main app.
+
+## A.1 `entities/Employee.json` (Modified — full current schema)
+
+```json
+{
+  "name": "Employee",
+  "type": "object",
+  "title": "Employee",
+  "description": "Master employee record. Linked to AttendanceLog via employee_code.",
+  "properties": {
+    "employee_code": { "type": "string", "minLength": 1, "maxLength": 50 },
+    "employee_name": { "type": "string", "maxLength": 200 },
+    "father_name": { "type": "string", "maxLength": 200 },
+    "card_number": { "type": "string", "maxLength": 50 },
+    "enroll_no": { "type": "string", "maxLength": 50 },
+    "phone": { "type": "string", "maxLength": 50 },
+    "email": { "type": "string", "maxLength": 200 },
+    "date_of_birth": { "type": "string", "maxLength": 20 },
+    "government_uid": { "type": "string", "maxLength": 100 },
+    "gender": { "type": "string", "enum": ["", "Male", "Female", "Other"] },
+    "nationality": { "type": "string", "maxLength": 100 },
+    "address": { "type": "string", "maxLength": 500 },
+    "attachment_1_url": { "type": "string", "maxLength": 1000 },
+    "attachment_2_url": { "type": "string", "maxLength": 1000 },
+    "bank_name": { "type": "string", "maxLength": 200 },
+    "bank_account_number": { "type": "string", "maxLength": 100 },
+    "bank_ifsc_code": { "type": "string", "maxLength": 50 },
+    "telegram_token": { "type": "string", "maxLength": 200 },
+    "chat_id": { "type": "string", "maxLength": 200 },
+    "allow_notifications": { "type": "boolean", "default": true },
+    "auto_approved_gps_punch": { "type": "boolean", "default": false },
+    "mobile_attendance_mode": { "type": "string", "maxLength": 50 },
+    "department": { "type": "string", "maxLength": 100 },
+    "designation": { "type": "string", "maxLength": 100 },
+    "branch_name": { "type": "string", "maxLength": 100 },
+    "company_name": { "type": "string", "maxLength": 200 },
+    "supervisor_email": { "type": "string", "maxLength": 200 },
+    "supervisor_name": { "type": "string", "maxLength": 200 },
+    "date_of_joining": { "type": "string", "maxLength": 20 },
+    "office_time_policy": { "type": "string", "maxLength": 100 },
+    "resignation_date": { "type": "string", "maxLength": 20 },
+    "shift_start_date": { "type": "string", "maxLength": 20 },
+    "weekly_off": { "type": "string", "maxLength": 50 },
+    "shift_type": { "type": "string", "maxLength": 50 },
+    "shift_name": { "type": "string", "maxLength": 100 },
+    "is_active": { "type": "boolean", "default": true }
+  },
+  "required": ["employee_code", "employee_name"]
+}
+```
+
+## A.2 `entities/CandidateLead.json` (🆕 New)
+
+```json
+{
+  "name": "CandidateLead",
+  "type": "object",
+  "title": "Candidate Lead",
+  "description": "Profile of a manpower candidate for recruitment tracking, including post-hire conversion and attrition tracking.",
+  "properties": {
+    "candidate_name": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "mobile_number": { "type": "string", "minLength": 1, "maxLength": 50 },
+    "location_area": { "type": "string", "maxLength": 500 },
+    "role_interested": { "type": "string", "maxLength": 500 },
+    "source_type": { "type": "string", "maxLength": 200 },
+    "source_details": { "type": "string", "maxLength": 1000 },
+    "first_contact_mode": { "type": "string", "maxLength": 200 },
+    "first_contact_date": { "type": "string", "format": "date" },
+    "status": {
+      "type": "string",
+      "enum": ["New", "Contacted", "Shortlisted", "Interviewed", "Hired", "Rejected", "On Hold", "Terminated"],
+      "default": "New"
+    },
+    "employee_id": { "type": "string", "maxLength": 100 },
+    "employee_code": { "type": "string", "maxLength": 50 },
+    "department": { "type": "string", "maxLength": 100 },
+    "designation": { "type": "string", "maxLength": 100 },
+    "enrollment_date": { "type": "string", "format": "date" },
+    "attrition_date": { "type": "string", "format": "date" },
+    "attrition_reason": { "type": "string", "maxLength": 500 },
+    "exit_type": {
+      "type": "string",
+      "enum": ["Resignation", "Termination", "Absconded", "Retirement", "End of Contract", "Other"]
+    },
+    "last_working_day": { "type": "string", "format": "date" },
+    "eligible_for_rehire": { "type": "boolean" },
+    "exit_feedback": { "type": "string", "maxLength": 2000 },
+    "days_employed": { "type": "number", "minimum": 0 },
+    "remarks": { "type": "string", "maxLength": 2000 },
+    "is_active": { "type": "boolean", "default": true }
+  },
+  "required": ["candidate_name", "mobile_number"]
+}
+```
+
+## A.3 `entities/CandidateLeadStatusLog.json` (🆕 New)
+
+```json
+{
+  "name": "CandidateLeadStatusLog",
+  "type": "object",
+  "title": "Candidate Lead Status Change Log",
+  "properties": {
+    "candidate_lead_id": { "type": "string", "minLength": 1, "maxLength": 100 },
+    "candidate_name": { "type": "string", "maxLength": 200 },
+    "old_status": { "type": "string", "maxLength": 50 },
+    "new_status": { "type": "string", "minLength": 1, "maxLength": 50 },
+    "changed_at": { "type": "string", "format": "date-time" },
+    "changed_by": { "type": "string", "maxLength": 200 },
+    "duration_in_previous_status_minutes": { "type": "number", "minimum": 0 },
+    "remarks": { "type": "string", "maxLength": 1000 }
+  },
+  "required": ["candidate_lead_id", "new_status", "changed_at"]
+}
+```
+
+## A.4 `entities/ExitInterviewSurvey.json` (🆕 New)
+
+```json
+{
+  "name": "ExitInterviewSurvey",
+  "type": "object",
+  "title": "Exit Interview Survey",
+  "properties": {
+    "candidate_lead_id": { "type": "string", "minLength": 1, "maxLength": 100 },
+    "candidate_name": { "type": "string", "maxLength": 200 },
+    "employee_code": { "type": "string", "maxLength": 50 },
+    "token": { "type": "string", "minLength": 16, "maxLength": 100 },
+    "survey_url": { "type": "string", "maxLength": 1000 },
+    "sent_to": { "type": "string", "maxLength": 200 },
+    "sent_at": { "type": "string", "format": "date-time" },
+    "status": {
+      "type": "string",
+      "enum": ["SENT", "OPENED", "SUBMITTED", "EXPIRED"],
+      "default": "SENT"
+    },
+    "expires_at": { "type": "string", "format": "date-time" },
+    "submitted_at": { "type": "string", "format": "date-time" },
+    "reason_for_leaving": { "type": "string", "maxLength": 1000 },
+    "work_environment_rating": { "type": "number", "minimum": 1, "maximum": 5 },
+    "management_rating": { "type": "number", "minimum": 1, "maximum": 5 },
+    "compensation_rating": { "type": "number", "minimum": 1, "maximum": 5 },
+    "would_recommend": { "type": "string", "enum": ["Yes", "No", "Maybe"] },
+    "suggestions": { "type": "string", "maxLength": 2000 },
+    "additional_comments": { "type": "string", "maxLength": 2000 },
+    "submitted_from_ip": { "type": "string", "maxLength": 100 },
+    "hr_alerted": { "type": "boolean", "default": false },
+    "hr_alerted_at": { "type": "string", "format": "date-time" }
+  },
+  "required": ["candidate_lead_id", "token", "status"]
+}
+```
+
+## A.5 Master Data Entities (🆕 5 small lookups)
+
+### `entities/CandidateSourceType.json`
+```json
+{
+  "name": "CandidateSourceType",
+  "type": "object",
+  "properties": {
+    "source_name": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "is_active": { "type": "boolean", "default": true }
+  },
+  "required": ["source_name"]
+}
+```
+
+### `entities/CandidateContactMode.json`
+```json
+{
+  "name": "CandidateContactMode",
+  "type": "object",
+  "properties": {
+    "mode_name": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "is_active": { "type": "boolean", "default": true }
+  },
+  "required": ["mode_name"]
+}
+```
+
+### `entities/CandidateSourceDetail.json`
+```json
+{
+  "name": "CandidateSourceDetail",
+  "type": "object",
+  "properties": {
+    "detail_text": { "type": "string", "minLength": 1, "maxLength": 500 },
+    "is_active": { "type": "boolean", "default": true }
+  },
+  "required": ["detail_text"]
+}
+```
+
+### `entities/CandidateLocation.json`
+```json
+{
+  "name": "CandidateLocation",
+  "type": "object",
+  "properties": {
+    "location_name": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "is_active": { "type": "boolean", "default": true }
+  },
+  "required": ["location_name"]
+}
+```
+
+### `entities/CandidateRole.json`
+```json
+{
+  "name": "CandidateRole",
+  "type": "object",
+  "properties": {
+    "role_name": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "is_active": { "type": "boolean", "default": true }
+  },
+  "required": ["role_name"]
+}
+```
+
+---
+
+# 📎 ANNEX B — File Inventory (Read These In Source)
+
+> Code annex below lists each file's purpose, location, and key APIs. Full source for each file is available in the cloned repo at the path shown — read directly from there during merge. Annex C below provides full inline source for the most critical small files.
+
+## B.1 New Pages (`src/pages/`)
+
+| File | Lines | Key Logic |
+|---|---|---|
+| `pages/HRCandidateLeads.jsx` | ~340 | Main candidate pipeline page. Uses `CandidateLeadTable`, `CandidateLeadFormDialog`, `CandidateStatusChangeDialog`, `CandidateTimelineDialog`, `CreateEmployeeFromCandidateDialog`. Fires HR FMS events on save/status change. |
+| `pages/HRAttritionDashboard.jsx` | ~270 | Analytics page. Uses charts from `components/hr/AttritionCharts`. Memoized stats from `lib/candidateAttritionStats`, `lib/hrAnalyticsHelpers`. |
+| `pages/HRTerminationForm.jsx` | ~410 | Standalone termination workflow. Loads candidate by `?id=`, validates exit type + dates, fires `employee_exit_completed`, sends survey. |
+| `pages/ExitInterviewSurvey.jsx` | ~240 | **PUBLIC** survey form. Reads token from URL, submits via `submitExitInterviewSurvey` function. |
+
+## B.2 New Components (`src/components/hr/`)
+
+All located under `src/components/hr/`. Each is < 300 lines:
+
+```
+CandidateLeadTable.jsx              Table view with status badges + action buttons
+CandidateLeadFormDialog.jsx         Create/edit dialog with CreatableSelect for masters
+CandidateTimelineDialog.jsx         Vertical timeline of CandidateLeadStatusLog entries
+CandidateStatusChangeDialog.jsx     Guided status transition with effective date
+CandidateEmployeeLinker.jsx         Search + link existing employee to candidate
+CreateEmployeeFromCandidateDialog.jsx   New employee from Hired candidate
+AttritionCharts.jsx                 Recharts wrappers (Line, Bar, Pie)
+AttritionKPICards.jsx               Lifetime KPI tiles
+AttritionFunnelPanel.jsx            Hired→Active vs Exited breakdown
+PeriodKPICards.jsx                  Date-range KPI tiles
+ConversionFunnelChart.jsx           Multi-stage funnel visualization
+ConversionBreakdownTable.jsx        Conversion % by category
+BIExportPanel.jsx                   CSV/Sheets export controls
+employee-form/EmployeePersonalSection.jsx
+employee-form/EmployeeContactBankSection.jsx
+employee-form/EmployeeEmploymentSection.jsx
+employee-form/EmployeeNotificationsSection.jsx
+```
+
+## B.3 New Backend Functions (`src/functions/`)
+
+| File | Auth | Purpose |
+|---|---|---|
+| `functions/sendExitInterviewSurvey.js` | Authenticated (HR) | Generate token, create `ExitInterviewSurvey`, email link |
+| `functions/submitExitInterviewSurvey.js` | **Public** | Validate token, save responses, update candidate `exit_feedback` |
+| `functions/syncHRAttritionToSheets.js` | Authenticated (HR) | Push attrition data to Google Sheets webhook |
+| `functions/syncToGoogleSheets.js` | Authenticated | Generic Sales pusher (potential filename clash — see §6.2) |
+
+## B.4 New Library Files (`src/lib/`)
+
+| File | Purpose |
+|---|---|
+| `lib/candidateStatusTransitions.js` | Status graph + visual metadata (full source in Annex C) |
+| `lib/candidateAttritionStats.js` | Pure analytics functions (`computeKPIs`, `groupByDate`, `buildDailySeries`, `groupByCategory`, `inDateRange`) |
+| `lib/hrAnalyticsHelpers.js` | Funnel + tenure builders (`buildTenureBucketsDetailed`, `buildConversionFunnel`, `buildAttritionFunnel`, `computePeriodKPIs`, `buildConversionBreakdown`) |
+
+---
+
+# 📎 ANNEX C — Full Source for Critical Small Files
+
+> Inline source for files small enough to paste here. Larger files (pages, dialogs) — read directly from the cloned repo using paths in Annex B.
+
+## C.1 `lib/candidateStatusTransitions.js`
+
+```javascript
+/**
+ * Candidate lead status transition rules.
+ * Defines which statuses a candidate can move to from their current status.
+ * Keeps the workflow guided and prevents illogical jumps.
+ */
+
+export const ALL_STATUSES = [
+  'New',
+  'Contacted',
+  'Shortlisted',
+  'Interviewed',
+  'Hired',
+  'Rejected',
+  'On Hold',
+  'Terminated',
+];
+
+export const STATUS_META = {
+  New: {
+    color: 'bg-slate-100 text-slate-700 border-slate-200',
+    dotColor: 'bg-slate-400',
+    description: 'Lead just captured, not yet contacted',
+  },
+  Contacted: {
+    color: 'bg-blue-100 text-blue-700 border-blue-200',
+    dotColor: 'bg-blue-500',
+    description: 'Initial contact made with candidate',
+  },
+  Shortlisted: {
+    color: 'bg-amber-100 text-amber-700 border-amber-200',
+    dotColor: 'bg-amber-500',
+    description: 'Candidate matches role requirements',
+  },
+  Interviewed: {
+    color: 'bg-violet-100 text-violet-700 border-violet-200',
+    dotColor: 'bg-violet-500',
+    description: 'Interview completed, awaiting decision',
+  },
+  Hired: {
+    color: 'bg-green-100 text-green-700 border-green-200',
+    dotColor: 'bg-green-500',
+    description: 'Offered and joined as employee',
+  },
+  Rejected: {
+    color: 'bg-red-100 text-red-700 border-red-200',
+    dotColor: 'bg-red-500',
+    description: 'Candidate not suitable for role',
+  },
+  'On Hold': {
+    color: 'bg-slate-100 text-slate-600 border-slate-200',
+    dotColor: 'bg-slate-400',
+    description: 'Paused — revisit later',
+  },
+  Terminated: {
+    color: 'bg-red-100 text-red-700 border-red-200',
+    dotColor: 'bg-red-600',
+    description: 'Employee exited the company',
+  },
+};
+
+const TRANSITIONS = {
+  New: ['Contacted', 'Shortlisted', 'Rejected', 'On Hold'],
+  Contacted: ['Shortlisted', 'Interviewed', 'Rejected', 'On Hold'],
+  Shortlisted: ['Interviewed', 'Hired', 'Rejected', 'On Hold'],
+  Interviewed: ['Hired', 'Shortlisted', 'Rejected', 'On Hold'],
+  Hired: ['Terminated'],
+  Rejected: ['New', 'Shortlisted'],
+  'On Hold': ['Contacted', 'Shortlisted', 'Interviewed', 'Rejected'],
+  Terminated: [],
+};
+
+export function getAllowedNextStatuses(currentStatus) {
+  const key = currentStatus || 'New';
+  return TRANSITIONS[key] || [];
+}
+
+export function getStatusMeta(status) {
+  return STATUS_META[status] || STATUS_META.New;
+}
+```
+
+## C.2 HR Lifecycle FMS Events — Append to `lib/fmsAppEvents.js`
+
+These six entries must be merged into the main app's existing `APP_EVENTS` array:
+
+```javascript
+// HR Lifecycle Events (HR Module)
+{ key: 'candidate_lead_created',     label: 'Candidate Lead Created',     category: 'HR', canTrigger: true,  canComplete: true  },
+{ key: 'candidate_shortlisted',      label: 'Candidate Shortlisted',      category: 'HR', canTrigger: false, canComplete: true  },
+{ key: 'candidate_interviewed',      label: 'Candidate Interviewed',      category: 'HR', canTrigger: false, canComplete: true  },
+{ key: 'candidate_hired',            label: 'Candidate Hired',            category: 'HR', canTrigger: true,  canComplete: true  },
+{ key: 'employee_exit_initiated',    label: 'Employee Exit Initiated',    category: 'HR', canTrigger: true,  canComplete: true  },
+{ key: 'exit_interview_sent',        label: 'Exit Interview Sent',        category: 'HR', canTrigger: false, canComplete: true  },
+```
+
+> **Verify** the exact shape against main app's existing entries (some apps use `name` instead of `label`, etc.) before pasting.
+
+## C.3 Registry Patch — `lib/registryConfig.js`
+
+### Module entry to add to `moduleRegistry`:
+```javascript
+{
+  moduleKey: 'HR',
+  label: 'Human Resources',
+  icon: UserCheck,
+  color: 'text-amber-600',
+  bgColor: 'bg-amber-50',
+  adminOnly: false,
+  sortOrder: 50,
+}
+```
+
+### Page entries to add to `pageRegistry` (HR section):
+```javascript
+{ pageKey: 'HREmployees',             title: 'Employees',                moduleKey: 'HR', icon: Users,         roles: ['admin', 'hr_manager', 'hr_supervisor', 'hr_user'],          sortOrder: 0  },
+{ pageKey: 'HRAttendanceLogs',        title: 'Attendance Logs',          moduleKey: 'HR', icon: UserCheck,     roles: ['admin', 'hr_manager', 'hr_supervisor', 'hr_user', 'user'], sortOrder: 1  },
+{ pageKey: 'HRAttendanceSummary',     title: 'Attendance Summary',       moduleKey: 'HR', icon: ClipboardList, roles: ['admin', 'hr_manager', 'hr_supervisor', 'hr_user'],         sortOrder: 2  },
+{ pageKey: 'HREmployeeDailyHours',    title: 'Employee Daily Hours',     moduleKey: 'HR', icon: BarChart3,     roles: ['admin', 'hr_manager', 'hr_supervisor', 'hr_user', 'supervisor'], sortOrder: 3 },
+{ pageKey: 'HRManualPunchRequest',    title: 'Punch Requests',           moduleKey: 'HR', icon: ClipboardList, roles: ['admin', 'hr_manager', 'hr_supervisor', 'hr_user', 'user'], sortOrder: 4  },
+{ pageKey: 'HRManualPunchApprovals',  title: 'Punch Approvals',          moduleKey: 'HR', icon: ClipboardCheck, roles: ['admin', 'hr_manager', 'hr_supervisor', 'supervisor'],     sortOrder: 5  },
+{ pageKey: 'HRAttendanceAlerts',      title: 'Attendance Alerts',        moduleKey: 'HR', icon: Bell,          roles: ['admin', 'hr_manager', 'hr_supervisor', 'hr_user'],         sortOrder: 6  },
+{ pageKey: 'HRShiftTimings',          title: 'Shift Timings',            moduleKey: 'HR', icon: Settings,      roles: ['admin', 'hr_manager'],                                     sortOrder: 10 },
+{ pageKey: 'HRHolidays',              title: 'Holidays',                 moduleKey: 'HR', icon: CalendarDays,  roles: ['admin', 'hr_manager'],                                     sortOrder: 11 },
+{ pageKey: 'HRDepartments',           title: 'Departments',              moduleKey: 'HR', icon: Users,         roles: ['admin', 'hr_manager', 'hr_supervisor'],                    sortOrder: 20 },
+{ pageKey: 'HRDesignations',          title: 'Designations',             moduleKey: 'HR', icon: Tag,           roles: ['admin', 'hr_manager', 'hr_supervisor'],                    sortOrder: 21 },
+{ pageKey: 'HRBranches',              title: 'Branches',                 moduleKey: 'HR', icon: MapPin,        roles: ['admin', 'hr_manager', 'hr_supervisor'],                    sortOrder: 22 },
+{ pageKey: 'HRCompanies',             title: 'Companies',                moduleKey: 'HR', icon: Factory,       roles: ['admin', 'hr_manager'],                                     sortOrder: 23 },
+{ pageKey: 'HRLeaveTypes',            title: 'Leave Types',              moduleKey: 'HR', icon: CalendarDays,  roles: ['admin', 'hr_manager'],                                     sortOrder: 24 },
+{ pageKey: 'HRNotificationSettings',  title: 'Notification Settings',    moduleKey: 'HR', icon: Bell,          roles: ['admin', 'hr_manager'],                                     sortOrder: 25 },
+{ pageKey: 'HRCandidateLeads',        title: 'Candidate Leads',          moduleKey: 'HR', icon: UserPlus,      roles: ['admin', 'hr_manager', 'hr_supervisor', 'hr_user'],         sortOrder: 30 },
+{ pageKey: 'HRAttritionDashboard',    title: 'Attrition Analytics',      moduleKey: 'HR', icon: TrendingDown,  roles: ['admin', 'hr_manager', 'hr_supervisor', 'hr_user'],         sortOrder: 31 },
+{ pageKey: 'HRTerminationForm',       title: 'Termination Form',         moduleKey: 'HR', icon: UserMinus,     roles: ['admin', 'hr_manager', 'hr_supervisor'],                    sortOrder: 32, hideFromNav: true },
+```
+
+### Required new icon imports at top of `lib/registryConfig.js`:
+```javascript
+import {
+  // ... existing imports ...
+  UserCheck, UserPlus, UserMinus, TrendingDown, CalendarDays, MapPin, Bell,
+} from 'lucide-react';
+```
+
+## C.4 Routing Patch — `App.jsx`
+
+### Imports to add (top of file):
+```jsx
+import HREmployees             from './pages/HREmployees';
+import HRAttendanceLogs        from './pages/HRAttendanceLogs';
+import HRAttendanceSummary     from './pages/HRAttendanceSummary';
+import HREmployeeDailyHours    from './pages/HREmployeeDailyHours';
+import HRManualPunchRequest    from './pages/HRManualPunchRequest';
+import HRManualPunchApprovals  from './pages/HRManualPunchApprovals';
+import HRAttendanceAlerts      from './pages/HRAttendanceAlerts';
+import HRShiftTimings          from './pages/HRShiftTimings';
+import HRHolidays              from './pages/HRHolidays';
+import HRDepartments           from './pages/HRDepartments';
+import HRDesignations          from './pages/HRDesignations';
+import HRBranches              from './pages/HRBranches';
+import HRCompanies             from './pages/HRCompanies';
+import HRLeaveTypes            from './pages/HRLeaveTypes';
+import HRNotificationSettings  from './pages/HRNotificationSettings';
+import HRCandidateLeads        from './pages/HRCandidateLeads';
+import HRAttritionDashboard    from './pages/HRAttritionDashboard';
+import HRTerminationForm       from './pages/HRTerminationForm';
+import ExitInterviewSurvey     from './pages/ExitInterviewSurvey';
+```
+
+### Routes to add inside `<Routes>` block:
+```jsx
+{/* HR Module — wrapped routes */}
+<Route path="/HREmployees"            element={<LayoutWrapper currentPageName="HREmployees"><HREmployees /></LayoutWrapper>} />
+<Route path="/HRAttendanceLogs"       element={<LayoutWrapper currentPageName="HRAttendanceLogs"><HRAttendanceLogs /></LayoutWrapper>} />
+<Route path="/HRAttendanceSummary"    element={<LayoutWrapper currentPageName="HRAttendanceSummary"><HRAttendanceSummary /></LayoutWrapper>} />
+<Route path="/HREmployeeDailyHours"   element={<LayoutWrapper currentPageName="HREmployeeDailyHours"><HREmployeeDailyHours /></LayoutWrapper>} />
+<Route path="/HRManualPunchRequest"   element={<LayoutWrapper currentPageName="HRManualPunchRequest"><HRManualPunchRequest /></LayoutWrapper>} />
+<Route path="/HRManualPunchApprovals" element={<LayoutWrapper currentPageName="HRManualPunchApprovals"><HRManualPunchApprovals /></LayoutWrapper>} />
+<Route path="/HRAttendanceAlerts"     element={<LayoutWrapper currentPageName="HRAttendanceAlerts"><HRAttendanceAlerts /></LayoutWrapper>} />
+<Route path="/HRShiftTimings"         element={<LayoutWrapper currentPageName="HRShiftTimings"><HRShiftTimings /></LayoutWrapper>} />
+<Route path="/HRHolidays"             element={<LayoutWrapper currentPageName="HRHolidays"><HRHolidays /></LayoutWrapper>} />
+<Route path="/HRDepartments"          element={<LayoutWrapper currentPageName="HRDepartments"><HRDepartments /></LayoutWrapper>} />
+<Route path="/HRDesignations"         element={<LayoutWrapper currentPageName="HRDesignations"><HRDesignations /></LayoutWrapper>} />
+<Route path="/HRBranches"             element={<LayoutWrapper currentPageName="HRBranches"><HRBranches /></LayoutWrapper>} />
+<Route path="/HRCompanies"            element={<LayoutWrapper currentPageName="HRCompanies"><HRCompanies /></LayoutWrapper>} />
+<Route path="/HRLeaveTypes"           element={<LayoutWrapper currentPageName="HRLeaveTypes"><HRLeaveTypes /></LayoutWrapper>} />
+<Route path="/HRNotificationSettings" element={<LayoutWrapper currentPageName="HRNotificationSettings"><HRNotificationSettings /></LayoutWrapper>} />
+<Route path="/HRCandidateLeads"       element={<LayoutWrapper currentPageName="HRCandidateLeads"><HRCandidateLeads /></LayoutWrapper>} />
+<Route path="/HRAttritionDashboard"   element={<LayoutWrapper currentPageName="HRAttritionDashboard"><HRAttritionDashboard /></LayoutWrapper>} />
+<Route path="/HRTerminationForm"      element={<LayoutWrapper currentPageName="HRTerminationForm"><HRTerminationForm /></LayoutWrapper>} />
+
+{/* Public exit interview survey — no layout, no auth gate (token-validated server-side) */}
+<Route path="/ExitInterviewSurvey" element={<ExitInterviewSurvey />} />
+```
+
+### Page component lookup map — add to `PAGE_COMPONENTS`:
+```jsx
+HREmployees, HRAttendanceLogs, HRAttendanceSummary, HREmployeeDailyHours,
+HRManualPunchRequest, HRManualPunchApprovals, HRAttendanceAlerts,
+HRShiftTimings, HRHolidays,
+HRDepartments, HRDesignations, HRBranches, HRCompanies, HRLeaveTypes,
+HRNotificationSettings,
+HRCandidateLeads, HRAttritionDashboard, HRTerminationForm,
+```
+
+## C.5 Backend Function Signatures (See repo for full source)
+
+### `functions/sendExitInterviewSurvey.js`
+- **Path:** `src/functions/sendExitInterviewSurvey.js`
+- **Auth:** Requires authenticated HR user
+- **Input:** `{ candidate_lead_id, app_origin }`
+- **Output:** `{ success: true, survey_url, surveyRecordId }`
+- **Side effects:** Creates `ExitInterviewSurvey` row with random token, 30-day expiry; calls `Core.SendEmail` if candidate has email.
+
+### `functions/submitExitInterviewSurvey.js`
+- **Path:** `src/functions/submitExitInterviewSurvey.js`
+- **Auth:** **PUBLIC** — token-validated only
+- **Input:** `{ token, surveyData }`
+- **Output:** `{ success: true }` or 4xx with error
+- **Side effects:** Updates `ExitInterviewSurvey` to `SUBMITTED`; writes summary to `CandidateLead.exit_feedback`.
+
+### `functions/syncHRAttritionToSheets.js`
+- **Path:** `src/functions/syncHRAttritionToSheets.js`
+- **Auth:** Requires `admin` / `hr_manager` / `hr_supervisor`
+- **Input:** `{ startDate, endDate, format, candidates }`
+- **Output:** `{ success: true, sheet, result }`
+- **Required secret:** `GOOGLE_SHEETS_WEBHOOK_URL`
+
+### `functions/syncToGoogleSheets.js` ⚠️
+- **Path:** `src/functions/syncToGoogleSheets.js`
+- **Scope:** Sales (NOT HR) — see §6.2 conflict warning.
+- **Required secret:** `GOOGLE_SHEETS_WEBHOOK_URL`
+
+---
+
+# 📎 ANNEX D — Page File Locations (Read From Repo)
+
+The following files exceed 200 lines each — read them directly from the cloned repo using these paths during merge:
+
+```
+src/pages/HRCandidateLeads.jsx
+src/pages/HRAttritionDashboard.jsx
+src/pages/HRTerminationForm.jsx
+src/pages/ExitInterviewSurvey.jsx
+
+src/components/hr/CandidateLeadTable.jsx
+src/components/hr/CandidateLeadFormDialog.jsx
+src/components/hr/CandidateTimelineDialog.jsx
+src/components/hr/CandidateStatusChangeDialog.jsx
+src/components/hr/CandidateEmployeeLinker.jsx
+src/components/hr/CreateEmployeeFromCandidateDialog.jsx
+src/components/hr/AttritionCharts.jsx
+src/components/hr/AttritionKPICards.jsx
+src/components/hr/AttritionFunnelPanel.jsx
+src/components/hr/PeriodKPICards.jsx
+src/components/hr/ConversionFunnelChart.jsx
+src/components/hr/ConversionBreakdownTable.jsx
+src/components/hr/BIExportPanel.jsx
+src/components/hr/employee-form/EmployeePersonalSection.jsx
+src/components/hr/employee-form/EmployeeContactBankSection.jsx
+src/components/hr/employee-form/EmployeeEmploymentSection.jsx
+src/components/hr/employee-form/EmployeeNotificationsSection.jsx
+
+src/lib/candidateAttritionStats.js
+src/lib/hrAnalyticsHelpers.js
+
+src/functions/sendExitInterviewSurvey.js
+src/functions/submitExitInterviewSurvey.js
+src/functions/syncHRAttritionToSheets.js
+src/functions/syncToGoogleSheets.js
+```
+
+> Each file is self-contained. Standard imports follow the convention: React → Base44 → UI → Custom → Utils → Icons.
+
+---
+
 **End of Merge Blueprint.**
