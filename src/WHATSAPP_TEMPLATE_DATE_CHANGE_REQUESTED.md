@@ -127,6 +127,44 @@ The Director and Executive Assistant have been notified. You will be informed on
 
 ---
 
+## cURL Command — Submit to Meta for Approval
+
+Replace `<WHATSAPP_BUSINESS_ACCOUNT_ID>` with your WhatsApp Business Account ID and `<ACCESS_TOKEN>` with your Meta access token.
+
+```bash
+curl -X POST \
+  "https://graph.facebook.com/v21.0/<WHATSAPP_BUSINESS_ACCOUNT_ID>/message_templates" \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "k95_task_date_change",
+    "language": "en",
+    "category": "UTILITY",
+    "components": [
+      {
+        "type": "HEADER",
+        "format": "TEXT",
+        "text": "📅 Date Change Requested"
+      },
+      {
+        "type": "BODY",
+        "text": "Hi {{1}},\n\nA deadline change has been requested:\n\n📌 *{{2}} — {{3}}*\n👤 Requested by: {{4}}\n📅 Current deadline: {{5}}\n📅 Requested new date: {{6}}\n\n💬 Reason: {{7}}\n\nPlease take action in the K95 ERP dashboard.",
+        "example": {
+          "body_text": [
+            ["Vikram Shah", "DT-0045", "Prepare vendor audit report", "Rajesh Kumar", "06/05/2026", "08/05/2026", "Waiting for supplier data"]
+          ]
+        }
+      },
+      {
+        "type": "FOOTER",
+        "text": "K95 ERP Task Management"
+      }
+    ]
+  }'
+```
+
+---
+
 ## Recipients
 
 | Role | Message Tone |

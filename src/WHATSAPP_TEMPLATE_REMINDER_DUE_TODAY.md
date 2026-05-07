@@ -131,6 +131,44 @@ Your team has *3 tasks* due today (06/05/2026):
 
 ---
 
+## cURL Command — Submit to Meta for Approval
+
+Replace `<WHATSAPP_BUSINESS_ACCOUNT_ID>` with your WhatsApp Business Account ID and `<ACCESS_TOKEN>` with your Meta access token.
+
+```bash
+curl -X POST \
+  "https://graph.facebook.com/v21.0/<WHATSAPP_BUSINESS_ACCOUNT_ID>/message_templates" \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "k95_tasks_due_today",
+    "language": "en",
+    "category": "UTILITY",
+    "components": [
+      {
+        "type": "HEADER",
+        "format": "TEXT",
+        "text": "📋 Tasks Due Today"
+      },
+      {
+        "type": "BODY",
+        "text": "Hi {{1}},\n\nYou have *{{3}} task(s)* due today ({{2}}):\n\n{{4}}\n\nPlease complete these before the deadlines.",
+        "example": {
+          "body_text": [
+            ["Rajesh Kumar", "06/05/2026", "2", "1. 🔴 DT-0045 — Prepare vendor audit report\n   ⏰ Due: 4:00 PM | Assigned by: Vikram Shah\n\n2. DT-0048 — Update ingredient stock sheet\n   ⏰ Due: 2:00 PM | Assigned by: Priya Mehta"]
+          ]
+        }
+      },
+      {
+        "type": "FOOTER",
+        "text": "K95 ERP Task Management"
+      }
+    ]
+  }'
+```
+
+---
+
 ## Recipients
 
 | Role | What They Receive |

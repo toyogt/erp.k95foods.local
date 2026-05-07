@@ -124,6 +124,44 @@ The assignee and your Executive Assistant have also been notified.
 
 ---
 
+## cURL Command — Submit to Meta for Approval
+
+Replace `<WHATSAPP_BUSINESS_ACCOUNT_ID>` with your WhatsApp Business Account ID and `<ACCESS_TOKEN>` with your Meta access token.
+
+```bash
+curl -X POST \
+  "https://graph.facebook.com/v21.0/<WHATSAPP_BUSINESS_ACCOUNT_ID>/message_templates" \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "k95_task_overdue",
+    "language": "en",
+    "category": "UTILITY",
+    "components": [
+      {
+        "type": "HEADER",
+        "format": "TEXT",
+        "text": "⚠️ Task Overdue"
+      },
+      {
+        "type": "BODY",
+        "text": "Hi {{1}},\n\nA task is past its deadline:\n\n📌 *{{2}} — {{3}}*\n👤 Assigned to: {{4}}\n📅 Deadline was: {{5}}\n⏱️ Overdue by: {{7}}\n🏢 Director: {{6}}\n\nPlease take immediate action.",
+        "example": {
+          "body_text": [
+            ["Rajesh Kumar", "DT-0045", "Prepare vendor audit report", "Rajesh Kumar", "05/05/2026 4:00 PM", "Vikram Shah", "1 day 2 hours"]
+          ]
+        }
+      },
+      {
+        "type": "FOOTER",
+        "text": "K95 ERP Task Management"
+      }
+    ]
+  }'
+```
+
+---
+
 ## Recipients
 
 | Role | Message Tone |

@@ -121,6 +121,44 @@ The assignee and your Executive Assistant have been reminded.
 
 ---
 
+## cURL Command — Submit to Meta for Approval
+
+Replace `<WHATSAPP_BUSINESS_ACCOUNT_ID>` with your WhatsApp Business Account ID and `<ACCESS_TOKEN>` with your Meta access token.
+
+```bash
+curl -X POST \
+  "https://graph.facebook.com/v21.0/<WHATSAPP_BUSINESS_ACCOUNT_ID>/message_templates" \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "k95_task_reminder_2h",
+    "language": "en",
+    "category": "UTILITY",
+    "components": [
+      {
+        "type": "HEADER",
+        "format": "TEXT",
+        "text": "🔴 Important Task — 2 Hour Reminder"
+      },
+      {
+        "type": "BODY",
+        "text": "Hi {{1}},\n\nAn important task is due in 2 hours:\n\n📌 *{{2}} — {{3}}*\n👤 Assigned to: {{4}}\n📅 Deadline: {{6}} at {{5}}\n🏢 Director: {{7}}\n\n⏰ Please ensure this is completed on time.",
+        "example": {
+          "body_text": [
+            ["Rajesh Kumar", "DT-0045", "Prepare vendor audit report", "Rajesh Kumar", "4:00 PM", "06/05/2026", "Vikram Shah"]
+          ]
+        }
+      },
+      {
+        "type": "FOOTER",
+        "text": "K95 ERP Task Management"
+      }
+    ]
+  }'
+```
+
+---
+
 ## Recipients
 
 | Role | Message Tone |
