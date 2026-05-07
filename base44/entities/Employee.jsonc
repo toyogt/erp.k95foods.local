@@ -17,21 +17,108 @@
     },
     "father_name": {
       "type": "string",
-      "maxLength": 200
+      "maxLength": 200,
+      "description": "Father's or Husband's name"
     },
     "card_number": {
       "type": "string",
       "maxLength": 50,
-      "description": "Biometric card number"
+      "description": "Proximity Card Number (from biometric device)"
+    },
+    "enroll_no": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Biometric Enrollment Number / Biometric ID (from biometric device)"
+    },
+    "phone": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Mobile / phone number"
     },
     "email": {
       "type": "string",
       "maxLength": 200,
       "description": "Employee email address"
     },
-    "phone": {
+    "date_of_birth": {
       "type": "string",
-      "maxLength": 50
+      "maxLength": 20,
+      "description": "Date of birth in DD/MM/YYYY format"
+    },
+    "government_uid": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Government UID (e.g. Aadhaar, PAN)"
+    },
+    "gender": {
+      "type": "string",
+      "enum": [
+        "",
+        "Male",
+        "Female",
+        "Other"
+      ],
+      "description": "Gender"
+    },
+    "nationality": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Nationality"
+    },
+    "address": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "Residential address"
+    },
+    "attachment_1_url": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "URL for Attachment 1 (uploaded file)"
+    },
+    "attachment_2_url": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "URL for Attachment 2 (uploaded file)"
+    },
+    "bank_name": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Bank name"
+    },
+    "bank_account_number": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Bank account number"
+    },
+    "bank_ifsc_code": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Bank IFSC code"
+    },
+    "telegram_token": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Telegram bot token"
+    },
+    "chat_id": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Telegram chat ID"
+    },
+    "allow_notifications": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether the employee allows app notifications"
+    },
+    "auto_approved_gps_punch": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether mobile GPS punches are auto-approved"
+    },
+    "mobile_attendance_mode": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Mobile attendance mode (e.g. GPS Attendance, Disabled)"
     },
     "department": {
       "type": "string",
@@ -62,20 +149,35 @@
       "type": "string",
       "maxLength": 200
     },
-    "date_of_birth": {
-      "type": "string",
-      "maxLength": 20,
-      "description": "Date of birth in DD/MM/YYYY format"
-    },
     "date_of_joining": {
       "type": "string",
       "maxLength": 20,
       "description": "Joining date in DD/MM/YYYY format"
     },
+    "office_time_policy": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Office time policy name"
+    },
+    "resignation_date": {
+      "type": "string",
+      "maxLength": 20,
+      "description": "Resignation date in DD/MM/YYYY format"
+    },
+    "shift_start_date": {
+      "type": "string",
+      "maxLength": 20,
+      "description": "Shift start date in DD/MM/YYYY format"
+    },
     "weekly_off": {
       "type": "string",
       "maxLength": 50,
       "description": "Weekly off day (e.g. Sunday, None)"
+    },
+    "shift_type": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Type of shift (e.g. Fixed, Rotating)"
     },
     "shift_name": {
       "type": "string",
@@ -88,6 +190,7 @@
     }
   },
   "required": [
-    "employee_code"
+    "employee_code",
+    "employee_name"
   ]
 }
