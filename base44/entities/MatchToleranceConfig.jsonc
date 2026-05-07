@@ -1,0 +1,40 @@
+{
+  "name": "MatchToleranceConfig",
+  "type": "object",
+  "title": "Match Tolerance Config",
+  "properties": {
+    "config_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "qty_over_tolerance_percent": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0,
+      "description": "Allow invoice qty to be N% over PO qty"
+    },
+    "price_over_tolerance_percent": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0,
+      "description": "Allow invoice rate to be N% over PO rate"
+    },
+    "allow_under_delivery": {
+      "type": "boolean",
+      "default": true,
+      "description": "Allow invoice qty less than max_payable_qty"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 500
+    }
+  },
+  "required": [
+    "config_id"
+  ]
+}

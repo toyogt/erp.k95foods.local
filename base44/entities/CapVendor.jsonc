@@ -1,0 +1,51 @@
+{
+  "name": "CapVendor",
+  "type": "object",
+  "title": "Cap Vendor",
+  "properties": {
+    "cap_sku_code": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Reference to CapType.cap_sku_code"
+    },
+    "vendor_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "Vendor/supplier name"
+    },
+    "vendor_part_number": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Vendor's part/SKU number for this cap"
+    },
+    "lead_time_days": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Typical lead time in days"
+    },
+    "moq": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Minimum order quantity"
+    },
+    "unit_price": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Price per unit"
+    },
+    "is_preferred": {
+      "type": "boolean",
+      "default": false,
+      "description": "Mark as preferred vendor for this cap"
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 500
+    }
+  },
+  "required": [
+    "cap_sku_code",
+    "vendor_name"
+  ]
+}

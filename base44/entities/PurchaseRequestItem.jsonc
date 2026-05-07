@@ -1,0 +1,40 @@
+{
+  "name": "PurchaseRequestItem",
+  "type": "object",
+  "title": "Purchase Request Item",
+  "properties": {
+    "mr_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "item_code": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "item_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "uom_code": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "qty": {
+      "type": "number",
+      "minimum": 0
+    },
+    "required_by": {
+      "type": "string",
+      "format": "date"
+    },
+    "remarks": {
+      "type": "string",
+      "maxLength": 500
+    }
+  },
+  "required": [
+    "mr_id",
+    "item_code",
+    "qty"
+  ]
+}

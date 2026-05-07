@@ -1,0 +1,41 @@
+{
+  "name": "ChamberCycleTemplate",
+  "type": "object",
+  "title": "Chamber Cycle Template",
+  "properties": {
+    "template_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "interval_minutes": {
+      "type": "number",
+      "minimum": 1,
+      "default": 60
+    },
+    "stages_json": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [
+        "HEATUP",
+        "HOLD",
+        "COOLDOWN"
+      ]
+    }
+  },
+  "required": [
+    "template_id",
+    "name"
+  ]
+}

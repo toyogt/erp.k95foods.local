@@ -1,0 +1,29 @@
+{
+  "name": "ModuleConfig",
+  "type": "object",
+  "title": "Module Config",
+  "properties": {
+    "module_key": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 300
+    },
+    "is_globally_enabled": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "module_key",
+    "name"
+  ]
+}

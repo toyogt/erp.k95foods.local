@@ -1,0 +1,44 @@
+{
+  "name": "ManufacturerMaster",
+  "type": "object",
+  "title": "Manufacturer Master",
+  "properties": {
+    "manufacturer_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "manufacturer_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "addresses": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "address_line_1": {
+            "type": "string",
+            "maxLength": 300
+          },
+          "address_line_2": {
+            "type": "string",
+            "maxLength": 300
+          },
+          "fssai_no": {
+            "type": "string",
+            "maxLength": 100
+          }
+        }
+      }
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "manufacturer_name"
+  ]
+}

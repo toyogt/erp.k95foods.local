@@ -1,0 +1,52 @@
+{
+  "name": "RecipeVersion",
+  "type": "object",
+  "title": "Recipe Version",
+  "properties": {
+    "version_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50,
+      "description": "Unique version identifier (auto-generated, e.g. RV-xxxxx)"
+    },
+    "option_id": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Reference to RecipeOption.option_id"
+    },
+    "version_no": {
+      "type": "number",
+      "minimum": 1,
+      "description": "Sequential version number within the option"
+    },
+    "version_name": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Optional friendly name for this version"
+    },
+    "change_note": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "Required: reason for this version"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "created_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Only one active version per option at a time"
+    }
+  },
+  "required": [
+    "version_id",
+    "option_id",
+    "version_no",
+    "change_note"
+  ]
+}

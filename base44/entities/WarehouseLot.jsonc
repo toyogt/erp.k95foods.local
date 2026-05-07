@@ -1,0 +1,122 @@
+{
+  "name": "WarehouseLot",
+  "type": "object",
+  "title": "Warehouse Lot",
+  "properties": {
+    "lot_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "lot_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "lot_seq": {
+      "type": "number",
+      "minimum": 1
+    },
+    "sku_code": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "product_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "brand_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "product_family": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "flavour": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "batch_code": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Manufacturing batch code"
+    },
+    "mfg_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Manufacturing date"
+    },
+    "exp_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Expiry date"
+    },
+    "boxes_in": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0
+    },
+    "loose_bottles_in": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0
+    },
+    "boxes_balance": {
+      "type": "number",
+      "default": 0
+    },
+    "loose_bottles_balance": {
+      "type": "number",
+      "default": 0
+    },
+    "bottles_per_box": {
+      "type": "number",
+      "minimum": 1
+    },
+    "location": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "ACTIVE",
+        "EMPTY",
+        "CLOSED"
+      ],
+      "default": "ACTIVE"
+    },
+    "is_trial_pack": {
+      "type": "boolean",
+      "default": false
+    },
+    "customer_id": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Reference to Customer.customer_id (for trial packs)"
+    },
+    "customer_barcode": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Customer-specific barcode (for trial packs)"
+    },
+    "recipe_option_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Recipe option used for this lot"
+    },
+    "artwork_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Artwork used for this lot"
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 500
+    }
+  },
+  "required": [
+    "lot_id",
+    "sku_code"
+  ]
+}

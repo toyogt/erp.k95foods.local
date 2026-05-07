@@ -1,0 +1,82 @@
+{
+  "name": "DistributorRequest",
+  "type": "object",
+  "properties": {
+    "request_number": {
+      "type": "string",
+      "title": "Request Number"
+    },
+    "distributor_id": {
+      "type": "string",
+      "title": "Distributor ID"
+    },
+    "distributor_name": {
+      "type": "string",
+      "title": "Distributor Name"
+    },
+    "contact_name": {
+      "type": "string",
+      "title": "Contact Name"
+    },
+    "requested_by_email": {
+      "type": "string",
+      "title": "Requested By (Email)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "reviewing",
+        "converted",
+        "rejected"
+      ],
+      "title": "Status"
+    },
+    "items": {
+      "type": "array",
+      "title": "Requested Items",
+      "items": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "notes": {
+      "type": "string",
+      "title": "Notes / Special Instructions"
+    },
+    "expected_delivery_date": {
+      "type": "string",
+      "title": "Expected Delivery Date"
+    },
+    "converted_so_id": {
+      "type": "string",
+      "title": "Converted Sales Order ID"
+    },
+    "converted_so_number": {
+      "type": "string",
+      "title": "Converted Sales Order Number"
+    },
+    "reviewed_by": {
+      "type": "string",
+      "title": "Reviewed By"
+    },
+    "rejection_reason": {
+      "type": "string",
+      "title": "Rejection Reason"
+    }
+  },
+  "required": [
+    "distributor_name",
+    "items"
+  ]
+}

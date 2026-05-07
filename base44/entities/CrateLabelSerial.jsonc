@@ -1,0 +1,40 @@
+{
+  "name": "CrateLabelSerial",
+  "type": "object",
+  "title": "Crate Label Serial",
+  "properties": {
+    "label_serial": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "crate_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "product_code": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "batch_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "filler_machine_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "used_time": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "used_by": {
+      "type": "string",
+      "maxLength": 200
+    }
+  },
+  "required": [
+    "label_serial",
+    "crate_id"
+  ]
+}

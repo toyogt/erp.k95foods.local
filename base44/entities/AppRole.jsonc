@@ -1,0 +1,57 @@
+{
+  "name": "AppRole",
+  "type": "object",
+  "title": "Application Role",
+  "properties": {
+    "role_key": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "description": "Unique machine key (e.g. purchase_manager)"
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "Human-readable display name"
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "What this role can do"
+    },
+    "color": {
+      "type": "string",
+      "maxLength": 50,
+      "default": "slate",
+      "description": "Tailwind color name for badge (e.g. blue, purple, green)"
+    },
+    "module_access": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of module keys this role can access (e.g. [PURCHASE, GRN])"
+    },
+    "page_access": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Optional: individual page keys to allow beyond module-level access"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "is_system": {
+      "type": "boolean",
+      "default": false,
+      "description": "System roles (admin, user) cannot be deleted"
+    }
+  },
+  "required": [
+    "role_key",
+    "label"
+  ]
+}

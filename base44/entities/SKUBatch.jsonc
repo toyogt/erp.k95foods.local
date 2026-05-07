@@ -1,0 +1,76 @@
+{
+  "name": "SKUBatch",
+  "type": "object",
+  "title": "SKU Batch",
+  "properties": {
+    "sku_batch_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "description": "The generated batch ID printed on bottles"
+    },
+    "plan_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Reference to LiquidBatchPlan.plan_id"
+    },
+    "allocation_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Reference to SKUAllocation.allocation_id"
+    },
+    "wo_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Reference to PackingWO.wo_id (for LABEL_START batches)"
+    },
+    "sku_code": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "SKU code (ProductMaster.item_code)"
+    },
+    "date_used": {
+      "type": "string",
+      "format": "date",
+      "description": "The date used for batch ID generation (MFG_START or LABEL_START date)"
+    },
+    "date_source": {
+      "type": "string",
+      "enum": [
+        "MFG_START",
+        "LABEL_START"
+      ],
+      "description": "Which date was used to generate the batch ID"
+    },
+    "rule_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Reference to BatchFormatRule.rule_id used"
+    },
+    "seq_used": {
+      "type": "number",
+      "minimum": 1,
+      "description": "The sequence number consumed for this batch ID"
+    },
+    "period_key": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Period key used for sequence counter"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this batch ID was generated"
+    },
+    "generated_by": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Who/what triggered generation"
+    }
+  },
+  "required": [
+    "sku_batch_id",
+    "sku_code",
+    "rule_id"
+  ]
+}

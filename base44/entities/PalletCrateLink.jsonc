@@ -1,0 +1,19 @@
+{
+  "name": "PalletCrateLink",
+  "type": "object",
+  "title": "Pallet Crate Link",
+  "properties": {
+    "pallet_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "crate_id": {
+      "type": "string",
+      "maxLength": 50
+    }
+  },
+  "required": [
+    "pallet_id",
+    "crate_id"
+  ]
+}

@@ -1,0 +1,191 @@
+{
+  "name": "AuditLog",
+  "type": "object",
+  "title": "Audit Log Entry",
+  "description": "Structured audit trail for all significant actions",
+  "properties": {
+    "audit_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "description": "Unique audit entry ID"
+    },
+    "action": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "Action performed"
+    },
+    "action_type": {
+      "type": "string",
+      "enum": [
+        "create",
+        "update",
+        "delete",
+        "approve",
+        "reject",
+        "receive",
+        "dispatch",
+        "adjustment",
+        "rework",
+        "override",
+        "status_change",
+        "print",
+        "scan"
+      ],
+      "description": "Standardized action category"
+    },
+    "module": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Module (WAREHOUSE, PRODUCTION, QC, PURCHASE, GRN, LABELLING, etc.)"
+    },
+    "entity_type": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Entity being modified (Dispatch, Pallet, Batch, GRNHeader, etc.)"
+    },
+    "entity_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "ID of entity being modified"
+    },
+    "entity_code": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "User-friendly code (pallet ID, batch ID, etc.)"
+    },
+    "before_state": {
+      "type": "object",
+      "description": "State before action (key fields only for critical fields)"
+    },
+    "after_state": {
+      "type": "object",
+      "description": "State after action (key fields only)"
+    },
+    "reason_code": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Standardized reason code (e.g., QUALITY_HOLD, SHORT_RECEIPT)"
+    },
+    "reason_text": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "Free-text reason/note"
+    },
+    "actor_email": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "User email who performed action"
+    },
+    "actor_name": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "User display name"
+    },
+    "actor_role": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "User role at time of action"
+    },
+    "device_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Device/station identifier"
+    },
+    "session_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "User session ID"
+    },
+    "transaction_id": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Idempotency key / transaction reference"
+    },
+    "is_offline": {
+      "type": "boolean",
+      "default": false,
+      "description": "Was action performed offline?"
+    },
+    "synced_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When offline action was synced to server"
+    },
+    "ip_address": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Client IP address"
+    },
+    "user_agent": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "Browser/device user agent"
+    },
+    "affected_records": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "entity_type": {
+            "type": "string"
+          },
+          "entity_id": {
+            "type": "string"
+          },
+          "entity_code": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Other records affected by this action"
+    },
+    "fms_event_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Associated FMS event (if applicable)"
+    },
+    "trace_event_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Associated trace event (if applicable)"
+    },
+    "criticality": {
+      "type": "string",
+      "enum": [
+        "info",
+        "warning",
+        "critical",
+        "security"
+      ],
+      "default": "info",
+      "description": "Importance level for root-cause analysis"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Search tags (e.g., 'rework', 'exception', 'override')"
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Internal notes for investigation"
+    },
+    "synced": {
+      "type": "boolean",
+      "default": true,
+      "description": "Legacy compatibility: if action synced/confirmed"
+    }
+  },
+  "required": [
+    "audit_id",
+    "action_type",
+    "module",
+    "entity_type",
+    "entity_id",
+    "actor_email"
+  ]
+}

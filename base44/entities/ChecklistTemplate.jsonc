@@ -1,0 +1,68 @@
+{
+  "name": "ChecklistTemplate",
+  "type": "object",
+  "title": "Checklist Template",
+  "properties": {
+    "template_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "station_type": {
+      "type": "string",
+      "enum": [
+        "STORES",
+        "RECIPE",
+        "FILLING",
+        "CHAMBER",
+        "RECEIVING",
+        "LABELLING",
+        "FG"
+      ]
+    },
+    "stage": {
+      "type": "string",
+      "enum": [
+        "BEFORE",
+        "WHILE",
+        "AFTER",
+        "STARTUP",
+        "FIRST_PIECE",
+        "ROLL_CHANGE",
+        "RECEIVE",
+        "DISPATCH",
+        "RESTART_AFTER_HARD_STOP",
+        "FG_PALLETIZE",
+        "HANDOVER_FILLING",
+        "HANDOVER_LABELLING",
+        "HANDOVER_CHAMBER"
+      ]
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "version": {
+      "type": "number",
+      "minimum": 1,
+      "default": 1
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "items_json": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    }
+  },
+  "required": [
+    "template_id",
+    "station_type",
+    "stage",
+    "name"
+  ]
+}

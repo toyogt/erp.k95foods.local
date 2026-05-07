@@ -1,0 +1,45 @@
+{
+  "name": "Bin",
+  "type": "object",
+  "title": "Bin",
+  "properties": {
+    "bin_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "warehouse_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "bin_code": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "bin_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "bin_type": {
+      "type": "string",
+      "enum": [
+        "RECEIVING",
+        "QC_HOLD",
+        "UNRESTRICTED",
+        "REJECTED",
+        "RTV"
+      ],
+      "default": "UNRESTRICTED"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "bin_id",
+    "bin_code",
+    "bin_type"
+  ]
+}

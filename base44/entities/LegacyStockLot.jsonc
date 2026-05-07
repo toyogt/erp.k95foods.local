@@ -1,0 +1,55 @@
+{
+  "name": "LegacyStockLot",
+  "type": "object",
+  "title": "Legacy Stock Lot",
+  "properties": {
+    "item_code": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "product_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "batch_no": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "mfg_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "exp_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "qty_boxes": {
+      "type": "number",
+      "minimum": 0
+    },
+    "current_location": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "OPENING",
+        "ADJUSTMENT"
+      ],
+      "default": "OPENING"
+    },
+    "imported_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "imported_by": {
+      "type": "string",
+      "maxLength": 200
+    }
+  },
+  "required": [
+    "item_code",
+    "qty_boxes"
+  ]
+}

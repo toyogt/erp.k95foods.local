@@ -1,0 +1,82 @@
+{
+  "name": "PurchaseRequest",
+  "type": "object",
+  "title": "Purchase Request (MR)",
+  "properties": {
+    "mr_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "request_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "requested_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "department": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "DRAFT",
+        "SUBMITTED",
+        "APPROVED",
+        "REJECTED",
+        "ORDERED",
+        "CLOSED"
+      ],
+      "default": "DRAFT"
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 1000
+    },
+    "rejection_reason": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "rejected_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "rejected_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "approved_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "approved_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "checklist_run_id": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "erp_sync_status": {
+      "type": "string",
+      "enum": [
+        "NOT_SYNCED",
+        "QUEUED",
+        "SYNCED",
+        "FAILED"
+      ],
+      "default": "NOT_SYNCED"
+    },
+    "erp_name": {
+      "type": "string",
+      "maxLength": 100
+    }
+  },
+  "required": [
+    "mr_id",
+    "request_date"
+  ]
+}

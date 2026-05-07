@@ -1,0 +1,47 @@
+{
+  "name": "WarehouseReceiptLine",
+  "type": "object",
+  "title": "Warehouse Receipt Line",
+  "properties": {
+    "receipt_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "lot_id": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Linked WarehouseLot"
+    },
+    "sku_code": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "product_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "boxes_received": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0
+    },
+    "loose_bottles_received": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0
+    },
+    "bottles_per_box": {
+      "type": "number",
+      "minimum": 1
+    },
+    "total_bottles": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0
+    }
+  },
+  "required": [
+    "receipt_id",
+    "sku_code"
+  ]
+}

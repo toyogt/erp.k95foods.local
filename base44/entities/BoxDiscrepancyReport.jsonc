@@ -1,0 +1,46 @@
+{
+  "name": "BoxDiscrepancyReport",
+  "type": "object",
+  "title": "Box Discrepancy Report",
+  "properties": {
+    "pallet_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "created_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "missing_serials": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "extra_serials": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "OPEN",
+        "CLOSED"
+      ],
+      "default": "OPEN"
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 2000
+    }
+  },
+  "required": [
+    "pallet_id"
+  ]
+}

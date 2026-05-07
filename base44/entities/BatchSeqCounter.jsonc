@@ -1,0 +1,39 @@
+{
+  "name": "BatchSeqCounter",
+  "type": "object",
+  "title": "Batch Sequence Counter",
+  "properties": {
+    "rule_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Reference to BatchFormatRule.rule_id"
+    },
+    "sku_code": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "SKU code (ProductMaster.item_code or SKUPrintMapping.product_code)"
+    },
+    "period_key": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Period key based on reset scope (e.g., '20260302' for daily, '202603' for monthly)"
+    },
+    "next_seq": {
+      "type": "number",
+      "minimum": 1,
+      "default": 1,
+      "description": "Next sequence number to use"
+    },
+    "batch_key": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Generic counter key (e.g., SO_25-26, INV_25-26)"
+    },
+    "last_seq": {
+      "type": "number",
+      "default": 0,
+      "description": "Last used sequence number"
+    }
+  },
+  "required": []
+}

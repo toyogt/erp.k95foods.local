@@ -1,0 +1,177 @@
+{
+  "name": "TraceEvent",
+  "type": "object",
+  "title": "Material & Product Trace Event",
+  "description": "Event-driven traceability for complete genealogy tracking",
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "description": "Unique event identifier"
+    },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "RM_INWARD",
+        "QC_RELEASE",
+        "QC_REJECT",
+        "ISSUE_TO_BATCH",
+        "BATCH_CREATION",
+        "MIXING_COMPLETE",
+        "FILLING_OUTPUT",
+        "CRATE_CREATION",
+        "CHAMBER_MOVEMENT",
+        "LABELLING_ISSUE",
+        "LABELLING_CONSUMPTION",
+        "REPACKING",
+        "REWORK",
+        "PALLET_BUILD",
+        "DISPATCH",
+        "STOCK_ADJUSTMENT",
+        "RETURN"
+      ],
+      "description": "Type of event"
+    },
+    "module": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Module (WAREHOUSE, PRODUCTION, LABELLING, ACCOUNTS, etc.)"
+    },
+    "site_id": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Factory/site where event occurred"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When event occurred"
+    },
+    "source_entity_type": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "What was consumed/source (Lot, Batch, Crate, etc.)"
+    },
+    "source_entity_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "ID of source entity"
+    },
+    "target_entity_type": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "What was created/produced (Batch, Crate, Pallet, etc.)"
+    },
+    "target_entity_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "ID of target entity"
+    },
+    "quantity": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Quantity involved"
+    },
+    "unit": {
+      "type": "string",
+      "maxLength": 20,
+      "description": "Unit of measurement (kg, bottles, liters, etc.)"
+    },
+    "batch_id": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Associated batch (if applicable)"
+    },
+    "lot_id": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Associated lot (if applicable)"
+    },
+    "crate_id": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Associated crate (if applicable)"
+    },
+    "pallet_id": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Associated pallet (if applicable)"
+    },
+    "dispatch_id": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Associated dispatch document (if applicable)"
+    },
+    "sku": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Product code/SKU (if applicable)"
+    },
+    "product_name": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Product name for context"
+    },
+    "session_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Associated production/shift session"
+    },
+    "order_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Associated order/plan ID"
+    },
+    "user_email": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Who performed action"
+    },
+    "user_name": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "User display name"
+    },
+    "device_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Device/station where recorded"
+    },
+    "remarks": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "Additional context/notes"
+    },
+    "yield_loss": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Quantity lost/rejected in this event"
+    },
+    "loss_reason": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Why quantity was lost"
+    },
+    "is_critical": {
+      "type": "boolean",
+      "default": false,
+      "description": "Critical event (rework, reject, major loss)"
+    },
+    "data": {
+      "type": "object",
+      "description": "Extended event data (flexibility for future fields)"
+    }
+  },
+  "required": [
+    "event_id",
+    "event_type",
+    "module",
+    "site_id",
+    "timestamp",
+    "source_entity_type",
+    "source_entity_id",
+    "target_entity_type",
+    "target_entity_id"
+  ]
+}

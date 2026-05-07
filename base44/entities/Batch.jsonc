@@ -1,0 +1,74 @@
+{
+  "name": "Batch",
+  "type": "object",
+  "title": "Batch",
+  "properties": {
+    "batch_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "product": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "bottle_type": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "planned_qty_liters": {
+      "type": "number",
+      "minimum": 0
+    },
+    "start_time": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "end_time": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "qc_ph": {
+      "type": "number"
+    },
+    "qc_brix": {
+      "type": "number"
+    },
+    "qc_temperature": {
+      "type": "number"
+    },
+    "qc_status": {
+      "type": "string",
+      "enum": [
+        "PENDING",
+        "PASSED",
+        "FAILED",
+        "ON_HOLD"
+      ],
+      "default": "PENDING"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "PLANNED",
+        "IN_PROGRESS",
+        "QC_PENDING",
+        "APPROVED",
+        "REJECTED",
+        "COMPLETED",
+        "ON_HOLD"
+      ],
+      "default": "PLANNED"
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 2000
+    }
+  },
+  "required": [
+    "batch_id",
+    "product",
+    "bottle_type"
+  ]
+}

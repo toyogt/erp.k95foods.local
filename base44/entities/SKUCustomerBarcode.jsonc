@@ -1,0 +1,36 @@
+{
+  "name": "SKUCustomerBarcode",
+  "type": "object",
+  "title": "SKU Customer Barcode",
+  "properties": {
+    "sku_code": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Reference to ProductMaster.item_code"
+    },
+    "customer_id": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Reference to Customer.customer_id"
+    },
+    "barcode_value": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "description": "Customer-specific barcode for this SKU"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 500
+    }
+  },
+  "required": [
+    "sku_code",
+    "customer_id",
+    "barcode_value"
+  ]
+}

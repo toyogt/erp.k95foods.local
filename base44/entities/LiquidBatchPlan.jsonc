@@ -1,0 +1,64 @@
+{
+  "name": "LiquidBatchPlan",
+  "type": "object",
+  "title": "Liquid Batch Plan",
+  "properties": {
+    "plan_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "description": "Unique plan identifier"
+    },
+    "recipe_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Reference to RecipeMaster.recipe_id"
+    },
+    "recipe_name": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Snapshot of recipe name at plan creation"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "DRAFT",
+        "RELEASED",
+        "STARTED",
+        "COMPLETED",
+        "CLOSED"
+      ],
+      "default": "DRAFT",
+      "description": "Plan status"
+    },
+    "filler_machine_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Assigned filler machine (nullable until started)"
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When manufacturing started (MFG date)"
+    },
+    "started_by": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Who started the plan"
+    },
+    "linked_order_ids": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Comma-separated list of ProductionOrder.order_id"
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Additional notes"
+    }
+  },
+  "required": [
+    "plan_id",
+    "recipe_id"
+  ]
+}

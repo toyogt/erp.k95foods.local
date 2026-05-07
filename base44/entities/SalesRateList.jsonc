@@ -1,0 +1,71 @@
+{
+  "name": "SalesRateList",
+  "type": "object",
+  "properties": {
+    "item_code": {
+      "type": "string",
+      "title": "Item Code"
+    },
+    "item_name": {
+      "type": "string",
+      "title": "Item Name"
+    },
+    "hsn_code": {
+      "type": "string",
+      "title": "HSN Code"
+    },
+    "uom": {
+      "type": "string",
+      "title": "Unit of Measure"
+    },
+    "price_list": {
+      "type": "string",
+      "title": "Price List Name"
+    },
+    "rate": {
+      "type": "number",
+      "title": "Rate (INR)"
+    },
+    "mrp": {
+      "type": "number",
+      "title": "MRP"
+    },
+    "igst_rate": {
+      "type": "number",
+      "title": "IGST Rate %"
+    },
+    "packing_unit": {
+      "type": "number",
+      "title": "Packing Unit (bottles per box)"
+    },
+    "brand": {
+      "type": "string",
+      "title": "Brand"
+    },
+    "currency": {
+      "type": "string",
+      "title": "Currency",
+      "default": "INR"
+    },
+    "valid_from": {
+      "type": "string",
+      "title": "Valid From"
+    },
+    "valid_upto": {
+      "type": "string",
+      "title": "Valid Upto"
+    },
+    "is_active": {
+      "type": "boolean",
+      "title": "Is Active"
+    },
+    "notes": {
+      "type": "string",
+      "title": "Notes"
+    }
+  },
+  "required": [
+    "item_code",
+    "rate"
+  ]
+}

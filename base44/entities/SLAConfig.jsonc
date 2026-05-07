@@ -1,0 +1,115 @@
+{
+  "name": "SLAConfig",
+  "type": "object",
+  "title": "SLA Configuration",
+  "description": "Define SLA targets for different workflow types",
+  "properties": {
+    "workflow_type": {
+      "type": "string",
+      "enum": [
+        "purchase_approval",
+        "label_approval",
+        "grn_qc_pending",
+        "dispatch_readiness",
+        "transfer_receipt_pending",
+        "maintenance_issue",
+        "sync_conflict",
+        "quality_hold"
+      ],
+      "description": "Type of workflow"
+    },
+    "workflow_label": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Display name (e.g. 'Purchase Order Approval')"
+    },
+    "normal_sla_hours": {
+      "type": "number",
+      "minimum": 1,
+      "default": 24,
+      "description": "Normal SLA target in hours"
+    },
+    "urgent_sla_hours": {
+      "type": "number",
+      "minimum": 1,
+      "default": 4,
+      "description": "Urgent SLA target in hours"
+    },
+    "critical_sla_hours": {
+      "type": "number",
+      "minimum": 1,
+      "default": 1,
+      "description": "Critical SLA target in hours"
+    },
+    "warning_threshold_percent": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100,
+      "default": 75,
+      "description": "Show warning when % of SLA consumed (0-100)"
+    },
+    "overdue_threshold_percent": {
+      "type": "number",
+      "minimum": 100,
+      "default": 150,
+      "description": "Mark as overdue when % of SLA exceeded"
+    },
+    "escalation_interval_hours": {
+      "type": "number",
+      "minimum": 1,
+      "default": 4,
+      "description": "Escalate every N hours if still pending"
+    },
+    "default_owner_role": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Default role responsible (e.g. 'purchase_manager')"
+    },
+    "escalation_chain": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "escalation_level": {
+            "type": "number",
+            "minimum": 1,
+            "description": "Escalation level (1=first escalation)"
+          },
+          "role_key": {
+            "type": "string",
+            "description": "Role to escalate to"
+          },
+          "notify_method": {
+            "type": "string",
+            "enum": [
+              "email",
+              "alert",
+              "both"
+            ],
+            "default": "both"
+          }
+        }
+      },
+      "description": "Who to escalate to and how"
+    },
+    "allow_exception_justification": {
+      "type": "boolean",
+      "default": true,
+      "description": "Allow users to provide exception notes for delays"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "Why this SLA exists and what it prevents"
+    }
+  },
+  "required": [
+    "workflow_type",
+    "workflow_label",
+    "normal_sla_hours"
+  ]
+}

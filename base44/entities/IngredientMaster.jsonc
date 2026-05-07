@@ -1,0 +1,68 @@
+{
+  "name": "IngredientMaster",
+  "type": "object",
+  "title": "Ingredient Master (Spec)",
+  "properties": {
+    "ingredient_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50,
+      "description": "Unique ingredient spec identifier (auto-generated)"
+    },
+    "ingredient_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "Ingredient display name (generic spec)"
+    },
+    "normalized_name": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Lowercase, punctuation-stripped version of ingredient_name for duplicate detection"
+    },
+    "short_code": {
+      "type": "string",
+      "maxLength": 20,
+      "description": "System-generated: group_code + padded seq (e.g. FL01)"
+    },
+    "group_id": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Reference to IngredientGroup.group_id"
+    },
+    "uom_id": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Reference to UOMMaster.uom_id (default UOM for this spec)"
+    },
+    "allow_substitution": {
+      "type": "boolean",
+      "default": true,
+      "description": "If false, recipes must use a specific brand item; substitutions not allowed"
+    },
+    "legacy_brand_name": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Deprecated \u2014 original brand_name field, kept for migration only"
+    },
+    "barcode_value": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Barcode value, defaults to short_code"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 500
+    }
+  },
+  "required": [
+    "ingredient_id",
+    "ingredient_name",
+    "group_id",
+    "uom_id"
+  ]
+}

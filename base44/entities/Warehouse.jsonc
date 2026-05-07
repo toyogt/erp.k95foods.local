@@ -1,0 +1,25 @@
+{
+  "name": "Warehouse",
+  "type": "object",
+  "title": "Warehouse",
+  "properties": {
+    "warehouse_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "warehouse_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "warehouse_id",
+    "warehouse_name"
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "name": "BoxType",
+  "type": "object",
+  "title": "Box Type",
+  "properties": {
+    "box_type_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50,
+      "description": "Unique box type identifier (auto-generated, e.g. BOX-000123)"
+    },
+    "box_code": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Short code e.g. BX6-250 (optional but recommended)"
+    },
+    "box_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "Display name"
+    },
+    "bottles_per_box": {
+      "type": "number",
+      "minimum": 1,
+      "description": "Number of bottles per box (required)"
+    },
+    "length_mm": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Box length in mm"
+    },
+    "width_mm": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Box width in mm"
+    },
+    "height_mm": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Box height in mm"
+    },
+    "empty_weight_kg": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Empty box weight in kg"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 500
+    }
+  },
+  "required": [
+    "box_type_id",
+    "box_name",
+    "bottles_per_box"
+  ]
+}

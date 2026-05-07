@@ -1,0 +1,35 @@
+{
+  "name": "ProductFamilyMaster",
+  "type": "object",
+  "title": "Product Family Master",
+  "properties": {
+    "brand_name": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Parent brand (from BrandMaster)"
+    },
+    "family_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "short_code": {
+      "type": "string",
+      "maxLength": 3,
+      "description": "3 letter code for SKU generation"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "display_order": {
+      "type": "number",
+      "minimum": 1,
+      "default": 1
+    }
+  },
+  "required": [
+    "brand_name",
+    "family_name"
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "name": "FGPallet",
+  "type": "object",
+  "title": "FG Pallet",
+  "properties": {
+    "fg_pallet_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "wo_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "pack_type": {
+      "type": "string",
+      "enum": [
+        "CASE6",
+        "CASE12"
+      ]
+    },
+    "case_count": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0
+    },
+    "bottle_count": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0
+    },
+    "current_location": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "OPEN",
+        "CLOSED"
+      ],
+      "default": "OPEN"
+    },
+    "created_by": {
+      "type": "string",
+      "maxLength": 200
+    }
+  },
+  "required": [
+    "fg_pallet_id"
+  ]
+}

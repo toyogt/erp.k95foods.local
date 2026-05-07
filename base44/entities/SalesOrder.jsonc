@@ -1,0 +1,175 @@
+{
+  "name": "SalesOrder",
+  "type": "object",
+  "properties": {
+    "so_number": {
+      "type": "string",
+      "title": "Sales Order Number"
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "manual",
+        "pdf_upload",
+        "distributor_request",
+        "excel_upload"
+      ],
+      "title": "Source"
+    },
+    "platform": {
+      "type": "string",
+      "enum": [
+        "blinkit",
+        "swiggy",
+        "zepto",
+        "direct",
+        "other"
+      ],
+      "title": "Platform"
+    },
+    "workflow_state": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "under_logistics_review",
+        "ready_to_pick",
+        "cancelled"
+      ],
+      "title": "Workflow State"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "confirmed",
+        "logistics_review",
+        "picking",
+        "packing",
+        "invoiced",
+        "delivered",
+        "paid",
+        "closed",
+        "cancelled"
+      ],
+      "title": "Status"
+    },
+    "customer_name": {
+      "type": "string",
+      "title": "Customer Name"
+    },
+    "customer_gstin": {
+      "type": "string",
+      "title": "Customer GSTIN"
+    },
+    "customer_pan": {
+      "type": "string",
+      "title": "Customer PAN"
+    },
+    "billing_address": {
+      "type": "string",
+      "title": "Billing Address"
+    },
+    "shipping_address": {
+      "type": "string",
+      "title": "Shipping Address"
+    },
+    "price_list": {
+      "type": "string",
+      "title": "Price List"
+    },
+    "po_number": {
+      "type": "string",
+      "title": "Purchase Order Number"
+    },
+    "po_date": {
+      "type": "string",
+      "title": "Purchase Order Date"
+    },
+    "po_expiry_date": {
+      "type": "string",
+      "title": "PO Expiry Date"
+    },
+    "po_delivery_date": {
+      "type": "string",
+      "title": "PO Delivery Date"
+    },
+    "planned_dispatch_date": {
+      "type": "string",
+      "title": "Planned Dispatch Date"
+    },
+    "payment_terms": {
+      "type": "string",
+      "title": "Payment Terms"
+    },
+    "vendor_no": {
+      "type": "string",
+      "title": "Vendor Number"
+    },
+    "transporter": {
+      "type": "string",
+      "title": "Transporter"
+    },
+    "packaging_type": {
+      "type": "string",
+      "title": "Packaging Type"
+    },
+    "taxable_amount": {
+      "type": "number",
+      "title": "Taxable Amount"
+    },
+    "tax_amount": {
+      "type": "number",
+      "title": "Tax Amount"
+    },
+    "total_amount": {
+      "type": "number",
+      "title": "Total Amount"
+    },
+    "notes": {
+      "type": "string",
+      "title": "Notes"
+    },
+    "pdf_url": {
+      "type": "string",
+      "title": "PDF URL"
+    },
+    "fms_instance_id": {
+      "type": "string",
+      "title": "FMS Instance ID"
+    },
+    "expiry_override_approved": {
+      "type": "boolean",
+      "title": "Expiry Override Approved"
+    },
+    "expiry_override_by": {
+      "type": "string",
+      "title": "Expiry Override By"
+    },
+    "distributor_id": {
+      "type": "string",
+      "title": "Distributor ID"
+    },
+    "stock_validation_status": {
+      "type": "string",
+      "enum": [
+        "not_checked",
+        "full",
+        "partial",
+        "unavailable"
+      ],
+      "title": "Stock Validation Status"
+    },
+    "stock_validated_at": {
+      "type": "string",
+      "title": "Stock Validated At"
+    },
+    "stock_validated_by": {
+      "type": "string",
+      "title": "Stock Validated By"
+    }
+  },
+  "required": [
+    "customer_name",
+    "status"
+  ]
+}

@@ -45,5 +45,8 @@
       },
       "description": "Store module page keys this user can access"
     }
-  }
+  },
+  "required": [
+    "store_page_access"
+  ]
 }

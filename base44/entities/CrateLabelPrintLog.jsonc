@@ -1,0 +1,57 @@
+{
+  "name": "CrateLabelPrintLog",
+  "type": "object",
+  "title": "Crate Label Print Log",
+  "properties": {
+    "log_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "crate_id": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "filler_machine_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "batch_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "product_code": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "bottle_type": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "printed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "printed_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "print_type": {
+      "type": "string",
+      "enum": [
+        "CRATE_LABEL",
+        "TEST_CALIBRATION",
+        "REPRINT"
+      ],
+      "default": "CRATE_LABEL"
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 500
+    }
+  },
+  "required": [
+    "log_id",
+    "print_type"
+  ]
+}

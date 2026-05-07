@@ -1,0 +1,32 @@
+{
+  "name": "GlobalBatchCounter",
+  "type": "object",
+  "title": "Global Batch Counter",
+  "properties": {
+    "counter_id": {
+      "type": "string",
+      "default": "GLOBAL",
+      "description": "Always 'GLOBAL' - singleton record"
+    },
+    "current_value": {
+      "type": "number",
+      "minimum": 100000,
+      "maximum": 999999,
+      "default": 100000,
+      "description": "Current 6-digit counter value"
+    },
+    "last_updated": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "total_batches_created": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0
+    }
+  },
+  "required": [
+    "counter_id",
+    "current_value"
+  ]
+}

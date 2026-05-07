@@ -1,0 +1,50 @@
+{
+  "name": "QCInspection",
+  "type": "object",
+  "title": "QC Inspection",
+  "properties": {
+    "qc_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "grn_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "PENDING",
+        "PASS",
+        "HOLD",
+        "FAIL"
+      ],
+      "default": "PENDING"
+    },
+    "inspected_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "inspected_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 2000
+    },
+    "checklist_run_id": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "photos_json": {
+      "type": "string",
+      "maxLength": 5000
+    }
+  },
+  "required": [
+    "qc_id",
+    "grn_id"
+  ]
+}

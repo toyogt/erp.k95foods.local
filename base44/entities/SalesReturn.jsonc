@@ -1,0 +1,92 @@
+{
+  "name": "SalesReturn",
+  "type": "object",
+  "properties": {
+    "sales_order_id": {
+      "type": "string",
+      "title": "Sales Order ID"
+    },
+    "invoice_id": {
+      "type": "string",
+      "title": "Invoice ID"
+    },
+    "dispatch_id": {
+      "type": "string",
+      "title": "Dispatch ID"
+    },
+    "so_number": {
+      "type": "string",
+      "title": "Sales Order Number"
+    },
+    "return_number": {
+      "type": "string",
+      "title": "Return Number"
+    },
+    "return_type": {
+      "type": "string",
+      "enum": [
+        "full",
+        "partial"
+      ],
+      "title": "Return Type"
+    },
+    "reason": {
+      "type": "string",
+      "title": "Return Reason"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "initiated",
+        "in_transit",
+        "received",
+        "stock_adjusted",
+        "credit_issued",
+        "closed"
+      ],
+      "title": "Status"
+    },
+    "items": {
+      "type": "array",
+      "title": "Returned Items",
+      "items": {
+        "type": "object",
+        "properties": {
+          "item_code": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "returned_qty": {
+            "type": "number"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "stock_adjustment_done": {
+      "type": "boolean",
+      "title": "Stock Adjustment Done"
+    },
+    "financial_adjustment_done": {
+      "type": "boolean",
+      "title": "Financial Adjustment Done"
+    },
+    "credit_note_amount": {
+      "type": "number",
+      "title": "Credit Note Amount"
+    },
+    "notes": {
+      "type": "string",
+      "title": "Notes"
+    }
+  },
+  "required": [
+    "sales_order_id",
+    "return_type",
+    "reason"
+  ]
+}
