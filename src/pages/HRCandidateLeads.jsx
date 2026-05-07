@@ -13,6 +13,7 @@ import CandidateLeadTable from '@/components/hr/CandidateLeadTable';
 import CandidateLeadFormDialog from '@/components/hr/CandidateLeadFormDialog';
 import CandidateTimelineDialog from '@/components/hr/CandidateTimelineDialog';
 import CandidateStatusChangeDialog from '@/components/hr/CandidateStatusChangeDialog';
+import CreateEmployeeFromCandidateDialog from '@/components/hr/CreateEmployeeFromCandidateDialog';
 import { fireFMSEvent, triggerFMSProcess } from '@/lib/useFMSAutoComplete';
 
 /**
@@ -140,6 +141,7 @@ export default function HRCandidateLeads() {
   const [editing, setEditing] = useState(null);
   const [timelineCandidate, setTimelineCandidate] = useState(null);
   const [statusChangeCandidate, setStatusChangeCandidate] = useState(null);
+  const [createEmpCandidate, setCreateEmpCandidate] = useState(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -395,6 +397,7 @@ export default function HRCandidateLeads() {
             onEdit={(c) => { setEditing(c); setDialogOpen(true); }}
             onViewTimeline={(c) => setTimelineCandidate(c)}
             onChangeStatus={(c) => setStatusChangeCandidate(c)}
+            onCreateEmployee={(c) => setCreateEmpCandidate(c)}
           />
         </CardContent>
       </Card>
@@ -411,6 +414,13 @@ export default function HRCandidateLeads() {
         open={!!timelineCandidate}
         onOpenChange={(o) => { if (!o) setTimelineCandidate(null); }}
         candidate={timelineCandidate}
+      />
+
+      <CreateEmployeeFromCandidateDialog
+        open={!!createEmpCandidate}
+        onOpenChange={(o) => { if (!o) setCreateEmpCandidate(null); }}
+        candidate={createEmpCandidate}
+        user={user}
       />
 
       <CandidateStatusChangeDialog
