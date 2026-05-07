@@ -196,7 +196,7 @@ export default function CreateEmployeeFromCandidateDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <UserCheck className="w-5 h-5 text-green-600" />
-            Create Employee & Mark Hired
+            Create Employee from Candidate
           </DialogTitle>
         </DialogHeader>
 
@@ -332,7 +332,7 @@ export default function CreateEmployeeFromCandidateDialog({
             disabled={mutation.isPending}
           >
             {mutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-            Create Employee & Hire
+            Create & Link Employee
           </Button>
         </DialogFooter>
       </DialogContent>

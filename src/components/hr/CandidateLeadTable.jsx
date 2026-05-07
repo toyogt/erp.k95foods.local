@@ -130,14 +130,14 @@ export default function CandidateLeadTable({ candidates, isLoading, onEdit, onCh
                 </td>
                 <td className="px-3 py-2 text-right">
                   <div className="flex justify-end gap-1.5 flex-wrap">
-                    {onCreateEmployee && c.status === 'Shortlisted' && !c.employee_id && (
+                    {onCreateEmployee && c.status === 'Hired' && !c.employee_id && (
                       <Button
                         size="sm"
                         onClick={() => onCreateEmployee(c)}
                         className="h-8 gap-1 bg-green-600 hover:bg-green-700 text-white"
                       >
                         <UserPlus className="w-3.5 h-3.5" />
-                        Create Employee & Hire
+                        Create Employee
                       </Button>
                     )}
                     {onChangeStatus && c.status !== 'Terminated' && (
