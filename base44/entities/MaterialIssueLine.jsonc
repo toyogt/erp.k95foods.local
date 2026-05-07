@@ -1,0 +1,51 @@
+{
+  "name": "MaterialIssueLine",
+  "type": "object",
+  "title": "Material Issue Line",
+  "properties": {
+    "request_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "item_code": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "item_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "lot_no": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "qty_requested": {
+      "type": "number",
+      "minimum": 0
+    },
+    "qty_issued": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0
+    },
+    "uom": {
+      "type": "string",
+      "maxLength": 20
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "PENDING",
+        "ISSUED",
+        "PARTIAL"
+      ],
+      "default": "PENDING"
+    }
+  },
+  "required": [
+    "request_id",
+    "item_code",
+    "item_name",
+    "qty_requested"
+  ]
+}

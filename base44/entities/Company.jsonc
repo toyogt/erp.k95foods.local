@@ -1,0 +1,32 @@
+{
+  "name": "Company",
+  "type": "object",
+  "title": "Company",
+  "description": "Master list of companies. Most installations have only one record (e.g. K95FoodsPvtLtd).",
+  "properties": {
+    "company_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "phone_number": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "email": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "address": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "company_name"
+  ]
+}

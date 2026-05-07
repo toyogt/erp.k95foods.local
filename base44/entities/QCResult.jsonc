@@ -1,0 +1,44 @@
+{
+  "name": "QCResult",
+  "type": "object",
+  "title": "QC Result",
+  "properties": {
+    "batch_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "brix": {
+      "type": "number"
+    },
+    "ph": {
+      "type": "number"
+    },
+    "temp": {
+      "type": "number"
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 1000
+    },
+    "qa_user": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "qa_status": {
+      "type": "string",
+      "enum": [
+        "PENDING",
+        "APPROVED",
+        "REJECTED"
+      ],
+      "default": "PENDING"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "batch_id"
+  ]
+}

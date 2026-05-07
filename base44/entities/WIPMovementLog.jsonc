@@ -1,0 +1,46 @@
+{
+  "name": "WIPMovementLog",
+  "type": "object",
+  "title": "WIP Movement Log",
+  "properties": {
+    "moved_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "moved_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "source_location": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "destination_location": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "entity_type": {
+      "type": "string",
+      "enum": [
+        "CRATE",
+        "PALLET"
+      ]
+    },
+    "entity_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "machine_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 500
+    }
+  },
+  "required": [
+    "entity_type",
+    "entity_id"
+  ]
+}

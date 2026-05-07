@@ -30,6 +30,7 @@
       "type": "string",
       "maxLength": 20
     },
+<<<<<<< HEAD
     "address": {
       "type": "string",
       "maxLength": 1000
@@ -46,6 +47,8 @@
       "type": "string",
       "maxLength": 10
     },
+=======
+>>>>>>> kunal/main
     "payment_terms_days": {
       "type": "number",
       "minimum": 0

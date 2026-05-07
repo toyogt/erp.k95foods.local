@@ -1,0 +1,134 @@
+{
+  "name": "FMSStepInstance",
+  "type": "object",
+  "title": "FMS Step Instance",
+  "properties": {
+    "instance_id": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "process_id": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "step_id": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "step_order": {
+      "type": "number"
+    },
+    "step_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 2000
+    },
+    "instructions": {
+      "type": "string",
+      "maxLength": 5000
+    },
+    "assignee_email": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "assignee_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "active",
+        "completed",
+        "skipped",
+        "escalated"
+      ],
+      "default": "pending"
+    },
+    "activated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "deadline": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "completed_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "completion_mode": {
+      "type": "string",
+      "enum": [
+        "manual",
+        "auto"
+      ],
+      "default": "manual"
+    },
+    "completion_submode": {
+      "type": "string",
+      "enum": [
+        "mark_done",
+        "checklist"
+      ],
+      "default": "mark_done"
+    },
+    "completion_note": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "step_checklist": {
+      "type": "array",
+      "description": "Checklist template for this step",
+      "items": {
+        "type": "object"
+      }
+    },
+    "checklist_responses": {
+      "type": "object",
+      "description": "User responses to checklist items keyed by item id"
+    },
+    "tat_type": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "tat_unit": {
+      "type": "string",
+      "maxLength": 20
+    },
+    "tat_value": {
+      "type": "number"
+    },
+    "tat_anchor_type": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "fixed_due_time": {
+      "type": "string",
+      "maxLength": 10
+    },
+    "reassigned_from": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "reminder_sent_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "instance_id",
+    "process_id",
+    "step_order",
+    "step_name",
+    "assignee_email"
+  ]
+}

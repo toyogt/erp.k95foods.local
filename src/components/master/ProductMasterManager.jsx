@@ -12,7 +12,8 @@ const EMPTY_FORM = {
   gross_weight_kg: '', fssai_no: '', manufacturer_name: '', address_1: '',
   address_2: '', customer_care_email: '', customer_care_phone: '',
   shelf_life_days: '', is_trial_pack: false, is_active: true,
-  bottle_type: '', recipe_id: '', batch_prefix: ''
+  bottle_type: '', recipe_id: '', batch_prefix: '',
+  product_prefix_code: '', flavour_code: '', batch_scheme: 'excel_date'
 };
 
 const CSV_HEADERS = [
@@ -246,7 +247,9 @@ export default function ProductMasterManager() {
                 <th className="px-4 py-3 text-left">SKU Name</th>
                 <th className="px-4 py-3 text-left">Bottle Type</th>
                 <th className="px-4 py-3 text-left">Recipe ID</th>
-                <th className="px-4 py-3 text-left">Batch Prefix</th>
+                <th className="px-4 py-3 text-left">Batch Prefix Code</th>
+                <th className="px-4 py-3 text-left">Flavour Code</th>
+                <th className="px-4 py-3 text-left">Batch Scheme</th>
                 <th className="px-4 py-3 text-right">ML</th>
                 <th className="px-4 py-3 text-center">Status</th>
                 <th className="px-4 py-3 text-center">Actions</th>
@@ -260,7 +263,9 @@ export default function ProductMasterManager() {
                   <td className="px-4 py-3 font-medium text-slate-800">{p.product_name}</td>
                   <td className="px-4 py-3 text-slate-600 text-xs">{p.bottle_type || <span className="text-slate-300">—</span>}</td>
                   <td className="px-4 py-3 text-slate-600 text-xs font-mono">{p.recipe_id || <span className="text-slate-300">—</span>}</td>
-                  <td className="px-4 py-3 text-slate-600 text-xs font-mono">{p.batch_prefix || <span className="text-slate-300">—</span>}</td>
+                  <td className="px-4 py-3 text-slate-600 text-xs font-mono">{p.product_prefix_code || p.batch_prefix || <span className="text-slate-300">—</span>}</td>
+                  <td className="px-4 py-3 text-slate-600 text-xs font-mono">{p.flavour_code || <span className="text-slate-300">—</span>}</td>
+                  <td className="px-4 py-3 text-xs">{p.batch_scheme === 'day_year_seq' ? <span className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">Day/Year/Seq</span> : <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">Excel Date</span>}</td>
                   <td className="px-4 py-3 text-right text-slate-600">{p.ml_per_bottle || '—'}</td>
                   <td className="px-4 py-3 text-center">
                    <div className="flex flex-col items-center gap-1">
@@ -314,7 +319,9 @@ export default function ProductMasterManager() {
               { key: 'shelf_life_days', label: 'Shelf Life (days)', type: 'number' },
               { key: 'fssai_no', label: 'FSSAI No', type: 'text' },
               { key: 'manufacturer_name', label: 'Manufacturer Name', type: 'text' },
-              { key: 'batch_prefix', label: 'Batch Prefix (optional)', type: 'text' },
+              { key: 'batch_prefix', label: 'Batch Prefix (legacy)', type: 'text' },
+              { key: 'product_prefix_code', label: 'Product Prefix Code (batch generation)', type: 'text' },
+              { key: 'flavour_code', label: 'Flavour Code (batch generation)', type: 'text' },
             ].map(({ key, label, type }) => (
               <div key={key} className="space-y-1">
                 <Label className="text-xs">{label}</Label>
@@ -322,48 +329,26 @@ export default function ProductMasterManager() {
               </div>
             ))}
 
-            {/* Box Type dropdown */}
+            {/* Batch Scheme */}
             <div className="space-y-1 col-span-2">
-              <Label className="text-xs">Box Type {form.is_active ? '*' : ''}</Label>
-              {boxTypes.length > 0 ? (
-                <select
-                  value={form.box_type_id}
-                  onChange={e => {
-                    const bt = boxTypes.find(b => b.box_type_id === e.target.value);
-                    setForm(f => ({
-                      ...f,
-                      box_type_id: e.target.value,
-                      bottles_per_box: bt ? bt.bottles_per_box : f.bottles_per_box,
-                    }));
-                  }}
-                  className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm bg-white"
-                >
-                  <option value="">— Select box type —</option>
-                  {boxTypes.map(b => (
-                    <option key={b.id} value={b.box_type_id}>
-                      {b.box_name}{b.box_code ? ` (${b.box_code})` : ''} — {b.bottles_per_box} btls/box
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">No active Box Types found. Add one in Master Data → Box Types first.</p>
-              )}
-              {/* Show derived bottles_per_box + dimensions read-only */}
-              {form.box_type_id && (() => {
-                const bt = boxTypes.find(b => b.box_type_id === form.box_type_id);
-                if (!bt) return null;
-                const dims = [bt.length_mm, bt.width_mm, bt.height_mm].filter(Boolean);
-                return (
-                  <div className="mt-1 flex flex-wrap gap-3 text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-md px-3 py-2">
-                    <span>📦 <strong className="text-slate-700">{bt.bottles_per_box}</strong> bottles/box</span>
-                    {dims.length === 3 && <span>📐 {bt.length_mm} × {bt.width_mm} × {bt.height_mm} mm</span>}
-                    {bt.empty_weight_kg && <span>⚖️ {bt.empty_weight_kg} kg empty</span>}
-                  </div>
-                );
-              })()}
+              <Label className="text-xs font-medium text-slate-700">Batch Number Scheme</Label>
+              <select
+                value={form.batch_scheme || 'excel_date'}
+                onChange={e => setForm(f => ({ ...f, batch_scheme: e.target.value }))}
+                className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm bg-white"
+              >
+                <option value="excel_date">Standard — Excel Date (e.g. 02GL46022)</option>
+                <option value="day_year_seq">Day / Year / Sequence (e.g. KFB31L2501)</option>
+              </select>
+              <p className="text-xs text-slate-500">
+                {form.batch_scheme === 'day_year_seq'
+                  ? 'Format: Prefix + DD (fill day) + Flavour initial + YY + sequence. Example: KFB31L2501'
+                  : 'Format: Prefix + Flavour Code + Excel serial of manufacturing date. Example: 02GL46022'}
+              </p>
             </div>
 
-            {/* Bottles per box — read-only, derived */}
+            {/* Box Type dropdown */}
+
             <div className="space-y-1">
               <Label className="text-xs">Bottles per Box (auto from Box Type)</Label>
               <Input

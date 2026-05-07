@@ -1,0 +1,36 @@
+{
+  "name": "PrinterDiscoveryCache",
+  "type": "object",
+  "title": "Printer Discovery Cache",
+  "description": "Latest discovery snapshot per workstation, populated by backend probes against /v1/discovery.",
+  "properties": {
+    "workstation_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "snapshot": {
+      "type": "object"
+    },
+    "last_probe_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "probe_ok": {
+      "type": "boolean"
+    },
+    "probe_latency_ms": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "probe_error": {
+      "type": "string",
+      "maxLength": 1000
+    }
+  },
+  "required": [
+    "workstation_id",
+    "last_probe_at",
+    "probe_ok"
+  ]
+}

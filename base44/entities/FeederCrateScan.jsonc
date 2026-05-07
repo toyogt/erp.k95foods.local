@@ -1,0 +1,45 @@
+{
+  "name": "FeederCrateScan",
+  "type": "object",
+  "title": "Feeder Crate Scan",
+  "properties": {
+    "scan_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "session_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "wo_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "line_machine_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "crate_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "scanned_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "ryan_count_at_scan": {
+      "type": "number"
+    },
+    "buffer_estimate_bottles": {
+      "type": "number"
+    }
+  },
+  "required": [
+    "scan_id",
+    "session_id",
+    "wo_id",
+    "line_machine_id",
+    "crate_id"
+  ]
+}

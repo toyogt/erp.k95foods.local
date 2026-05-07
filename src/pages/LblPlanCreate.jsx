@@ -32,7 +32,7 @@ export default function LblPlanCreate() {
 
   const selectedMachine = machines.find(m => m.id === lineId);
 
-  const addJob = () => setJobs(prev => [...prev, { _key: Date.now(), sku_code: '', product_name: '', bottle_type: '', mrp: '', manufacturing_date: '', batch_no: '', quantity_bottles_planned: 0, quantity_cases_planned: 0, priority_order: prev.length + 1 }]);
+  const addJob = () => setJobs(prev => [...prev, { _key: Date.now(), sku_code: '', product_name: '', bottle_type: '', mrp: '', manufacturing_date: '', batch_no: '', printer_template_id: '', quantity_bottles_planned: 0, quantity_cases_planned: 0, priority_order: prev.length + 1 }]);
   const updateJob = (idx, field, value) => setJobs(prev => prev.map((j, i) => i === idx ? { ...j, [field]: value } : j));
   const removeJob = (idx) => setJobs(prev => prev.filter((_, i) => i !== idx).map((j, i) => ({ ...j, priority_order: i + 1 })));
   const reorderJobs = (fromIdx, toIdx) => {
@@ -90,29 +90,52 @@ export default function LblPlanCreate() {
       return;
     }
 
-    // Check for duplicate plan (same date + shift + line)
-    const jobsWithBatch = jobs.filter(j => j.sku_code && j.batch_no);
-    if (jobsWithBatch.length > 0) {
-      const allDayJobs = await base44.entities.LabellingJob.filter({ plan_date: fd });
-      const activeJobs = allDayJobs.filter(j => j.status !== 'cancelled');
-      const duplicates = [];
-      for (const j of jobsWithBatch) {
-        const match = activeJobs.find(ej => ej.sku_code === j.sku_code && ej.batch_no === j.batch_no);
-        if (match) duplicates.push(`${j.product_name || j.sku_code} / Batch ${j.batch_no} (already in job ${match.job_id})`);
-      }
-      if (duplicates.length > 0) {
-        toast({ title: 'Duplicate Product + Batch', description: `These product-batch combinations already exist today: ${duplicates.join('; ')}`, variant: 'destructive' });
-        return;
-      }
+    // [DISABLED] Check for duplicate plan (same date + shift + line)
+    // const jobsWithBatch = jobs.filter(j => j.sku_code && j.batch_no);
+    // if (jobsWithBatch.length > 0) {
+    //   const allDayJobs = await base44.entities.LabellingJob.filter({ plan_date: fd });
+    //   const activeJobs = allDayJobs.filter(j => j.status !== 'cancelled');
+    //   const duplicates = [];
+    //   for (const j of jobsWithBatch) {
+    //     const match = activeJobs.find(ej => ej.sku_code === j.sku_code && ej.batch_no === j.batch_no);
+    //     if (match) duplicates.push(`${j.product_name || j.sku_code} / Batch ${j.batch_no} (already in job ${match.job_id})`);
+    //   }
+    //   if (duplicates.length > 0) {
+    //     toast({ title: 'Duplicate Product + Batch', description: `These product-batch combinations already exist today: ${duplicates.join('; ')}`, variant: 'destructive' });
+    //     return;
+    //   }
+    // }
+    // Block if a plan already exists for same date + shift + line
+    const existingPlans = await base44.entities.LabellingShiftPlan.filter({ plan_date: fd, shift_type: shiftType, line_id: lineId });
+    const activePlan = existingPlans.find(p => p.status !== 'cancelled');
+    if (activePlan) {
+      toast({
+        title: 'Plan Already Exists',
+        description: `A ${shiftType} shift plan for ${fd} on ${selectedMachine?.display_name || lineId} already exists (${activePlan.plan_id}). Please edit that plan to add more products.`,
+        variant: 'destructive',
+      });
+      setSaving(false);
+      navigate(`/LblPlanDetail?planId=${activePlan.id}`);
+      return;
     }
+
     setSaving(true);
     const pid = generatePlanId();
-    const plan = { plan_id: pid, plan_date: fd, shift_type: shiftType, line_id: lineId, line_name: selectedMachine?.display_name || lineId, supervisor_email: user?.email, supervisor_name: user?.full_name, status: lockAfterSave ? 'locked' : 'draft', total_jobs: jobs.length, completed_jobs: 0, notes };
+    const plan = {
+      plan_id: pid,
+      plan_date: fd,
+      shift_type: shiftType,
+      line_id: lineId,
+      line_name: selectedMachine?.display_name || lineId,
+      notes,
+      status: lockAfterSave ? 'locked' : 'draft',
+      total_jobs: jobs.length,
+    };
     const createdPlan = await base44.entities.LabellingShiftPlan.create(plan);
     const jobRecords = jobs.map((j, i) => {
       const mfgRaw = j.manufacturing_date || planDate;
       const mfgFormatted = mfgRaw ? moment(mfgRaw).format('DD/MM/YYYY') : fd;
-      return { job_id: generateJobId(), plan_id: createdPlan.id, sku_code: j.sku_code, product_name: j.product_name, bottle_type: j.bottle_type, mrp: String(j.mrp || ''), manufacturing_date: mfgFormatted, batch_no: j.batch_no || '', quantity_bottles_planned: j.quantity_bottles_planned, quantity_cases_planned: j.quantity_cases_planned, priority_order: i + 1, line_id: lineId, line_name: selectedMachine?.display_name || lineId, shift_type: shiftType, plan_date: fd, status: 'pending' };
+      return { job_id: generateJobId(), plan_id: createdPlan.id, sku_code: j.sku_code, product_name: j.product_name, bottle_type: j.bottle_type, mrp: String(j.mrp || ''), manufacturing_date: mfgFormatted, batch_no: j.batch_no || '', printer_template_id: j.printer_template_id || '', quantity_bottles_planned: j.quantity_bottles_planned, quantity_cases_planned: j.quantity_cases_planned, priority_order: i + 1, line_id: lineId, line_name: selectedMachine?.display_name || lineId, shift_type: shiftType, plan_date: fd, status: 'pending' };
     });
     await base44.entities.LabellingJob.bulkCreate(jobRecords);
     await logLabellingEvent({ action_type: lockAfterSave ? 'plan_locked' : 'plan_created', plan_id: createdPlan.id, description: `Plan ${pid} ${lockAfterSave ? 'created and locked' : 'created'}`, user });

@@ -1,0 +1,30 @@
+{
+  "name": "UserDashboardOverride",
+  "type": "object",
+  "title": "User Dashboard Override",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "layout_json": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "enabled_widget_keys": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "last_updated": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "user_id"
+  ]
+}

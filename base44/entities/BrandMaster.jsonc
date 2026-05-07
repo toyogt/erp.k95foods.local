@@ -1,0 +1,29 @@
+{
+  "name": "BrandMaster",
+  "type": "object",
+  "title": "Brand Master",
+  "properties": {
+    "brand_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "short_code": {
+      "type": "string",
+      "maxLength": 3,
+      "description": "2-3 letter code for SKU generation"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "display_order": {
+      "type": "number",
+      "minimum": 1,
+      "default": 1
+    }
+  },
+  "required": [
+    "brand_name"
+  ]
+}

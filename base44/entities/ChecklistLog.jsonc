@@ -1,0 +1,42 @@
+{
+  "name": "ChecklistLog",
+  "type": "object",
+  "title": "Checklist Log",
+  "properties": {
+    "station": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "batch_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "checklist_type": {
+      "type": "string",
+      "enum": [
+        "BEFORE",
+        "WHILE",
+        "AFTER"
+      ]
+    },
+    "items_json": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "completed_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "station",
+    "batch_id",
+    "checklist_type"
+  ]
+}

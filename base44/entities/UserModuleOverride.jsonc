@@ -1,0 +1,23 @@
+{
+  "name": "UserModuleOverride",
+  "type": "object",
+  "title": "User Module Override",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "module_key": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "enabled": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "user_id",
+    "module_key"
+  ]
+}

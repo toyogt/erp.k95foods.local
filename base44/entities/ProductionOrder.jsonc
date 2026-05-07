@@ -1,0 +1,51 @@
+{
+  "name": "ProductionOrder",
+  "type": "object",
+  "title": "Production Order",
+  "properties": {
+    "order_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "description": "Unique order identifier"
+    },
+    "order_name": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Optional friendly name"
+    },
+    "due_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Expected completion date"
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "LOW",
+        "MED",
+        "HIGH"
+      ],
+      "default": "MED",
+      "description": "Priority level"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "OPEN",
+        "IN_PROGRESS",
+        "CLOSED"
+      ],
+      "default": "OPEN",
+      "description": "Overall order status"
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Additional notes"
+    }
+  },
+  "required": [
+    "order_id"
+  ]
+}

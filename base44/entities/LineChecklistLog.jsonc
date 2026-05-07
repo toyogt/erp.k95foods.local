@@ -1,0 +1,46 @@
+{
+  "name": "LineChecklistLog",
+  "type": "object",
+  "title": "Line Checklist Log",
+  "properties": {
+    "wo_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "session_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "checklist_type": {
+      "type": "string",
+      "enum": [
+        "STARTUP",
+        "FIRST_PIECE",
+        "ROLL_CHANGE"
+      ]
+    },
+    "completed_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "items_json": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "approved_by": {
+      "type": "string",
+      "maxLength": 200
+    }
+  },
+  "required": [
+    "wo_id",
+    "session_id",
+    "checklist_type"
+  ]
+}

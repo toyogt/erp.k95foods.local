@@ -1,0 +1,63 @@
+{
+  "name": "AlertEvent",
+  "type": "object",
+  "title": "Alert Event",
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "INFO",
+        "WARN",
+        "CRITICAL"
+      ],
+      "default": "INFO"
+    },
+    "station_type": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "reference_type": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "reference_id": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "message": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "OPEN",
+        "CLOSED"
+      ],
+      "default": "OPEN"
+    },
+    "closed_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "closed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 500
+    }
+  },
+  "required": [
+    "message"
+  ]
+}

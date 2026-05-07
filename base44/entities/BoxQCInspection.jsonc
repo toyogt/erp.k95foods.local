@@ -1,0 +1,52 @@
+{
+  "name": "BoxQCInspection",
+  "type": "object",
+  "title": "Box QC Inspection",
+  "properties": {
+    "pallet_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "box_serial": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "inspected_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "inspected_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "checklist_json": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "photo_label": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "photo_bottle": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "result": {
+      "type": "string",
+      "enum": [
+        "PASS",
+        "FAIL"
+      ]
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 1000
+    }
+  },
+  "required": [
+    "pallet_id",
+    "box_serial"
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "name": "AIExtractionRun",
+  "type": "object",
+  "title": "AI Extraction Run",
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "inv_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "PENDING",
+        "SUCCESS",
+        "FAILED"
+      ],
+      "default": "PENDING"
+    },
+    "extracted_json": {
+      "type": "string",
+      "maxLength": 10000,
+      "description": "JSON with supplier_name, invoice_number, invoice_date, total, items"
+    },
+    "warnings": {
+      "type": "string",
+      "maxLength": 2000
+    },
+    "run_by": {
+      "type": "string",
+      "maxLength": 200
+    }
+  },
+  "required": [
+    "run_id",
+    "inv_id"
+  ]
+}

@@ -1,0 +1,73 @@
+{
+  "name": "LblPrintTemplate",
+  "type": "object",
+  "title": "Label Print Template",
+  "properties": {
+    "template_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "description": "Unique identifier matching the Rynan middleware template name exactly"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "Human-readable name of the template"
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Description of what this template is used for"
+    },
+    "artwork_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Reference to LabelArtwork.artwork_id \u2014 which label design this template prints"
+    },
+    "middleware_template_name": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Exact template name as known by the Rynan middleware (e.g. Default-1)"
+    },
+    "field_mappings": {
+      "type": "array",
+      "description": "List of Rynan POD field mappings (e.g. POD1, POD2) and the corresponding ERP field that populates them",
+      "items": {
+        "type": "object",
+        "properties": {
+          "pod_field": {
+            "type": "string",
+            "description": "Rynan middleware field name (e.g. POD1, POD2)"
+          },
+          "label": {
+            "type": "string",
+            "description": "Human-readable label for this field (e.g. Batch Number)"
+          },
+          "erp_source": {
+            "type": "string",
+            "description": "ERP field key that auto-populates this POD field (e.g. batch_no, mrp, manufacturing_date)"
+          },
+          "is_editable": {
+            "type": "boolean",
+            "description": "Whether operator can manually override this field",
+            "default": true
+          }
+        }
+      }
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 500
+    }
+  },
+  "required": [
+    "template_id",
+    "name",
+    "middleware_template_name"
+  ]
+}

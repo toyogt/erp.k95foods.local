@@ -1,0 +1,98 @@
+{
+  "name": "SLAException",
+  "type": "object",
+  "title": "SLA Exception",
+  "description": "Track justified delays and exceptions",
+  "properties": {
+    "entity_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "ID of the entity with delayed SLA"
+    },
+    "entity_type": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Type of entity (PurchaseOrder, GRNHeader, etc.)"
+    },
+    "workflow_type": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Workflow type"
+    },
+    "reason_code": {
+      "type": "string",
+      "enum": [
+        "waiting_external",
+        "missing_info",
+        "quality_hold",
+        "system_issue",
+        "resource_constraint",
+        "other"
+      ],
+      "description": "Categorized reason for delay"
+    },
+    "justification_notes": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "User-provided explanation"
+    },
+    "submitted_by": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Email of person who submitted exception"
+    },
+    "submitted_by_name": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Name of submitter"
+    },
+    "submitted_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When exception was submitted"
+    },
+    "approved_by": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Supervisor who approved exception"
+    },
+    "approved_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When approved"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "rejected"
+      ],
+      "default": "pending",
+      "description": "Exception approval status"
+    },
+    "expected_resolution_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this issue is expected to be resolved"
+    },
+    "is_resolved": {
+      "type": "boolean",
+      "default": false,
+      "description": "Has the underlying issue been resolved?"
+    },
+    "resolved_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When resolved"
+    }
+  },
+  "required": [
+    "entity_id",
+    "entity_type",
+    "workflow_type",
+    "reason_code",
+    "justification_notes",
+    "submitted_by"
+  ]
+}

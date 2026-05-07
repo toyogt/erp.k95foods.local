@@ -21,17 +21,24 @@
       "maxLength": 100,
       "description": "Full name e.g. Kilogram, Gram, Litre"
     },
+<<<<<<< HEAD
     "must_be_whole_number": {
       "type": "boolean",
       "default": false,
       "description": "If true, only whole number quantities allowed for this UOM"
     },
+=======
+>>>>>>> kunal/main
     "is_active": {
       "type": "boolean",
       "default": true
     }
   },
   "required": [
+<<<<<<< HEAD
+=======
+    "uom_id",
+>>>>>>> kunal/main
     "uom_code",
     "uom_name"
   ]

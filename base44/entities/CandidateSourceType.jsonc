@@ -1,0 +1,21 @@
+{
+  "name": "CandidateSourceType",
+  "type": "object",
+  "title": "Candidate Source Type",
+  "description": "Master list of candidate sources (e.g. Market Visit, Walk-in, Referral). Auto-populated when HR adds a new value via the smart dropdown.",
+  "properties": {
+    "source_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "Unique source name (e.g. Market Visit, Walk-in, Incoming Call, Referral)"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "source_name"
+  ]
+}

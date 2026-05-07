@@ -42,7 +42,11 @@ export default class ErrorBoundary extends React.Component {
               </p>
             </div>
 
+<<<<<<< HEAD
             {this.state.error && (
+=======
+            {import.meta.env.DEV && this.state.error && (
+>>>>>>> kunal/main
               <div className="p-3 bg-slate-50 rounded border border-slate-200 text-left">
                 <p className="text-xs font-mono text-red-600 break-words">
                   {this.state.error.toString()}

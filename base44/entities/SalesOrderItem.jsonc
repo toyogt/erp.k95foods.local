@@ -1,0 +1,117 @@
+{
+  "name": "SalesOrderItem",
+  "type": "object",
+  "properties": {
+    "sales_order_id": {
+      "type": "string",
+      "title": "Sales Order ID"
+    },
+    "so_number": {
+      "type": "string",
+      "title": "Sales Order Number"
+    },
+    "item_code": {
+      "type": "string",
+      "title": "Item Code"
+    },
+    "sku_code": {
+      "type": "string",
+      "title": "SKU Code"
+    },
+    "hsn_code": {
+      "type": "string",
+      "title": "HSN Code"
+    },
+    "ean_number": {
+      "type": "string",
+      "title": "EAN Number"
+    },
+    "description": {
+      "type": "string",
+      "title": "Description"
+    },
+    "quantity": {
+      "type": "number",
+      "title": "Ordered Quantity"
+    },
+    "mrp": {
+      "type": "number",
+      "title": "MRP"
+    },
+    "unit_base_cost": {
+      "type": "number",
+      "title": "Unit Base Cost"
+    },
+    "rate_snapshot": {
+      "type": "number",
+      "title": "Rate at Time of Order (Snapshot)"
+    },
+    "packing_unit": {
+      "type": "number",
+      "title": "Packing Unit (bottles per box)"
+    },
+    "taxable_value": {
+      "type": "number",
+      "title": "Taxable Value"
+    },
+    "igst_rate": {
+      "type": "number",
+      "title": "IGST Rate %"
+    },
+    "igst_amount": {
+      "type": "number",
+      "title": "IGST Amount"
+    },
+    "cgst_rate": {
+      "type": "number",
+      "title": "CGST Rate %"
+    },
+    "cgst_amount": {
+      "type": "number",
+      "title": "CGST Amount"
+    },
+    "sgst_rate": {
+      "type": "number",
+      "title": "SGST Rate %"
+    },
+    "sgst_amount": {
+      "type": "number",
+      "title": "SGST Amount"
+    },
+    "total_amount": {
+      "type": "number",
+      "title": "Total Amount"
+    },
+    "picked_qty": {
+      "type": "number",
+      "title": "Picked Quantity"
+    },
+    "dispatched_qty": {
+      "type": "number",
+      "title": "Dispatched Quantity"
+    },
+    "available_stock": {
+      "type": "number",
+      "title": "Available Stock"
+    },
+    "stock_status": {
+      "type": "string",
+      "enum": [
+        "full",
+        "partial",
+        "unavailable",
+        "not_checked"
+      ],
+      "title": "Stock Status"
+    },
+    "location": {
+      "type": "string",
+      "title": "Rack / Bin Location"
+    }
+  },
+  "required": [
+    "sales_order_id",
+    "description",
+    "quantity"
+  ]
+}

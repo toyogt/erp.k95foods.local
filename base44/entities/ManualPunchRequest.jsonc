@@ -1,0 +1,109 @@
+{
+  "name": "ManualPunchRequest",
+  "type": "object",
+  "title": "Manual Punch Request",
+  "description": "Approval-gated request to add, edit, or delete an AttendanceLog punch. Only after approval does the underlying punch change and daily attendance recalculate.",
+  "properties": {
+    "request_type": {
+      "type": "string",
+      "enum": [
+        "add",
+        "edit",
+        "delete"
+      ],
+      "description": "Type of change being requested"
+    },
+    "target_log_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Existing AttendanceLog id (for edit/delete). Empty for add."
+    },
+    "employee_code": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "employee_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "log_datetime": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Proposed punch datetime (UTC ISO). For delete, this is the existing punch time for context."
+    },
+    "log_date": {
+      "type": "string",
+      "maxLength": 20,
+      "description": "DD/MM/YYYY display date"
+    },
+    "punch_direction": {
+      "type": "string",
+      "enum": [
+        "IN",
+        "OUT"
+      ]
+    },
+    "device_sn": {
+      "type": "string",
+      "maxLength": 100,
+      "default": "MANUAL"
+    },
+    "previous_values": {
+      "type": "object",
+      "description": "Snapshot of the existing AttendanceLog before edit/delete (for audit)"
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1000,
+      "description": "Reason for the manual change (required)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "PENDING",
+        "APPROVED",
+        "REJECTED",
+        "CANCELLED"
+      ],
+      "default": "PENDING"
+    },
+    "requested_by": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Email of the user who created this request"
+    },
+    "requested_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "reviewed_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "reviewed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "review_remarks": {
+      "type": "string",
+      "maxLength": 1000
+    },
+    "applied_log_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "After approval: the AttendanceLog id that was created/updated/deleted"
+    },
+    "recalc_triggered": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "request_type",
+    "employee_code",
+    "reason",
+    "status"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "name": "RecipeArtworkLink",
+  "type": "object",
+  "title": "Recipe Artwork Link",
+  "properties": {
+    "sku_code": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Reference to ProductMaster.item_code"
+    },
+    "recipe_option_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Reference to RecipeOption.option_id"
+    },
+    "artwork_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Reference to LabelArtwork.artwork_id"
+    },
+    "is_default": {
+      "type": "boolean",
+      "default": false,
+      "description": "Is this the default artwork for this SKU-Recipe combination?"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 500
+    }
+  },
+  "required": [
+    "sku_code",
+    "recipe_option_id",
+    "artwork_id"
+  ]
+}

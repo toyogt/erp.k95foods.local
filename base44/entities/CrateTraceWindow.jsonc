@@ -1,0 +1,50 @@
+{
+  "name": "CrateTraceWindow",
+  "type": "object",
+  "title": "Crate Trace Window",
+  "properties": {
+    "trace_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "wo_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "line_machine_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "crate_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "scanned_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "ryan_count_at_scan": {
+      "type": "number"
+    },
+    "window_prev_crate_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "window_next_crate_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "buffer_estimate_bottles": {
+      "type": "number"
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 1000
+    }
+  },
+  "required": [
+    "trace_id",
+    "crate_id"
+  ]
+}

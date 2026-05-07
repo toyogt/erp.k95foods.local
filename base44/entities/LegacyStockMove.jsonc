@@ -1,0 +1,50 @@
+{
+  "name": "LegacyStockMove",
+  "type": "object",
+  "title": "Legacy Stock Move",
+  "properties": {
+    "move_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "lot_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "direction": {
+      "type": "string",
+      "enum": [
+        "IN",
+        "OUT",
+        "ADJ"
+      ]
+    },
+    "qty_boxes": {
+      "type": "number",
+      "minimum": 0
+    },
+    "reference_doc_no": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "moved_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "moved_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 1000
+    }
+  },
+  "required": [
+    "move_id",
+    "lot_id",
+    "direction",
+    "qty_boxes"
+  ]
+}

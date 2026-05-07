@@ -60,11 +60,18 @@
       "type": "number",
       "minimum": 0
     },
+<<<<<<< HEAD
     "current_stock": {
       "type": "number",
       "minimum": 0,
       "default": 0,
       "description": "Current available stock in boxes/cases"
+=======
+    "filled_bottle_weight_kg": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Weight of a single filled bottle in kg. Used to auto-compute box gross weight = (bottles_per_box \u00d7 filled_bottle_weight_kg) + box empty weight."
+>>>>>>> kunal/main
     },
     "hsn_code": {
       "type": "string",
@@ -117,7 +124,18 @@
     },
     "shelf_life_days": {
       "type": "number",
-      "minimum": 0
+      "minimum": 0,
+      "description": "Shelf life value (number). Interpret using shelf_life_unit."
+    },
+    "shelf_life_unit": {
+      "type": "string",
+      "enum": [
+        "days",
+        "months",
+        "years"
+      ],
+      "default": "months",
+      "description": "Unit for shelf_life_days: days, months, or years"
     },
     "is_trial_pack": {
       "type": "boolean",
@@ -160,12 +178,37 @@
     },
     "batch_prefix": {
       "type": "string",
-      "maxLength": 50
+      "maxLength": 50,
+      "description": "Legacy batch prefix (superseded by product_prefix_code)"
+    },
+    "product_prefix_code": {
+      "type": "string",
+      "maxLength": 20,
+      "description": "Short code used in batch number generation. e.g. '02' for Toyo Zero Sugar, 'KFB' for Swiggy Noice"
+    },
+    "flavour_code": {
+      "type": "string",
+      "maxLength": 5,
+      "description": "Short flavour abbreviation used in batch numbers. e.g. 'GL' for Ginger Lemon, 'L' for Lemon"
+    },
+    "batch_scheme": {
+      "type": "string",
+      "enum": [
+        "excel_date",
+        "day_year_seq"
+      ],
+      "default": "excel_date",
+      "description": "Batch number generation scheme. excel_date = prefix+flavour+ExcelSerial (e.g. 02GL46022). day_year_seq = prefix+DD+flavourInitial+YY+seq (e.g. KFB31L2501)"
     },
     "label_template_4x6": {
       "type": "string",
       "maxLength": 200,
       "description": "4x6 inch label template ID for trial packs"
+    },
+    "box_label_template_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Reference to BoxLabelTemplate.id \u2014 used to print box labels for this SKU"
     }
   },
   "required": [

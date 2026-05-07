@@ -1,0 +1,31 @@
+{
+  "name": "StockBalance",
+  "type": "object",
+  "title": "Stock Balance",
+  "properties": {
+    "sku_code": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "bin_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "bin_code": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "qty": {
+      "type": "number",
+      "default": 0
+    },
+    "last_updated_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "sku_code",
+    "bin_id"
+  ]
+}

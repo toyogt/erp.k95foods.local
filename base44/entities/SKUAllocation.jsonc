@@ -1,0 +1,79 @@
+{
+  "name": "SKUAllocation",
+  "type": "object",
+  "title": "SKU Allocation",
+  "properties": {
+    "allocation_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "description": "Unique allocation identifier"
+    },
+    "plan_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Reference to LiquidBatchPlan.plan_id"
+    },
+    "order_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Reference to ProductionOrder.order_id (nullable)"
+    },
+    "order_line_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Reference to ProductionOrderLine.id (nullable)"
+    },
+    "sku_code": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "SKU code from ProductMaster.item_code"
+    },
+    "allocation_type": {
+      "type": "string",
+      "enum": [
+        "FIXED",
+        "UP_TO",
+        "REMAINDER"
+      ],
+      "default": "FIXED",
+      "description": "How this SKU is allocated from the batch"
+    },
+    "target_bottles_requested": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Target bottles from order line"
+    },
+    "required_bottles": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Actual required bottles (rounded to box multiple)"
+    },
+    "produced_bottles_packed": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0,
+      "description": "Bottles packed for this allocation"
+    },
+    "sku_batch_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Generated batch ID for this SKU (populated at MFG_START)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "RELEASED",
+        "RUNNING",
+        "DONE"
+      ],
+      "default": "RELEASED",
+      "description": "Allocation status"
+    }
+  },
+  "required": [
+    "allocation_id",
+    "plan_id",
+    "sku_code"
+  ]
+}

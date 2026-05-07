@@ -3,15 +3,19 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { JOB_STATUSES } from '@/lib/labellingHelpers';
+import { JOB_STATUSES, canManagePlans } from '@/lib/labellingHelpers';
 import { logLabellingEvent } from '@/lib/labellingEventLogger';
 import LblStockTransferStep from '@/components/labelling/LblStockTransferStep';
 import LblDemoPrintStep from '@/components/labelling/LblDemoPrintStep';
+import LblDemoPrintVerificationStep from '@/components/labelling/LblDemoPrintVerificationStep';
 import LblChecklistStep from '@/components/labelling/LblChecklistStep';
 import LblBulkPrintStep from '@/components/labelling/LblBulkPrintStep';
 import LblCompletionStep from '@/components/labelling/LblCompletionStep';
+import LblBoxLabelPrintStep from '@/components/labelling/LblBoxLabelPrintStep';
+import LblStopJobModal from '@/components/labelling/LblStopJobModal';
+import LblResumeJobModal from '@/components/labelling/LblResumeJobModal';
 import { toast } from '@/components/ui/use-toast';
-import { ArrowLeft, Loader2, Play } from 'lucide-react';
+import { ArrowLeft, Loader2, Play, RotateCcw, Square, PlayCircle } from 'lucide-react';
 
 export default function LblOperatorJob() {
   const navigate = useNavigate();
@@ -19,10 +23,16 @@ export default function LblOperatorJob() {
   const jobId = new URLSearchParams(window.location.search).get('jobId');
   const [user, setUser] = useState(null);
   const [acting, setActing] = useState(false);
+  const [stopModalOpen, setStopModalOpen] = useState(false);
+  const [resumeModalOpen, setResumeModalOpen] = useState(false);
 
   useEffect(() => { base44.auth.me().then(setUser); }, []);
 
-  const { data: job, isLoading } = useQuery({ queryKey: ['labelling-job', jobId], queryFn: async () => { const j = await base44.entities.LabellingJob.filter({ id: jobId }); return j[0] || null; }, enabled: !!jobId });
+  const { data: job, isLoading } = useQuery({
+    queryKey: ['labelling-job', jobId],
+    queryFn: async () => { const j = await base44.entities.LabellingJob.filter({ id: jobId }); return j[0] || null; },
+    enabled: !!jobId,
+  });
   const refreshJob = () => queryClient.invalidateQueries({ queryKey: ['labelling-job', jobId] });
 
   const handleStartJob = async () => {
@@ -34,11 +44,59 @@ export default function LblOperatorJob() {
     setActing(false);
   };
 
+  const handleResumeJob = async (resume_reason, updated_planned_quantity) => {
+    setActing(true);
+    try {
+      const response = await base44.functions.invoke('resumeLabellingJob', {
+        job_id: job.id,
+        resume_reason,
+        updated_planned_quantity,
+      });
+      if (response.data.success) {
+        toast({ title: 'Job Resumed', description: response.data.message });
+        setResumeModalOpen(false);
+        refreshJob();
+      } else {
+        toast({ title: 'Error', description: response.data.error, variant: 'destructive' });
+      }
+    } catch (error) {
+      toast({ title: 'Error', description: error?.response?.data?.error || error.message, variant: 'destructive' });
+    } finally {
+      setActing(false);
+    }
+  };
+
+  const handleStopAndNext = async (newStatus, remarks) => {
+    setActing(true);
+    try {
+      const response = await base44.functions.invoke('stopJobAndActivateNext', {
+        job_id: job.id,
+        new_status: newStatus,
+        remarks,
+      });
+
+      if (response.data.success) {
+        toast({
+          title: 'Job Stopped',
+          description: response.data.message,
+        });
+        setStopModalOpen(false);
+        navigate('/LblOperatorQueue');
+      } else {
+        toast({ title: 'Error', description: response.data.error, variant: 'destructive' });
+      }
+    } catch (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setActing(false);
+    }
+  };
+
   if (isLoading) return <div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>;
   if (!job) return <div className="p-6 text-center text-slate-500">Job not found</div>;
 
   const st = JOB_STATUSES[job.status] || JOB_STATUSES.pending;
-  const steps = ['Start', 'Stock Transfer', 'Demo Print', 'Checklist', 'Approval', 'Bulk Print', 'Complete'];
+  const steps = ['Start', 'Stock Transfer', 'Demo Print', 'Verify Demo', 'Checklist', 'Approval', 'Bulk Print', 'Complete'];
   const currentStep = st.step >= 0 ? Math.min(st.step, steps.length - 1) : 0;
 
   return (
@@ -76,11 +134,133 @@ export default function LblOperatorJob() {
       )}
       {job.status === 'active' && <LblStockTransferStep job={job} user={user} onComplete={refreshJob} />}
       {job.status === 'stock_transferred' && <LblDemoPrintStep job={job} user={user} onComplete={refreshJob} />}
-      {(job.status === 'demo_print_sent' || job.status === 'demo_rejected') && <LblChecklistStep job={job} user={user} onComplete={refreshJob} />}
-      {job.status === 'demo_pending_approval' && <div className="bg-amber-50 border border-amber-200 rounded-lg p-6 text-center space-y-2"><h2 className="text-lg font-semibold text-amber-800">Waiting for Supervisor Approval</h2><p className="text-sm text-amber-600">Your checklist and demo sample have been submitted for review.</p></div>}
+      {job.status === 'demo_print_sent' && <LblDemoPrintVerificationStep job={job} user={user} onComplete={refreshJob} />}
+      {(job.status === 'demo_print_verified' || job.status === 'demo_rejected') && <LblChecklistStep job={job} user={user} onComplete={refreshJob} />}
+      {job.status === 'demo_pending_approval' && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-6 text-center space-y-4">
+          <h2 className="text-lg font-semibold text-amber-800">Waiting for Supervisor Approval</h2>
+          <p className="text-sm text-amber-600">Your checklist and demo sample have been submitted for review.</p>
+          <Button
+            variant="outline"
+            className="h-11 gap-2 border-amber-300 text-amber-700 hover:bg-amber-100"
+            disabled={acting}
+            onClick={async () => {
+              setActing(true);
+              await base44.entities.LabellingJob.update(job.id, { status: 'demo_print_verified', approval_status: 'not_required' });
+              await logLabellingEvent({ action_type: 'checklist_withdrawn', job_id: job.id, plan_id: job.plan_id, description: `Checklist submission withdrawn for job ${job.job_id} — re-opening for edit`, user });
+              toast({ title: 'Submission Withdrawn', description: 'You can now re-fill and re-submit the checklist.' });
+              refreshJob();
+              setActing(false);
+            }}
+          >
+            {acting ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
+            Withdraw &amp; Redo Checklist
+          </Button>
+        </div>
+      )}
       {job.status === 'demo_approved' && <LblBulkPrintStep job={job} user={user} onComplete={refreshJob} mode="start" />}
-      {(job.status === 'bulk_printing' || job.status === 'paused') && <LblBulkPrintStep job={job} user={user} onComplete={refreshJob} mode="control" />}
-      {job.status === 'completed' && <LblCompletionStep job={job} />}
+      {(job.status === 'bulk_printing' || job.status === 'paused' || job.status === 'bulk_printing_awaiting_printer_reset') && <LblBulkPrintStep job={job} user={user} onComplete={refreshJob} mode="control" />}
+      {job.status === 'completed' && (
+        <>
+          <LblCompletionStep job={job} />
+          <LblBoxLabelPrintStep job={job} user={user} />
+        </>
+      )}
+
+      {job.status === 'on_hold' && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-6 text-center space-y-4">
+          <div className="flex items-center justify-center gap-2">
+            <PlayCircle className="w-6 h-6 text-amber-600" />
+            <h2 className="text-lg font-semibold text-amber-800">Job is On Hold</h2>
+          </div>
+          {job.rejection_reason && (
+            <div className="bg-white border border-amber-200 rounded-lg p-3 text-left">
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Hold Reason</p>
+              <p className="text-sm text-slate-700">{job.rejection_reason}</p>
+            </div>
+          )}
+          {job.previous_status && (
+            <p className="text-xs text-amber-700">
+              Will resume at step: <span className="font-mono font-semibold">{job.previous_status}</span>
+            </p>
+          )}
+          {canManagePlans(user?.role) ? (
+            <Button
+              className="h-11 gap-2 w-full md:w-auto bg-green-600 hover:bg-green-700"
+              onClick={() => setResumeModalOpen(true)}
+              disabled={acting}
+            >
+              <PlayCircle className="w-4 h-4" />
+              Resume Job
+            </Button>
+          ) : (
+            <p className="text-sm text-amber-600">Only a supervisor or admin can resume this job.</p>
+          )}
+        </div>
+      )}
+
+      {(['active', 'stock_transferred', 'demo_print_sent', 'demo_print_verified', 'demo_pending_approval', 'demo_approved', 'bulk_printing', 'paused'].includes(job.status) && canManagePlans(user?.role)) && (
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            className="h-11 flex-1 md:flex-none gap-2 border-red-300 text-red-700 hover:bg-red-50"
+            onClick={() => setStopModalOpen(true)}
+            disabled={acting}
+          >
+            <Square className="w-4 h-4" />
+            Stop & Next
+          </Button>
+        </div>
+      )}
+
+      <LblStopJobModal
+        open={stopModalOpen}
+        onOpenChange={setStopModalOpen}
+        job={job}
+        onConfirm={handleStopAndNext}
+        isLoading={acting}
+      />
+
+      <LblResumeJobModal
+        open={resumeModalOpen}
+        onOpenChange={setResumeModalOpen}
+        job={job}
+        user={user}
+        onConfirm={handleResumeJob}
+        isLoading={acting}
+      />
+
+      {(job.status === 'bulk_printing' || job.status === 'paused') && job.current_printed_qty >= job.quantity_bottles_planned && (
+        <div className="bg-white border border-slate-200 rounded-lg p-6 text-center space-y-4">
+          <h2 className="text-lg font-semibold text-green-700">Bulk Printing Complete</h2>
+          <p className="text-sm text-slate-500">All {job.quantity_bottles_planned?.toLocaleString()} labels have been printed successfully.</p>
+          <Button
+            className="h-11 gap-2 w-full md:w-auto bg-green-600 hover:bg-green-700"
+            onClick={async () => {
+              setActing(true);
+              await base44.entities.LabellingJob.update(job.id, {
+                status: 'completed',
+                completed_at: new Date().toISOString(),
+                completed_by: user?.email,
+              });
+              await logLabellingEvent({
+                action_type: 'job_completed',
+                job_id: job.id,
+                plan_id: job.plan_id,
+                description: `Job ${job.job_id} completed — all ${job.quantity_bottles_planned} bottles printed`,
+                user,
+              });
+              toast({ title: 'Job Completed', description: 'Labelling job finished successfully.' });
+              refreshJob();
+              setActing(false);
+            }}
+            disabled={acting}
+          >
+            {acting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+            Mark as Complete
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

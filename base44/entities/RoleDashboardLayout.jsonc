@@ -1,0 +1,25 @@
+{
+  "name": "RoleDashboardLayout",
+  "type": "object",
+  "title": "Role Dashboard Layout",
+  "properties": {
+    "role": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "layout_json": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "last_updated": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "role"
+  ]
+}

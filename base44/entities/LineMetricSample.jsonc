@@ -1,0 +1,49 @@
+{
+  "name": "LineMetricSample",
+  "type": "object",
+  "title": "Line Metric Sample",
+  "properties": {
+    "sample_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "station_type": {
+      "type": "string",
+      "enum": [
+        "LABELLING"
+      ],
+      "default": "LABELLING"
+    },
+    "line_machine_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "wo_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "captured_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "ryan_count": {
+      "type": "number"
+    },
+    "bottles_per_hour": {
+      "type": "number"
+    },
+    "active_session_id": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 500
+    }
+  },
+  "required": [
+    "sample_id",
+    "line_machine_id"
+  ]
+}

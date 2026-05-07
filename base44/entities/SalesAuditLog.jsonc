@@ -1,0 +1,47 @@
+{
+  "name": "SalesAuditLog",
+  "type": "object",
+  "properties": {
+    "entity_type": {
+      "type": "string",
+      "title": "Entity Type"
+    },
+    "entity_id": {
+      "type": "string",
+      "title": "Entity ID"
+    },
+    "reference_number": {
+      "type": "string",
+      "title": "Reference Number"
+    },
+    "action": {
+      "type": "string",
+      "title": "Action"
+    },
+    "field_name": {
+      "type": "string",
+      "title": "Field Changed"
+    },
+    "old_value": {
+      "type": "string",
+      "title": "Old Value"
+    },
+    "new_value": {
+      "type": "string",
+      "title": "New Value"
+    },
+    "user_email": {
+      "type": "string",
+      "title": "User Email"
+    },
+    "notes": {
+      "type": "string",
+      "title": "Notes"
+    }
+  },
+  "required": [
+    "entity_type",
+    "entity_id",
+    "action"
+  ]
+}

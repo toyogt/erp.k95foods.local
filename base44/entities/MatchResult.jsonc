@@ -1,0 +1,49 @@
+{
+  "name": "MatchResult",
+  "type": "object",
+  "title": "3-Way Match Result",
+  "properties": {
+    "match_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "inv_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "po_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "OK",
+        "EXCEPTION"
+      ],
+      "default": "OK"
+    },
+    "exception_summary": {
+      "type": "string",
+      "maxLength": 1000
+    },
+    "details_json": {
+      "type": "string",
+      "maxLength": 5000,
+      "description": "Line-level diffs: qty/price variance"
+    },
+    "matched_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "matched_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "match_id",
+    "inv_id"
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "name": "HRNotificationConfig",
+  "type": "object",
+  "title": "HR Notification Configuration",
+  "description": "Singleton config for HR alert routing. Defines which HR mailboxes receive attendance anomaly notifications and which alert types are enabled.",
+  "properties": {
+    "config_key": {
+      "type": "string",
+      "maxLength": 50,
+      "default": "DEFAULT",
+      "description": "Use 'DEFAULT' for the singleton config row"
+    },
+    "hr_emails": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of HR email addresses (always CC'd on alerts)"
+    },
+    "alert_on_missing_out": {
+      "type": "boolean",
+      "default": true,
+      "description": "Send alert when an employee punches IN but never OUT"
+    },
+    "alert_on_missing_in": {
+      "type": "boolean",
+      "default": true,
+      "description": "Send alert when an employee punches OUT but never IN"
+    },
+    "alert_on_no_punches": {
+      "type": "boolean",
+      "default": false,
+      "description": "Send alert when an active employee has zero punches on a working day"
+    },
+    "alert_on_flagged": {
+      "type": "boolean",
+      "default": false,
+      "description": "Send alert when day is FLAGGED (unmatched punches)"
+    },
+    "skip_holidays": {
+      "type": "boolean",
+      "default": true
+    },
+    "skip_weekly_off": {
+      "type": "boolean",
+      "default": true,
+      "description": "Skip alert if work date matches employee's weekly_off day"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 500
+    }
+  },
+  "required": [
+    "config_key"
+  ]
+}

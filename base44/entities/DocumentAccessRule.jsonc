@@ -1,0 +1,66 @@
+{
+  "name": "DocumentAccessRule",
+  "type": "object",
+  "title": "Document Access Rule",
+  "properties": {
+    "doc_type": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "description": "Document entity name (e.g. PurchaseRequest, PurchaseOrder, GRNHeader, SupplierInvoice)"
+    },
+    "workflow_stages": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Document statuses where this rule applies (e.g. [DRAFT, SUBMITTED, APPROVED])"
+    },
+    "allowed_roles": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Roles that can access this document in these stages"
+    },
+    "can_view": {
+      "type": "boolean",
+      "default": true,
+      "description": "Can role view the document?"
+    },
+    "can_edit": {
+      "type": "boolean",
+      "default": false,
+      "description": "Can role edit the document?"
+    },
+    "can_create": {
+      "type": "boolean",
+      "default": false,
+      "description": "Can role create this document type?"
+    },
+    "can_approve": {
+      "type": "boolean",
+      "default": false,
+      "description": "Can role approve? (See DocumentApprovalRule for specific transitions)"
+    },
+    "can_reject": {
+      "type": "boolean",
+      "default": false,
+      "description": "Can role reject?"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "Why this rule exists"
+    }
+  },
+  "required": [
+    "doc_type",
+    "workflow_stages",
+    "allowed_roles"
+  ]
+}

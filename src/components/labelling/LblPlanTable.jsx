@@ -1,8 +1,9 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { PLAN_STATUSES } from '@/lib/labellingHelpers';
 import { ChevronRight, Loader2 } from 'lucide-react';
 
 export default function LblPlanTable({ plans, isLoading }) {
+  const navigate = useNavigate();
   if (isLoading) {
     return <div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>;
   }
@@ -30,7 +31,7 @@ export default function LblPlanTable({ plans, isLoading }) {
             {plans.map(p => {
               const st = PLAN_STATUSES[p.status] || PLAN_STATUSES.draft;
               return (
-                <tr key={p.id} className="hover:bg-slate-50">
+                <tr key={p.id} className="hover:bg-slate-50 cursor-pointer" onClick={() => navigate(`/LblPlanDetail?planId=${p.id}`)}>                  
                   <td className="px-4 py-3 font-mono text-sm font-medium">{p.plan_id}</td>
                   <td className="px-4 py-3">{p.plan_date}</td>
                   <td className="px-4 py-3 capitalize">{p.shift_type} Shift</td>
@@ -38,9 +39,7 @@ export default function LblPlanTable({ plans, isLoading }) {
                   <td className="px-4 py-3">{p.supervisor_name || '—'}</td>
                   <td className="px-4 py-3">{p.completed_jobs || 0}/{p.total_jobs || 0}</td>
                   <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${st.color}`}>{st.label}</span></td>
-                  <td className="px-4 py-3">
-                    <Link to={`/LblPlanDetail?planId=${p.id}`} className="text-slate-400 hover:text-slate-700"><ChevronRight className="w-4 h-4" /></Link>
-                  </td>
+                  <td className="px-4 py-3 text-slate-400"><ChevronRight className="w-4 h-4" /></td>
                 </tr>
               );
             })}

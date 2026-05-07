@@ -34,11 +34,14 @@
       "maxLength": 200,
       "description": "Internal nickname or vendor reference name"
     },
+<<<<<<< HEAD
     "uom": {
       "type": "string",
       "maxLength": 50,
       "description": "Unit of Measure for this cap type"
     },
+=======
+>>>>>>> kunal/main
     "datasheet_urls": {
       "type": "array",
       "items": {

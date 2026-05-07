@@ -213,13 +213,21 @@ export default function FMSMyTasks() {
   const [taskTranslations, setTaskTranslations] = useState({}); // { [taskId]: { task_name, task_details } }
 
   const load = useCallback(async () => {
+    const isAuthed = await base44.auth.isAuthenticated();
+    if (!isAuthed) { setLoading(false); return; }
     const me = await base44.auth.me();
+    if (!me) { setLoading(false); return; }
     setUser(me);
+<<<<<<< HEAD
     const [allSteps, myScheduled, myDirectorTasks] = await Promise.all([
+=======
+    const [allSteps, myScheduled] = await Promise.all([
+>>>>>>> kunal/main
       base44.entities.FMSStepInstance.filter({ assignee_email: me.email, status: 'active' }, '-deadline', 100).catch(() => []),
       base44.entities.ScheduledTaskInstance.filter({ assignee_email: me.email, status: 'PENDING' }, '-due_at', 100).catch(() => []),
       base44.entities.DirectorTask.filter({ assigned_to_email: me.email }, '-created_date', 100).catch(() => []),
     ]);
+<<<<<<< HEAD
     const instanceIds = [...new Set((allSteps || []).map(s => s.instance_id).filter(Boolean))];
     const instances = instanceIds.length
       ? await Promise.all(instanceIds.map(id => base44.entities.FMSProcessInstance.filter({ id }).catch(() => [])))
@@ -227,6 +235,15 @@ export default function FMSMyTasks() {
     const instanceMap = {};
     instances.flat().forEach(inst => { instanceMap[inst.id] = inst; });
     const enriched = (allSteps || []).map(s => ({
+=======
+    const instanceIds = [...new Set(allSteps.map(s => s.instance_id).filter(Boolean))];
+    const instances = instanceIds.length > 0
+      ? await Promise.all(instanceIds.map(id => base44.entities.FMSProcessInstance.filter({ id }).catch(() => []))).then(r => r.flat())
+      : [];
+    const instanceMap = {};
+    instances.forEach(inst => { instanceMap[inst.id] = inst; });
+    const enriched = allSteps.map(s => ({
+>>>>>>> kunal/main
       ...s,
       _process_name: instanceMap[s.instance_id]?.process_name || s.process_id,
       _instance_title: instanceMap[s.instance_id]?.title || '',
@@ -239,7 +256,6 @@ export default function FMSMyTasks() {
       return new Date(a.deadline || 0) - new Date(b.deadline || 0);
     });
     setTasks(enriched);
-    // Sort scheduled: overdue first
     const sorted = [...myScheduled].sort((a, b) => {
       const aOD = a.due_at && new Date(a.due_at) < new Date();
       const bOD = b.due_at && new Date(b.due_at) < new Date();

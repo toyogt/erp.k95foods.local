@@ -1,0 +1,109 @@
+{
+  "name": "FMSProcessStep",
+  "type": "object",
+  "title": "FMS Process Step Template",
+  "properties": {
+    "process_id": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "step_order": {
+      "type": "number",
+      "minimum": 1
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 2000,
+      "description": "What to do"
+    },
+    "instructions": {
+      "type": "string",
+      "maxLength": 5000,
+      "description": "How to do it"
+    },
+    "assignee_email": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "assignee_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "tat_type": {
+      "type": "string",
+      "enum": [
+        "calendar_days",
+        "working_days",
+        "hours"
+      ],
+      "default": "calendar_days"
+    },
+    "tat_unit": {
+      "type": "string",
+      "enum": [
+        "hours",
+        "day",
+        "week",
+        "month"
+      ],
+      "default": "day"
+    },
+    "tat_value": {
+      "type": "number"
+    },
+    "tat_anchor_type": {
+      "type": "string",
+      "enum": [
+        "run_start",
+        "step_start"
+      ],
+      "default": "step_start",
+      "description": "step_start = timer begins when this step activates; run_start = timer from day process was triggered"
+    },
+    "fixed_due_time": {
+      "type": "string",
+      "maxLength": 10
+    },
+    "completion_mode": {
+      "type": "string",
+      "enum": [
+        "manual",
+        "auto"
+      ],
+      "default": "manual"
+    },
+    "completion_submode": {
+      "type": "string",
+      "enum": [
+        "mark_done",
+        "checklist"
+      ],
+      "default": "mark_done"
+    },
+    "step_checklist": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "auto_complete_event": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "reminder_hours_before": {
+      "type": "number",
+      "default": 2
+    }
+  },
+  "required": [
+    "process_id",
+    "step_order",
+    "name",
+    "assignee_email"
+  ]
+}

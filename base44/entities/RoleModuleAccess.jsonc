@@ -1,0 +1,23 @@
+{
+  "name": "RoleModuleAccess",
+  "type": "object",
+  "title": "Role Module Access",
+  "properties": {
+    "role": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "module_key": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "enabled": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "role",
+    "module_key"
+  ]
+}

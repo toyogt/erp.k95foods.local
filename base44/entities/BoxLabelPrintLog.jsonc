@@ -1,0 +1,66 @@
+{
+  "name": "BoxLabelPrintLog",
+  "type": "object",
+  "title": "Box Label Print Log",
+  "properties": {
+    "log_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "request_id": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "wo_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "line_machine_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "product_code": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "batch_no": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "label_variant_id": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "qty_printed": {
+      "type": "number",
+      "minimum": 0
+    },
+    "print_type": {
+      "type": "string",
+      "enum": [
+        "PRODUCTION",
+        "TEST",
+        "ADMIN_OVERRIDE"
+      ],
+      "default": "PRODUCTION"
+    },
+    "override_reason": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "printed_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "printed_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "log_id",
+    "print_type",
+    "qty_printed"
+  ]
+}

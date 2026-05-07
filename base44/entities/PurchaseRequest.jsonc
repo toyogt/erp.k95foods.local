@@ -1,6 +1,7 @@
 {
   "name": "PurchaseRequest",
   "type": "object",
+<<<<<<< HEAD
   "title": "Purchase Request",
   "properties": {
     "mr_id": {
@@ -17,26 +18,42 @@
       "maxLength": 500,
       "description": "Requester name / on whose behalf"
     },
+=======
+  "title": "Purchase Request (MR)",
+  "properties": {
+    "mr_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50
+    },
+>>>>>>> kunal/main
     "request_date": {
       "type": "string",
       "format": "date"
     },
+<<<<<<< HEAD
     "required_by_date": {
       "type": "string",
       "format": "date"
     },
+=======
+>>>>>>> kunal/main
     "requested_by": {
       "type": "string",
       "maxLength": 200
     },
+<<<<<<< HEAD
     "requested_by_name": {
       "type": "string",
       "maxLength": 200
     },
+=======
+>>>>>>> kunal/main
     "department": {
       "type": "string",
       "maxLength": 100
     },
+<<<<<<< HEAD
     "priority": {
       "type": "string",
       "enum": [
@@ -89,6 +106,19 @@
         "Critical"
       ],
       "description": "Manager can override urgency"
+=======
+    "status": {
+      "type": "string",
+      "enum": [
+        "DRAFT",
+        "SUBMITTED",
+        "APPROVED",
+        "REJECTED",
+        "ORDERED",
+        "CLOSED"
+      ],
+      "default": "DRAFT"
+>>>>>>> kunal/main
     },
     "notes": {
       "type": "string",
@@ -134,6 +164,10 @@
     }
   },
   "required": [
+<<<<<<< HEAD
+=======
+    "mr_id",
+>>>>>>> kunal/main
     "request_date"
   ]
 }

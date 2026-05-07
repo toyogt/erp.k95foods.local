@@ -1,0 +1,35 @@
+{
+  "name": "Workstation",
+  "type": "object",
+  "title": "Workstation",
+  "description": "Physical workstation/PC where a print agent runs.",
+  "properties": {
+    "workstation_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "display_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "location": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "department": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "workstation_id",
+    "display_name",
+    "location"
+  ]
+}

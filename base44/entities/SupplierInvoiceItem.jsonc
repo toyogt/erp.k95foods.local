@@ -1,0 +1,44 @@
+{
+  "name": "SupplierInvoiceItem",
+  "type": "object",
+  "title": "Supplier Invoice Item",
+  "properties": {
+    "inv_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "item_code": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "item_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "uom_code": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "qty": {
+      "type": "number",
+      "minimum": 0
+    },
+    "rate": {
+      "type": "number",
+      "minimum": 0
+    },
+    "amount": {
+      "type": "number",
+      "minimum": 0
+    },
+    "remarks": {
+      "type": "string",
+      "maxLength": 500
+    }
+  },
+  "required": [
+    "inv_id",
+    "item_code",
+    "qty"
+  ]
+}

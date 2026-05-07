@@ -1,0 +1,73 @@
+{
+  "name": "MasterCarton",
+  "type": "object",
+  "title": "Master Carton",
+  "properties": {
+    "master_carton_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "inner_box_sku": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "SKU of boxes inside"
+    },
+    "inner_box_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "boxes_packed": {
+      "type": "number",
+      "minimum": 1
+    },
+    "batch_codes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "All batch codes from inner boxes"
+    },
+    "mfg_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Oldest manufacturing date"
+    },
+    "exp_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Oldest expiry date"
+    },
+    "source_lot_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "packed_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "packed_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "label_printed": {
+      "type": "boolean",
+      "default": false
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "DRAFT",
+        "SEALED"
+      ],
+      "default": "DRAFT"
+    }
+  },
+  "required": [
+    "master_carton_id",
+    "inner_box_sku",
+    "boxes_packed"
+  ]
+}

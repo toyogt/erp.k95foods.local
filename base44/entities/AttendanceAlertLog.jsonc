@@ -1,0 +1,113 @@
+{
+  "name": "AttendanceAlertLog",
+  "type": "object",
+  "title": "Attendance Alert Log",
+  "description": "Audit trail of attendance anomaly alerts (e.g. single-punch in 24h, missing IN/OUT) sent to supervisors and HR.",
+  "properties": {
+    "employee_code": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "employee_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "work_date": {
+      "type": "string",
+      "maxLength": 20,
+      "description": "DD/MM/YYYY"
+    },
+    "work_date_iso": {
+      "type": "string",
+      "format": "date"
+    },
+    "alert_type": {
+      "type": "string",
+      "enum": [
+        "MISSING_OUT",
+        "MISSING_IN",
+        "SINGLE_PUNCH",
+        "FLAGGED",
+        "NO_PUNCHES"
+      ],
+      "description": "Anomaly category"
+    },
+    "summary_status": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Status from DailyAttendanceSummary that triggered the alert"
+    },
+    "department": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "supervisor_email": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "department_head_email": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "hr_emails": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of HR recipients copied on the alert"
+    },
+    "recipients_to": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "recipients_cc": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "punch_count": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0
+    },
+    "first_in": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "last_out": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "send_status": {
+      "type": "string",
+      "enum": [
+        "SENT",
+        "SKIPPED_NO_RECIPIENT",
+        "FAILED"
+      ],
+      "default": "SENT"
+    },
+    "failure_reason": {
+      "type": "string",
+      "maxLength": 1000
+    },
+    "summary_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "DailyAttendanceSummary.id that triggered this alert"
+    },
+    "sent_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "employee_code",
+    "alert_type",
+    "work_date_iso"
+  ]
+}

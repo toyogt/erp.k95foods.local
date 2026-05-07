@@ -1,0 +1,72 @@
+{
+  "name": "SalesPayment",
+  "type": "object",
+  "properties": {
+    "sales_order_id": {
+      "type": "string",
+      "title": "Sales Order ID"
+    },
+    "invoice_id": {
+      "type": "string",
+      "title": "Invoice ID"
+    },
+    "so_number": {
+      "type": "string",
+      "title": "Sales Order Number"
+    },
+    "invoice_number": {
+      "type": "string",
+      "title": "Invoice Number"
+    },
+    "customer_name": {
+      "type": "string",
+      "title": "Customer Name"
+    },
+    "amount": {
+      "type": "number",
+      "title": "Amount Received"
+    },
+    "payment_date": {
+      "type": "string",
+      "title": "Payment Date"
+    },
+    "method": {
+      "type": "string",
+      "enum": [
+        "neft",
+        "rtgs",
+        "cheque",
+        "upi",
+        "cash",
+        "other"
+      ],
+      "title": "Payment Method"
+    },
+    "reference_number": {
+      "type": "string",
+      "title": "Reference Number"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "receipt",
+        "advance",
+        "credit_note"
+      ],
+      "title": "Payment Type"
+    },
+    "notes": {
+      "type": "string",
+      "title": "Notes"
+    },
+    "recorded_by": {
+      "type": "string",
+      "title": "Recorded By"
+    }
+  },
+  "required": [
+    "sales_order_id",
+    "amount",
+    "payment_date"
+  ]
+}

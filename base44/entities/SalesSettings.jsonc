@@ -1,0 +1,29 @@
+{
+  "name": "SalesSettings",
+  "type": "object",
+  "properties": {
+    "setting_key": {
+      "type": "string",
+      "title": "Setting Key"
+    },
+    "setting_label": {
+      "type": "string",
+      "title": "Label"
+    },
+    "values": {
+      "type": "array",
+      "title": "Options",
+      "items": {
+        "type": "string"
+      }
+    },
+    "description": {
+      "type": "string",
+      "title": "Description"
+    }
+  },
+  "required": [
+    "setting_key",
+    "values"
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "name": "Pallet",
+  "type": "object",
+  "title": "Pallet",
+  "properties": {
+    "pallet_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "pallet_type": {
+      "type": "string",
+      "enum": [
+        "WIP",
+        "FG"
+      ],
+      "default": "WIP"
+    },
+    "current_location": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "OPEN",
+        "IN_CHAMBER",
+        "POST_CHAMBER",
+        "IN_TRANSIT",
+        "RECEIVED",
+        "AT_ZONE",
+        "EMPTY",
+        "CLOSED"
+      ],
+      "default": "OPEN"
+    },
+    "crate_count": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0
+    },
+    "batch_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "product_code": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "bottle_type": {
+      "type": "string",
+      "maxLength": 100
+    }
+  },
+  "required": [
+    "pallet_id",
+    "pallet_type"
+  ]
+}

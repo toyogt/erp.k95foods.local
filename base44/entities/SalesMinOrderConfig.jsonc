@@ -1,0 +1,47 @@
+{
+  "name": "SalesMinOrderConfig",
+  "type": "object",
+  "properties": {
+    "item_code": {
+      "type": "string",
+      "title": "Item Code / Product Code"
+    },
+    "item_name": {
+      "type": "string",
+      "title": "Item Name"
+    },
+    "distributor_id": {
+      "type": "string",
+      "title": "Distributor ID (leave blank for all)"
+    },
+    "distributor_name": {
+      "type": "string",
+      "title": "Distributor Name"
+    },
+    "min_order_qty": {
+      "type": "number",
+      "title": "Minimum Order Quantity (units)"
+    },
+    "min_order_boxes": {
+      "type": "number",
+      "title": "Minimum Order Boxes"
+    },
+    "packing_unit": {
+      "type": "number",
+      "title": "Units per Box"
+    },
+    "notes": {
+      "type": "string",
+      "title": "Notes"
+    },
+    "is_active": {
+      "type": "boolean",
+      "title": "Active",
+      "default": true
+    }
+  },
+  "required": [
+    "item_code",
+    "min_order_qty"
+  ]
+}

@@ -1,0 +1,73 @@
+{
+  "name": "Job",
+  "type": "object",
+  "title": "Job",
+  "properties": {
+    "job_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "product": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "mrp": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "pack_type": {
+      "type": "string",
+      "enum": [
+        "case6",
+        "case12"
+      ]
+    },
+    "target_cases": {
+      "type": "number",
+      "minimum": 0
+    },
+    "target_bottles": {
+      "type": "number",
+      "minimum": 0
+    },
+    "priority": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 10,
+      "default": 5
+    },
+    "assigned_line": {
+      "type": "number",
+      "enum": [
+        1,
+        2
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "DRAFT",
+        "RELEASED",
+        "IN_PROGRESS",
+        "COMPLETED",
+        "ON_HOLD"
+      ],
+      "default": "DRAFT"
+    },
+    "completed_cases": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0
+    },
+    "batch_id": {
+      "type": "string",
+      "maxLength": 50
+    }
+  },
+  "required": [
+    "job_id",
+    "product"
+  ]
+}

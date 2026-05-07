@@ -49,7 +49,7 @@ import Putaway from './pages/Putaway';
 import QCInbox from './pages/QCInbox';
 import RecipeBuilder from './pages/RecipeBuilder';
 import RecipeStation from './pages/RecipeStation';
-import RyanTemplateManager from './pages/RyanTemplateManager';
+
 import SKUSetup from './pages/SKUSetup';
 import ShiftKPIDashboard from './pages/ShiftKPIDashboard';
 import StoresIssue from './pages/StoresIssue';
@@ -124,6 +124,7 @@ import LblChecklistBuilder from './pages/LblChecklistBuilder';
 import LblEventLogPage from './pages/LblEventLogPage';
 import LblMasterData from './pages/LblMasterData';
 import LblDocTypePermissions from './pages/LblDocTypePermissions';
+<<<<<<< HEAD
 import StoreItemCreator from './pages/StoreItemCreator';
 import SMSOpeningStockManager from './pages/SMSOpeningStockManager';
 import ItemModule from './pages/ItemModule';
@@ -148,6 +149,36 @@ import BulkPOCreate from './pages/BulkPOCreate';
 import PurchaseRequestList from './pages/PurchaseRequestList';
 import PurchaseOrderList from './pages/PurchaseOrderList';
 import WhatsAppTemplateManager from './pages/WhatsAppTemplateManager';
+=======
+import RynanPrinterCenter from './pages/RynanPrinterCenter';
+import LblPrintTemplateManager from './pages/LblPrintTemplateManager';
+import PageFieldPermissions from './pages/PageFieldPermissions';
+import BoxLabelTemplateManager from './pages/BoxLabelTemplateManager';
+import BoxLabelTemplateBuilder from './pages/BoxLabelTemplateBuilder';
+import PrintManagementDashboard from './pages/PrintManagementDashboard';
+import PrintJobCreate from './pages/PrintJobCreate';
+import PrintJobs from './pages/PrintJobs';
+import PrintManagementAdmin from './pages/PrintManagementAdmin';
+import HRAttendanceLogs from './pages/HRAttendanceLogs';
+import HRAttendanceSummary from './pages/HRAttendanceSummary';
+import HRShiftTimings from './pages/HRShiftTimings';
+import HRHolidays from './pages/HRHolidays';
+import HRManualPunchRequest from './pages/HRManualPunchRequest';
+import HRManualPunchApprovals from './pages/HRManualPunchApprovals';
+import HREmployeeDailyHours from './pages/HREmployeeDailyHours';
+import HREmployees from './pages/HREmployees';
+import HRDepartments from './pages/HRDepartments';
+import HRDesignations from './pages/HRDesignations';
+import HRBranches from './pages/HRBranches';
+import HRCompanies from './pages/HRCompanies';
+import HRLeaveTypes from './pages/HRLeaveTypes';
+import HRNotificationSettings from './pages/HRNotificationSettings';
+import HRAttendanceAlerts from './pages/HRAttendanceAlerts';
+import HRCandidateLeads from './pages/HRCandidateLeads';
+import HRAttritionDashboard from './pages/HRAttritionDashboard';
+import HRTerminationForm from './pages/HRTerminationForm';
+import ExitInterviewSurvey from './pages/ExitInterviewSurvey';
+>>>>>>> kunal/main
 
 // Page component lookup table
 const PAGE_COMPONENTS = {
@@ -157,7 +188,7 @@ const PAGE_COMPONENTS = {
   LabelRollManager, LabellingLine, LiquidPlans, MasterData, PaymentRequests, ProductTaxonomy,
   ProductionControl, ProductionOrders, PullLists, Putaway, QCInbox, RecipeBuilder,
   MaterialRequest, PurchaseOrders, PurchaseReports,
-  RecipeStation, RyanTemplateManager, SKUSetup, ShiftKPIDashboard, StoresIssue, SupplierManager, TemplateMappingManager,
+  RecipeStation, SKUSetup, ShiftKPIDashboard, StoresIssue, SupplierManager, TemplateMappingManager,
   ThreeWayMatch, TraceInvestigation, TransferReceiving, UOMManager, WarehouseBins,
   FMSMyTasks, FMSProcesses, FMSActiveRuns, FMSMonitor, UserManagement, RoleManager, ApprovalRulesManager,
   PermissionMatrix, PermissionMatrixDashboard, ApprovalWorkflowHub, AccessAuditLog, FMSHealthDashboard,
@@ -174,6 +205,7 @@ const PAGE_COMPONENTS = {
   LblSupervisorApprovals, LblMonitorDashboard, LblChecklistBuilder, LblEventLogPage,
   LblMasterData,
   LblDocTypePermissions,
+<<<<<<< HEAD
   StoreItemCreator,
   SMSOpeningStockManager,
   ItemModule,
@@ -198,6 +230,12 @@ const PAGE_COMPONENTS = {
   PurchaseRequestList,
   PurchaseOrderList,
   WhatsAppTemplateManager,
+=======
+  RynanPrinterCenter,
+  PrintManagementDashboard, PrintJobCreate, PrintJobs, PrintManagementAdmin,
+  HRDepartments, HRDesignations, HRBranches, HRCompanies, HRLeaveTypes,
+  HRNotificationSettings, HRAttendanceAlerts,
+>>>>>>> kunal/main
 };
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -240,6 +278,9 @@ const AuthenticatedApp = () => {
         </LayoutWrapper>
       } />
       
+      {/* Labelling Department */}
+      <Route path="/LblPrintTemplateManager" element={<LayoutWrapper currentPageName="LblPrintTemplateManager"><LblPrintTemplateManager /></LayoutWrapper>} />
+
       {/* Explicit route for Audit Log Viewer */}
       <Route
         path="/AuditLogViewer"
@@ -368,6 +409,38 @@ const AuthenticatedApp = () => {
       <Route path="/LblEventLogPage" element={<LayoutWrapper currentPageName="LblEventLogPage"><LblEventLogPage /></LayoutWrapper>} />
       <Route path="/LblMasterData" element={<LayoutWrapper currentPageName="LblMasterData"><LblMasterData /></LayoutWrapper>} />
       <Route path="/LblDocTypePermissions" element={<LayoutWrapper currentPageName="LblDocTypePermissions"><LblDocTypePermissions /></LayoutWrapper>} />
+      <Route path="/RynanPrinterCenter" element={<LayoutWrapper currentPageName="RynanPrinterCenter"><RynanPrinterCenter /></LayoutWrapper>} />
+      <Route path="/PageFieldPermissions" element={<LayoutWrapper currentPageName="PageFieldPermissions"><PageFieldPermissions /></LayoutWrapper>} />
+      <Route path="/BoxLabelTemplateManager" element={<LayoutWrapper currentPageName="BoxLabelTemplateManager"><BoxLabelTemplateManager /></LayoutWrapper>} />
+      <Route path="/BoxLabelTemplateBuilder" element={<LayoutWrapper currentPageName="BoxLabelTemplateBuilder"><BoxLabelTemplateBuilder /></LayoutWrapper>} />
+
+      {/* Print Management Module */}
+      <Route path="/PrintManagementDashboard" element={<LayoutWrapper currentPageName="PrintManagementDashboard"><PrintManagementDashboard /></LayoutWrapper>} />
+      <Route path="/PrintJobCreate" element={<LayoutWrapper currentPageName="PrintJobCreate"><PrintJobCreate /></LayoutWrapper>} />
+      <Route path="/PrintJobs" element={<LayoutWrapper currentPageName="PrintJobs"><PrintJobs /></LayoutWrapper>} />
+      <Route path="/PrintManagementAdmin" element={<LayoutWrapper currentPageName="PrintManagementAdmin"><PrintManagementAdmin /></LayoutWrapper>} />
+
+      {/* HR Module */}
+      <Route path="/HRAttendanceLogs" element={<LayoutWrapper currentPageName="HRAttendanceLogs"><HRAttendanceLogs /></LayoutWrapper>} />
+      <Route path="/HRAttendanceSummary" element={<LayoutWrapper currentPageName="HRAttendanceSummary"><HRAttendanceSummary /></LayoutWrapper>} />
+      <Route path="/HRShiftTimings" element={<LayoutWrapper currentPageName="HRShiftTimings"><HRShiftTimings /></LayoutWrapper>} />
+      <Route path="/HRHolidays" element={<LayoutWrapper currentPageName="HRHolidays"><HRHolidays /></LayoutWrapper>} />
+      <Route path="/HRManualPunchRequest" element={<LayoutWrapper currentPageName="HRManualPunchRequest"><HRManualPunchRequest /></LayoutWrapper>} />
+      <Route path="/HRManualPunchApprovals" element={<LayoutWrapper currentPageName="HRManualPunchApprovals"><HRManualPunchApprovals /></LayoutWrapper>} />
+      <Route path="/HREmployeeDailyHours" element={<LayoutWrapper currentPageName="HREmployeeDailyHours"><HREmployeeDailyHours /></LayoutWrapper>} />
+      <Route path="/HREmployees" element={<LayoutWrapper currentPageName="HREmployees"><HREmployees /></LayoutWrapper>} />
+      <Route path="/HRDepartments" element={<LayoutWrapper currentPageName="HRDepartments"><HRDepartments /></LayoutWrapper>} />
+      <Route path="/HRDesignations" element={<LayoutWrapper currentPageName="HRDesignations"><HRDesignations /></LayoutWrapper>} />
+      <Route path="/HRBranches" element={<LayoutWrapper currentPageName="HRBranches"><HRBranches /></LayoutWrapper>} />
+      <Route path="/HRCompanies" element={<LayoutWrapper currentPageName="HRCompanies"><HRCompanies /></LayoutWrapper>} />
+      <Route path="/HRLeaveTypes" element={<LayoutWrapper currentPageName="HRLeaveTypes"><HRLeaveTypes /></LayoutWrapper>} />
+      <Route path="/HRNotificationSettings" element={<LayoutWrapper currentPageName="HRNotificationSettings"><HRNotificationSettings /></LayoutWrapper>} />
+      <Route path="/HRAttendanceAlerts" element={<LayoutWrapper currentPageName="HRAttendanceAlerts"><HRAttendanceAlerts /></LayoutWrapper>} />
+      <Route path="/HRCandidateLeads" element={<LayoutWrapper currentPageName="HRCandidateLeads"><HRCandidateLeads /></LayoutWrapper>} />
+      <Route path="/HRAttritionDashboard" element={<LayoutWrapper currentPageName="HRAttritionDashboard"><HRAttritionDashboard /></LayoutWrapper>} />
+      <Route path="/HRTerminationForm" element={<LayoutWrapper currentPageName="HRTerminationForm"><HRTerminationForm /></LayoutWrapper>} />
+      {/* Public exit interview survey — no layout, no auth gate (token-validated) */}
+      <Route path="/ExitInterviewSurvey" element={<ExitInterviewSurvey />} />
 
       {/* ItemModule removed — replaced by All Items module pages */}
 

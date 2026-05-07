@@ -1,0 +1,41 @@
+{
+  "name": "SKUPrintMapping",
+  "type": "object",
+  "title": "SKU Print Template Mapping",
+  "properties": {
+    "mapping_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "sku_code": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Reference to ProductMaster.item_code"
+    },
+    "template_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Reference to LblPrintTemplate.template_id"
+    },
+    "artwork_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Reference to LabelArtwork.artwork_id \u2014 which artwork variant this template prints"
+    },
+    "is_default": {
+      "type": "boolean",
+      "default": false,
+      "description": "If true, this template is pre-selected when creating label plans for this SKU"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "mapping_id",
+    "sku_code",
+    "template_id"
+  ]
+}

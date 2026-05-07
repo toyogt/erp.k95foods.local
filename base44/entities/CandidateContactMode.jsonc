@@ -1,0 +1,21 @@
+{
+  "name": "CandidateContactMode",
+  "type": "object",
+  "title": "Candidate First Contact Mode",
+  "description": "Master list of first-contact modes for candidates (e.g. In-person, Phone, WhatsApp). Auto-populated when HR adds a new value via the smart dropdown.",
+  "properties": {
+    "mode_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "Unique mode name (e.g. In-person, Phone, WhatsApp)"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "mode_name"
+  ]
+}

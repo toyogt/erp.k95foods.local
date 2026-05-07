@@ -1,0 +1,132 @@
+{
+  "name": "PackingWO",
+  "type": "object",
+  "title": "Packing Work Order",
+  "properties": {
+    "wo_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "plan_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Reference to LiquidBatchPlan.plan_id"
+    },
+    "allocation_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Reference to SKUAllocation.allocation_id"
+    },
+    "sku_code": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "ProductMaster.item_code"
+    },
+    "product": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "product_code": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "bottle_type": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "mrp": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "pack_type": {
+      "type": "string",
+      "enum": [
+        "CASE6",
+        "CASE12"
+      ]
+    },
+    "target_cases": {
+      "type": "number",
+      "minimum": 0
+    },
+    "target_bottles": {
+      "type": "number",
+      "minimum": 0
+    },
+    "required_bottles": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Authoritative target \u2014 from allocation.required_bottles"
+    },
+    "produced_bottles_packed": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0,
+      "description": "Packed bottles from sealed pallet output (R7)"
+    },
+    "priority": {
+      "type": "number",
+      "minimum": 1,
+      "default": 5
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "RELEASED",
+        "RUNNING",
+        "PAUSED",
+        "COMPLETED"
+      ],
+      "default": "RELEASED"
+    },
+    "assigned_line": {
+      "type": "string",
+      "enum": [
+        "",
+        "LABEL-LINE-1",
+        "LABEL-LINE-2"
+      ],
+      "default": "",
+      "description": "Blank = unassigned (supervisor claims to a line)"
+    },
+    "label_sku_code": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "carton_code": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "batch_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Generated batch ID for this WO (sku_batch_id)"
+    },
+    "printer_template_id": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "print_variables": {
+      "type": "object",
+      "properties": {
+        "batch_code": {
+          "type": "string"
+        },
+        "mfg": {
+          "type": "string"
+        },
+        "exp": {
+          "type": "string"
+        },
+        "mrp": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "required": [
+    "wo_id",
+    "product"
+  ]
+}

@@ -1,0 +1,160 @@
+{
+  "name": "BoxLabelTemplate",
+  "type": "object",
+  "title": "Box Label Template",
+  "description": "Designable box label template with drag-and-drop elements and dynamic data field bindings",
+  "properties": {
+    "template_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "description": "Unique identifier for the template"
+    },
+    "template_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "Human-readable name of the template"
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "Description of what this template is used for"
+    },
+    "page_unit": {
+      "type": "string",
+      "enum": [
+        "mm",
+        "inch"
+      ],
+      "default": "mm",
+      "description": "Unit for page size and element coordinates"
+    },
+    "page_width": {
+      "type": "number",
+      "minimum": 1,
+      "description": "Page width in the chosen unit"
+    },
+    "page_height": {
+      "type": "number",
+      "minimum": 1,
+      "description": "Page height in the chosen unit"
+    },
+    "elements": {
+      "type": "array",
+      "description": "Ordered list of label elements (text, image, barcode)",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique element identifier within the template"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "text",
+              "image",
+              "barcode"
+            ],
+            "description": "Kind of element"
+          },
+          "x": {
+            "type": "number",
+            "description": "Left coordinate in page_unit"
+          },
+          "y": {
+            "type": "number",
+            "description": "Top coordinate in page_unit"
+          },
+          "width": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Width in page_unit"
+          },
+          "height": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Height in page_unit"
+          },
+          "rotation": {
+            "type": "number",
+            "default": 0,
+            "description": "Rotation in degrees"
+          },
+          "text_content": {
+            "type": "string",
+            "description": "Static text or template string with placeholders e.g. 'Batch: {{job.batch_no}}'"
+          },
+          "data_field": {
+            "type": "string",
+            "description": "Single data field key (e.g. 'job.batch_no', 'sku.product_name', 'sku.mrp'). When set, value is resolved at print time. Leave empty for static text."
+          },
+          "font_size": {
+            "type": "number",
+            "minimum": 4,
+            "default": 10,
+            "description": "Font size in points (text only)"
+          },
+          "font_weight": {
+            "type": "string",
+            "enum": [
+              "normal",
+              "bold",
+              "800",
+              "900"
+            ],
+            "default": "normal",
+            "description": "Text weight: normal, bold, 800 (Extra Bold), or 900 (Black)"
+          },
+          "text_align": {
+            "type": "string",
+            "enum": [
+              "left",
+              "center",
+              "right"
+            ],
+            "default": "left"
+          },
+          "color": {
+            "type": "string",
+            "default": "#000000",
+            "description": "Text/barcode color as hex"
+          },
+          "image_url": {
+            "type": "string",
+            "description": "Public URL for image elements"
+          },
+          "barcode_type": {
+            "type": "string",
+            "enum": [
+              "CODE128",
+              "QR",
+              "EAN13"
+            ],
+            "default": "CODE128"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "x",
+          "y",
+          "width",
+          "height"
+        ]
+      }
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "template_id",
+    "template_name",
+    "page_unit",
+    "page_width",
+    "page_height"
+  ]
+}

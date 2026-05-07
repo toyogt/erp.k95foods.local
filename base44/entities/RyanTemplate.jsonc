@@ -1,0 +1,28 @@
+{
+  "name": "RyanTemplate",
+  "type": "object",
+  "title": "Ryan Template",
+  "properties": {
+    "ryan_template_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "placeholders_json": {
+      "type": "string",
+      "maxLength": 2000,
+      "description": "JSON array of placeholder names this template expects, e.g. [\"BATCH\",\"MFG_DATE\",\"EXP_DATE\"]"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "ryan_template_id"
+  ]
+}

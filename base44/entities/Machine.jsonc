@@ -1,0 +1,42 @@
+{
+  "name": "Machine",
+  "type": "object",
+  "title": "Machine",
+  "properties": {
+    "machine_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "display_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "default_location": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "machine_type": {
+      "type": "string",
+      "enum": [
+        "FILLER",
+        "CHAMBER",
+        "LABEL-LINE",
+        "RECIPE-ROOM"
+      ]
+    },
+    "qr_code": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "machine_id",
+    "display_name"
+  ]
+}

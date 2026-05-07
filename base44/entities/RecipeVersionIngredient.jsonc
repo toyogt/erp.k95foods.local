@@ -1,0 +1,57 @@
+{
+  "name": "RecipeVersionIngredient",
+  "type": "object",
+  "title": "Recipe Version Ingredient",
+  "properties": {
+    "version_id": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Reference to RecipeVersion.version_id"
+    },
+    "ingredient_id": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Reference to IngredientMaster.ingredient_id (Spec)"
+    },
+    "qty": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Quantity"
+    },
+    "uom_id": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Reference to UOMMaster.uom_id"
+    },
+    "phase": {
+      "type": "string",
+      "enum": [
+        "BREW",
+        "SYRUP",
+        "MIX",
+        "ADDITION",
+        "PACKING"
+      ],
+      "description": "Production phase"
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "lock_brand": {
+      "type": "boolean",
+      "default": false,
+      "description": "If true, must use a specific brand item"
+    },
+    "ingredient_item_id": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Reference to IngredientItem.item_id (only if lock_brand=true)"
+    }
+  },
+  "required": [
+    "version_id",
+    "ingredient_id",
+    "qty"
+  ]
+}

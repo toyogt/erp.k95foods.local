@@ -1,0 +1,101 @@
+{
+  "name": "SupplierInvoice",
+  "type": "object",
+  "title": "Supplier Invoice",
+  "properties": {
+    "inv_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "supplier_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "supplier_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "invoice_number": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "invoice_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "invoice_amount": {
+      "type": "number",
+      "minimum": 0
+    },
+    "invoice_file": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "File URL of uploaded invoice (photo/PDF)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "DRAFT",
+        "SUBMITTED",
+        "MATCHED_OK",
+        "EXCEPTION",
+        "APPROVED_FOR_PAYMENT",
+        "PAID"
+      ],
+      "default": "DRAFT"
+    },
+    "linked_po_id": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "linked_grn_ids_json": {
+      "type": "string",
+      "maxLength": 2000,
+      "description": "JSON array of linked GRN IDs"
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 2000
+    },
+    "exception_summary": {
+      "type": "string",
+      "maxLength": 1000
+    },
+    "submitted_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "submitted_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "approved_by": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "approved_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "erp_sync_status": {
+      "type": "string",
+      "enum": [
+        "NOT_SYNCED",
+        "QUEUED",
+        "SYNCED",
+        "FAILED"
+      ],
+      "default": "NOT_SYNCED"
+    },
+    "erp_name": {
+      "type": "string",
+      "maxLength": 100
+    }
+  },
+  "required": [
+    "inv_id",
+    "supplier_id",
+    "invoice_file"
+  ]
+}
