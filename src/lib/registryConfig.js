@@ -163,7 +163,6 @@ export const pageRegistry = [
   { pageKey: 'SalesInvoices',          title: 'Invoices',             moduleKey: 'SALES', icon: FileText,     roles: ['admin', 'sales_manager', 'sales_user', 'user'] },
   { pageKey: 'SalesSKUManagement',      title: 'Products (SKU)',        moduleKey: 'SALES', icon: PackageSearch, roles: ['admin', 'sales_manager', 'sales_user', 'user'] },
 
-<<<<<<< HEAD
   // ─── ALL ITEMS ───
   { pageKey: 'AllItemsIngredients',   title: 'Ingredients',      moduleKey: 'ALL_ITEMS', icon: Zap,           roles: ['admin', 'store_manager', 'production_manager', 'user'], sortOrder: 1 },
   { pageKey: 'AllItemsUOM',           title: 'Units of Measure', moduleKey: 'ALL_ITEMS', icon: Tag,           roles: ['admin', 'store_manager', 'production_manager', 'user'], sortOrder: 2 },
@@ -172,7 +171,7 @@ export const pageRegistry = [
   { pageKey: 'AllItemsContainers',    title: 'Containers',       moduleKey: 'ALL_ITEMS', icon: PackageSearch,  roles: ['admin', 'store_manager', 'production_manager', 'user'], sortOrder: 5 },
   { pageKey: 'AllItemsCaps',          title: 'Caps',             moduleKey: 'ALL_ITEMS', icon: Archive,        roles: ['admin', 'store_manager', 'production_manager', 'user'], sortOrder: 6 },
   { pageKey: 'AllItemsFlavours',      title: 'Flavours',         moduleKey: 'ALL_ITEMS', icon: Droplets,       roles: ['admin', 'store_manager', 'production_manager', 'user'], sortOrder: 7 },
-=======
+
   // ─── HR ───
   { pageKey: 'HREmployees', title: 'Employees', moduleKey: 'HR', icon: Users, roles: ['admin', 'hr_manager', 'hr_supervisor', 'hr_user'], sortOrder: 0 },
   { pageKey: 'HRAttendanceLogs', title: 'Attendance Logs', moduleKey: 'HR', icon: UserCheck, roles: ['admin', 'hr_manager', 'hr_supervisor', 'hr_user', 'user'], sortOrder: 1 },
@@ -192,7 +191,6 @@ export const pageRegistry = [
   { pageKey: 'HRCandidateLeads', title: 'Candidate Leads', moduleKey: 'HR', icon: UserPlus, roles: ['admin', 'hr_manager', 'hr_supervisor', 'hr_user'], sortOrder: 30 },
   { pageKey: 'HRAttritionDashboard', title: 'Attrition Analytics', moduleKey: 'HR', icon: TrendingDown, roles: ['admin', 'hr_manager', 'hr_supervisor', 'hr_user'], sortOrder: 31 },
   { pageKey: 'HRTerminationForm', title: 'Termination Form', moduleKey: 'HR', icon: UserMinus, roles: ['admin', 'hr_manager', 'hr_supervisor'], sortOrder: 32, hideFromNav: true },
->>>>>>> kunal/main
 
   // ─── USER MANAGEMENT ───
   { pageKey: 'UserManagement', title: 'Users', moduleKey: 'USER_MANAGEMENT', icon: Users, roles: ['admin'], adminOnly: true },

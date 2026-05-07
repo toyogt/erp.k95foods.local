@@ -218,32 +218,18 @@ export default function FMSMyTasks() {
     const me = await base44.auth.me();
     if (!me) { setLoading(false); return; }
     setUser(me);
-<<<<<<< HEAD
     const [allSteps, myScheduled, myDirectorTasks] = await Promise.all([
-=======
-    const [allSteps, myScheduled] = await Promise.all([
->>>>>>> kunal/main
       base44.entities.FMSStepInstance.filter({ assignee_email: me.email, status: 'active' }, '-deadline', 100).catch(() => []),
       base44.entities.ScheduledTaskInstance.filter({ assignee_email: me.email, status: 'PENDING' }, '-due_at', 100).catch(() => []),
       base44.entities.DirectorTask.filter({ assigned_to_email: me.email }, '-created_date', 100).catch(() => []),
     ]);
-<<<<<<< HEAD
     const instanceIds = [...new Set((allSteps || []).map(s => s.instance_id).filter(Boolean))];
     const instances = instanceIds.length
-      ? await Promise.all(instanceIds.map(id => base44.entities.FMSProcessInstance.filter({ id }).catch(() => [])))
-      : [];
-    const instanceMap = {};
-    instances.flat().forEach(inst => { instanceMap[inst.id] = inst; });
-    const enriched = (allSteps || []).map(s => ({
-=======
-    const instanceIds = [...new Set(allSteps.map(s => s.instance_id).filter(Boolean))];
-    const instances = instanceIds.length > 0
       ? await Promise.all(instanceIds.map(id => base44.entities.FMSProcessInstance.filter({ id }).catch(() => []))).then(r => r.flat())
       : [];
     const instanceMap = {};
     instances.forEach(inst => { instanceMap[inst.id] = inst; });
-    const enriched = allSteps.map(s => ({
->>>>>>> kunal/main
+    const enriched = (allSteps || []).map(s => ({
       ...s,
       _process_name: instanceMap[s.instance_id]?.process_name || s.process_id,
       _instance_title: instanceMap[s.instance_id]?.title || '',

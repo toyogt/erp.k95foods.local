@@ -14,16 +14,11 @@ import { auditRoleCreated, auditRoleUpdated, auditRoleDeactivated } from '@/lib/
 
 const MODULE_LABELS = {
   DASHBOARD: 'Dashboard', PRODUCTION: 'Production', LABELLING: 'Labelling & Packing',
-<<<<<<< HEAD
   LBL_DEPT: 'Labelling Department', WAREHOUSE: 'Warehouse & FG', PURCHASE: 'Purchase',
   STORE: 'Store Management', QUALITY: 'Quality', ACCOUNTS: 'Accounts',
   FMS: 'Process Flow', SALES: 'Sales', USER_MANAGEMENT: 'User Management',
-  ADMIN: 'System',
-=======
-  WAREHOUSE: 'Warehouse & FG', PURCHASE: 'Purchase', GRN: 'Goods Receipt',
-  QUALITY: 'Quality', ACCOUNTS: 'Accounts', FMS: 'Process Flow', ADMIN: 'Admin',
-  STORE: 'Store', USER_MANAGEMENT: 'User Management', SALES: 'Sales',
-  LBL: 'Labelling', SMS: 'Store Management', REPORTS: 'Reports',
+  ADMIN: 'System', HR: 'Human Resources', ALL_ITEMS: 'All Items',
+  PRINT_MGMT: 'Print Management',
 };
 
 // Fallback: convert SNAKE_CASE to Title Case for any module not in the map
@@ -33,7 +28,6 @@ const formatModuleLabel = (key) => {
     .split('_')
     .map(w => w.charAt(0) + w.slice(1).toLowerCase())
     .join(' ');
->>>>>>> kunal/main
 };
 
 const EMPTY_FORM = { role_key: '', label: '', description: '', module_access: [], page_access: [], is_active: true, is_system: false };
@@ -200,72 +194,6 @@ function RoleForm({ initial, onSave, onCancel, saving }) {
         </div>
       </div>
 
-<<<<<<< HEAD
-      <div>
-        <Label>Description</Label>
-        <Input className="mt-1" placeholder="What can this role do?"
-          value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-          disabled={initial?.is_system}
-        />
-      </div>
-
-      <div>
-         <Label>Module Access</Label>
-         <p className="text-xs text-slate-400 mb-2">Select modules and configure page-level access within each module</p>
-         <div className="space-y-2">
-           {ALL_MODULE_KEYS.map(mod => {
-             const isSelected = form.module_access.includes(mod);
-             const modulePages = getPagesInModule(mod);
-             return (
-               <div key={mod} className="border border-slate-200 rounded-lg overflow-hidden">
-                 <button
-                   onClick={() => toggleExpandModule(mod)}
-                   className={`w-full flex items-center gap-2 px-3 py-2.5 text-sm font-medium transition-all ${
-                     isSelected
-                       ? 'bg-slate-900 text-white'
-                       : 'bg-slate-50 text-slate-700 hover:bg-slate-100'
-                   }`}
-                 >
-                   <input
-                     type="checkbox"
-                     checked={isSelected}
-                     onChange={() => {}}
-                     className="cursor-pointer pointer-events-none"
-                   />
-                   <span className="flex-1 text-left">{MODULE_LABELS[mod] || mod}</span>
-                   {modulePages.length > 0 && (
-                     <ChevronDown className={`w-4 h-4 transition-transform ${expandedModule === mod ? 'rotate-180' : ''}`} />
-                   )}
-                 </button>
-                 {expandedModule === mod && (
-                   <div className="bg-slate-50 border-t border-slate-200 p-3 space-y-1.5 max-h-48 overflow-y-auto">
-                     <p className="text-xs text-slate-500 mb-2">Select pages this role can access:</p>
-                     {modulePages.length === 0 ? (
-                       <p className="text-xs text-slate-400 italic">No pages in this module</p>
-                     ) : (
-                       modulePages.map(page => (
-                         <label key={page.pageKey} className="flex items-center gap-2 px-2 py-1 hover:bg-white rounded cursor-pointer text-xs">
-                           <input
-                             type="checkbox"
-                             checked={form.page_access?.includes(page.pageKey) ?? true}
-                             onChange={() => togglePageAccess(page.pageKey, mod)}
-                             className="cursor-pointer"
-                           />
-                           <span className="text-slate-600">{page.title}</span>
-                         </label>
-                       ))
-                     )}
-                   </div>
-                 )}
-               </div>
-             );
-           })}
-         </div>
-       </div>
-
-      <div className="flex gap-2 justify-end pt-2">
-        <Button variant="outline" onClick={onCancel}>Cancel</Button>
-=======
       {/* Pinned footer — always visible */}
       <div className="shrink-0 px-4 py-3 bg-white border-t border-slate-200 flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
         <Button
@@ -275,7 +203,6 @@ function RoleForm({ initial, onSave, onCancel, saving }) {
         >
           Cancel
         </Button>
->>>>>>> kunal/main
         <Button
           disabled={saving || !form.role_key || !form.label}
           onClick={() => onSave(form)}

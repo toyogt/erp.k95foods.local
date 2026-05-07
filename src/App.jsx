@@ -124,7 +124,6 @@ import LblChecklistBuilder from './pages/LblChecklistBuilder';
 import LblEventLogPage from './pages/LblEventLogPage';
 import LblMasterData from './pages/LblMasterData';
 import LblDocTypePermissions from './pages/LblDocTypePermissions';
-<<<<<<< HEAD
 import StoreItemCreator from './pages/StoreItemCreator';
 import SMSOpeningStockManager from './pages/SMSOpeningStockManager';
 import ItemModule from './pages/ItemModule';
@@ -149,7 +148,6 @@ import BulkPOCreate from './pages/BulkPOCreate';
 import PurchaseRequestList from './pages/PurchaseRequestList';
 import PurchaseOrderList from './pages/PurchaseOrderList';
 import WhatsAppTemplateManager from './pages/WhatsAppTemplateManager';
-=======
 import RynanPrinterCenter from './pages/RynanPrinterCenter';
 import LblPrintTemplateManager from './pages/LblPrintTemplateManager';
 import PageFieldPermissions from './pages/PageFieldPermissions';
@@ -178,7 +176,6 @@ import HRCandidateLeads from './pages/HRCandidateLeads';
 import HRAttritionDashboard from './pages/HRAttritionDashboard';
 import HRTerminationForm from './pages/HRTerminationForm';
 import ExitInterviewSurvey from './pages/ExitInterviewSurvey';
->>>>>>> kunal/main
 
 // Page component lookup table
 const PAGE_COMPONENTS = {
@@ -205,7 +202,6 @@ const PAGE_COMPONENTS = {
   LblSupervisorApprovals, LblMonitorDashboard, LblChecklistBuilder, LblEventLogPage,
   LblMasterData,
   LblDocTypePermissions,
-<<<<<<< HEAD
   StoreItemCreator,
   SMSOpeningStockManager,
   ItemModule,
@@ -230,12 +226,10 @@ const PAGE_COMPONENTS = {
   PurchaseRequestList,
   PurchaseOrderList,
   WhatsAppTemplateManager,
-=======
   RynanPrinterCenter,
   PrintManagementDashboard, PrintJobCreate, PrintJobs, PrintManagementAdmin,
   HRDepartments, HRDesignations, HRBranches, HRCompanies, HRLeaveTypes,
   HRNotificationSettings, HRAttendanceAlerts,
->>>>>>> kunal/main
 };
 
 const { Pages, Layout, mainPage } = pagesConfig;
