@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -64,6 +64,7 @@ export default function TemplateForm({ template, onBack, onSaved }) {
   const [examples, setExamples] = useState([]);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const initialLoadDone = useRef(false);
 
   useEffect(() => {
     if (template) {
@@ -90,20 +91,26 @@ export default function TemplateForm({ template, onBack, onSaved }) {
   const paramCount = (form.body_text.match(/\{\{\d+\}\}/g) || []).length;
   const uniqueParams = [...new Set((form.body_text.match(/\{\{\d+\}\}/g) || []).map(p => parseInt(p.replace(/[{}]/g, ''))))].sort((a, b) => a - b);
 
-  // Sync mappings when params change
+  // Sync mappings when body text params change — skip initial load for edits to preserve DB data
   useEffect(() => {
+    if (isEdit && !initialLoadDone.current) {
+      // On first render with a template, just mark as loaded — DB values already set
+      if (uniqueParams.length > 0) initialLoadDone.current = true;
+      return;
+    }
     setMappings(prev => {
-      const updated = uniqueParams.map(idx => {
+      const prevIndices = prev.map(m => m.index).sort((a, b) => a - b);
+      if (JSON.stringify(prevIndices) === JSON.stringify(uniqueParams) && prev.length > 0) return prev;
+      return uniqueParams.map(idx => {
         const existing = prev.find(m => m.index === idx);
         return existing || { index: idx, label: `Parameter ${idx}`, source_entity: form.trigger_entity, source_field: '', fallback_value: '' };
       });
-      return updated;
     });
     setExamples(prev => {
-      const updated = uniqueParams.map((idx, i) => prev[i] || '');
-      return updated;
+      if (prev.length === uniqueParams.length && prev.length > 0) return prev;
+      return uniqueParams.map((_idx, i) => prev[i] || '');
     });
-  }, [paramCount, form.trigger_entity]);
+  }, [paramCount]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function setField(k, v) {
     setForm(prev => ({ ...prev, [k]: v }));
