@@ -7,13 +7,39 @@ import ParameterMapper from './ParameterMapper';
 import { Loader2, ArrowLeft, Send, Save } from 'lucide-react';
 
 const ENTITIES_WITH_FIELDS = [
+  // Task Management
   { name: 'DirectorTask', label: 'Director Task' },
+  { name: 'Project', label: 'Project' },
+  // Purchase & Procurement
+  { name: 'PurchaseRequest', label: 'Purchase Request' },
   { name: 'PurchaseOrder', label: 'Purchase Order' },
-  { name: 'GRNHeader', label: 'Goods Receipt Note' },
-  { name: 'SalesOrder', label: 'Sales Order' },
+  { name: 'Supplier', label: 'Supplier' },
+  { name: 'SupplierInvoice', label: 'Supplier Invoice' },
+  { name: 'PaymentRequest', label: 'Payment Request' },
+  // Gate & Goods Receipt
   { name: 'GateEntry', label: 'Gate Entry' },
+  { name: 'GRNHeader', label: 'Goods Receipt Note' },
+  // Store & Inventory
   { name: 'StoreIssue', label: 'Store Issue' },
+  { name: 'StoreLot', label: 'Store Lot' },
+  { name: 'StoreItemMaster', label: 'Store Item Master' },
+  // Production
+  { name: 'ProductionOrder', label: 'Production Order' },
+  { name: 'Batch', label: 'Batch' },
+  { name: 'LiquidBatchPlan', label: 'Liquid Batch Plan' },
+  // Quality
+  { name: 'QCInspection', label: 'Quality Control Inspection' },
+  // Sales & Dispatch
+  { name: 'SalesOrder', label: 'Sales Order' },
+  { name: 'SalesPicklist', label: 'Sales Picklist' },
+  { name: 'SalesInvoice', label: 'Sales Invoice' },
+  { name: 'SalesDispatch', label: 'Sales Dispatch' },
+  { name: 'Customer', label: 'Customer' },
+  // Labelling
+  { name: 'LabellingJob', label: 'Labelling Job' },
+  // Users & Roles
   { name: 'User', label: 'User' },
+  { name: 'EADirectorMapping', label: 'Executive Assistant Mapping' },
 ];
 
 export default function TemplateForm({ template, onBack, onSaved }) {
