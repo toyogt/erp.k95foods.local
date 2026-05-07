@@ -64,7 +64,6 @@ export default function TemplateForm({ template, onBack, onSaved }) {
   const [examples, setExamples] = useState([]);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [entityFields, setEntityFields] = useState([]);
 
   useEffect(() => {
     if (template) {
@@ -86,40 +85,6 @@ export default function TemplateForm({ template, onBack, onSaved }) {
       setExamples(template.example_values || []);
     }
   }, [template]);
-
-  // Load entity fields when trigger_entity changes
-  useEffect(() => {
-    if (!form.trigger_entity) { setEntityFields([]); return; }
-    const entityRef = base44.entities[form.trigger_entity];
-    if (!entityRef || typeof entityRef.schema !== 'function') {
-      // Fallback: provide built-in fields only
-      setEntityFields([
-        { key: 'id', label: 'id — Record ID', type: 'string' },
-        { key: 'created_date', label: 'created_date — Created Date', type: 'string' },
-        { key: 'created_by', label: 'created_by — Created By Email', type: 'string' },
-      ]);
-      return;
-    }
-    entityRef.schema()
-      .then(schema => {
-        const fields = Object.entries(schema.properties || {}).map(([key, val]) => ({
-          key,
-          label: `${key}${val.description ? ' — ' + val.description : ''}`,
-          type: val.type,
-        }));
-        fields.unshift(
-          { key: 'id', label: 'id — Record ID', type: 'string' },
-          { key: 'created_date', label: 'created_date — Created Date', type: 'string' },
-          { key: 'created_by', label: 'created_by — Created By Email', type: 'string' },
-        );
-        setEntityFields(fields);
-      })
-      .catch(() => setEntityFields([
-        { key: 'id', label: 'id — Record ID', type: 'string' },
-        { key: 'created_date', label: 'created_date — Created Date', type: 'string' },
-        { key: 'created_by', label: 'created_by — Created By Email', type: 'string' },
-      ]));
-  }, [form.trigger_entity]);
 
   // Count parameters in body text
   const paramCount = (form.body_text.match(/\{\{\d+\}\}/g) || []).length;
@@ -293,7 +258,6 @@ export default function TemplateForm({ template, onBack, onSaved }) {
           <ParameterMapper
             mappings={mappings}
             examples={examples}
-            entityFields={entityFields}
             entities={ENTITIES_WITH_FIELDS}
             triggerEntity={form.trigger_entity}
             onMappingsChange={setMappings}
