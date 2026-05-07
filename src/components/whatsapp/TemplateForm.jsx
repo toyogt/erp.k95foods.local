@@ -90,14 +90,23 @@ export default function TemplateForm({ template, onBack, onSaved }) {
   // Load entity fields when trigger_entity changes
   useEffect(() => {
     if (!form.trigger_entity) { setEntityFields([]); return; }
-    base44.entities[form.trigger_entity]?.schema()
+    const entityRef = base44.entities[form.trigger_entity];
+    if (!entityRef || typeof entityRef.schema !== 'function') {
+      // Fallback: provide built-in fields only
+      setEntityFields([
+        { key: 'id', label: 'id — Record ID', type: 'string' },
+        { key: 'created_date', label: 'created_date — Created Date', type: 'string' },
+        { key: 'created_by', label: 'created_by — Created By Email', type: 'string' },
+      ]);
+      return;
+    }
+    entityRef.schema()
       .then(schema => {
         const fields = Object.entries(schema.properties || {}).map(([key, val]) => ({
           key,
           label: `${key}${val.description ? ' — ' + val.description : ''}`,
           type: val.type,
         }));
-        // Add built-in fields
         fields.unshift(
           { key: 'id', label: 'id — Record ID', type: 'string' },
           { key: 'created_date', label: 'created_date — Created Date', type: 'string' },
@@ -105,7 +114,11 @@ export default function TemplateForm({ template, onBack, onSaved }) {
         );
         setEntityFields(fields);
       })
-      .catch(() => setEntityFields([]));
+      .catch(() => setEntityFields([
+        { key: 'id', label: 'id — Record ID', type: 'string' },
+        { key: 'created_date', label: 'created_date — Created Date', type: 'string' },
+        { key: 'created_by', label: 'created_by — Created By Email', type: 'string' },
+      ]));
   }, [form.trigger_entity]);
 
   // Count parameters in body text
