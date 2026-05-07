@@ -153,40 +153,59 @@ export default function TemplateForm({ template, onBack, onSaved }) {
       return;
     }
 
+    // Meta rejects headers with emojis, newlines, asterisks, or formatting characters
+    const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{2B55}\u{200D}\u{FE0F}]/u;
+    if (form.header_text && (emojiRegex.test(form.header_text) || /[*\n\r]/.test(form.header_text))) {
+      toast({
+        title: 'Invalid Header',
+        description: 'Header text cannot contain emojis, asterisks, or new lines. Meta will reject it.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setSubmitting(true);
-    const resp = await base44.functions.invoke('whatsappTemplateManager', {
-      action: 'create_template',
-      waba_id: '__FROM_ENV__',
-      template_name: form.template_name,
-      category: form.category,
-      language: form.language,
-      header_text: form.header_text,
-      body_text: form.body_text,
-      footer_text: form.footer_text,
-      example_values: examples,
-    });
-
-    if (resp.data?.success) {
-      const saveData = {
-        ...form,
-        parameter_count: uniqueParams.length,
-        parameter_mappings: mappings,
+    try {
+      const resp = await base44.functions.invoke('whatsappTemplateManager', {
+        action: 'create_template',
+        waba_id: '__FROM_ENV__',
+        template_name: form.template_name,
+        category: form.category,
+        language: form.language,
+        header_text: form.header_text,
+        body_text: form.body_text,
+        footer_text: form.footer_text,
         example_values: examples,
-        meta_template_id: resp.data.meta_template_id || '',
-        meta_status: 'submitted',
-        is_active: true,
-      };
+      });
 
-      if (isEdit) {
-        await base44.entities.WhatsAppTemplate.update(template.id, saveData);
+      if (resp.data?.success) {
+        const saveData = {
+          ...form,
+          parameter_count: uniqueParams.length,
+          parameter_mappings: mappings,
+          example_values: examples,
+          meta_template_id: resp.data.meta_template_id || '',
+          meta_status: 'submitted',
+          is_active: true,
+        };
+
+        if (isEdit) {
+          await base44.entities.WhatsAppTemplate.update(template.id, saveData);
+        } else {
+          await base44.entities.WhatsAppTemplate.create(saveData);
+        }
+
+        toast({ title: 'Submitted to Meta', description: `Template ID: ${resp.data.meta_template_id || 'pending'}` });
+        onSaved();
       } else {
-        await base44.entities.WhatsAppTemplate.create(saveData);
+        const metaErr = resp.data?.details?.error;
+        const errMsg = metaErr?.error_user_msg || metaErr?.message || resp.data?.error || 'Submission failed';
+        toast({ title: 'Meta API Error', description: errMsg, variant: 'destructive' });
       }
-
-      toast({ title: 'Submitted to Meta', description: `Template ID: ${resp.data.meta_template_id || 'pending'}` });
-      onSaved();
-    } else {
-      const errMsg = resp.data?.details?.error?.message || resp.data?.error || 'Submission failed';
+    } catch (err) {
+      const respData = err?.response?.data;
+      const metaErr = respData?.details?.error;
+      const errMsg = metaErr?.error_user_msg || metaErr?.message || respData?.error || err.message || 'Submission failed';
       toast({ title: 'Meta API Error', description: errMsg, variant: 'destructive' });
     }
 
@@ -238,7 +257,8 @@ export default function TemplateForm({ template, onBack, onSaved }) {
         <h3 className="text-sm font-semibold text-slate-800">Message Content</h3>
         <div>
           <label className="text-xs font-medium text-slate-700">Header Text</label>
-          <Input className="h-9 text-sm mt-1" value={form.header_text} onChange={e => setField('header_text', e.target.value)} placeholder="⚠️ Task Overdue" />
+            <Input className="h-9 text-sm mt-1" value={form.header_text} onChange={e => setField('header_text', e.target.value)} placeholder="Task Overdue Alert" />
+            <p className="text-xs text-slate-400 mt-0.5">No emojis, asterisks, or new lines allowed by Meta.</p>
         </div>
         <div>
           <label className="text-xs font-medium text-slate-700">Body Text * <span className="text-slate-400 font-normal">(Use {'{{1}}'}, {'{{2}}'} etc. for dynamic values)</span></label>
