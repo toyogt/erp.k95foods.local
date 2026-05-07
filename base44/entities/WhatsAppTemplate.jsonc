@@ -1,0 +1,142 @@
+{
+  "name": "WhatsAppTemplate",
+  "type": "object",
+  "title": "WhatsApp Template",
+  "description": "Stores WhatsApp message templates with field mappings for dynamic sending",
+  "properties": {
+    "template_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "Meta-approved template name (lowercase, underscores only)"
+    },
+    "display_name": {
+      "type": "string",
+      "maxLength": 300,
+      "description": "Human-readable name for the template"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "UTILITY",
+        "MARKETING",
+        "AUTHENTICATION"
+      ],
+      "default": "UTILITY"
+    },
+    "language": {
+      "type": "string",
+      "maxLength": 10,
+      "default": "en"
+    },
+    "header_text": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "Header text for the template"
+    },
+    "body_text": {
+      "type": "string",
+      "maxLength": 5000,
+      "description": "Body text with {{1}}, {{2}} etc. placeholders"
+    },
+    "footer_text": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Footer text"
+    },
+    "parameter_count": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0,
+      "description": "Number of parameters in the body"
+    },
+    "parameter_mappings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "index": {
+            "type": "number"
+          },
+          "label": {
+            "type": "string"
+          },
+          "source_entity": {
+            "type": "string"
+          },
+          "source_field": {
+            "type": "string"
+          },
+          "fallback_value": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Maps each {{n}} to an entity field path"
+    },
+    "example_values": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Example values for Meta submission"
+    },
+    "meta_template_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Template ID returned by Meta after creation"
+    },
+    "meta_status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "submitted",
+        "approved",
+        "rejected"
+      ],
+      "default": "draft"
+    },
+    "phone_number_id": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "WhatsApp Phone Number ID to use"
+    },
+    "trigger_entity": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Entity that triggers this template (e.g. DirectorTask)"
+    },
+    "trigger_event": {
+      "type": "string",
+      "enum": [
+        "manual",
+        "on_create",
+        "on_update",
+        "scheduled"
+      ],
+      "default": "manual"
+    },
+    "trigger_conditions": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "JSON conditions for when to auto-send"
+    },
+    "recipient_field": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Entity field path that resolves to phone number"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 1000
+    }
+  },
+  "required": [
+    "template_name",
+    "body_text"
+  ]
+}
