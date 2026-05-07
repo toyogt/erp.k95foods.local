@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
 
       if (!response.ok) {
         console.error('Meta create template error:', JSON.stringify(result));
-        return Response.json({ error: 'Failed to create template on Meta', details: result }, { status: response.status });
+        return Response.json({ success: false, error: 'Failed to create template on Meta', details: result });
       }
 
       return Response.json({ success: true, meta_template_id: result.id, status: result.status });
@@ -131,7 +131,7 @@ Deno.serve(async (req) => {
 
       if (!response.ok) {
         console.error('WhatsApp send error:', JSON.stringify(result));
-        return Response.json({ error: 'Failed to send message', details: result }, { status: response.status });
+        return Response.json({ success: false, error: 'Failed to send message', details: result });
       }
 
       return Response.json({ success: true, message_id: result.messages?.[0]?.id });
@@ -155,7 +155,7 @@ Deno.serve(async (req) => {
 
       const result = await response.json();
       if (!response.ok) {
-        return Response.json({ error: 'Failed to fetch templates', details: result }, { status: response.status });
+        return Response.json({ success: false, error: 'Failed to fetch templates', details: result });
       }
 
       return Response.json({ success: true, templates: result.data || [] });
@@ -179,7 +179,7 @@ Deno.serve(async (req) => {
 
       const result = await response.json();
       if (!response.ok) {
-        return Response.json({ error: 'Failed to delete template', details: result }, { status: response.status });
+        return Response.json({ success: false, error: 'Failed to delete template', details: result });
       }
 
       return Response.json({ success: true });
