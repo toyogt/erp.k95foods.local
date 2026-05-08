@@ -1,6 +1,23 @@
 // Returns merged active printers/workstations from latest probe cache.
 // { refresh: true } forces re-probe of all active workstations first.
+//
+// NOTE: Base44 binds env-secrets to a function based on textual references
+// in the source. The secret names below are listed explicitly so the platform
+// attaches them to this function's runtime — without these references,
+// Deno.env.get() returns undefined even though the secret is set globally.
+// Known secrets (keep in sync with PrintServerConfig.auth_token_secret_name):
+//   LBL_DPT_PC_01_TKN
+//   PRINT_AGENT_TOKEN_WH_01
+//   PRINT_AGENT_TOKEN_PACK_01
+//   PRINT_AGENT_TOKEN_PACK_02
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+
+const KNOWN_SECRET_NAMES = [
+  'LBL_DPT_PC_01_TKN',
+  'PRINT_AGENT_TOKEN_WH_01',
+  'PRINT_AGENT_TOKEN_PACK_01',
+  'PRINT_AGENT_TOKEN_PACK_02',
+];
 
 async function probe(baseUrl, token, timeoutMs) {
   const url = baseUrl.replace(/\/+$/, '') + '/v1/discovery';
@@ -33,12 +50,18 @@ Deno.serve(async (req) => {
     const configByWid = new Map(configs.map(c => [c.workstation_id, c]));
 
     if (refresh) {
+      // Touch the known secret names so static analysis binds them at deploy.
+      // (Reading them is harmless; values are not exposed in the response.)
+      const _bind = KNOWN_SECRET_NAMES.map(n => Deno.env.get(n) ? 1 : 0).reduce((a, b) => a + b, 0);
+      void _bind;
+
       await Promise.all(workstations.filter(w => configByWid.has(w.workstation_id)).map(async (w) => {
         const cfg = configByWid.get(w.workstation_id);
-        const token = Deno.env.get(cfg.auth_token_secret_name);
+        const secretName = cfg.auth_token_secret_name;
+        const token = secretName ? Deno.env.get(secretName) : null;
         const result = token
           ? await probe(cfg.base_url, token, cfg.request_timeout_ms || 1200)
-          : { ok: false, latency: 0, error: 'token_secret_missing' };
+          : { ok: false, latency: 0, error: `token_secret_missing:${secretName}` };
         const existing = await base44.asServiceRole.entities.PrinterDiscoveryCache.filter({ workstation_id: w.workstation_id });
         const payload = {
           workstation_id: w.workstation_id,
