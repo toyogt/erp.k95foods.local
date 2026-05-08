@@ -152,6 +152,7 @@ import HRCandidateLeads from './pages/HRCandidateLeads';
 import HRAttritionDashboard from './pages/HRAttritionDashboard';
 import HRTerminationForm from './pages/HRTerminationForm';
 import ExitInterviewSurvey from './pages/ExitInterviewSurvey';
+import RyanTemplateManager from './pages/RyanTemplateManager';
 
 // Page component lookup table
 const PAGE_COMPONENTS = {
@@ -182,6 +183,10 @@ const PAGE_COMPONENTS = {
   PrintManagementDashboard, PrintJobCreate, PrintJobs, PrintManagementAdmin,
   HRDepartments, HRDesignations, HRBranches, HRCompanies, HRLeaveTypes,
   HRNotificationSettings, HRAttendanceAlerts,
+  HREmployees, HRAttendanceLogs, HRAttendanceSummary, HREmployeeDailyHours,
+  HRManualPunchRequest, HRManualPunchApprovals, HRShiftTimings, HRHolidays,
+  HRCandidateLeads, HRAttritionDashboard, HRTerminationForm,
+  BoxLabelTemplateManager, RyanTemplateManager,
 };
 
 const { Pages, Layout, mainPage } = pagesConfig;
