@@ -14,11 +14,13 @@ import {
   Factory, LogOut, X, ChevronDown, LayoutDashboard, Menu, ChevronRight
 } from 'lucide-react';
 
+const ENABLE_ALL_MODULES_LOCALLY = true;
+
 export default function Layout({ children, currentPageName }) {
   const [user, setUser] = useState(null);
   const [userLoading, setUserLoading] = useState(true);
   const [roleModuleAccess, setRoleModuleAccess] = useState(null); // from DB AppRole
-  const [allowedPages, setAllowedPages] = useState([]);          // allowed pages for this user
+  const [allowedPages, setAllowedPages] = useState(ENABLE_ALL_MODULES_LOCALLY ? ['*'] : []);          // allowed pages for this user
   const [sidebarOpen, setSidebarOpen] = useState(false);       // mobile drawer
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // desktop collapse
   const [expandedModules, setExpandedModules] = useState({});  // which modules are expanded
@@ -26,6 +28,12 @@ export default function Layout({ children, currentPageName }) {
   useEffect(() => {
     base44.auth.me().then(async u => {
       setUser(u);
+      if (ENABLE_ALL_MODULES_LOCALLY) {
+        setAllowedPages(['*']);
+        setUserLoading(false);
+        return;
+      }
+
       if (u?.role) {
         // Load allowed pages from database
         const pages = await getAllowedPagesFromDB(u);
@@ -55,12 +63,13 @@ export default function Layout({ children, currentPageName }) {
   }, [currentPageName]);
 
   const role = user?.role || 'user';
+  const navigationRole = ENABLE_ALL_MODULES_LOCALLY ? 'admin' : role;
   const isAdmin = role === 'admin';
   const isOperator = isOperatorLayout(role);
   const isHome = currentPageName === 'FMSMyTasks' || currentPageName === 'Dashboard';
   
   // Check if user has access to current page using unified resolver
-  const hasAccess = isHome || allowedPages.includes('*') || allowedPages.includes(currentPageName);
+  const hasAccess = ENABLE_ALL_MODULES_LOCALLY || isHome || allowedPages.includes('*') || allowedPages.includes(currentPageName);
 
   if (userLoading) return null;
   
@@ -75,9 +84,11 @@ export default function Layout({ children, currentPageName }) {
   }
 
   // Get modules from database (AppRole.module_access) for non-admins, otherwise use registry
-  const visibleModules = isAdmin 
-    ? getVisibleModules(role) 
-    : getVisibleModules(role).filter(m => roleModuleAccess?.includes(m.moduleKey));
+  const visibleModules = ENABLE_ALL_MODULES_LOCALLY
+    ? getVisibleModules(navigationRole)
+    : isAdmin 
+      ? getVisibleModules(role) 
+      : getVisibleModules(role).filter(m => roleModuleAccess?.includes(m.moduleKey));
   const activeModule = getModuleForPage(currentPageName);
 
   const toggleModule = (moduleKey) => {
@@ -122,10 +133,12 @@ export default function Layout({ children, currentPageName }) {
         {/* Module groups */}
         {visibleModules.filter(m => m.moduleKey !== 'DASHBOARD').map(mod => {
           const Icon = mod.icon;
-          const pages = getVisiblePagesInModule(mod.moduleKey, role);
+          const pages = getVisiblePagesInModule(mod.moduleKey, navigationRole);
           
           // Filter pages by allowedPages (respects page_access overrides)
-          const visiblePages = pages.filter(p => allowedPages.includes('*') || allowedPages.includes(p.pageKey));
+          const visiblePages = ENABLE_ALL_MODULES_LOCALLY
+            ? pages
+            : pages.filter(p => allowedPages.includes('*') || allowedPages.includes(p.pageKey));
           if (visiblePages.length === 0) return null; // Hide module if no pages visible
           const isActive = activeModule?.moduleKey === mod.moduleKey;
           const isExpanded = expandedModules[mod.moduleKey];

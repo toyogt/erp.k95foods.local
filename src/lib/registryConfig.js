@@ -419,7 +419,8 @@ export function getVisiblePagesInModule(moduleKey, userRole) {
   
   return pages.filter(p => {
     if (p.hideFromNav) return false;
-    if (p.adminOnly && !isAdmin) return false;
+    if (isAdmin) return true;
+    if (p.adminOnly) return false;
     return p.roles.includes(userRole) || p.roles.includes('user');
   }).sort((a, b) => (a.sortOrder || 99) - (b.sortOrder || 99));
 }
@@ -447,7 +448,8 @@ export function canAccessPage(pageKey, userRole) {
   const page = getPageByKey(pageKey);
   if (!page) return false;
   const isAdmin = userRole === 'admin';
-  if (page.adminOnly && !isAdmin) return false;
+  if (isAdmin) return true;
+  if (page.adminOnly) return false;
   return page.roles.includes(userRole) || page.roles.includes('user');
 }
 
