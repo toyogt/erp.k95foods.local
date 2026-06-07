@@ -1,0 +1,209 @@
+# K95 ERP Project Overview
+
+## Project Type
+
+This repository is a Vite + React frontend for the K95 ERP application. It was generated/exported from Base44 and uses the Base44 SDK for authentication, data entities, file uploads, and serverless functions.
+
+The local app runs in the browser at:
+
+```text
+http://127.0.0.1:5173
+```
+
+## Current Runtime Setup
+
+Frontend:
+
+```powershell
+npm install
+npm.cmd run dev -- --host 127.0.0.1
+```
+
+Build check:
+
+```powershell
+npm.cmd run build
+```
+
+PostgreSQL local database:
+
+```text
+Host: localhost
+Port: 5432
+Database: k95erp
+User: nikhil
+Password: nikhil8877
+```
+
+Connection string:
+
+```text
+postgres://nikhil:nikhil8877@localhost:5432/k95erp
+```
+
+Important: this frontend does not currently use the local PostgreSQL database directly. The app data layer still uses the remote Base44 backend configured in `.env.local`.
+
+## Environment
+
+Main local environment file:
+
+```text
+.env.local
+```
+
+Current important values:
+
+```text
+VITE_BASE44_APP_ID=cbef744a8545c389ef439ea6
+VITE_BASE44_APP_BASE_URL=https://my-to-do-list-81bfaad7.base44.app
+```
+
+Do not put PowerShell commands such as `$env:DATABASE_URL=...` inside `.env.local`. Vite env files should use plain `KEY=value` entries.
+
+## Application Architecture
+
+Main entry files:
+
+```text
+src/main.jsx
+src/App.jsx
+src/Layout.jsx
+src/api/base44Client.js
+src/lib/registryConfig.js
+src/pages.config.js
+```
+
+Routing:
+
+- `src/App.jsx` defines explicit routes and also auto-generates routes from `getAllRoutablePages()`.
+- `src/pages.config.js` defines the Base44 page config and main landing page.
+- `src/lib/registryConfig.js` is the main registry for page metadata, module grouping, icons, roles, and navigation ordering.
+
+Layout/navigation:
+
+- `src/Layout.jsx` renders the sidebar, module groups, page links, user area, and logout button.
+- The sidebar is driven by `getVisibleModules()` and `getVisiblePagesInModule()` from `src/lib/registryConfig.js`.
+
+Base44 client:
+
+- `src/api/base44Client.js` creates the Base44 SDK client.
+- The app uses `base44.auth.me()`, `base44.entities.*`, `base44.functions.invoke()`, and Base44 integrations throughout the codebase.
+
+## Current Local Admin Override
+
+For local development, access restrictions were changed so the local user can access all modules.
+
+Files changed:
+
+```text
+src/Layout.jsx
+src/lib/registryConfig.js
+src/api/base44Client.js
+```
+
+Behavior now:
+
+- The local navigation shows all modules and pages.
+- `base44.auth.me()` is patched locally to return an admin role.
+- Base44 entity read calls such as `list`, `filter`, and `get` timeout and return empty results if the remote backend hangs.
+
+This prevents endless spinners during local development, but it does not create real data in the app.
+
+## Data Layer
+
+The app currently reads and writes data through Base44 entities, for example:
+
+```js
+base44.entities.IngredientMaster.list()
+base44.entities.User.list()
+base44.entities.PurchaseOrder.filter(...)
+base44.entities.AuditLog.create(...)
+```
+
+There is no local Express, Node, Django, Laravel, or other backend in this repository that connects to PostgreSQL.
+
+The local PostgreSQL database is ready, but unused unless a backend/API layer is added or the Base44 data calls are replaced.
+
+## Major Modules
+
+The main modules are defined in `src/lib/registryConfig.js`.
+
+Visible modules include:
+
+- Dashboard
+- Production
+- Labelling & Packing
+- Labelling Department
+- Print Management
+- Warehouse & FG
+- Purchase
+- All Items
+- Store Management
+- Quality
+- Accounts
+- Process Flow
+- Sales
+- Human Resources
+- User Management
+- System
+
+## Important Pages
+
+Examples of key pages:
+
+- `FMSMyTasks` - landing page and task inbox
+- `ProductionControl` - production control workflows
+- `ProductionOrders` - production order management
+- `LabellingLine` - labelling line operations
+- `LblPlanningDashboard` - labelling shift planning
+- `TransferReceiving` - warehouse transfer and receiving
+- `PurchaseRequestList` - purchase requests
+- `PurchaseOrderList` - purchase orders
+- `AllItemsIngredients` - ingredient specs, brand items, and groups
+- `SMSDashboard` - store dashboard
+- `QCInbox` - quality inbox
+- `InvoiceCapture` - accounts invoice capture
+- `FMSProcesses` - process flow setup
+- `UserManagement` - users
+- `RoleManager` - roles
+
+## Base44 Functions
+
+Serverless functions live under:
+
+```text
+base44/functions
+```
+
+Examples:
+
+- `whisperTranscribe`
+- `whatsappTemplateManager`
+- `voiceCreateTask`
+- `updateLabellingPlanStatus`
+- `triggerBulkPrintJob`
+- `tallyPushInvoice`
+- `diagnosePrinterError`
+- `createLiquidPlansFromOrders`
+
+These functions are written as Base44/Deno-style functions and use Base44 SDK APIs.
+
+## Known Current Limitations
+
+1. Local PostgreSQL is not connected to the frontend.
+2. Data screens depend on the remote Base44 backend.
+3. If the remote Base44 backend has no records, pages will load but tables may be empty.
+4. The local admin override is a development shortcut, not a production permission model.
+5. Some routes/pages may exist in the registry but still require matching imported components in `src/App.jsx`.
+
+## Next Recommended Work
+
+To make this a real local PostgreSQL-backed ERP app:
+
+1. Add a backend API service.
+2. Connect the backend to `postgres://nikhil:nikhil8877@localhost:5432/k95erp`.
+3. Create database tables for Base44 entity equivalents.
+4. Replace or wrap `base44.entities.*` calls with local API calls.
+5. Add seed data for users, roles, modules, ingredients, purchase records, store records, and other master data.
+6. Remove the local admin override once real user/role permissions exist in the backend.
+
